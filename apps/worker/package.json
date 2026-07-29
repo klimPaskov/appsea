@@ -1,0 +1,44 @@
+{
+  "name": "@appsea/worker",
+  "version": "0.3.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "tsc --noEmit",
+    "lint": "eslint src",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "fixture": "tsx src/fixture.ts",
+    "fixture:persist": "tsx src/fixture-persist.ts",
+    "plan:sample": "tsx src/plan-sample.ts",
+    "analysis:sample": "tsx src/analysis-sample.ts",
+    "auth:retention": "tsx src/auth-retention.ts",
+    "auth:recovery": "tsx src/auth-recovery.ts",
+    "workspace:invitations": "tsx src/workspace-invitations.ts",
+    "source:maintenance": "tsx src/source-maintenance.ts",
+    "workflow:fixture": "tsx src/workflow-fixture.ts",
+    "source:cfpb": "tsx src/production-cfpb.ts",
+    "source:policy:cfpb": "tsx src/source-policy-cfpb-review.ts",
+    "workflow:worker": "tsx src/durable-worker.ts"
+  },
+  "dependencies": {
+    "@appsea/connectors": "workspace:*",
+    "@appsea/contracts": "workspace:*",
+    "@appsea/db": "workspace:*",
+    "@appsea/object-store": "workspace:*",
+    "@appsea/reports": "workspace:*",
+    "@appsea/research": "workspace:*",
+    "@appsea/workflows": "workspace:*",
+    "@temporalio/activity": "1.20.2",
+    "@temporalio/client": "1.20.2",
+    "@temporalio/worker": "1.20.2",
+    "pg": "8.22.0"
+  },
+  "devDependencies": {
+    "@types/node": "26.1.1",
+    "@types/pg": "8.20.0",
+    "tsx": "4.23.0",
+    "typescript": "6.0.3",
+    "vitest": "4.1.10"
+  }
+}

@@ -1,0 +1,29 @@
+---
+name: appsea-complaint-analysis
+description: Use when normalizing, deduplicating, classifying, clustering, or curating complaint evidence.
+---
+
+# AppSea complaint analysis
+
+## Procedure
+
+1. Validate provenance and permitted representation.
+2. Normalize whitespace and obvious formatting without changing meaning.
+3. Detect exact duplicates, reposts, quoted copies, and near-duplicates.
+4. Preserve links from clusters to every retained observation.
+5. Classify product, company, feature, problem category, user role, severity signal, and workaround signal.
+6. Separate symptoms from root-problem hypotheses.
+7. Keep clusters narrow enough to guide a product response.
+8. Record cluster confidence and ambiguity.
+9. Route sensitive or identifying content through redaction.
+10. Sample clusters manually before using them in scoring.
+
+A cluster must not merge different jobs merely because they mention the same product. A complaint count must not count copies as independent demand.
+
+## Validation
+
+Use labeled fixtures for deduplication and cluster boundaries. Review false merges and false splits.
+
+## Completion
+
+Each cluster has a clear title, summary, observation ids, unique count, source count, confidence, and unresolved ambiguity.

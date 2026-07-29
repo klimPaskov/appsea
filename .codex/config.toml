@@ -1,0 +1,56 @@
+approval_policy = "never"
+
+sandbox_mode = "danger-full-access"
+
+project_doc_max_bytes = 65536
+
+[features]
+multi_agent = true
+
+[agents]
+max_threads = 6
+max_depth = 1
+
+[agents.appsea_architect]
+description = "Review AppSea architecture and package boundaries without editing."
+config_file = "agents/appsea_architect.toml"
+
+[agents.appsea_builder]
+description = "Implement one bounded AppSea vertical slice with explicit ownership."
+config_file = "agents/appsea_builder.toml"
+
+[agents.appsea_completion_auditor]
+description = "Audit a claimed AppSea milestone against code, tests, docs, and memory."
+config_file = "agents/appsea_completion_auditor.toml"
+
+[agents.appsea_documentarian]
+description = "Keep AppSea product, architecture, runbook, plan, and status docs aligned."
+config_file = "agents/appsea_documentarian.toml"
+
+[agents.appsea_explorer]
+description = "Map AppSea files, contracts, precedents, risks, and safe edit order read-only."
+config_file = "agents/appsea_explorer.toml"
+
+[agents.appsea_memory_curator]
+description = "Curate factual AppSea project memory and resumable handoffs."
+config_file = "agents/appsea_memory_curator.toml"
+
+[agents.appsea_researcher]
+description = "Collect policy-aware market, complaint, competitor, and contrary evidence."
+config_file = "agents/appsea_researcher.toml"
+
+[agents.appsea_reviewer]
+description = "Review AppSea correctness, contracts, tests, and documentation without editing."
+config_file = "agents/appsea_reviewer.toml"
+
+[agents.appsea_security_reviewer]
+description = "Review AppSea security, privacy, permissions, source, and deployment boundaries."
+config_file = "agents/appsea_security_reviewer.toml"
+
+[agents.appsea_skill_maintainer]
+description = "Create, update, merge, audit, and retire native AppSea skills."
+config_file = "agents/appsea_skill_maintainer.toml"
+
+[agents.appsea_ui_reviewer]
+description = "Review AppSea interface visuals and accessibility without editing."
+config_file = "agents/appsea_ui_reviewer.toml"

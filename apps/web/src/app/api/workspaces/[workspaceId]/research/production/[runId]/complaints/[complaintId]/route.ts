@@ -1,0 +1,92 @@
+import { appseaIdentifierSchema, workspaceComplaintReviewInputSchema } from '@appsea/contracts'
+import {
+  PostgresProductionCollectionRepository,
+  ProductionComplaintReviewConflictError,
+  ProductionComplaintReviewNotFoundError,
+  ProductionComplaintReviewPermissionError
+} from '@appsea/db/production-collection'
+import { WorkspaceAuthorizationError } from '@appsea/db'
+import {
+  forbiddenResponse,
+  invalidRequest,
+  privateResponseHeaders,
+  readSession,
+  sameOriginRequest,
+  unauthorizedResponse
+} from '../../../../../../../../../server/auth-session'
+import { getDatabasePool } from '../../../../../../../../../server/database'
+
+export const runtime = 'nodejs'
+export const dynamic = 'force-dynamic'
+
+export async function PATCH(
+  request: Request,
+  context: {
+    params: Promise<{
+      workspaceId: string
+      runId: string
+      complaintId: string
+    }>
+  }
+): Promise<Response> {
+  if (!sameOriginRequest(request)) {
+    return Response.json({ error: 'Origin not allowed' }, { status: 403 })
+  }
+  const session = await readSession()
+  if (!session) return unauthorizedResponse()
+  const { workspaceId, runId, complaintId } = await context.params
+  const parsedWorkspaceId = appseaIdentifierSchema.safeParse(workspaceId)
+  const parsedRunId = appseaIdentifierSchema.safeParse(runId)
+  const parsedComplaintId = appseaIdentifierSchema.safeParse(complaintId)
+  if (!parsedWorkspaceId.success || !parsedRunId.success || !parsedComplaintId.success) {
+    return invalidRequest('Invalid complaint review path')
+  }
+
+  let payload: unknown
+  try {
+    payload = await request.json()
+  } catch {
+    return invalidRequest('Request body must be valid JSON')
+  }
+  const parsed = workspaceComplaintReviewInputSchema.safeParse(payload)
+  if (!parsed.success) return invalidRequest('A valid complaint review action is required')
+
+  try {
+    const data = await new PostgresProductionCollectionRepository(
+      getDatabasePool()
+    ).updateComplaintReview(
+      session.user.userId,
+      parsedWorkspaceId.data,
+      parsedRunId.data,
+      parsedComplaintId.data,
+      parsed.data
+    )
+    return Response.json({ data }, { headers: privateResponseHeaders })
+  } catch (error) {
+    if (
+      error instanceof WorkspaceAuthorizationError ||
+      error instanceof ProductionComplaintReviewPermissionError
+    ) {
+      return forbiddenResponse()
+    }
+    if (error instanceof ProductionComplaintReviewNotFoundError) {
+      return Response.json(
+        { error: 'Production complaint not found' },
+        { status: 404, headers: privateResponseHeaders }
+      )
+    }
+    if (error instanceof ProductionComplaintReviewConflictError) {
+      return Response.json(
+        { error: 'Complaint review transition is not permitted' },
+        { status: 409, headers: privateResponseHeaders }
+      )
+    }
+    console.error('AppSea complaint review update failed', {
+      name: error instanceof Error ? error.name : 'unknown'
+    })
+    return Response.json(
+      { error: 'Unable to update complaint review' },
+      { status: 500, headers: privateResponseHeaders }
+    )
+  }
+}

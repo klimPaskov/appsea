@@ -1,0 +1,191 @@
+{
+  "package": "AppSea_Dark_UI_References_v5",
+  "version": "5.0",
+  "generatedOn": "2026-07-12",
+  "routeCount": 5,
+  "files": [
+    {
+      "path": "DESIGN_TOKENS.md",
+      "bytes": 775,
+      "sha256": "48b96176df1e4c60569565757f333459db61a3aac611e15b0aa4931929031aa2"
+    },
+    {
+      "path": "IMPLEMENTATION_NOTES.md",
+      "bytes": 1216,
+      "sha256": "ddf93f26538b53c98bc21acf7980f1b68dc0d6a0f802144ef20efa25a7a12c66"
+    },
+    {
+      "path": "INTEGRATION.md",
+      "bytes": 620,
+      "sha256": "11459f27f84016e0509250bfc7c32157a54af6f2f2f8978c7210c46e1b4765c0"
+    },
+    {
+      "path": "MOBILE_BEHAVIOR.md",
+      "bytes": 1114,
+      "sha256": "f3d9ddaa32d99c347880b359da481469d6fdf1b1be66e92ced6d5a31f5f00165"
+    },
+    {
+      "path": "PACKAGE_MANIFEST.md",
+      "bytes": 299,
+      "sha256": "d8587a0a6f49da6b480f7781c78403b1a1980461114fd8f2aac565d08ba32573"
+    },
+    {
+      "path": "README.md",
+      "bytes": 2105,
+      "sha256": "d058cf07a3293fd8541f29fc29f4fbfc59727ad9a209d016b1b6e1d475e5ca07"
+    },
+    {
+      "path": "REFERENCE_MANIFEST.md",
+      "bytes": 1542,
+      "sha256": "4b9afec949949f5be32ae018cc1c276b0ec5a745c91e3e014cd16ad1cea3ef2f"
+    },
+    {
+      "path": "VISUAL_DIRECTION.md",
+      "bytes": 1229,
+      "sha256": "7dd19b471f5ef29001308050949124365b154e58638c75e3ba4a70e2d124f8d8"
+    },
+    {
+      "path": "design/references/REFERENCE_BRIEF.md",
+      "bytes": 1051,
+      "sha256": "e451092ccd489f2b7a3d6dc514c9afa6ba51cc7d58826fdc7061d91ee8cbd165"
+    },
+    {
+      "path": "design/references/desktop/competitors.png",
+      "bytes": 1375767,
+      "sha256": "18d85e0458d54b08f93a4996ce400650076263bc619e8de0e458ba34eb15ebde",
+      "width": 1440,
+      "height": 1000
+    },
+    {
+      "path": "design/references/desktop/complaints.png",
+      "bytes": 1489451,
+      "sha256": "aeac8829b6080d397a0ce4b7cb664bc174626b437cd3ee3d223166c6673271bd",
+      "width": 1440,
+      "height": 1000
+    },
+    {
+      "path": "design/references/desktop/leaderboard.png",
+      "bytes": 1290611,
+      "sha256": "35f0fc36ac89513d58058cd02a793fa5a82148392a6bb115b8ee550f53d6164d",
+      "width": 1440,
+      "height": 1000
+    },
+    {
+      "path": "design/references/desktop/opportunity.png",
+      "bytes": 1444144,
+      "sha256": "5615efadbc2e1572329a0974b149b8d125762da7b240c74e9d6773d3736806c1",
+      "width": 1440,
+      "height": 1000
+    },
+    {
+      "path": "design/references/desktop/plan.png",
+      "bytes": 1497572,
+      "sha256": "edef95532edfad13d66537b67fd96d754f6791cb60e29342d557001bb162c973",
+      "width": 1440,
+      "height": 1000
+    },
+    {
+      "path": "design/references/mobile/competitors.png",
+      "bytes": 387416,
+      "sha256": "25e82695d8598b9256de6cc0440dcc1a721c54304e89324e3659e8b5803e76f6",
+      "width": 390,
+      "height": 844
+    },
+    {
+      "path": "design/references/mobile/complaints.png",
+      "bytes": 407248,
+      "sha256": "c6bdd97e757433f909a65f698d5560d4760467a36b409727aaaf1defed618b08",
+      "width": 390,
+      "height": 844
+    },
+    {
+      "path": "design/references/mobile/leaderboard.png",
+      "bytes": 389145,
+      "sha256": "0ff7bd0af69d7b74d536bdcb8fc0a10f49167f834b6022d7e282fe6257a429f2",
+      "width": 390,
+      "height": 844
+    },
+    {
+      "path": "design/references/mobile/opportunity.png",
+      "bytes": 397123,
+      "sha256": "fa2932bca357cfd48fc02e56e6a52321380d72cdcd116c9ad3d97d68b80e3a1e",
+      "width": 390,
+      "height": 844
+    },
+    {
+      "path": "design/references/mobile/plan.png",
+      "bytes": 383144,
+      "sha256": "ecc380a5fb6ae42543aae8cc64dad6cfc1d12cc7547524f1f01132d03bbd0c8d",
+      "width": 390,
+      "height": 844
+    },
+    {
+      "path": "design/references/mobile/source/competitors.png",
+      "bytes": 1279674,
+      "sha256": "cbdc982d50b3161ce31bc82b5db3ee5ea6768f569388bb827b9487dddf57f229",
+      "width": 853,
+      "height": 1844
+    },
+    {
+      "path": "design/references/mobile/source/complaints.png",
+      "bytes": 1340594,
+      "sha256": "a71f3efff0c3318c9ce89706abaa51aa5fb111c25a3952232031d872fa0bf605",
+      "width": 853,
+      "height": 1844
+    },
+    {
+      "path": "design/references/mobile/source/leaderboard.png",
+      "bytes": 1259550,
+      "sha256": "0ec1635fc92e190d63f58179d674d49e85af6178b85014caa59ff76c8d37d6f9",
+      "width": 853,
+      "height": 1844
+    },
+    {
+      "path": "design/references/mobile/source/opportunity.png",
+      "bytes": 1307414,
+      "sha256": "8da66a13e827c53ef720f30e875a96f497aa6978469f021763af857db6b3cd85",
+      "width": 853,
+      "height": 1844
+    },
+    {
+      "path": "design/references/mobile/source/plan.png",
+      "bytes": 1285161,
+      "sha256": "565d63b380226cfa679fc56606413ac1f3e2a0aa465ef15675c6790c4079ec5f",
+      "width": 853,
+      "height": 1844
+    },
+    {
+      "path": "design/references/overview-all.png",
+      "bytes": 1984301,
+      "sha256": "3eb98908671e1669727a995ea98399c85bfdc7faf66d0819ee2c717e9089b443",
+      "width": 873,
+      "height": 2494
+    },
+    {
+      "path": "design/references/overview-desktop.png",
+      "bytes": 1136965,
+      "sha256": "7f86fd763464bf8733a76bc821e050d7625a9a88c4d8c397cf6ef8b32442c475",
+      "width": 1124,
+      "height": 1386
+    },
+    {
+      "path": "design/references/overview-mobile.png",
+      "bytes": 605151,
+      "sha256": "c5b9198a8c211f3954fb9ac2bd17d969752ca977827e93809ad193311fbf0225",
+      "width": 709,
+      "height": 1094
+    },
+    {
+      "path": "design/references/overview.png",
+      "bytes": 1984301,
+      "sha256": "3eb98908671e1669727a995ea98399c85bfdc7faf66d0819ee2c717e9089b443",
+      "width": 873,
+      "height": 2494
+    },
+    {
+      "path": "design/references/reference-map.json",
+      "bytes": 1595,
+      "sha256": "732e61483549b1cdd68a174507bdca12cf96eacdf16a006daff2ca727a34a7e5"
+    }
+  ]
+}

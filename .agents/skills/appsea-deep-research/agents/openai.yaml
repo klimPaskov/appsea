@@ -1,0 +1,4 @@
+interface:
+  display_name: 'AppSea Deep Research'
+  short_description: 'Use when planning or running extensive complaint, market, competitor, and opportunity research for AppSea.'
+  default_prompt: 'Apply the appsea-deep-research skill to the current AppSea task.'

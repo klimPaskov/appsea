@@ -1,0 +1,28 @@
+{
+  "name": "complaint-classification",
+  "version": "1.0.0",
+  "description": "Classifies untrusted evidence into complaint and non-complaint categories and extracts a typed problem observation.",
+  "owner": "intelligence-pipeline",
+  "risk_level": "medium",
+  "permissions": [
+    "read_evidence",
+    "write_derived_records",
+    "call_model_gateway",
+    "request_human_review"
+  ],
+  "inputs": ["EvidenceRecord"],
+  "outputs": ["ComplaintObservation"],
+  "fixtures": [
+    "fixtures/complaint_classification/core.jsonl",
+    "fixtures/security/prompt_injection.jsonl"
+  ],
+  "rollback_to": null,
+  "status": "active",
+  "evaluation_requirements": {
+    "minimum_fixture_pass_rate": 0.92,
+    "security_suite_required": true,
+    "human_review_required": true,
+    "maximum_cost_regression": 0.15
+  },
+  "created_at": "2026-07-01T12:00:00Z"
+}

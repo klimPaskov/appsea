@@ -1,0 +1,314 @@
+{
+  "id": "analysis:e41034159b62dad71655d79bb540ad6e",
+  "mode": "production",
+  "createdAt": "2026-07-26T00:00:00.000Z",
+  "sourcePolicies": [
+    {
+      "sourceId": "cfpb-consumer-complaints",
+      "displayName": "CFPB Consumer Complaint Database",
+      "sourceType": "api",
+      "enabled": true,
+      "policyState": "approved",
+      "permittedPurposes": [
+        "opportunity-research",
+        "development",
+        "testing"
+      ],
+      "commercialUse": "allowed",
+      "accessMethod": "Official CFPB public JSON search API; no credentials and no scraping; test-only in-memory transport",
+      "retentionDays": 30,
+      "deletionRequired": true,
+      "attributionRequired": true,
+      "displayMode": "excerpt",
+      "coverageNotes": [
+        "Engineering policy draft: legal, privacy, and security approval is still required.",
+        "The public database is not a statistical sample and does not represent all consumer experiences.",
+        "Filtered API pages cannot establish deletion absence; a full-snapshot reconciliation is required.",
+        "Narratives are included only when the consumer consented and CFPB scrubbing produced a public record.",
+        "The API does not provide a deletion webhook or tombstone feed.",
+        "This approved-shaped policy is used only for a test-only offline composition sample."
+      ],
+      "reviewedAt": "2026-07-24T00:00:00.000Z",
+      "policyOwner": "offline analysis sample; no connector activation",
+      "policyDocumentRef": "https://www.consumerfinance.gov/complaint/data-use/",
+      "expiresAt": "2026-10-24T00:00:00.000Z",
+      "quota": {
+        "requestsPerMinute": 6,
+        "maxRecordsPerRequest": 1000,
+        "maxRecordsPerRun": 1000,
+        "costPerRequestMicros": 0
+      },
+      "deletion": {
+        "sourceRecordIdField": "complaint_id",
+        "supportsTombstones": false,
+        "deletionPollIntervalHours": 24,
+        "retentionAction": "redact"
+      }
+    }
+  ],
+  "complaints": [
+    {
+      "id": "cfpb-sample-complaint-1001",
+      "sourceId": "cfpb-consumer-complaints",
+      "sourceRecordId": "1001",
+      "capturedAt": "2026-07-25T00:00:00.000Z",
+      "publishedAt": null,
+      "query": "shared inbox handoff",
+      "product": "Example Inbox",
+      "company": "Example Company",
+      "feature": "ownership history",
+      "category": "handoff loss",
+      "text": "The next teammate cannot see the ownership history after a handoff.",
+      "language": "en",
+      "synthetic": false,
+      "redacted": true,
+      "allowedRepresentation": "excerpt",
+      "evidenceId": "evidence:cfpb-sample-1001",
+      "sourceItemId": "source-item:cfpb-sample-1001",
+      "evidenceHash": "1111111111111111111111111111111111111111111111111111111111111111"
+    },
+    {
+      "id": "cfpb-sample-complaint-1002",
+      "sourceId": "cfpb-consumer-complaints",
+      "sourceRecordId": "1002",
+      "capturedAt": "2026-07-25T00:00:00.000Z",
+      "publishedAt": null,
+      "query": "shared inbox handoff",
+      "product": "Example Inbox",
+      "company": "Example Company",
+      "feature": "reassignment audit",
+      "category": "accountability gap",
+      "text": "A reassigned conversation does not show who changed its owner.",
+      "language": "en",
+      "synthetic": false,
+      "redacted": true,
+      "allowedRepresentation": "excerpt",
+      "evidenceId": "evidence:cfpb-sample-1002",
+      "sourceItemId": "source-item:cfpb-sample-1002",
+      "evidenceHash": "2222222222222222222222222222222222222222222222222222222222222222"
+    },
+    {
+      "id": "cfpb-sample-complaint-1003",
+      "sourceId": "cfpb-consumer-complaints",
+      "sourceRecordId": "1003",
+      "capturedAt": "2026-07-25T00:00:00.000Z",
+      "publishedAt": null,
+      "query": "shared inbox handoff",
+      "product": "Example Inbox",
+      "company": "Example Company",
+      "feature": "handoff notes",
+      "category": "stale handoff",
+      "text": "Manual handoff notes become stale before the next shift starts.",
+      "language": "en",
+      "synthetic": false,
+      "redacted": true,
+      "allowedRepresentation": "excerpt",
+      "evidenceId": "evidence:cfpb-sample-1003",
+      "sourceItemId": "source-item:cfpb-sample-1003",
+      "evidenceHash": "3333333333333333333333333333333333333333333333333333333333333333"
+    }
+  ],
+  "clusters": [
+    {
+      "id": "cluster-production-1",
+      "title": "Example Inbox: accountability gap",
+      "product": "Example Inbox",
+      "category": "accountability gap",
+      "summary": "1 retained observation describes accountability gap.",
+      "complaintIds": [
+        "cfpb-sample-complaint-1002"
+      ],
+      "uniqueObservationCount": 1,
+      "sourceCount": 1,
+      "confidence": 0.62
+    },
+    {
+      "id": "cluster-production-2",
+      "title": "Example Inbox: handoff loss",
+      "product": "Example Inbox",
+      "category": "handoff loss",
+      "summary": "1 retained observation describes handoff loss.",
+      "complaintIds": [
+        "cfpb-sample-complaint-1001"
+      ],
+      "uniqueObservationCount": 1,
+      "sourceCount": 1,
+      "confidence": 0.62
+    },
+    {
+      "id": "cluster-production-3",
+      "title": "Example Inbox: stale handoff",
+      "product": "Example Inbox",
+      "category": "stale handoff",
+      "summary": "1 retained observation describes stale handoff.",
+      "complaintIds": [
+        "cfpb-sample-complaint-1003"
+      ],
+      "uniqueObservationCount": 1,
+      "sourceCount": 1,
+      "confidence": 0.62
+    }
+  ],
+  "opportunity": {
+    "id": "opportunity:cfpb-offline-sample",
+    "slug": "handoff-audit-sample",
+    "name": "Handoff Audit Sample",
+    "oneLine": "A test-only seed for reviewing shared-inbox handoff evidence.",
+    "thesis": "The supplied observations describe handoff visibility problems, but this offline sample cannot establish demand or market size.",
+    "audience": "Test readers reviewing source-policy and report boundaries.",
+    "firstWedge": "Read-only ownership history and shift handoff review.",
+    "complaintCount": 3,
+    "synthetic": false,
+    "tags": [
+      "test-only",
+      "shared-inbox"
+    ],
+    "complaintIds": [
+      "cfpb-sample-complaint-1002",
+      "cfpb-sample-complaint-1001",
+      "cfpb-sample-complaint-1003"
+    ],
+    "competitors": [],
+    "scoreSnapshot": {
+      "score": 7.8,
+      "version": "opportunity-score-v0.2.0",
+      "calculatedAt": "2026-07-26T00:00:00.000Z",
+      "factors": {
+        "complaintVolume": 10,
+        "painSeverity": 30,
+        "recurrence": 20,
+        "willingnessToPay": 0,
+        "competitiveGap": 0,
+        "buildFeasibility": 30,
+        "evidenceQuality": 25,
+        "contraryEvidencePenalty": 90
+      },
+      "weights": {
+        "complaintVolume": 20,
+        "painSeverity": 18,
+        "recurrence": 14,
+        "willingnessToPay": 10,
+        "competitiveGap": 14,
+        "buildFeasibility": 12,
+        "evidenceQuality": 12,
+        "contraryEvidencePenalty": 10
+      }
+    },
+    "contraryEvidence": [
+      "No competitor or workaround research is present in the offline sample."
+    ],
+    "planFiles": [
+      "README.md",
+      "01-product-brief.md",
+      "02-mvp-scope.md",
+      "03-architecture.md",
+      "04-task-graph.json",
+      "05-validation.md"
+    ]
+  },
+  "coverageGaps": [
+    "This payload is a test-only offline sample, not a statistical sample.",
+    "No competitor or contrary-evidence source was included.",
+    "The CFPB connector remains pending review and was not activated.",
+    "This analysis was composed from a test-only offline transport and cannot support market conclusions."
+  ],
+  "warnings": [
+    "Test-only production-shaped transport; do not present this artifact as market research."
+  ],
+  "analysisVersion": "production-analysis-v1",
+  "runId": "run:cfpb-offline-sample-v1",
+  "analysisRunId": "analysis-run:cfpb-offline-sample-v1",
+  "collectionArtifactId": "collection:cfpb-offline-sample-v1",
+  "transport": "offline-sample",
+  "testOnly": true,
+  "policySnapshot": {
+    "sourceId": "cfpb-consumer-complaints",
+    "policyVersion": "cfpb-offline-sample-v1",
+    "contentHash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "reviewId": "review:cfpb-offline-sample-v1",
+    "policy": {
+      "sourceId": "cfpb-consumer-complaints",
+      "displayName": "CFPB Consumer Complaint Database",
+      "sourceType": "api",
+      "enabled": true,
+      "policyState": "approved",
+      "permittedPurposes": [
+        "opportunity-research",
+        "development",
+        "testing"
+      ],
+      "commercialUse": "allowed",
+      "accessMethod": "Official CFPB public JSON search API; no credentials and no scraping; test-only in-memory transport",
+      "retentionDays": 30,
+      "deletionRequired": true,
+      "attributionRequired": true,
+      "displayMode": "excerpt",
+      "coverageNotes": [
+        "Engineering policy draft: legal, privacy, and security approval is still required.",
+        "The public database is not a statistical sample and does not represent all consumer experiences.",
+        "Filtered API pages cannot establish deletion absence; a full-snapshot reconciliation is required.",
+        "Narratives are included only when the consumer consented and CFPB scrubbing produced a public record.",
+        "The API does not provide a deletion webhook or tombstone feed.",
+        "This approved-shaped policy is used only for a test-only offline composition sample."
+      ],
+      "reviewedAt": "2026-07-24T00:00:00.000Z",
+      "policyOwner": "offline analysis sample; no connector activation",
+      "policyDocumentRef": "https://www.consumerfinance.gov/complaint/data-use/",
+      "expiresAt": "2026-10-24T00:00:00.000Z",
+      "quota": {
+        "requestsPerMinute": 6,
+        "maxRecordsPerRequest": 1000,
+        "maxRecordsPerRun": 1000,
+        "costPerRequestMicros": 0
+      },
+      "deletion": {
+        "sourceRecordIdField": "complaint_id",
+        "supportsTombstones": false,
+        "deletionPollIntervalHours": 24,
+        "retentionAction": "redact"
+      }
+    }
+  },
+  "opportunitySeedReview": {
+    "seed": {
+      "id": "opportunity:cfpb-offline-sample",
+      "slug": "handoff-audit-sample",
+      "name": "Handoff Audit Sample",
+      "oneLine": "A test-only seed for reviewing shared-inbox handoff evidence.",
+      "thesis": "The supplied observations describe handoff visibility problems, but this offline sample cannot establish demand or market size.",
+      "audience": "Test readers reviewing source-policy and report boundaries.",
+      "firstWedge": "Read-only ownership history and shift handoff review.",
+      "tags": [
+        "test-only",
+        "shared-inbox"
+      ],
+      "competitors": [],
+      "contraryEvidence": [
+        "No competitor or workaround research is present in the offline sample."
+      ],
+      "scoreFactors": {
+        "complaintVolume": 10,
+        "painSeverity": 30,
+        "recurrence": 20,
+        "willingnessToPay": 0,
+        "competitiveGap": 0,
+        "buildFeasibility": 30,
+        "evidenceQuality": 25,
+        "contraryEvidencePenalty": 90
+      },
+      "planFiles": [
+        "README.md",
+        "01-product-brief.md",
+        "02-mvp-scope.md",
+        "03-architecture.md",
+        "04-task-graph.json",
+        "05-validation.md"
+      ]
+    },
+    "seedVersion": "handoff-audit-sample-seed-v1",
+    "contentHash": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+    "reviewId": "review:handoff-audit-sample-v1",
+    "reviewedBy": "offline analysis sample; no connector activation",
+    "reviewedAt": "2026-07-26T00:00:00.000Z"
+  }
+}

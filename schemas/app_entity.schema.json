@@ -1,0 +1,119 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.appsea.local/app_entity.schema.json",
+  "title": "AppSea App Entity",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "app_id",
+    "tenant_id",
+    "canonical_name",
+    "entity_type",
+    "aliases",
+    "categories",
+    "platforms",
+    "identifiers",
+    "resolution_confidence",
+    "review_state",
+    "updated_at"
+  ],
+  "properties": {
+    "app_id": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_:-]{2,127}$"
+    },
+    "tenant_id": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_:-]{2,127}$"
+    },
+    "canonical_name": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 160
+    },
+    "entity_type": {
+      "enum": [
+        "application",
+        "platform",
+        "service",
+        "browser_extension",
+        "library",
+        "operating_system_feature",
+        "manual_workflow"
+      ]
+    },
+    "company_id": {
+      "type": ["string", "null"],
+      "pattern": "^[a-z][a-z0-9_:-]{2,127}$"
+    },
+    "aliases": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 160
+      }
+    },
+    "categories": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 80
+      }
+    },
+    "platforms": {
+      "type": "array",
+      "items": {
+        "enum": ["web", "windows", "macos", "linux", "ios", "android", "browser", "api", "other"]
+      }
+    },
+    "identifiers": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "domains": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 3
+          }
+        },
+        "app_store_ids": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "play_store_ids": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "repository_urls": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "format": "uri"
+          }
+        }
+      }
+    },
+    "resolution_confidence": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 1
+    },
+    "review_state": {
+      "enum": ["unreviewed", "confirmed", "merged", "rejected"]
+    },
+    "updated_at": {
+      "type": "string",
+      "format": "date-time"
+    }
+  }
+}

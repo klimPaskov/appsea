@@ -1,0 +1,4 @@
+interface:
+  display_name: 'AppSea Documentation'
+  short_description: 'Use when adding, updating, auditing, or reorganizing AppSea documentation.'
+  default_prompt: 'Apply the appsea-documentation skill to the current AppSea task.'

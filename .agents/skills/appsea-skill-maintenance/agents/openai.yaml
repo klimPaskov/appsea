@@ -1,0 +1,4 @@
+interface:
+  display_name: 'AppSea Skill Maintenance'
+  short_description: 'Use when creating, updating, merging, auditing, or retiring native AppSea Codex skills.'
+  default_prompt: 'Apply the appsea-skill-maintenance skill to the current AppSea task.'

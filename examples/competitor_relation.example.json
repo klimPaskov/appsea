@@ -1,0 +1,16 @@
+{
+  "relation_id": "relation_demo_notifyhub_os",
+  "tenant_id": "tenant_demo",
+  "subject_id": "app_demo_notifyhub",
+  "object_id": "app_demo_os_notifications",
+  "relation_type": "platform_feature",
+  "problem_cluster_ids": ["cluster_demo_settings_fragmentation"],
+  "evidence_ids": ["evidence_demo_competitor_001"],
+  "shared_jobs": ["review and suppress distracting notifications"],
+  "differentiation_notes": [
+    "The operating-system control lacks cross-device preference explanations."
+  ],
+  "confidence": 0.88,
+  "observed_at": "2026-07-02T09:10:00Z",
+  "review_state": "confirmed"
+}

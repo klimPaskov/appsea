@@ -1,0 +1,19 @@
+{
+  "app_id": "app_demo_taskflow",
+  "tenant_id": "tenant_demo",
+  "canonical_name": "TaskFlow",
+  "entity_type": "application",
+  "company_id": "company_demo_taskflow",
+  "aliases": ["Task Flow"],
+  "categories": ["productivity", "task_management"],
+  "platforms": ["web", "windows", "macos", "ios", "android"],
+  "identifiers": {
+    "domains": ["taskflow.example"],
+    "app_store_ids": ["demo.taskflow.ios"],
+    "play_store_ids": ["example.taskflow"],
+    "repository_urls": []
+  },
+  "resolution_confidence": 0.98,
+  "review_state": "confirmed",
+  "updated_at": "2026-07-02T08:10:00Z"
+}

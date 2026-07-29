@@ -1,0 +1,23 @@
+# Reference manifest
+
+- `design/references/desktop/leaderboard.png`: 1440x1000, 1290611 bytes, desktop
+- `design/references/mobile/leaderboard.png`: 390x844, 389145 bytes, mobile
+- `design/references/mobile/source/leaderboard.png`: 853x1844, 1259550 bytes, mobile source
+- `design/references/desktop/opportunity.png`: 1440x1000, 1444144 bytes, desktop
+- `design/references/mobile/opportunity.png`: 390x844, 397123 bytes, mobile
+- `design/references/mobile/source/opportunity.png`: 853x1844, 1307414 bytes, mobile source
+- `design/references/desktop/complaints.png`: 1440x1000, 1489451 bytes, desktop
+- `design/references/mobile/complaints.png`: 390x844, 407248 bytes, mobile
+- `design/references/mobile/source/complaints.png`: 853x1844, 1340594 bytes, mobile source
+- `design/references/desktop/competitors.png`: 1440x1000, 1375767 bytes, desktop
+- `design/references/mobile/competitors.png`: 390x844, 387416 bytes, mobile
+- `design/references/mobile/source/competitors.png`: 853x1844, 1279674 bytes, mobile source
+- `design/references/desktop/plan.png`: 1440x1000, 1497572 bytes, desktop
+- `design/references/mobile/plan.png`: 390x844, 383144 bytes, mobile
+- `design/references/mobile/source/plan.png`: 853x1844, 1285161 bytes, mobile source
+- `design/references/desktop/security.png`: 1440x1000, 49262 bytes, desktop
+- `design/references/mobile/security.png`: 390x844, 37114 bytes, mobile
+- `design/references/overview-desktop.png`: 1124x1386, 1136965 bytes, overview
+- `design/references/overview-mobile.png`: 709x1094, 605151 bytes, overview
+- `design/references/overview-all.png`: 873x2494, 1984301 bytes, overview
+- `design/references/overview.png`: 873x2494, 1984301 bytes, overview

@@ -1,0 +1,39 @@
+{
+  "name": "@appsea/db",
+  "version": "0.4.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./auth": "./src/auth.ts",
+    "./workflow": "./src/workflow.ts",
+    "./production-collection": "./src/production-collection.ts",
+    "./production-collection-workflow": "./src/production-collection-workflow.ts",
+    "./production-analysis": "./src/production-analysis.ts",
+    "./opportunity-seed-review": "./src/opportunity-seed-review.ts",
+    "./source-policy": "./src/source-policy.ts"
+  },
+  "scripts": {
+    "build": "tsc --noEmit",
+    "lint": "eslint src integration",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run src",
+    "test:integration": "vitest run integration/db.integration.test.ts",
+    "migrate": "tsx src/cli/migrate.ts"
+  },
+  "dependencies": {
+    "@appsea/contracts": "workspace:*",
+    "@appsea/object-store": "workspace:*",
+    "@appsea/reports": "workspace:*",
+    "@appsea/scoring": "workspace:*",
+    "pg": "8.22.0"
+  },
+  "devDependencies": {
+    "@appsea/research": "workspace:*",
+    "@types/node": "26.1.1",
+    "@types/pg": "8.20.0",
+    "tsx": "4.23.0",
+    "typescript": "6.0.3",
+    "vitest": "4.1.10"
+  }
+}

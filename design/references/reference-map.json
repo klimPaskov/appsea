@@ -1,0 +1,74 @@
+{
+  "version": "5.0",
+  "theme": "dark",
+  "viewports": {
+    "desktop": {
+      "width": 1440,
+      "height": 1000
+    },
+    "mobile": {
+      "width": 390,
+      "height": 844
+    },
+    "mobileSource": {
+      "width": 853,
+      "height": 1844
+    }
+  },
+  "screens": [
+    {
+      "id": "leaderboard",
+      "route": "/leaderboard",
+      "purpose": "Ranked app opportunities only",
+      "desktop": "desktop/leaderboard.png",
+      "mobile": "mobile/leaderboard.png",
+      "mobileSource": "mobile/source/leaderboard.png"
+    },
+    {
+      "id": "opportunity",
+      "route": "/opportunities/:slug",
+      "purpose": "Focused opportunity summary",
+      "desktop": "desktop/opportunity.png",
+      "mobile": "mobile/opportunity.png",
+      "mobileSource": "mobile/source/opportunity.png"
+    },
+    {
+      "id": "complaints",
+      "route": "/opportunities/:slug/complaints",
+      "purpose": "Curated complaint evidence",
+      "desktop": "desktop/complaints.png",
+      "mobile": "mobile/complaints.png",
+      "mobileSource": "mobile/source/complaints.png"
+    },
+    {
+      "id": "competitors",
+      "route": "/opportunities/:slug/competitors",
+      "purpose": "Competitor comparison",
+      "desktop": "desktop/competitors.png",
+      "mobile": "mobile/competitors.png",
+      "mobileSource": "mobile/source/competitors.png"
+    },
+    {
+      "id": "plan",
+      "route": "/opportunities/:slug/plan",
+      "purpose": "Coding-agent build plan",
+      "desktop": "desktop/plan.png",
+      "mobile": "mobile/plan.png",
+      "mobileSource": "mobile/source/plan.png"
+    },
+    {
+      "id": "security",
+      "route": "/account/security",
+      "purpose": "Private active-session review and revocation",
+      "desktop": "desktop/security.png",
+      "mobile": "mobile/security.png"
+    },
+    {
+      "id": "seed-reviews",
+      "route": "/workspace/:workspaceId/seed-reviews",
+      "purpose": "Private reviewed opportunity-seed registry",
+      "desktop": "source/seed-reviews.svg",
+      "mobile": "source/seed-reviews-mobile.svg"
+    }
+  ]
+}

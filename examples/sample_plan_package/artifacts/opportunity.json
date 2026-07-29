@@ -1,0 +1,59 @@
+{
+  "opportunity_id": "opportunity_cross_app_notification_control",
+  "tenant_id": "tenant_demo",
+  "title": "Cross-app notification control",
+  "slug": "cross-app-notification-control",
+  "state": "planned",
+  "category": "productivity",
+  "target_segments": [
+    "knowledge workers who use many collaboration and productivity apps",
+    "small teams without dedicated device management"
+  ],
+  "problem_statement": "People cannot see why apps interrupt them or manage notification rules consistently across desktop and mobile tools, which leads to broad muting and missed important events.",
+  "proposed_wedge": "A desktop-first control center that inventories notification settings, explains likely interruption causes, and guides users through supported changes without requiring invasive message access.",
+  "excluded_scope": [
+    "reading private notification content in the MVP",
+    "bypassing operating-system security controls",
+    "enterprise device management"
+  ],
+  "supporting_cluster_ids": [
+    "cluster_demo_settings_fragmentation",
+    "cluster_demo_over_muting"
+  ],
+  "app_ids": [
+    "app_demo_taskflow",
+    "app_demo_chatdesk"
+  ],
+  "competitor_relation_ids": [
+    "relation_demo_notifyhub_os"
+  ],
+  "contrary_evidence_ids": [
+    "evidence_demo_contrary_001"
+  ],
+  "assumptions": [
+    {
+      "statement": "Users will grant enough local settings access for an inventory tool to be useful.",
+      "status": "untested",
+      "validation_method": "prototype permission walkthrough with target users"
+    },
+    {
+      "statement": "Guided control is valuable even when direct settings changes are unavailable.",
+      "status": "supported",
+      "validation_method": "compare complaints about discovery against complaints about missing automation"
+    }
+  ],
+  "dependencies": [
+    "stable operating-system notification APIs and settings deep links",
+    "clear privacy model"
+  ],
+  "risks": [
+    {
+      "risk": "Operating systems may limit cross-app control.",
+      "severity": "high",
+      "mitigation": "Design the first release around inventory, explanation, and supported deep links."
+    }
+  ],
+  "confidence": 0.78,
+  "created_at": "2026-07-02T09:30:00Z",
+  "updated_at": "2026-07-02T10:00:00Z"
+}

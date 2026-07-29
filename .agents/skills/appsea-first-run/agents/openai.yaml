@@ -1,0 +1,4 @@
+interface:
+  display_name: 'AppSea First Run'
+  short_description: 'Use when opening the AppSea repository for the first time or resuming after a long gap.'
+  default_prompt: 'Apply the appsea-first-run skill to the current AppSea task.'

@@ -1,0 +1,4 @@
+interface:
+  display_name: 'AppSea Ui Reference Loop'
+  short_description: 'Use when designing or changing AppSea website or desktop interface surfaces.'
+  default_prompt: 'Apply the appsea-ui-reference-loop skill to the current AppSea task.'

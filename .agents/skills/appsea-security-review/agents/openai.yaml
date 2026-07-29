@@ -1,0 +1,4 @@
+interface:
+  display_name: 'AppSea Security Review'
+  short_description: 'Use before merging AppSea work that touches sources, authentication, permissions, personal data, agents, models, deployments, or desktop packaging.'
+  default_prompt: 'Apply the appsea-security-review skill to the current AppSea task.'

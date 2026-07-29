@@ -1,0 +1,4 @@
+interface:
+  display_name: 'AppSea Memory'
+  short_description: 'Use when reading, updating, searching, validating, or curating AppSea project memory.'
+  default_prompt: 'Apply the appsea-memory skill to the current AppSea task.'

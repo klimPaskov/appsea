@@ -1,0 +1,22 @@
+{
+  "rank": 1,
+  "opportunity_id": "opportunity_cross_app_notification_control",
+  "title": "Cross-app notification control",
+  "category": "productivity",
+  "state": "planned",
+  "ranking_score": 60.8,
+  "raw_score": 78.4,
+  "confidence": 0.78,
+  "risk_penalty": 13.2,
+  "trend": "rising",
+  "complaint_count": 37,
+  "unique_author_count": 31,
+  "source_count": 4,
+  "freshness": {
+    "last_evidence_at": "2026-06-30T17:00:00Z",
+    "status": "fresh"
+  },
+  "coverage_status": "partial",
+  "score_snapshot_id": "score_demo_notification_001",
+  "updated_at": "2026-07-02T10:00:00Z"
+}

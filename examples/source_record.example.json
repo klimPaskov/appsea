@@ -1,0 +1,36 @@
+{
+  "source_id": "youtube_comments",
+  "name": "YouTube comments",
+  "source_kind": "video_platform",
+  "access_state": "active",
+  "permitted_purposes": ["product_research", "internal_quality"],
+  "commercial_use": "permitted",
+  "policy_version": "2026-06-review-1",
+  "policy_reviewed_at": "2026-06-20T09:00:00Z",
+  "policy_expires_at": "2026-12-20T09:00:00Z",
+  "collection_modes": ["official_api"],
+  "credentials_required": true,
+  "quota": {
+    "unit": "credits",
+    "hard_limit": 9000,
+    "window": "day",
+    "currency": null
+  },
+  "retention": {
+    "raw_days": 30,
+    "derived_days": 365,
+    "deletion_propagation_required": true,
+    "refresh_required_days": 30
+  },
+  "display_mode": "excerpt_only",
+  "coverage": {
+    "known_scope": ["comments on videos matched by approved campaign queries"],
+    "known_gaps": ["private videos", "deleted comments", "content outside query results"],
+    "languages": ["en"],
+    "regions": ["global"]
+  },
+  "owner": "source-operations",
+  "health": "healthy",
+  "notes": ["Quota is allocated per project and must be checked before every run."],
+  "updated_at": "2026-07-01T12:00:00Z"
+}

@@ -1,0 +1,32 @@
+{
+  "name": "@appsea/web",
+  "version": "0.3.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint src next.config.ts",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@appsea/catalog": "workspace:*",
+    "@appsea/contracts": "workspace:*",
+    "@appsea/db": "workspace:*",
+    "@appsea/object-store": "workspace:*",
+    "@appsea/research": "workspace:*",
+    "@appsea/workflows": "workspace:*",
+    "@temporalio/client": "1.20.2",
+    "next": "16.2.10",
+    "react": "19.2.7",
+    "react-dom": "19.2.7"
+  },
+  "devDependencies": {
+    "@types/node": "26.1.1",
+    "@types/react": "19.2.10",
+    "@types/react-dom": "19.2.3",
+    "typescript": "6.0.3",
+    "vitest": "4.1.10"
+  }
+}

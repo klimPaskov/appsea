@@ -1,0 +1,40 @@
+{
+  "package_id": "plan_demo_notification_001",
+  "opportunity_id": "opportunity_cross_app_notification_control",
+  "version": "1.0.0",
+  "created_at": "2026-07-02T10:30:00Z",
+  "files": [
+    {
+      "path": "README.md",
+      "media_type": "text/markdown",
+      "sha256": "3333333333333333333333333333333333333333333333333333333333333333",
+      "purpose": "Entry point and reading order",
+      "redistributable": true
+    },
+    {
+      "path": "artifacts/opportunity.json",
+      "media_type": "application/json",
+      "sha256": "4444444444444444444444444444444444444444444444444444444444444444",
+      "purpose": "Structured opportunity record",
+      "redistributable": true
+    },
+    {
+      "path": "tasks/task_graph.json",
+      "media_type": "application/json",
+      "sha256": "5555555555555555555555555555555555555555555555555555555555555555",
+      "purpose": "Dependency-aware coding task graph",
+      "redistributable": true
+    }
+  ],
+  "schema_versions": {
+    "opportunity": "1.0.0",
+    "task_graph": "1.0.0",
+    "manifest": "1.0.0"
+  },
+  "evidence_snapshot_id": "evidence_snapshot_demo_001",
+  "score_snapshot_id": "score_demo_notification_001",
+  "skill_versions": ["coding-agent-plan-generation@1.0.0", "task-graph-generation@1.0.0"],
+  "model_versions": ["fixture-model@1"],
+  "restricted_content_excluded": true,
+  "warnings": ["Willingness-to-pay evidence is pending."]
+}

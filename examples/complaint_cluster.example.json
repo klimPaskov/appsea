@@ -1,0 +1,22 @@
+{
+  "cluster_id": "cluster_demo_settings_fragmentation",
+  "tenant_id": "tenant_demo",
+  "working_label": "Fragmented notification controls",
+  "problem_statement": "Users cannot understand or manage notification behavior because controls differ by app and operating system surface.",
+  "complaint_ids": ["complaint_demo_001", "complaint_demo_002", "complaint_demo_003"],
+  "app_ids": ["app_demo_taskflow", "app_demo_chatdesk"],
+  "metrics": {
+    "complaint_count": 14,
+    "unique_author_count": 12,
+    "source_count": 3,
+    "median_severity": 3.5,
+    "recent_30d_count": 8,
+    "duplicate_ratio": 0.08
+  },
+  "stability": 0.84,
+  "review_state": "confirmed",
+  "cluster_version": "clusterer@1.2.0",
+  "representative_evidence_ids": ["evidence_demo_001", "evidence_demo_004"],
+  "contrary_evidence_ids": ["evidence_demo_contrary_001"],
+  "updated_at": "2026-07-02T09:00:00Z"
+}

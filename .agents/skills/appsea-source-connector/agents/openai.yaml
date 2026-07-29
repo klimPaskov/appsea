@@ -1,0 +1,4 @@
+interface:
+  display_name: 'AppSea Source Connector'
+  short_description: 'Use when creating, reviewing, enabling, or modifying an AppSea complaint source connector.'
+  default_prompt: 'Apply the appsea-source-connector skill to the current AppSea task.'

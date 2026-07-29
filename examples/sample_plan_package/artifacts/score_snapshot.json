@@ -1,0 +1,53 @@
+{
+  "score_snapshot_id": "score_demo_notification_001",
+  "opportunity_id": "opportunity_cross_app_notification_control",
+  "profile": "balanced",
+  "weight_version": "balanced-1.0.0",
+  "scorer_version": "appsea-score@1.0.0",
+  "factor_breakdown": [
+    {
+      "key": "complaint_strength",
+      "direction": "positive",
+      "normalized_value": 0.82,
+      "weight": 18,
+      "contribution": 14.76,
+      "evidence_refs": [
+        "cluster_demo_settings_fragmentation"
+      ],
+      "explanation": "The cluster is recent, repeated, and spans several products."
+    },
+    {
+      "key": "pain_severity",
+      "direction": "positive",
+      "normalized_value": 0.64,
+      "weight": 12,
+      "contribution": 7.68,
+      "evidence_refs": [
+        "complaint_demo_001"
+      ],
+      "explanation": "Users report missed work and broad muting, but few critical failures."
+    },
+    {
+      "key": "platform_dependency",
+      "direction": "risk",
+      "normalized_value": 0.72,
+      "weight": 15,
+      "contribution": 10.8,
+      "evidence_refs": [
+        "evidence_demo_contrary_001"
+      ],
+      "explanation": "Operating-system permissions limit direct control."
+    }
+  ],
+  "raw_score": 78.4,
+  "risk_penalty": 13.2,
+  "risk_adjusted_score": 65.2,
+  "confidence": 0.78,
+  "uncertainty_margin": 4.4,
+  "ranking_score": 60.8,
+  "input_hash": "2222222222222222222222222222222222222222222222222222222222222222",
+  "warnings": [
+    "App-store review coverage is unavailable for this snapshot."
+  ],
+  "computed_at": "2026-07-02T10:00:00Z"
+}

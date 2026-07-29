@@ -1,0 +1,96 @@
+import Link from 'next/link'
+import { notFound, redirect } from 'next/navigation'
+import { readSession } from '../../../../../../server/auth-session'
+import { readPrivateOpportunityContext } from '../../../../../../server/private-opportunity'
+
+export const dynamic = 'force-dynamic'
+
+export default async function PrivateEvidencePage({
+  params
+}: {
+  params: Promise<{ workspaceId: string; slug: string }>
+}) {
+  const { workspaceId, slug } = await params
+  const context = await readPrivateOpportunityContext(workspaceId, slug)
+  if (!context) {
+    const session = await readSession()
+    if (!session) redirect('/login')
+    notFound()
+  }
+  const { detail } = context
+  return (
+    <main className="workspace-page">
+      <p className="breadcrumb">
+        <Link href={`/workspace/${workspaceId}/opportunities/${slug}`}>
+          {detail.opportunity.name}
+        </Link>
+        <span aria-hidden="true">/</span>
+        <span>Evidence</span>
+      </p>
+      <div className="workspace-toolbar workspace-opportunity-heading">
+        <div>
+          <p className="eyebrow">Evidence inspection</p>
+          <h1>{detail.opportunity.name}</h1>
+        </div>
+        <strong className="workspace-score">{detail.evidence.length}</strong>
+      </div>
+      <section className="workspace-section" aria-labelledby="coverage-heading">
+        <div className="section-intro">
+          <h2 id="coverage-heading">Source coverage</h2>
+          <p>Gaps are recorded rather than interpreted as evidence of no demand.</p>
+        </div>
+        <ul>
+          {(detail.coverageGaps.length > 0
+            ? detail.coverageGaps
+            : ['No source coverage gaps were recorded.']
+          ).map((gap) => (
+            <li key={gap}>{gap}</li>
+          ))}
+        </ul>
+        {detail.sourceCoverage.length > 0 ? (
+          <ul className="coverage-list">
+            {detail.sourceCoverage.map((source) => (
+              <li key={source.sourceId}>
+                <div className="complaint-meta">
+                  <span>{source.displayName}</span>
+                  <span>{source.policyState.replace('_', ' ')}</span>
+                  <span>{source.displayMode}</span>
+                </div>
+                <p>
+                  {source.observationCount} retained observation
+                  {source.observationCount === 1 ? '' : 's'};{' '}
+                  {source.synthetic ? 'synthetic fixture' : 'permitted source'}.
+                </p>
+                {source.coverageNotes.length > 0 ? (
+                  <ul>
+                    {source.coverageNotes.map((note) => (
+                      <li key={note}>{note}</li>
+                    ))}
+                  </ul>
+                ) : null}
+              </li>
+            ))}
+          </ul>
+        ) : null}
+      </section>
+      <section className="workspace-section" aria-labelledby="evidence-heading">
+        <div className="section-intro">
+          <h2 id="evidence-heading">Retained observations</h2>
+          <p>Only representations permitted by the source policy are displayed.</p>
+        </div>
+        <ul className="complaint-list">
+          {detail.evidence.map((evidence) => (
+            <li key={evidence.id}>
+              <div className="complaint-meta">
+                <span>{evidence.product}</span>
+                <span>{evidence.category}</span>
+                <span>{evidence.synthetic ? 'Synthetic fixture' : evidence.sourceItemId}</span>
+              </div>
+              <p>{evidence.text}</p>
+            </li>
+          ))}
+        </ul>
+      </section>
+    </main>
+  )
+}

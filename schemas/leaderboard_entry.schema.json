@@ -1,0 +1,109 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.appsea.local/leaderboard_entry.schema.json",
+  "title": "AppSea Leaderboard Entry",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "rank",
+    "opportunity_id",
+    "title",
+    "category",
+    "state",
+    "ranking_score",
+    "raw_score",
+    "confidence",
+    "risk_penalty",
+    "trend",
+    "complaint_count",
+    "unique_author_count",
+    "source_count",
+    "freshness",
+    "coverage_status",
+    "score_snapshot_id",
+    "updated_at"
+  ],
+  "properties": {
+    "rank": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "opportunity_id": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_:-]{2,127}$"
+    },
+    "title": {
+      "type": "string",
+      "minLength": 3,
+      "maxLength": 180
+    },
+    "category": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 100
+    },
+    "state": {
+      "enum": ["signal", "candidate", "researched", "planned", "approved", "monitoring", "archived"]
+    },
+    "ranking_score": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 100
+    },
+    "raw_score": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 100
+    },
+    "confidence": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 1
+    },
+    "risk_penalty": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 100
+    },
+    "trend": {
+      "enum": ["rising", "stable", "falling", "new", "insufficient_history"]
+    },
+    "complaint_count": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "unique_author_count": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "source_count": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "freshness": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["last_evidence_at", "status"],
+      "properties": {
+        "last_evidence_at": {
+          "type": ["string", "null"],
+          "format": "date-time"
+        },
+        "status": {
+          "enum": ["fresh", "aging", "stale", "unknown"]
+        }
+      }
+    },
+    "coverage_status": {
+      "enum": ["sufficient", "partial", "thin", "blocked"]
+    },
+    "score_snapshot_id": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_:-]{2,127}$"
+    },
+    "updated_at": {
+      "type": "string",
+      "format": "date-time"
+    }
+  }
+}

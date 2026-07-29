@@ -1,0 +1,161 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.appsea.local/complaint_observation.schema.json",
+  "title": "AppSea Complaint Observation",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "complaint_id",
+    "tenant_id",
+    "evidence_id",
+    "classification",
+    "complaint_type",
+    "severity",
+    "problem_statement",
+    "affected_workflow",
+    "desired_outcome",
+    "app_mentions",
+    "confidence",
+    "review_state",
+    "created_at",
+    "derivation"
+  ],
+  "properties": {
+    "complaint_id": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_:-]{2,127}$"
+    },
+    "tenant_id": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_:-]{2,127}$"
+    },
+    "evidence_id": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_:-]{2,127}$"
+    },
+    "classification": {
+      "enum": [
+        "complaint",
+        "feature_request",
+        "question",
+        "praise",
+        "support_response",
+        "joke",
+        "spam",
+        "unrelated"
+      ]
+    },
+    "complaint_type": {
+      "enum": [
+        "missing_capability",
+        "broken_behavior",
+        "usability",
+        "performance",
+        "reliability",
+        "integration",
+        "pricing",
+        "privacy",
+        "security",
+        "support",
+        "accessibility",
+        "platform_restriction",
+        "other"
+      ]
+    },
+    "severity": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 5
+    },
+    "problem_statement": {
+      "type": "string",
+      "minLength": 3,
+      "maxLength": 1000
+    },
+    "affected_workflow": {
+      "type": "string",
+      "minLength": 2,
+      "maxLength": 500
+    },
+    "desired_outcome": {
+      "type": "string",
+      "minLength": 2,
+      "maxLength": 500
+    },
+    "workaround": {
+      "type": ["string", "null"],
+      "maxLength": 1000
+    },
+    "app_mentions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["surface_text", "app_entity_id", "confidence"],
+        "properties": {
+          "surface_text": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 160
+          },
+          "app_entity_id": {
+            "type": ["string", "null"],
+            "pattern": "^[a-z][a-z0-9_:-]{2,127}$"
+          },
+          "confidence": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1
+          }
+        }
+      }
+    },
+    "feature_mentions": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 160
+      }
+    },
+    "user_segment_hints": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 160
+      }
+    },
+    "confidence": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 1
+    },
+    "review_state": {
+      "enum": ["unreviewed", "confirmed", "corrected", "rejected"]
+    },
+    "created_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "derivation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["skill_version", "model_version", "prompt_version"],
+      "properties": {
+        "skill_version": {
+          "type": "string",
+          "minLength": 1
+        },
+        "model_version": {
+          "type": "string",
+          "minLength": 1
+        },
+        "prompt_version": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    }
+  }
+}

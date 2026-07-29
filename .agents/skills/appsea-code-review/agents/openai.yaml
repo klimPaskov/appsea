@@ -1,0 +1,4 @@
+interface:
+  display_name: 'AppSea Code Review'
+  short_description: 'Use for focused review of AppSea code before integration or after a substantial implementation tranche.'
+  default_prompt: 'Apply the appsea-code-review skill to the current AppSea task.'

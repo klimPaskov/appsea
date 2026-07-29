@@ -1,0 +1,4 @@
+interface:
+  display_name: 'AppSea Guidance Maintenance'
+  short_description: 'Use after meaningful AppSea work when repository instructions, scoped guidance, memory, docs, or skills may need maintenance.'
+  default_prompt: 'Apply the appsea-guidance-maintenance skill to the current AppSea task.'

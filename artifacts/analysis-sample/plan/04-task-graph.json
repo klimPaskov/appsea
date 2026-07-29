@@ -1,0 +1,137 @@
+{
+  "graph_id": "taskgraph:handoff-audit-sample:production",
+  "package_id": "plan:handoff-audit-sample:production-v1",
+  "version": "1.0.0",
+  "phases": [
+    {
+      "phase_id": "phase:evidence",
+      "title": "Evidence and problem validation",
+      "order": 1
+    },
+    {
+      "phase_id": "phase:market",
+      "title": "Market and competitor research",
+      "order": 2
+    },
+    {
+      "phase_id": "phase:product",
+      "title": "Product wedge and architecture",
+      "order": 3
+    },
+    {
+      "phase_id": "phase:validation",
+      "title": "Implementation validation",
+      "order": 4
+    }
+  ],
+  "tasks": [
+    {
+      "task_id": "task:evidence-review",
+      "phase_id": "phase:evidence",
+      "title": "Review retained complaint evidence",
+      "objective": "Inspect the retained observations and cluster memberships before treating the opportunity as a product requirement.",
+      "depends_on": [],
+      "priority": "P0",
+      "owner_type": "research_agent",
+      "inputs": [
+        "Collection artifact collection:cfpb-offline-sample-v1",
+        "Cluster membership snapshot"
+      ],
+      "outputs": [
+        "Reviewed problem statement and evidence traceability notes"
+      ],
+      "acceptance_criteria": [
+        "Every product requirement links to one or more retained complaint IDs",
+        "Coverage gaps and restricted display modes remain visible"
+      ],
+      "tests": [
+        "Evidence identifiers and policy display rules are checked"
+      ],
+      "risk_level": "high",
+      "status": "ready"
+    },
+    {
+      "task_id": "task:market-research",
+      "phase_id": "phase:market",
+      "title": "Research competitors and contrary signals",
+      "objective": "Verify direct products, adjacent tools, workarounds, and weak-market signals instead of inferring them from complaints.",
+      "depends_on": [
+        "task:evidence-review"
+      ],
+      "priority": "P0",
+      "owner_type": "research_agent",
+      "inputs": [
+        "Reviewed evidence notes",
+        "Source-policy coverage gaps"
+      ],
+      "outputs": [
+        "Competitor relations and contrary-evidence records"
+      ],
+      "acceptance_criteria": [
+        "Each competitor relation has a permitted provenance route",
+        "Unresearched market dimensions are recorded as unresolved gaps"
+      ],
+      "tests": [
+        "Missing competitor coverage cannot be rendered as negative evidence"
+      ],
+      "risk_level": "high",
+      "status": "ready"
+    },
+    {
+      "task_id": "task:product-wedge",
+      "phase_id": "phase:product",
+      "title": "Define the smallest product wedge",
+      "objective": "Turn the reviewed problem statement into a bounded first wedge with explicit non-goals and policy-aware architecture boundaries.",
+      "depends_on": [
+        "task:market-research"
+      ],
+      "priority": "P1",
+      "owner_type": "coding_agent",
+      "inputs": [
+        "Reviewed problem statement",
+        "Competitor and contrary-evidence summary"
+      ],
+      "outputs": [
+        "MVP scope, architecture direction, and dependency-aware tasks"
+      ],
+      "acceptance_criteria": [
+        "The wedge addresses a named cluster without expanding to unrelated problems",
+        "Deletion, privacy, and operational work are included in the scope"
+      ],
+      "tests": [
+        "Task dependencies are acyclic and every task has acceptance criteria"
+      ],
+      "risk_level": "medium",
+      "status": "ready"
+    },
+    {
+      "task_id": "task:implementation-validation",
+      "phase_id": "phase:validation",
+      "title": "Validate implementation readiness",
+      "objective": "Prove the proposed wedge against replayable evidence, deterministic scoring, security boundaries, and operational limits before release.",
+      "depends_on": [
+        "task:product-wedge"
+      ],
+      "priority": "P0",
+      "owner_type": "coding_agent",
+      "inputs": [
+        "MVP scope",
+        "Architecture direction",
+        "Validation plan"
+      ],
+      "outputs": [
+        "Passing tests, failure-drill evidence, and an explicit release decision"
+      ],
+      "acceptance_criteria": [
+        "The implementation can be reproduced from the package without hidden chat context",
+        "Open source, retention, and deployment blockers are not marked complete"
+      ],
+      "tests": [
+        "Contract, replay, security, and failure-recovery tests pass"
+      ],
+      "risk_level": "high",
+      "status": "ready"
+    }
+  ],
+  "created_at": "2026-07-26T00:00:00.000Z"
+}

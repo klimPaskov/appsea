@@ -1,0 +1,209 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.appsea.local/source_record.schema.json",
+  "title": "AppSea Source Record",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "source_id",
+    "name",
+    "source_kind",
+    "access_state",
+    "permitted_purposes",
+    "policy_version",
+    "collection_modes",
+    "retention",
+    "display_mode",
+    "coverage",
+    "updated_at"
+  ],
+  "properties": {
+    "source_id": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_:-]{2,127}$"
+    },
+    "name": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 120
+    },
+    "source_kind": {
+      "enum": [
+        "social_network",
+        "video_platform",
+        "developer_platform",
+        "forum",
+        "app_store",
+        "support_system",
+        "review_platform",
+        "manual_import",
+        "licensed_provider",
+        "web_source"
+      ]
+    },
+    "access_state": {
+      "enum": [
+        "active",
+        "degraded",
+        "disabled_pending_access",
+        "disabled_policy",
+        "disabled_operator",
+        "retired"
+      ]
+    },
+    "permitted_purposes": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {
+        "enum": [
+          "product_research",
+          "customer_authorized_analysis",
+          "academic_research",
+          "internal_quality",
+          "public_display",
+          "agent_export"
+        ]
+      }
+    },
+    "commercial_use": {
+      "enum": ["permitted", "restricted", "approval_required", "unknown"]
+    },
+    "policy_version": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 40
+    },
+    "policy_reviewed_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "policy_expires_at": {
+      "type": ["string", "null"],
+      "format": "date-time"
+    },
+    "collection_modes": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {
+        "enum": [
+          "official_api",
+          "licensed_feed",
+          "webhook",
+          "user_authorized_export",
+          "manual_url",
+          "manual_file",
+          "public_stream",
+          "search_provider",
+          "fixture"
+        ]
+      }
+    },
+    "credentials_required": {
+      "type": "boolean"
+    },
+    "quota": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["unit", "hard_limit", "window"],
+      "properties": {
+        "unit": {
+          "enum": ["requests", "items", "credits", "currency", "none"]
+        },
+        "hard_limit": {
+          "type": ["number", "null"],
+          "minimum": 0
+        },
+        "window": {
+          "enum": ["minute", "hour", "day", "month", "campaign", "none"]
+        },
+        "currency": {
+          "type": ["string", "null"],
+          "pattern": "^[A-Z]{3}$"
+        }
+      }
+    },
+    "retention": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["raw_days", "derived_days", "deletion_propagation_required"],
+      "properties": {
+        "raw_days": {
+          "type": ["integer", "null"],
+          "minimum": 0
+        },
+        "derived_days": {
+          "type": ["integer", "null"],
+          "minimum": 0
+        },
+        "deletion_propagation_required": {
+          "type": "boolean"
+        },
+        "refresh_required_days": {
+          "type": ["integer", "null"],
+          "minimum": 1
+        }
+      }
+    },
+    "display_mode": {
+      "enum": ["full_permitted", "excerpt_only", "metadata_only", "aggregate_only", "no_display"]
+    },
+    "coverage": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["known_scope", "known_gaps"],
+      "properties": {
+        "known_scope": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "known_gaps": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "languages": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 16
+          }
+        },
+        "regions": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 64
+          }
+        }
+      }
+    },
+    "owner": {
+      "type": ["string", "null"],
+      "maxLength": 120
+    },
+    "health": {
+      "enum": ["healthy", "degraded", "blocked", "unknown"]
+    },
+    "notes": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 500
+      }
+    },
+    "updated_at": {
+      "type": "string",
+      "format": "date-time"
+    }
+  }
+}

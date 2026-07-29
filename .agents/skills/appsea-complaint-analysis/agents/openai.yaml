@@ -1,0 +1,4 @@
+interface:
+  display_name: 'AppSea Complaint Analysis'
+  short_description: 'Use when normalizing, deduplicating, classifying, clustering, or curating complaint evidence.'
+  default_prompt: 'Apply the appsea-complaint-analysis skill to the current AppSea task.'

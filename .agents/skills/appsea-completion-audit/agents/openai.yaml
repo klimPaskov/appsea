@@ -1,0 +1,4 @@
+interface:
+  display_name: 'AppSea Completion Audit'
+  short_description: 'Use before claiming a large AppSea goal, milestone, source integration, research workflow, or interface tranche complete.'
+  default_prompt: 'Apply the appsea-completion-audit skill to the current AppSea task.'

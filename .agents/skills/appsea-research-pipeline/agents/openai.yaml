@@ -1,0 +1,4 @@
+interface:
+  display_name: 'AppSea Research Pipeline'
+  short_description: 'Use when implementing or changing AppSea collection, normalization, clustering, enrichment, scoring, or research artifact workflows.'
+  default_prompt: 'Apply the appsea-research-pipeline skill to the current AppSea task.'

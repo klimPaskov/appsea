@@ -1,0 +1,23 @@
+group,factor,balanced_weight
+Demand evidence,Complaint frequency,8
+Demand evidence,Independent users,6
+Demand evidence,Source diversity,5
+Demand evidence,Recent velocity,5
+Demand evidence,Time persistence,3
+Demand evidence,Segment density,3
+Pain value,Severity,7
+Pain value,Workflow criticality,5
+Pain value,Workaround cost,4
+Pain value,Switching intent,4
+Market opening,Competitor dissatisfaction,6
+Market opening,Unresolved solution gap,7
+Market opening,Substitute weakness,4
+Market opening,Timing,3
+Business quality,Willingness-to-pay proxy,5
+Business quality,Repeat use and retention,4
+Business quality,Audience reachability,3
+Business quality,Expansion potential,3
+Execution quality,MVP feasibility,5
+Execution quality,Data and integration feasibility,4
+Execution quality,Trust and compliance feasibility,3
+Execution quality,Platform independence,3

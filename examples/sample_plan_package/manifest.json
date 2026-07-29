@@ -1,0 +1,87 @@
+{
+  "package_id": "plan_demo_notification_001",
+  "opportunity_id": "opportunity_cross_app_notification_control",
+  "version": "1.0.0",
+  "created_at": "2026-07-02T10:30:00Z",
+  "files": [
+    {
+      "path": "01_product_brief.md",
+      "media_type": "text/markdown",
+      "sha256": "fcc7c13dd6d5833515dc6c1c4e3f751222cde61003dd3b3c25c80532c7d5e58d",
+      "purpose": "Evidence-grounded product direction",
+      "redistributable": true
+    },
+    {
+      "path": "02_mvp_scope.md",
+      "media_type": "text/markdown",
+      "sha256": "3c9b9c9d614d176ebf6ec60e76175d0f3b137bf28333499afe5ac3daded83dda",
+      "purpose": "MVP flow, capabilities, and acceptance gates",
+      "redistributable": true
+    },
+    {
+      "path": "03_architecture_direction.md",
+      "media_type": "text/markdown",
+      "sha256": "d93d5535330b9512eb3b641d441ef3db97a85fbffb46f367379c757c937b1abf",
+      "purpose": "Desktop and platform architecture constraints",
+      "redistributable": true
+    },
+    {
+      "path": "04_validation_plan.md",
+      "media_type": "text/markdown",
+      "sha256": "ba215b7d61c906ddc82644e5ca2d57896eb57d3aa7a216e52119ac8aabb58247",
+      "purpose": "Product, technical, and privacy validation",
+      "redistributable": true
+    },
+    {
+      "path": "README.md",
+      "media_type": "text/markdown",
+      "sha256": "29c230b84485ed8868c6b702337d63c0fcc7b9984e86eadd8e956bd4092b910b",
+      "purpose": "Entry point and reading order",
+      "redistributable": true
+    },
+    {
+      "path": "artifacts/opportunity.json",
+      "media_type": "application/json",
+      "sha256": "737480d765ab89326ed068b7c7d47dedbe16d8e4b4cce30a4b05e179bb776a8f",
+      "purpose": "Structured opportunity record",
+      "redistributable": true
+    },
+    {
+      "path": "artifacts/score_snapshot.json",
+      "media_type": "application/json",
+      "sha256": "ec5ff2627039358722978cfbe1256822ae42278bdf0fdeb26f037a481984e3d4",
+      "purpose": "Structured score snapshot",
+      "redistributable": true
+    },
+    {
+      "path": "evidence/source_ledger.json",
+      "media_type": "application/json",
+      "sha256": "07908d0291d6d6c6443d32691907e6281629ca894fa71bcfbfb65ae4f903bec6",
+      "purpose": "Synthetic evidence references and coverage warnings",
+      "redistributable": true
+    },
+    {
+      "path": "tasks/task_graph.json",
+      "media_type": "application/json",
+      "sha256": "8a6ac241629c7d52b8199ea0a50a7f2db31b3a3cd665446c3c9a90f22605b2e9",
+      "purpose": "Dependency-aware coding tasks",
+      "redistributable": true
+    }
+  ],
+  "schema_versions": {
+    "opportunity": "1.0.0",
+    "opportunity_score_snapshot": "1.0.0",
+    "task_graph": "1.0.0",
+    "plan_package_manifest": "1.0.0"
+  },
+  "evidence_snapshot_id": "evidence_snapshot_demo_001",
+  "score_snapshot_id": "score_demo_notification_001",
+  "skill_versions": [
+    "coding-agent-plan-generation@0.1.0",
+    "task-graph-generation@0.1.0",
+    "plan-package-validation@0.1.0"
+  ],
+  "model_versions": ["fixture-model@1"],
+  "restricted_content_excluded": true,
+  "warnings": ["Willingness-to-pay evidence is pending."]
+}

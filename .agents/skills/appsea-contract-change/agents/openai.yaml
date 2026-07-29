@@ -1,0 +1,4 @@
+interface:
+  display_name: 'AppSea Contract Change'
+  short_description: 'Use when adding or changing shared AppSea schemas, types, API payloads, or stored artifact shapes.'
+  default_prompt: 'Apply the appsea-contract-change skill to the current AppSea task.'

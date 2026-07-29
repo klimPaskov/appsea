@@ -1,0 +1,28 @@
+{
+  "evidence_snapshot_id": "evidence_snapshot_demo_001",
+  "synthetic": true,
+  "records": [
+    {
+      "evidence_id": "evidence_demo_001",
+      "source_id": "fixture_social",
+      "display_mode": "full_permitted",
+      "used_for": ["cluster_demo_settings_fragmentation", "complaint_strength"]
+    },
+    {
+      "evidence_id": "evidence_demo_004",
+      "source_id": "fixture_video",
+      "display_mode": "full_permitted",
+      "used_for": ["cluster_demo_over_muting"]
+    },
+    {
+      "evidence_id": "evidence_demo_contrary_001",
+      "source_id": "fixture_docs",
+      "display_mode": "metadata_only",
+      "used_for": ["platform_dependency", "contrary_evidence"]
+    }
+  ],
+  "coverage_warnings": [
+    "Competitor app-review access is not enabled.",
+    "The fixture package does not test purchase intent."
+  ]
+}

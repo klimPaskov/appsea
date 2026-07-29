@@ -1,0 +1,4 @@
+interface:
+  display_name: 'AppSea Agent Runtime'
+  short_description: 'Use when designing or implementing AppSea product agents, runtime memory, tool permissions, skill proposals, or autonomous maintenance.'
+  default_prompt: 'Apply the appsea-agent-runtime skill to the current AppSea task.'

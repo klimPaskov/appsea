@@ -1,0 +1,155 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.appsea.local/task_graph.schema.json",
+  "title": "AppSea Coding Task Graph",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["graph_id", "package_id", "version", "phases", "tasks", "created_at"],
+  "properties": {
+    "graph_id": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_:-]{2,127}$"
+    },
+    "package_id": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_:-]{2,127}$"
+    },
+    "version": {
+      "type": "string",
+      "pattern": "^\\d+\\.\\d+\\.\\d+(?:[-+][A-Za-z0-9.-]+)?$"
+    },
+    "phases": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["phase_id", "title", "order"],
+        "properties": {
+          "phase_id": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9_:-]{2,127}$"
+          },
+          "title": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 160
+          },
+          "order": {
+            "type": "integer",
+            "minimum": 1
+          }
+        }
+      }
+    },
+    "tasks": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "task_id",
+          "phase_id",
+          "title",
+          "objective",
+          "depends_on",
+          "priority",
+          "owner_type",
+          "inputs",
+          "outputs",
+          "acceptance_criteria",
+          "tests",
+          "risk_level",
+          "status"
+        ],
+        "properties": {
+          "task_id": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9_:-]{2,127}$"
+          },
+          "phase_id": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9_:-]{2,127}$"
+          },
+          "title": {
+            "type": "string",
+            "minLength": 3,
+            "maxLength": 180
+          },
+          "objective": {
+            "type": "string",
+            "minLength": 10,
+            "maxLength": 1500
+          },
+          "depends_on": {
+            "type": "array",
+            "uniqueItems": true,
+            "items": {
+              "type": "string",
+              "pattern": "^[a-z][a-z0-9_:-]{2,127}$"
+            }
+          },
+          "priority": {
+            "enum": ["P0", "P1", "P2", "P3"]
+          },
+          "owner_type": {
+            "enum": [
+              "coding_agent",
+              "research_agent",
+              "design_agent",
+              "security_agent",
+              "human_reviewer",
+              "operations_agent"
+            ]
+          },
+          "inputs": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 500
+            }
+          },
+          "outputs": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 500
+            }
+          },
+          "acceptance_criteria": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "string",
+              "minLength": 3,
+              "maxLength": 1000
+            }
+          },
+          "tests": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "string",
+              "minLength": 3,
+              "maxLength": 500
+            }
+          },
+          "risk_level": {
+            "enum": ["low", "medium", "high", "critical"]
+          },
+          "status": {
+            "enum": ["planned", "ready", "in_progress", "blocked", "done", "canceled"]
+          }
+        }
+      }
+    },
+    "created_at": {
+      "type": "string",
+      "format": "date-time"
+    }
+  }
+}

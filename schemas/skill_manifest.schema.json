@@ -1,0 +1,135 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.appsea.local/skill_manifest.schema.json",
+  "title": "AppSea Skill Manifest",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "name",
+    "version",
+    "description",
+    "owner",
+    "risk_level",
+    "permissions",
+    "inputs",
+    "outputs",
+    "fixtures",
+    "rollback_to",
+    "status",
+    "evaluation_requirements",
+    "created_at"
+  ],
+  "properties": {
+    "name": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9-]{2,79}$"
+    },
+    "version": {
+      "type": "string",
+      "pattern": "^\\d+\\.\\d+\\.\\d+(?:[-+][A-Za-z0-9.-]+)?$"
+    },
+    "description": {
+      "type": "string",
+      "minLength": 10,
+      "maxLength": 500
+    },
+    "owner": {
+      "type": "string",
+      "minLength": 2,
+      "maxLength": 120
+    },
+    "risk_level": {
+      "enum": ["low", "medium", "high", "critical"]
+    },
+    "permissions": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "enum": [
+          "read_source_registry",
+          "read_evidence",
+          "write_derived_records",
+          "call_model_gateway",
+          "query_approved_connectors",
+          "write_reports",
+          "write_plan_packages",
+          "propose_skills",
+          "run_sandbox",
+          "read_metrics",
+          "request_human_review",
+          "write_tuning_proposal"
+        ]
+      }
+    },
+    "inputs": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 200
+      }
+    },
+    "outputs": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 200
+      }
+    },
+    "fixtures": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 300
+      }
+    },
+    "rollback_to": {
+      "type": ["string", "null"],
+      "pattern": "^\\d+\\.\\d+\\.\\d+(?:[-+][A-Za-z0-9.-]+)?$"
+    },
+    "status": {
+      "enum": [
+        "draft",
+        "proposed",
+        "evaluating",
+        "approved",
+        "canary",
+        "active",
+        "paused",
+        "rejected",
+        "retired"
+      ]
+    },
+    "evaluation_requirements": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["minimum_fixture_pass_rate", "security_suite_required", "human_review_required"],
+      "properties": {
+        "minimum_fixture_pass_rate": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "security_suite_required": {
+          "type": "boolean"
+        },
+        "human_review_required": {
+          "type": "boolean"
+        },
+        "maximum_cost_regression": {
+          "type": ["number", "null"],
+          "minimum": 0
+        }
+      }
+    },
+    "created_at": {
+      "type": "string",
+      "format": "date-time"
+    }
+  }
+}

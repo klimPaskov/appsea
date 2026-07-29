@@ -1,0 +1,17 @@
+source,access_tier,mvp_status,commercial_path,main_limit,storage_direction,refresh_direction
+YouTube comments,A,active_candidate,official API,quota and disabled comments,policy-based excerpt or normalized record,minutes to daily by campaign
+Bluesky,A,active_candidate,public protocol and APIs,stream scale and deletion handling,derived record with source reference,near real time or scheduled
+GitHub issues,A,active_candidate,official API,repository scope and rate limits,issue metadata and permitted text,hourly or daily
+Stack Exchange,A,active_candidate,official API,throttles and cached responses,question and answer references,daily
+X,A,optional_paid,paid official API,credit cost and endpoint limits,source-policy based,scheduled within budget
+Mastodon,A,limited_instances,instance APIs,fragmented coverage and search configuration,instance-specific policy,scheduled by instance
+Meta public Pages,B,pending_approval,feature approval and app review,not general Facebook coverage,approved fields only,source-specific
+Meta Content Library,C,blocked_for_general_commercial,research eligibility,public-interest research restrictions,research policy only,not in commercial MVP
+TikTok Research Tools,C,blocked_for_general_commercial,approved research only,commercial users not eligible,research policy only,not in commercial MVP
+Reddit,D,pending_license,written commercial approval or license,commercial access approval,contract-specific,contract-specific
+Apple customer reviews,E,owner_authorized,customer's own App Store Connect account,not competitor reviews,tenant-private retention,daily
+Google Play reviews,E,owner_authorized,customer's own Play developer account,not competitor reviews,tenant-private retention,daily
+Licensed app reviews,F,partner_required,data provider contract,cost and downstream rights,contract-specific,daily or weekly
+Support and CRM imports,E,owner_authorized,tenant connection or upload,private and sensitive data,tenant-private strict retention,scheduled or event-based
+Web search results,G,active_candidate,permitted search provider,link and snippet rights,link-first with derived facts,on demand
+User submitted URLs,H,active_candidate,public fetch under controls,robots paywall copyright and SSRF,short excerpt or derived facts,on demand

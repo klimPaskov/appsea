@@ -1,0 +1,29 @@
+{
+  "complaint_id": "complaint_demo_001",
+  "tenant_id": "tenant_demo",
+  "evidence_id": "evidence_demo_001",
+  "classification": "complaint",
+  "complaint_type": "usability",
+  "severity": 3,
+  "problem_statement": "Notification settings are inconsistent across apps and difficult to locate.",
+  "affected_workflow": "configuring which notifications may interrupt the user",
+  "desired_outcome": "one understandable place to inspect and control app notification behavior",
+  "workaround": "mute most notifications at the operating-system level",
+  "app_mentions": [
+    {
+      "surface_text": "each app",
+      "app_entity_id": null,
+      "confidence": 0.45
+    }
+  ],
+  "feature_mentions": ["notification settings"],
+  "user_segment_hints": ["knowledge workers"],
+  "confidence": 0.92,
+  "review_state": "confirmed",
+  "created_at": "2026-07-02T08:06:00Z",
+  "derivation": {
+    "skill_version": "complaint-classification@1.0.0",
+    "model_version": "fixture-model@1",
+    "prompt_version": "complaint-v1"
+  }
+}

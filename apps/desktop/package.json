@@ -1,0 +1,12 @@
+{
+  "name": "@appsea/desktop",
+  "version": "0.3.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "node scripts/verify-boundary.mjs",
+    "lint": "node scripts/verify-boundary.mjs",
+    "typecheck": "node scripts/verify-boundary.mjs",
+    "test": "node scripts/verify-boundary.mjs"
+  }
+}

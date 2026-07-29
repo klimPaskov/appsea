@@ -1,0 +1,4 @@
+interface:
+  display_name: 'AppSea Worker Job'
+  short_description: 'Use when adding or changing AppSea worker commands, scheduled jobs, durable workflows, retries, or recovery.'
+  default_prompt: 'Apply the appsea-worker-job skill to the current AppSea task.'

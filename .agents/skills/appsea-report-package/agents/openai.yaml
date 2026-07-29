@@ -1,0 +1,4 @@
+interface:
+  display_name: 'AppSea Report Package'
+  short_description: 'Use when generating or changing AppSea research reports and coding-agent planning packages.'
+  default_prompt: 'Apply the appsea-report-package skill to the current AppSea task.'

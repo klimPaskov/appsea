@@ -1,0 +1,66 @@
+{
+  "report_id": "report_demo_notification_001",
+  "opportunity_id": "opportunity_cross_app_notification_control",
+  "version": "1.0.0",
+  "generated_at": "2026-07-02T10:20:00Z",
+  "method": {
+    "campaign_ids": ["campaign_notification_control_001"],
+    "skills": [
+      "complaint-classification@1.0.0",
+      "competitor-discovery@1.0.0",
+      "deep-research-reporting@1.0.0"
+    ],
+    "models": ["fixture-model@1"],
+    "time_window": {
+      "start": "2026-04-01T00:00:00Z",
+      "end": "2026-07-01T00:00:00Z"
+    }
+  },
+  "coverage": {
+    "source_ids": ["fixture_social", "github_issues", "youtube_comments"],
+    "missing_sources": ["restricted app-store competitor reviews"],
+    "languages": ["en"],
+    "item_count": 74,
+    "complaint_count": 37
+  },
+  "executive_summary": "The evidence supports a recurring problem around fragmented notification controls. A useful first product should focus on inventory, explanation, and supported settings navigation because direct cross-app control faces operating-system limits.",
+  "findings": [
+    {
+      "finding_id": "finding_demo_001",
+      "claim": "Users often respond to confusing controls by muting broad categories, which creates a secondary risk of missed important events.",
+      "claim_type": "derived",
+      "confidence": 0.82,
+      "evidence_ids": ["evidence_demo_001", "evidence_demo_004"]
+    },
+    {
+      "finding_id": "finding_demo_002",
+      "claim": "A desktop-first guided inventory is a stronger initial wedge than a universal notification interceptor.",
+      "claim_type": "recommendation",
+      "confidence": 0.74,
+      "evidence_ids": ["evidence_demo_contrary_001"]
+    }
+  ],
+  "cluster_ids": ["cluster_demo_settings_fragmentation", "cluster_demo_over_muting"],
+  "competitor_relation_ids": ["relation_demo_notifyhub_os"],
+  "contrary_evidence": [
+    {
+      "statement": "Modern operating systems already provide broad notification controls, which may satisfy users who only need simple muting.",
+      "evidence_ids": ["evidence_demo_contrary_001"],
+      "impact": "material"
+    }
+  ],
+  "score_snapshot_id": "score_demo_notification_001",
+  "uncertainties": [
+    "Willingness to pay has not been tested.",
+    "Mobile platform access may be too limited for direct control."
+  ],
+  "recommendations": [
+    "Test a read-only inventory and guided settings prototype with multi-app knowledge workers.",
+    "Measure whether explanation and presets reduce broad muting."
+  ],
+  "provenance": {
+    "evidence_snapshot_id": "evidence_snapshot_demo_001",
+    "generator_version": "deep-research-reporting@1.0.0",
+    "source_ledger_path": "evidence/source_ledger.json"
+  }
+}

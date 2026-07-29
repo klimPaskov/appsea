@@ -1,0 +1,4 @@
+interface:
+  display_name: 'AppSea Competitor Research'
+  short_description: 'Use when finding and evaluating competitors, substitutes, platform features, and workarounds for an AppSea opportunity.'
+  default_prompt: 'Apply the appsea-competitor-research skill to the current AppSea task.'

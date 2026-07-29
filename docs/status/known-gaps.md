@@ -1,0 +1,179 @@
+# Known gaps
+
+## Research coverage
+
+No live social platform is enabled. Fixture data cannot estimate market size, complaint frequency, or current momentum.
+
+## Infrastructure
+
+The PostgreSQL schema, repository, migrations, RLS, local role bootstrap, and CI integration suite exist. Production role provisioning, secrets, verified TLS, backups, high availability, deployment, and migration approval automation do not.
+
+The fixture and production-collection workflow boundaries are durable locally
+and in CI, but there is no production Temporal topology, TLS/authentication,
+namespace authorization, HA, backup/restore policy, worker deployment, or
+alerting. Production billing and deployment configuration are also absent.
+
+Private workspace authentication is implemented for the web boundary with durable
+hashed sessions, PostgreSQL-backed login/signup throttling, bounded session
+retention, membership-checked RLS transactions, and fixture/production workflow
+start/status gateways. Signup creates an active private non-fixture workspace;
+source-policy approval and deployment controls still gate production starts,
+while a reviewed provisioning path for broader limits and roles remains open.
+Account recovery mechanics
+(hash-only single-use tokens, encrypted delivery outbox, retryable worker,
+fragment links, and generic responses) are implemented behind a production
+kill switch. Provider delivery, verified email/identity policy, gateway
+DPA/retention, key rotation, and deployment evidence remain unapproved.
+Existing-account workspace invitations are implemented with hash-only tokens,
+encrypted outbox delivery, owner step-up, acceptance/revocation state, and
+bounded worker retries, but invitation delivery is kill-switched and the
+current slice intentionally does not create accounts or verify email ownership.
+An external identity provider policy remains unimplemented. Authenticated
+session inventory and per-session revocation are implemented at
+`/account/security`. The same page now supports a step-up-protected account
+closure that anonymizes authentication material, discards reset deliveries,
+revokes sessions, and retains shared workspace research; closure is blocked
+until every owned workspace has another owner. Owner-only member listing, role changes, and removal are
+implemented through the private workspace settings route and protected by a
+15-minute password step-up window; MFA/OIDC and a production identity-provider
+control plane remain open.
+
+The repository refuses to auto-create fixture workspaces when `NODE_ENV` is
+`production`; deployment must provision fixture-enabled workspaces explicitly.
+
+Authenticated workflow jobs persist an immutable user or `appsea-worker`
+requesting actor, with a database check for owner/editor membership. This is
+not a substitute for production Temporal namespace authorization or complete
+identity operations such as MFA/OIDC and provider-backed identity controls.
+Account closure is a shared-workspace-safe profile closure, not workspace
+research deletion. Recovery mechanics exist behind a production kill switch;
+delivery and identity verification remain unapproved.
+
+Deletion tombstones now have a bounded skip-locked propagation worker. Source-item
+raw references are cleared, active source/evidence payload rewrites are blocked,
+terminal tombstone state/count rewrites are blocked, normalized evidence is
+replaced with a redaction marker, dependent report/plan versions are marked
+unavailable, and active production analysis runs are marked `invalidated` while
+provenance remains. Object references are retained for an authorized purge
+pass. Complaint/cluster/opportunity recomputation, object storage/backups, and
+export purge are not implemented. Complaint review transitions and the
+explicit reviewed analysis-start route are implemented. Migration `0034` also
+provides an opt-in, seed-bound post-collection handoff with stale-claim
+recovery; deployed scheduling, Temporal authorization, and alert ownership
+remain open.
+
+Source and authentication maintenance entry points now use schema-validated,
+bounded pure runners with stable scheduler job IDs and secret-free structured
+result events. The existing repository operations are idempotent for safe
+reruns, but production still needs a deployed scheduler, alert ownership,
+cross-run operational accounting, and a fresh Docker-backed recovery proof.
+
+The production workflow start route now caps both declared and chunked JSON
+bodies. Production ingress still needs a per-workspace start rate limit and
+concurrency cap so authenticated users cannot queue unbounded failed jobs while
+source policy is pending.
+
+Non-fixture report, plan, and production-analysis artifact payloads require
+object storage; inline JSONB is deliberately restricted to compact metadata
+and synthetic fixture packages. `@appsea/object-store` now provides a bounded
+content-addressed in-memory/filesystem seam wired to migration `0030`, private
+analysis reads, and deletion invalidation. Encrypted S3-compatible deployment,
+lifecycle rules, backup purge, and fresh Docker-backed proof remain open.
+
+## Sources
+
+The CFPB Consumer Complaint Database connector is implemented with an explicit
+typed policy, conservative quotas, narrative-only mapping, bounded request
+timeouts, and a separate full-snapshot deletion reconciliation helper, but remains disabled
+(`pending_review`). Migration `0027` now records operator-only draft
+registration and immutable approval evidence; an approved snapshot can feed
+the bounded production collection workflow, which persists non-synthetic
+source/evidence/complaint lineage, idempotent job/checkpoint state, and a
+private inspection route. The filtered collection request emits no deletion
+events; full-snapshot reconciliation is a separate maintenance operation that
+is not yet wired to a scheduler. Durable cross-workspace quota reservations,
+bounded all-workspace maintenance through a migration-owner security-definer
+workspace enumerator, stale-claim recovery, and deletion propagation now exist.
+No source is currently enabled for market research, and production Temporal
+provisioning/cloud-storage deployment, complaint/cluster/opportunity
+recomputation, object-store/backups purge, and legal/privacy/security approval
+remain required. CFPB collection currently
+records zero source cost because the reviewed policy declares zero API cost;
+non-zero billing adapters are not implemented. Retention enqueue now derives
+bounded tombstones from the stored policy and reuses deletion propagation;
+policy drafts requesting an unsupported `purge` retention action are rejected
+until a purge implementation exists. Object-store/backups purge and
+complaint/cluster recomputation remain open. A production-shaped offline
+composition checkpoint now proves normalization, deduplication, clustering,
+explicit seeded scoring, generic report generation, and generic plan generation;
+it is test-only/in-memory and is not a live-source analysis run. The reviewed
+production analysis repository/workflow persists non-test artifacts after a
+completed collection, but only the local/CI object-store adapter is available
+here. Migration `0033` now persists immutable workspace seed reviews with
+editor/owner review and approval transitions; analysis start accepts only an
+approved seed-review identifier and the persistence repository rechecks its
+stored content hash and version.
+In this tranche, `redact` and
+`tombstone` intentionally share the same source-deletion propagation path;
+field-level redaction that preserves derived payloads is not implemented.
+Collection timestamps remain
+caller-provided so idempotent retries can reproduce the same request; a
+server-issued timestamp/freshness policy is still needed for a multi-tenant
+deployment. The collection snapshot currently records that requested timestamp
+while source items use the connector's observed capture time; the two need an
+explicit server-observed timestamp contract. The worker revalidates the approved policy before persistence, but
+the external fetch is not yet covered by a revocation lease; deployment must
+close that policy read/fetch race before enabling a live source. Direct Temporal
+starts also rely on namespace/gateway authorization to make the persisted actor
+claim trustworthy.
+
+## Models
+
+No model gateway is wired. The fixture path uses deterministic labels and explicit data.
+
+## Reports
+
+Fixture persistence now emits a deterministic evidence-backed report with
+separate observations, score inference, contrary evidence, recommendation, and
+source coverage sections, and links that report version to the coding plan.
+The composer now supports a production-shaped offline artifact and generates a
+generic report/package template. Fixture reports retain inline JSON while
+production reports hydrate validated object-backed JSON through the same
+approval/export governance. The production contract carries policy-review hashes, distinct
+analysis-run identity, evidence/source-item mappings, and a reviewed seed
+envelope. Report approval transitions are role-checked in the private
+workspace API and database, and exports are authorized only for approved,
+validated report JSON. Migration `0033` adds a first-class workspace
+seed-review registry, private list/read/create/transition routes, and a seed
+review page; the analysis-start boundary now accepts only an approved
+`seedReviewId`. Production analysis persistence, opt-in post-collection
+handoff orchestration, private active-output reads, and source-deletion
+invalidation are implemented, with editor/owner complaint review transitions
+on the private collection surface. Cloud object storage, external retention/purge propagation, and
+export purge remain open. Plan packages now have a separate owner/editor
+approval boundary and approved JSON export; both report and plan routes hydrate
+validated object-backed payloads before export. Source-item retention enqueue is
+implemented from the stored policy, but it does not purge object stores or
+backups.
+
+## Desktop
+
+The Tauri boundary is staged without signing, update infrastructure, or platform release tests.
+
+## Autonomy
+
+The runtime skill registry and agent memory are contract foundations. They do not run an autonomous production coding loop.
+
+## Durable workflow proof
+
+The local/CI proof uses a loopback unauthenticated Temporal dev server with
+SQLite and deterministic fixture/production-collection/production-analysis
+activity contracts. It
+does not prove worker crash fault injection, production retention/encryption,
+or multi-worker deployment. A quota reservation that is settled before a
+collection result is persisted enters an explicit operator-reconciliation
+state; automated retry after that boundary is intentionally blocked.
+
+## Naming
+
+AppSea remains a working codename pending legal and domain clearance.

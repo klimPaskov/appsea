@@ -1,0 +1,201 @@
+# Plan 001: Foundation to production MVP
+
+- Status: active
+- Owner: main coding agent
+- Started: 2026-07-10
+- Current audit: [`production-readiness-audit-2026-07-25.md`](../../status/production-readiness-audit-2026-07-25.md)
+
+## Completed foundation
+
+- native Codex project layout
+- durable agent memory and documentation system
+- fixture source policy and connector
+- validated contracts
+- complaint normalization and clustering
+- deterministic opportunity scoring
+- coding-agent plan generation
+- sparse website routes
+- staged desktop boundary
+
+## Production milestones
+
+### 1. Persistence
+
+Status: production-shaped foundation implemented and validated locally; production provisioning remains blocked.
+
+Implemented:
+
+- PostgreSQL 18 schema and thirty-four forward, checksummed migrations
+- normalized source, evidence, complaint, cluster, competitor, opportunity, score, report, plan, audit, cost, deletion, outbox, and lineage tables
+- no-login owner, separate migrator, and least-privilege runtime role contract
+- forced workspace RLS and transaction-scoped workspace context
+- source collection and evidence display policy gates
+- immutable, run-scoped score, plan, cluster, source-policy, and acquisition lineage
+- replay-safe fixture repository with concurrent idempotency conflict handling
+- populated upgrade, fresh install, privilege, RLS, provenance, policy, cross-wire, and replay tests
+- local runbook and CI persistence gate
+- PostgreSQL-backed source quota reservations shared across workspaces, with
+  idempotent commit/release and bounded expiry
+- policy-derived, bounded retention tombstone enqueue reusing the deletion
+  propagation path
+- content-addressed object-reference contract with deterministic in-memory and
+  local filesystem adapters for production analysis artifact/report/plan blobs;
+  production encryption, lifecycle, and backup purge remain open
+- durable production-analysis run, policy/evidence/output lineage, report
+  object-reference, RLS, terminal-transition, and source-deletion invalidation
+  migration; idempotent repository stores redacted artifact/report/plan objects
+  and deterministic projections
+- migration `0031_plan_approval_governance.sql` adds object-reference format
+  checks and owner/editor plan approval transitions with report-readiness gates,
+  audit, and outbox receipts
+- migration `0032_complaint_review_governance.sql` adds an editor/owner review
+  boundary for production complaint observations, with active-evidence checks
+  and identifier-only audit/outbox receipts
+- skip-locked deletion tombstone propagation that redacts source/evidence rows
+  and marks dependent report/plan versions unavailable
+- global-auth password-reset tokens with latest-only semantics, encrypted
+  delivery outbox, security events, narrow security-definer functions, bounded
+  purge, and a retryable signed provider worker; delivery remains kill-switched
+  pending identity/provider approval
+
+Remaining deployment work and the non-fixture object-store integration are
+tracked in `docs/status/known-gaps.md` and are not part of the completed
+repository persistence foundation.
+
+### 2. Durable workflows
+
+Status: fixture and production-collection workflow boundaries plus an
+authenticated private-workspace start/status gateway are implemented and
+validated by package tests; production workflow provisioning remains blocked.
+
+Implemented:
+
+- Temporal TypeScript workflow/client package with fixed version/task queue,
+  sanitized history, deterministic idempotency/input hashes, duplicate-start
+  conflict handling, status query, bounded retries, budget rejection,
+  cancellation, safe-point completion, and terminal reconciliation
+- PostgreSQL job/checkpoint projections, RLS, transition triggers, output lineage,
+  and one-time cost/audit/outbox effects
+- worker activity adapters, local Compose Temporal service, restart/replay smoke,
+  retry/cancellation/duplicate tests, and raw-history leakage assertion
+- web gateway with strict workspace/body matching, owner/editor and fixture-only
+  authorization, private status projection, and production-fail-closed Temporal
+  address/TLS/API-key configuration; authenticated starts bind a user principal
+  and service starts use an explicit worker principal in the durable job and
+  terminal audit event
+- production collection workflow with a separate PostgreSQL job/checkpoint
+  projection, policy trigger, source-item budget preflight, idempotent
+  persistence safe point, terminal reconciliation, hashed cross-entry
+  idempotency, and user/service actor attribution
+- post-collection `productionAnalysisWorkflow` and worker activity that pass a
+  hashed idempotency digest to the idempotent analysis repository
+- migration `0034_production_analysis_handoffs.sql` adds an approved-seed-bound,
+  skip-locked handoff queue written in the collection completion transaction;
+  the durable worker reconstructs active policy/evidence lineage and starts the
+  existing idempotent analysis workflow with crash-reclaimable dispatch claims.
+  The private production collection read model exposes bounded handoff state,
+  retry, and failure metadata without exposing raw idempotency keys or source
+  payloads.
+
+Remaining production work: authenticated/TLS-protected Temporal, HA,
+object-store/backups retention and purge, deployment, metrics, alerts, and worker
+crash fault-injection proof.
+
+### 3. First real connector
+
+Status: connector boundary and production collection workflow implemented and
+disabled pending policy approval and deployment proof.
+
+Implemented:
+
+- CFPB public JSON search connector with typed policy metadata, official-route
+  boundary, conservative request/run quotas, no credentials, provenance mapping,
+  narrative consent/scrubbing gate, malformed-record warnings, and full-snapshot
+  deletion events; the connector requires the durable quota capability outside
+  tests
+- deterministic synthetic HTTP fixtures covering disabled/pending/expired
+  policy, quota, malformed, partial, and deletion paths
+- source-policy record at `docs/product/cfpb-source-policy.md`
+
+Remaining: assign legal/privacy/security owners, confirm intended commercial use
+and retention/display terms, approve a policy version, then activate only through
+the reviewed source registry. Migration `0027` now records that review and the
+runtime can persist an approved CFPB collection checkpoint through either the
+bounded command or the production-collection Temporal boundary, with idempotent
+source/evidence/complaint/deletion lineage plus a private inspection route. A
+separate production-shaped offline analysis checkpoint now composes validated
+collection payloads into clusters, an explicitly seeded opportunity, a
+deterministic score, a generic report, and a generic coding package. It remains
+test-only and does not activate a source or public UI. The additive contract
+now carries policy review hashes, distinct analysis-run identity,
+evidence/source-item mappings, and a reviewed seed envelope resolved from the
+workspace seed-review registry. Migration `0033` and the private seed-review
+routes now persist immutable seed content and editor/owner approval state.
+Durable analysis
+persistence/reference wiring, an idempotent post-collection repository, a
+Temporal activity, an opt-in approved-seed handoff queue, and private
+active-output reads are implemented after a completed collection; live
+activation, cloud object-store deployment, automatic aggregate recomputation,
+deployed scheduling, and handoff alerting remain open. The private
+review-start route now reconstructs the confirmed collection subset and starts
+the durable workflow explicitly; the local adapter does not
+authorize a production source activation.
+
+### 4. Workspaces and authentication
+
+Status: first private-workspace slice implemented; production identity operations remain.
+
+Implemented:
+
+- bounded shared auth/session/workspace contracts
+- scrypt password hashing, opaque bearer-session hashing, expiry, and revocation
+- private workspace signup with owner membership
+- membership-checked transaction helper before setting forced-RLS context
+- owner-only member listing, role changes, and removal with a last-owner database guard, audit, and outbox events
+- password step-up for owner membership mutations with a 15-minute session window
+- existing-account workspace invitations with hash-only tokens, encrypted delivery outbox, owner step-up, acceptance/revocation, bounded retries, and a production kill switch
+- authenticated active-session inventory at `/account/security` and same-origin, reauthenticated revocation of another session
+- owner-safe account closure at `/account/security`: recent step-up plus typed confirmation, session/reset revocation, profile anonymization, and workspace-owner blockers while shared research remains retained
+- private workspace opportunity/evidence/report/plan reads behind web API routes
+- public leaderboard remains database-free and explicitly synthetic
+
+Remaining: verified account recovery/delivery policy, production
+secret/session-retention operations, MFA/OIDC, and external identity review.
+Recovery and invitation mechanics exist behind explicit production kill
+switches; invitations intentionally do not create accounts until identity policy
+is approved.
+Login/signup/reauthentication throttling and membership administration are
+durable but require scheduled cleanup and distributed deployment validation.
+
+### 5. Evidence and reports
+
+Status: private evidence inspection, source-policy coverage, complaint curation, immutable seed review/approval, reviewed analysis-start, deterministic report
+generation, stored report/plan reads, report approval governance, approved JSON
+export, a separate approved-source collection evidence view, durable production
+analysis/object references, active-output private reads, and a
+production-shaped report/package composition checkpoint are implemented;
+cloud object storage, aggregate recomputation, and export retention remain. Report and plan
+approval/export now hydrate validated object-backed production payloads before
+applying their separate governance boundaries.
+
+The report contract keeps retained observations, deterministic score inference,
+contrary evidence, recommendation, source coverage, and coverage gaps separate.
+Reports are versioned in `report_versions` and linked to their plan package. Reads
+exclude inactive source rows and non-redacted non-fixture evidence.
+Approval transitions are role-checked in the private API and guarded by migration
+`0022_report_approval_governance.sql`; only approved reports can be exported.
+
+### 6. Operations
+
+Status: bounded worker events, workflow budgets, schema-validated/idempotent
+auth and source maintenance runners with stable job IDs, independent quota and
+retention budgets, source-policy warnings, centralized source-quota
+reservations, owner-scoped all-workspace maintenance, policy-derived retention
+tombstones, stale-claim recovery, and bounded deletion propagation, and retryable password-recovery/workspace-invitation
+delivery are implemented;
+deployment metrics, traces, role
+separation, incident drills, and production security review remain.
+
+### 7. Desktop release
+
+After web stability, complete Tauri packaging, signing, updates, platform tests, and release documentation for Windows and macOS.

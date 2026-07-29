@@ -1,0 +1,45 @@
+{
+  "campaign_id": "campaign_notification_control_001",
+  "tenant_id": "tenant_demo",
+  "name": "Cross-app notification control discovery",
+  "purpose": "product_research",
+  "status": "validated",
+  "queries": [
+    {
+      "query": "app notification controls are confusing or missing",
+      "intent": "complaint",
+      "app_hint": null
+    },
+    {
+      "query": "workarounds for too many app notifications",
+      "intent": "workaround",
+      "app_hint": null
+    },
+    {
+      "query": "notification management tools solve the problem",
+      "intent": "contrary_evidence",
+      "app_hint": null
+    }
+  ],
+  "source_ids": ["fixture_social", "github_issues", "youtube_comments"],
+  "time_window": {
+    "start": "2026-04-01T00:00:00Z",
+    "end": "2026-07-01T00:00:00Z"
+  },
+  "budget": {
+    "currency": "EUR",
+    "hard_limit": 25,
+    "model_token_limit": 500000,
+    "max_items": 2500
+  },
+  "languages": ["en"],
+  "categories": ["productivity", "utilities"],
+  "retention_profile": "minimal",
+  "coverage_requirements": {
+    "minimum_sources": 2,
+    "minimum_unique_authors": 20,
+    "minimum_complaints": 25
+  },
+  "created_by": "user_demo_researcher",
+  "created_at": "2026-07-02T08:00:00Z"
+}

@@ -1,0 +1,352 @@
+import { describe, expect, it, vi } from 'vitest'
+import { sourcePolicySchema } from '@appsea/contracts'
+import {
+  CfpbConnector,
+  FixtureConnector,
+  SourceQuotaExceededError,
+  SourceQuotaReservationReplayError,
+  SourceResponseTooLargeError,
+  type SourceQuotaLedger,
+  assertPolicyAllowsCollection,
+  cfpbSourcePolicy,
+  fixtureSourcePolicy,
+  mapCfpbRecord,
+  syncCfpbDeletions
+} from './index'
+
+const approvedCfpbPolicy = sourcePolicySchema.parse({
+  ...cfpbSourcePolicy,
+  enabled: true,
+  policyState: 'approved',
+  expiresAt: null
+})
+
+const cfpbRecord = {
+  complaint_id: 123456,
+  date_received: '2026-07-20',
+  product: 'Credit card',
+  sub_product: 'General-purpose credit card',
+  issue: 'Managing an account',
+  sub_issue: 'Deposits and withdrawals',
+  company: 'Synthetic Bank',
+  complaint_what_happened: 'Synthetic redacted narrative used only for connector tests.'
+}
+
+describe('connector policy gate', () => {
+  it('collects labeled fixture records through an allowed request', async () => {
+    const result = await new FixtureConnector().collect({
+      query: 'handoff',
+      limit: 10,
+      purpose: 'testing',
+      requestedDisplayMode: 'fixture'
+    })
+    expect(result.complaints.length).toBeGreaterThan(0)
+    expect(result.complaints.every((entry) => entry.synthetic)).toBe(true)
+  })
+
+  it('fails closed for an unapproved purpose', () => {
+    expect(() =>
+      assertPolicyAllowsCollection(fixtureSourcePolicy, {
+        query: '',
+        limit: 1,
+        purpose: 'production-surveillance',
+        requestedDisplayMode: 'fixture'
+      })
+    ).toThrow(/not permitted/)
+  })
+
+  it('fails closed for pending and expired source policy states', () => {
+    expect(() =>
+      assertPolicyAllowsCollection(
+        sourcePolicySchema.parse({ ...cfpbSourcePolicy, enabled: true }),
+        {
+          query: 'card',
+          limit: 1,
+          purpose: 'testing',
+          requestedDisplayMode: 'excerpt'
+        }
+      )
+    ).toThrow(/not approved/)
+    expect(() =>
+      assertPolicyAllowsCollection(
+        sourcePolicySchema.parse({ ...approvedCfpbPolicy, expiresAt: '2020-01-01T00:00:00.000Z' }),
+        {
+          query: 'card',
+          limit: 1,
+          purpose: 'testing',
+          requestedDisplayMode: 'excerpt'
+        }
+      )
+    ).toThrow(/expired/)
+  })
+
+  it('defaults omitted policy state to pending review', () => {
+    expect(
+      sourcePolicySchema.parse({ ...cfpbSourcePolicy, policyState: undefined }).policyState
+    ).toBe('pending_review')
+  })
+
+  it('rejects unsafe query and connector identity inputs', () => {
+    expect(() =>
+      assertPolicyAllowsCollection(approvedCfpbPolicy, {
+        query: 'x'.repeat(501),
+        limit: 1,
+        purpose: 'testing',
+        requestedDisplayMode: 'excerpt'
+      })
+    ).toThrow(/too long/)
+    expect(() => new CfpbConnector({ baseUrl: 'http://127.0.0.1:8080/' })).toThrow(
+      /official HTTPS API origin/
+    )
+    expect(
+      () =>
+        new CfpbConnector({
+          policy: sourcePolicySchema.parse({ ...approvedCfpbPolicy, sourceId: 'other-source' })
+        })
+    ).toThrow(/policy identity/)
+  })
+
+  it('requires a durable quota ledger for approved runtime policies', () => {
+    vi.stubEnv('NODE_ENV', 'production')
+    try {
+      expect(() => new CfpbConnector({ policy: approvedCfpbPolicy })).toThrow(
+        /durable quota ledger/
+      )
+    } finally {
+      vi.unstubAllEnvs()
+    }
+  })
+
+  it('maps an approved public record without retaining the raw payload', () => {
+    const complaint = mapCfpbRecord(cfpbRecord, '2026-07-24T00:00:00.000Z', 'card')
+    expect(complaint).toMatchObject({
+      id: 'cfpb-complaint-123456',
+      sourceRecordId: '123456',
+      synthetic: false,
+      redacted: true,
+      allowedRepresentation: 'excerpt'
+    })
+    expect(complaint.text).not.toContain('complaint_id')
+  })
+
+  it('enforces request and per-run quotas before making a request', async () => {
+    let requestCount = 0
+    const connector = new CfpbConnector({
+      policy: sourcePolicySchema.parse({
+        ...approvedCfpbPolicy,
+        quota: { ...approvedCfpbPolicy.quota, maxRecordsPerRequest: 1, maxRecordsPerRun: 1 }
+      }),
+      fetchImpl: async (_url, init) => {
+        expect(init?.redirect).toBe('error')
+        requestCount += 1
+        return new Response(JSON.stringify([cfpbRecord]), { status: 200 })
+      },
+      now: () => '2026-07-24T00:00:00.000Z'
+    })
+    await expect(
+      connector.collect({
+        query: 'card',
+        limit: 2,
+        purpose: 'testing',
+        requestedDisplayMode: 'excerpt',
+        runId: 'run-cfpb-quota'
+      })
+    ).rejects.toBeInstanceOf(SourceQuotaExceededError)
+    expect(requestCount).toBe(0)
+    await connector.collect({
+      query: 'card',
+      limit: 1,
+      purpose: 'testing',
+      requestedDisplayMode: 'excerpt',
+      runId: 'run-cfpb-quota'
+    })
+    await expect(
+      connector.collect({
+        query: 'card',
+        limit: 1,
+        purpose: 'testing',
+        requestedDisplayMode: 'excerpt',
+        runId: 'run-cfpb-quota'
+      })
+    ).rejects.toBeInstanceOf(SourceQuotaExceededError)
+  })
+
+  it('uses a durable quota capability and refuses committed reservation replays', async () => {
+    const reservations = new Map<string, 'reserved' | 'committed'>()
+    const inputs: string[] = []
+    const ledger: SourceQuotaLedger = {
+      async reserve(input) {
+        inputs.push(input.idempotencyKey)
+        const existing = reservations.get(input.idempotencyKey)
+        if (existing) {
+          return {
+            reservationId: 'quota:one',
+            status: existing,
+            replayed: true,
+            requestedRecords: input.requestedRecords,
+            requestedCostMicros: input.requestedCostMicros
+          }
+        }
+        reservations.set(input.idempotencyKey, 'reserved')
+        return {
+          reservationId: 'quota:one',
+          status: 'reserved',
+          replayed: false,
+          requestedRecords: input.requestedRecords,
+          requestedCostMicros: input.requestedCostMicros
+        }
+      },
+      async commit(input) {
+        expect(input.workspaceId).toBe('workspace:one')
+        reservations.set(inputs[0]!, 'committed')
+      },
+      async release() {
+        throw new Error('release is not expected after a dispatched request')
+      }
+    }
+    let requestCount = 0
+    const connector = new CfpbConnector({
+      policy: approvedCfpbPolicy,
+      quotaLedger: ledger,
+      fetchImpl: async () => {
+        requestCount += 1
+        return new Response(JSON.stringify([cfpbRecord]), { status: 200 })
+      },
+      now: () => '2026-07-24T00:00:00.000Z'
+    })
+    const request = {
+      query: 'card',
+      limit: 1,
+      purpose: 'testing',
+      requestedDisplayMode: 'excerpt' as const,
+      workspaceId: 'workspace:one',
+      runId: 'run-cfpb-durable',
+      policyVersion: 'cfpb-policy-v1',
+      idempotencyKey: 'sensitive query material'
+    }
+    await connector.collect(request)
+    expect(inputs[0]).toMatch(/^quota-key:[a-f0-9]{64}$/)
+    expect(inputs[0]).not.toContain('sensitive')
+    await expect(connector.collect(request)).rejects.toBeInstanceOf(
+      SourceQuotaReservationReplayError
+    )
+    expect(requestCount).toBe(1)
+  })
+
+  it('does not dispatch a replayed in-flight reservation or reuse it for another request', async () => {
+    const reservations = new Set<string>()
+    let requestCount = 0
+    const ledger: SourceQuotaLedger = {
+      async reserve(input) {
+        const replayed = reservations.has(input.idempotencyKey)
+        reservations.add(input.idempotencyKey)
+        return {
+          reservationId: input.reservationId,
+          status: 'reserved',
+          replayed,
+          requestedRecords: input.requestedRecords,
+          requestedCostMicros: input.requestedCostMicros
+        }
+      },
+      async commit() {
+        // Keep this fixture reservation in-flight to exercise the replay guard.
+      },
+      async release() {}
+    }
+    const connector = new CfpbConnector({
+      policy: approvedCfpbPolicy,
+      quotaLedger: ledger,
+      fetchImpl: async () => {
+        requestCount += 1
+        return new Response(JSON.stringify([cfpbRecord]), { status: 200 })
+      },
+      now: () => '2026-07-24T00:00:00.000Z'
+    })
+    const request = {
+      query: 'card',
+      limit: 1,
+      purpose: 'testing',
+      requestedDisplayMode: 'excerpt' as const,
+      workspaceId: 'workspace:one',
+      runId: 'run-cfpb-in-flight',
+      policyVersion: 'cfpb-policy-v1',
+      idempotencyKey: 'same-client-key'
+    }
+    await connector.collect(request)
+    await expect(connector.collect(request)).rejects.toBeInstanceOf(
+      SourceQuotaReservationReplayError
+    )
+    await connector.collect({ ...request, query: 'mortgage' })
+    expect(requestCount).toBe(2)
+  })
+
+  it('skips malformed or non-narrative records and exposes a coverage warning', async () => {
+    const connector = new CfpbConnector({
+      policy: approvedCfpbPolicy,
+      fetchImpl: async () =>
+        new Response(
+          JSON.stringify([
+            cfpbRecord,
+            { ...cfpbRecord, complaint_id: 123457, complaint_what_happened: null },
+            { product: 'Credit card' }
+          ]),
+          { status: 200 }
+        ),
+      now: () => '2026-07-24T00:00:00.000Z'
+    })
+    const result = await connector.collect({
+      query: 'card',
+      limit: 3,
+      purpose: 'testing',
+      requestedDisplayMode: 'excerpt',
+      runId: 'run-cfpb-malformed'
+    })
+    expect(result.complaints).toHaveLength(1)
+    expect(result.warnings.some((warning) => warning.includes('skipped'))).toBe(true)
+    expect(result.deletions).toEqual([])
+  })
+
+  it('rejects a response whose declared body exceeds the byte budget', async () => {
+    const connector = new CfpbConnector({
+      policy: approvedCfpbPolicy,
+      fetchImpl: async () =>
+        new Response('{}', {
+          status: 200,
+          headers: { 'content-length': String(32 * 1024 * 1024 + 1) }
+        }),
+      now: () => '2026-07-24T00:00:00.000Z'
+    })
+    await expect(
+      connector.collect({
+        query: 'card',
+        limit: 1,
+        purpose: 'testing',
+        requestedDisplayMode: 'excerpt',
+        runId: 'run-cfpb-large-response'
+      })
+    ).rejects.toBeInstanceOf(SourceResponseTooLargeError)
+  })
+
+  it('only emits deletion events after a full snapshot', () => {
+    const filtered = syncCfpbDeletions({
+      knownSourceRecordIds: ['1', '2'],
+      currentSourceRecordIds: ['1'],
+      fullSnapshot: false,
+      observedAt: '2026-07-24T00:00:00.000Z'
+    })
+    expect(filtered.deletions).toHaveLength(0)
+    expect(filtered.warnings).toHaveLength(1)
+    const full = syncCfpbDeletions({
+      knownSourceRecordIds: ['1', '2'],
+      currentSourceRecordIds: ['1'],
+      fullSnapshot: true,
+      observedAt: '2026-07-24T00:00:00.000Z'
+    })
+    expect(full.deletions).toMatchObject([
+      {
+        sourceId: 'cfpb-consumer-complaints',
+        sourceRecordId: '2'
+      }
+    ])
+  })
+})

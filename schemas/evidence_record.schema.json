@@ -1,0 +1,134 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.appsea.local/evidence_record.schema.json",
+  "title": "AppSea Evidence Record",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "evidence_id",
+    "tenant_id",
+    "source_id",
+    "source_policy_version",
+    "source_item_id",
+    "canonical_locator",
+    "content_hash",
+    "published_at",
+    "collected_at",
+    "language",
+    "display_mode",
+    "normalized_text",
+    "deletion_state",
+    "lineage"
+  ],
+  "properties": {
+    "evidence_id": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_:-]{2,127}$"
+    },
+    "tenant_id": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_:-]{2,127}$"
+    },
+    "source_id": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_:-]{2,127}$"
+    },
+    "source_policy_version": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 40
+    },
+    "source_item_id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 240
+    },
+    "canonical_locator": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 2000
+    },
+    "content_hash": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "published_at": {
+      "type": ["string", "null"],
+      "format": "date-time"
+    },
+    "collected_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "language": {
+      "type": "string",
+      "minLength": 2,
+      "maxLength": 16
+    },
+    "display_mode": {
+      "enum": ["full_permitted", "excerpt_only", "metadata_only", "aggregate_only", "no_display"]
+    },
+    "display_excerpt": {
+      "type": ["string", "null"],
+      "maxLength": 500
+    },
+    "normalized_text": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 20000
+    },
+    "raw_object_ref": {
+      "type": ["string", "null"],
+      "maxLength": 500
+    },
+    "author_pseudonym": {
+      "type": ["string", "null"],
+      "maxLength": 120
+    },
+    "author_hash_scope": {
+      "enum": ["source", "tenant", "none"]
+    },
+    "thread_locator": {
+      "type": ["string", "null"],
+      "maxLength": 2000
+    },
+    "parent_evidence_id": {
+      "type": ["string", "null"],
+      "pattern": "^[a-z][a-z0-9_:-]{2,127}$"
+    },
+    "deletion_state": {
+      "enum": ["active", "source_deleted", "tenant_deleted", "expired", "redacted", "pending"]
+    },
+    "lineage": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["collector_version", "normalizer_version", "redactor_version"],
+      "properties": {
+        "collector_version": {
+          "type": "string",
+          "minLength": 1
+        },
+        "normalizer_version": {
+          "type": "string",
+          "minLength": 1
+        },
+        "redactor_version": {
+          "type": "string",
+          "minLength": 1
+        },
+        "import_batch_id": {
+          "type": ["string", "null"],
+          "pattern": "^[a-z][a-z0-9_:-]{2,127}$"
+        }
+      }
+    },
+    "warnings": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 500
+      }
+    }
+  }
+}

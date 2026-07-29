@@ -1,0 +1,125 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.appsea.local/evaluation_result.schema.json",
+  "title": "AppSea Evaluation Result",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "evaluation_id",
+    "subject_type",
+    "subject_name",
+    "subject_version",
+    "fixture_set",
+    "metrics",
+    "security_checks",
+    "regressions",
+    "recommendation",
+    "evaluator_version",
+    "created_at"
+  ],
+  "properties": {
+    "evaluation_id": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_:-]{2,127}$"
+    },
+    "subject_type": {
+      "enum": [
+        "skill",
+        "model",
+        "prompt",
+        "scorer",
+        "connector",
+        "report_generator",
+        "plan_generator"
+      ]
+    },
+    "subject_name": {
+      "type": "string",
+      "minLength": 2,
+      "maxLength": 120
+    },
+    "subject_version": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 80
+    },
+    "fixture_set": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 300
+    },
+    "metrics": {
+      "type": "object",
+      "minProperties": 1,
+      "additionalProperties": {
+        "type": "number"
+      }
+    },
+    "security_checks": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["name", "passed", "details"],
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 160
+          },
+          "passed": {
+            "type": "boolean"
+          },
+          "details": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 1000
+          }
+        }
+      }
+    },
+    "regressions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["metric", "baseline", "candidate", "severity"],
+        "properties": {
+          "metric": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 100
+          },
+          "baseline": {
+            "type": "number"
+          },
+          "candidate": {
+            "type": "number"
+          },
+          "severity": {
+            "enum": ["none", "low", "medium", "high", "critical"]
+          }
+        }
+      }
+    },
+    "recommendation": {
+      "enum": ["approve", "approve_canary", "revise", "reject", "inconclusive"]
+    },
+    "notes": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 500
+      }
+    },
+    "evaluator_version": {
+      "type": "string",
+      "minLength": 1
+    },
+    "created_at": {
+      "type": "string",
+      "format": "date-time"
+    }
+  }
+}

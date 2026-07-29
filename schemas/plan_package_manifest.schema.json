@@ -1,0 +1,112 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.appsea.local/plan_package_manifest.schema.json",
+  "title": "AppSea Plan Package Manifest",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "package_id",
+    "opportunity_id",
+    "version",
+    "created_at",
+    "files",
+    "schema_versions",
+    "evidence_snapshot_id",
+    "score_snapshot_id",
+    "skill_versions",
+    "model_versions",
+    "restricted_content_excluded",
+    "warnings"
+  ],
+  "properties": {
+    "package_id": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_:-]{2,127}$"
+    },
+    "opportunity_id": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_:-]{2,127}$"
+    },
+    "version": {
+      "type": "string",
+      "pattern": "^\\d+\\.\\d+\\.\\d+(?:[-+][A-Za-z0-9.-]+)?$"
+    },
+    "created_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "files": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["path", "media_type", "sha256", "purpose"],
+        "properties": {
+          "path": {
+            "type": "string",
+            "pattern": "^(?!/)(?!.*\\.\\.).+$"
+          },
+          "media_type": {
+            "type": "string",
+            "minLength": 3,
+            "maxLength": 100
+          },
+          "sha256": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$"
+          },
+          "purpose": {
+            "type": "string",
+            "minLength": 3,
+            "maxLength": 300
+          },
+          "redistributable": {
+            "type": "boolean"
+          }
+        }
+      }
+    },
+    "schema_versions": {
+      "type": "object",
+      "minProperties": 1,
+      "additionalProperties": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "evidence_snapshot_id": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_:-]{2,127}$"
+    },
+    "score_snapshot_id": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_:-]{2,127}$"
+    },
+    "skill_versions": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "model_versions": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "restricted_content_excluded": {
+      "type": "boolean"
+    },
+    "warnings": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 500
+      }
+    }
+  }
+}

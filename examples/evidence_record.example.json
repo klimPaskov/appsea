@@ -1,0 +1,28 @@
+{
+  "evidence_id": "evidence_demo_001",
+  "tenant_id": "tenant_demo",
+  "source_id": "fixture_social",
+  "source_policy_version": "fixture-1",
+  "source_item_id": "fixture-post-001",
+  "canonical_locator": "fixture://notification-control/post-001",
+  "content_hash": "1111111111111111111111111111111111111111111111111111111111111111",
+  "published_at": "2026-06-28T10:15:00Z",
+  "collected_at": "2026-07-02T08:05:00Z",
+  "language": "en",
+  "display_mode": "full_permitted",
+  "display_excerpt": "I mute everything because each app hides notification controls in a different place.",
+  "normalized_text": "I mute everything because each app hides notification controls in a different place.",
+  "raw_object_ref": "s3://appsea-demo/raw/fixture-post-001.json",
+  "author_pseudonym": "fixture_author_07",
+  "author_hash_scope": "tenant",
+  "thread_locator": "fixture://notification-control/thread-01",
+  "parent_evidence_id": null,
+  "deletion_state": "active",
+  "lineage": {
+    "collector_version": "fixture-connector@1.0.0",
+    "normalizer_version": "normalize-text@1.0.0",
+    "redactor_version": "privacy-redaction@1.0.0",
+    "import_batch_id": null
+  },
+  "warnings": []
+}

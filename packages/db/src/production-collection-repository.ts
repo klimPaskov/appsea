@@ -1,0 +1,1433 @@
+import type { Pool, PoolClient, QueryResultRow } from 'pg'
+import {
+  appseaIdentifierSchema,
+  productionAnalysisComplaintSchema,
+  productionAnalysisHandoffReadModelSchema,
+  productionCollectionAnalysisSourceSchema,
+  productionCollectionPersistenceInputSchema,
+  productionCollectionReadModelSchema,
+  productionCollectionResultSchema,
+  productionCollectionSnapshotSchema,
+  productionCollectionRequestSchema,
+  productionPolicySnapshotSchema,
+  researchJobBudgetSchema,
+  sourceDeletionEventSchema,
+  sourcePolicySchema,
+  workspaceComplaintReviewInputSchema,
+  workspaceComplaintReviewReadModelSchema,
+  type ProductionCollectionPersistenceInput,
+  type ProductionCollectionAnalysisSource,
+  type ProductionCollectionReadModel,
+  type ProductionCollectionResult,
+  type ProductionCollectionSnapshot,
+  type ProductionAnalysisHandoffReadModel,
+  type WorkspaceComplaintReviewInput,
+  type WorkspaceComplaintReviewReadModel
+} from '@appsea/contracts'
+import { contentHash } from './hash'
+import { IdempotencyConflictError, ImmutableRecordConflictError } from './fixture-repository'
+import { withAuthenticatedWorkspaceTransaction, withWorkspaceTransaction } from './transaction'
+
+const productionNormalizerVersion = 'production-normalizer-v1'
+const productionExtractionVersion = 'production-extractor-v1'
+
+export class ProductionComplaintReviewPermissionError extends Error {
+  constructor() {
+    super('The workspace role cannot review production complaints')
+    this.name = 'ProductionComplaintReviewPermissionError'
+  }
+}
+
+export class ProductionComplaintReviewNotFoundError extends Error {
+  constructor() {
+    super('The production complaint was not found')
+    this.name = 'ProductionComplaintReviewNotFoundError'
+  }
+}
+
+export class ProductionComplaintReviewConflictError extends Error {
+  constructor() {
+    super('The production complaint review transition is not permitted')
+    this.name = 'ProductionComplaintReviewConflictError'
+  }
+}
+
+export class ProductionCollectionAnalysisUnavailableError extends Error {
+  constructor() {
+    super('The production collection is not ready for reviewed analysis')
+    this.name = 'ProductionCollectionAnalysisUnavailableError'
+  }
+}
+
+interface ExistingRunRow extends QueryResultRow {
+  run_id: string
+  campaign_id: string
+  idempotency_key: string
+  input_hash: string
+  state: string
+  artifact_id: string
+  artifact_snapshot: unknown
+  completed_at: Date | string | null
+  requested_at: Date | string
+}
+
+interface CampaignRow extends QueryResultRow {
+  purpose: string
+  configuration: unknown
+  budget: unknown
+}
+
+interface CountRow extends QueryResultRow {
+  count: string
+}
+
+interface AnalysisHandoffRow extends QueryResultRow {
+  handoff_id: string
+  collection_workflow_id: string
+  collection_run_id: string
+  seed_review_id: string
+  analysis_run_id: string
+  state: 'queued' | 'dispatching' | 'started' | 'failed'
+  attempt_count: number | string
+  workflow_id: string | null
+  failure_code: 'analysis_not_ready' | 'seed_not_approved' | 'handoff_dispatch_failed' | null
+  failure_summary: string | null
+  requested_at: Date | string
+  next_attempt_at: Date | string
+  started_at: Date | string | null
+  finished_at: Date | string | null
+  updated_at: Date | string
+}
+
+function asIso(value: Date | string): string {
+  return value instanceof Date ? value.toISOString() : new Date(value).toISOString()
+}
+
+function hashIdentifier(prefix: string, value: unknown): string {
+  return `${prefix}:${contentHash(value).slice(0, 32)}`
+}
+
+export interface ProductionCollectionCompletedIdentity {
+  result: ProductionCollectionResult
+  requestHash: string
+  idempotencyKey: string
+  campaignId: string
+  sourceId: string
+  policyVersion: string
+  query: string
+  limit: number
+  purpose: string
+  requestedDisplayMode: 'excerpt' | 'metadata-only' | 'aggregate-only'
+}
+
+function normalizeText(value: string): string {
+  return value.replace(/\s+/g, ' ').trim()
+}
+
+async function countRows(client: PoolClient, sql: string, parameters: unknown[]): Promise<number> {
+  const result = await client.query<CountRow>(sql, parameters)
+  return Number(result.rows[0]?.count ?? 0)
+}
+
+async function isProductionWorkspace(client: PoolClient, workspaceId: string): Promise<boolean> {
+  const result = await client.query<
+    QueryResultRow & { fixture_only: boolean; status: string; visibility: string }
+  >(
+    `SELECT fixture_only, status, visibility
+       FROM appsea.workspaces
+      WHERE workspace_id = $1`,
+    [workspaceId]
+  )
+  const workspace = result.rows[0]
+  return Boolean(
+    workspace &&
+    !workspace.fixture_only &&
+    workspace.status === 'active' &&
+    workspace.visibility === 'private'
+  )
+}
+
+async function assertHash(
+  client: PoolClient,
+  sql: string,
+  parameters: unknown[],
+  expectedHash: string,
+  recordType: string,
+  identifier: string
+): Promise<void> {
+  const result = await client.query<{ content_hash: string }>(sql, parameters)
+  if (result.rows[0]?.content_hash !== expectedHash) {
+    throw new ImmutableRecordConflictError(recordType, identifier)
+  }
+}
+
+function isUniqueViolation(error: unknown): boolean {
+  return (
+    typeof error === 'object' &&
+    error !== null &&
+    'code' in error &&
+    error.code === '23505' &&
+    'constraint' in error &&
+    [
+      'research_runs_workspace_id_idempotency_key_key',
+      'research_runs_pkey',
+      'research_runs_workspace_id_artifact_id_key'
+    ].includes(String(error.constraint))
+  )
+}
+
+function coverageGaps(input: ProductionCollectionPersistenceInput): string[] {
+  const gaps = [
+    'This collection covers only the requested source and query route; it is not a statistical sample.',
+    'Opportunity clustering, competitor research, contrary-evidence review, deterministic scoring, and report generation have not run for this collection.'
+  ]
+  if (!input.policy.deletion.supportsTombstones) {
+    gaps.push(
+      'The source has no tombstone feed; deletion absence requires a full-snapshot reconciliation.'
+    )
+  }
+  return [...new Set(gaps)]
+}
+
+function buildSnapshot(
+  input: ProductionCollectionPersistenceInput,
+  artifactId: string,
+  sourceItemCount: number,
+  evidenceCount: number,
+  complaintCount: number,
+  deletionCount: number
+): ProductionCollectionSnapshot {
+  return productionCollectionSnapshotSchema.parse({
+    mode: 'production-collection',
+    artifactId,
+    requestHash: contentHash(input.request),
+    sourceId: input.request.sourceId,
+    policyVersion: input.request.policyVersion,
+    query: input.request.query,
+    limit: input.request.limit,
+    purpose: input.request.purpose,
+    requestedDisplayMode: input.request.requestedDisplayMode,
+    sourceItemCount,
+    evidenceCount,
+    complaintCount,
+    deletionCount,
+    coverageGaps: coverageGaps(input),
+    warnings: input.warnings,
+    capturedAt: input.request.requestedAt
+  })
+}
+
+async function resultFromRun(
+  client: PoolClient,
+  workspaceId: string,
+  run: ExistingRunRow,
+  replayed: boolean
+): Promise<ProductionCollectionResult> {
+  const snapshot = productionCollectionSnapshotSchema.parse(run.artifact_snapshot)
+  return productionCollectionResultSchema.parse({
+    workspaceId,
+    campaignId: run.campaign_id,
+    runId: run.run_id,
+    artifactId: run.artifact_id,
+    sourceId: snapshot.sourceId,
+    policyVersion: snapshot.policyVersion,
+    sourceItemCount: snapshot.sourceItemCount,
+    evidenceCount: snapshot.evidenceCount,
+    complaintCount: snapshot.complaintCount,
+    deletionCount: snapshot.deletionCount,
+    coverageGaps: snapshot.coverageGaps,
+    warnings: snapshot.warnings,
+    state: 'completed',
+    completedAt: run.completed_at ? asIso(run.completed_at) : snapshot.capturedAt,
+    replayed
+  })
+}
+
+async function readRun(
+  client: PoolClient,
+  workspaceId: string,
+  idempotencyKey: string
+): Promise<ExistingRunRow | undefined> {
+  const result = await client.query<ExistingRunRow>(
+    `SELECT run_id, campaign_id, idempotency_key, input_hash, state, artifact_id,
+            artifact_snapshot, completed_at
+       FROM appsea.research_runs
+      WHERE workspace_id = $1 AND idempotency_key = $2
+      FOR UPDATE`,
+    [workspaceId, idempotencyKey]
+  )
+  return result.rows[0]
+}
+
+export class PostgresProductionCollectionRepository {
+  constructor(private readonly pool: Pool) {}
+
+  async readCompletedIdentity(
+    workspaceId: string,
+    runId: string
+  ): Promise<ProductionCollectionCompletedIdentity | null> {
+    return withWorkspaceTransaction(
+      this.pool,
+      workspaceId,
+      async (client) => {
+        if (!(await isProductionWorkspace(client, workspaceId))) return null
+        const result = await client.query<ExistingRunRow>(
+          `SELECT run_id, campaign_id, idempotency_key, input_hash, state, artifact_id,
+                  artifact_snapshot, completed_at
+             FROM appsea.research_runs
+            WHERE workspace_id = $1 AND run_id = $2
+              AND mode = 'production' AND state = 'completed'`,
+          [workspaceId, runId]
+        )
+        const run = result.rows[0]
+        if (!run) return null
+        const snapshot = productionCollectionSnapshotSchema.parse(run.artifact_snapshot)
+        return {
+          result: await resultFromRun(client, workspaceId, run, true),
+          requestHash: snapshot.requestHash,
+          idempotencyKey: run.idempotency_key,
+          campaignId: run.campaign_id,
+          sourceId: snapshot.sourceId,
+          policyVersion: snapshot.policyVersion,
+          query: snapshot.query,
+          limit: snapshot.limit,
+          purpose: snapshot.purpose,
+          requestedDisplayMode: snapshot.requestedDisplayMode
+        }
+      },
+      { readOnly: true }
+    )
+  }
+
+  /**
+   * Reconstruct the server-owned analysis input from a completed collection.
+   * The caller supplies no complaint payload: only confirmed, active,
+   * excerpt-represented observations cross this boundary.
+   */
+  async readForAnalysis(
+    userId: string,
+    workspaceId: string,
+    runId: string
+  ): Promise<ProductionCollectionAnalysisSource | null> {
+    return withAuthenticatedWorkspaceTransaction(
+      this.pool,
+      userId,
+      workspaceId,
+      (client) => this.readForAnalysisInTransaction(client, workspaceId, runId),
+      { readOnly: true }
+    )
+  }
+
+  /** Worker-only reconstruction uses the workspace RLS context without user impersonation. */
+  async readForAnalysisAsWorker(
+    workspaceId: string,
+    runId: string
+  ): Promise<ProductionCollectionAnalysisSource | null> {
+    return withWorkspaceTransaction(
+      this.pool,
+      workspaceId,
+      (client) => this.readForAnalysisInTransaction(client, workspaceId, runId),
+      { readOnly: true }
+    )
+  }
+
+  private async readForAnalysisInTransaction(
+    client: PoolClient,
+    workspaceId: string,
+    runId: string
+  ): Promise<ProductionCollectionAnalysisSource | null> {
+    if (!(await isProductionWorkspace(client, workspaceId))) return null
+    const runResult = await client.query<ExistingRunRow>(
+      `SELECT run_id, campaign_id, idempotency_key, input_hash, state, artifact_id,
+                  artifact_snapshot, completed_at, requested_at
+             FROM appsea.research_runs
+            WHERE workspace_id = $1 AND run_id = $2
+              AND mode = 'production' AND state = 'completed'`,
+      [workspaceId, runId]
+    )
+    const run = runResult.rows[0]
+    if (!run) return null
+    const snapshot = productionCollectionSnapshotSchema.parse(run.artifact_snapshot)
+    const campaignResult = await client.query<CampaignRow>(
+      `SELECT purpose, budget
+             FROM appsea.research_campaigns
+            WHERE workspace_id = $1 AND campaign_id = $2`,
+      [workspaceId, run.campaign_id]
+    )
+    const campaign = campaignResult.rows[0]
+    if (!campaign || campaign.purpose !== snapshot.purpose) {
+      throw new ProductionCollectionAnalysisUnavailableError()
+    }
+    const request = productionCollectionRequestSchema.parse({
+      workspaceId,
+      campaignId: run.campaign_id,
+      runId,
+      idempotencyKey: run.idempotency_key,
+      sourceId: snapshot.sourceId,
+      policyVersion: snapshot.policyVersion,
+      query: snapshot.query,
+      limit: snapshot.limit,
+      purpose: campaign.purpose,
+      requestedDisplayMode: snapshot.requestedDisplayMode,
+      budget: researchJobBudgetSchema.parse(campaign.budget),
+      requestedAt: asIso(run.requested_at)
+    })
+    if (contentHash(request) !== snapshot.requestHash) {
+      throw new ProductionCollectionAnalysisUnavailableError()
+    }
+
+    const policyResult = await client.query<
+      QueryResultRow & {
+        source_id: string
+        display_name: string
+        source_type: string
+        lifecycle_state: string
+        current_policy_version: string | null
+        policy_version: string
+        policy_state: string
+        policy_payload: unknown
+        content_hash: string
+        reviewed_at: Date | string | null
+        expires_at: Date | string | null
+        policy_document_ref: string | null
+        review_id: string
+      }
+    >(
+      `SELECT source.source_id, source.display_name, source.source_type,
+                  source.lifecycle_state, source.current_policy_version,
+                  policy.policy_version, policy.policy_state, policy.policy_payload,
+                  policy.content_hash, policy.reviewed_at, policy.expires_at,
+                  policy.policy_document_ref, review.review_id
+             FROM appsea.sources source
+             JOIN appsea.source_policy_versions policy
+               ON policy.source_id = source.source_id
+              AND policy.policy_version = $2
+             JOIN appsea.source_policy_reviews review
+               ON review.source_id = policy.source_id
+              AND review.policy_version = policy.policy_version
+              AND review.decision = 'approved'
+              AND review.content_hash = policy.content_hash
+            WHERE source.source_id = $1
+              AND source.source_type <> 'fixture'
+              AND source.lifecycle_state = 'active'
+              AND source.current_policy_version = policy.policy_version
+              AND policy.policy_state = 'approved'
+              AND policy.reviewed_at IS NOT NULL
+              AND (policy.expires_at IS NULL OR policy.expires_at > clock_timestamp())
+            ORDER BY review.reviewed_at DESC, review.review_id
+            LIMIT 1`,
+      [snapshot.sourceId, snapshot.policyVersion]
+    )
+    const storedPolicy = policyResult.rows[0]
+    if (
+      !storedPolicy ||
+      !storedPolicy.reviewed_at ||
+      !storedPolicy.policy_payload ||
+      contentHash(storedPolicy.policy_payload) !== storedPolicy.content_hash
+    ) {
+      throw new ProductionCollectionAnalysisUnavailableError()
+    }
+    const policyDraft = sourcePolicySchema.safeParse(storedPolicy.policy_payload)
+    if (!policyDraft.success) throw new ProductionCollectionAnalysisUnavailableError()
+    const policy = sourcePolicySchema.parse({
+      ...policyDraft.data,
+      displayName: storedPolicy.display_name,
+      enabled: true,
+      policyState: 'approved',
+      reviewedAt: asIso(storedPolicy.reviewed_at),
+      expiresAt: storedPolicy.expires_at ? asIso(storedPolicy.expires_at) : null,
+      policyDocumentRef: storedPolicy.policy_document_ref ?? policyDraft.data.policyDocumentRef
+    })
+    const policySnapshot = productionPolicySnapshotSchema.parse({
+      sourceId: storedPolicy.source_id,
+      policyVersion: storedPolicy.policy_version,
+      contentHash: storedPolicy.content_hash,
+      reviewId: storedPolicy.review_id,
+      policy
+    })
+
+    const evidenceRows = await client.query<
+      QueryResultRow & {
+        complaint_id: string
+        evidence_id: string
+        evidence_hash: string
+        source_item_id: string
+        source_record_id: string
+        normalized_text: string
+        language: string
+        product_candidate: string
+        company_candidate: string
+        feature_candidate: string
+        category_candidate: string
+        allowed_representation: 'excerpt' | 'metadata-only' | 'aggregate-only'
+        redacted: boolean
+        captured_at: Date | string
+        published_at: Date | string | null
+        review_state: 'unreviewed' | 'confirmed' | 'corrected' | 'rejected'
+      }
+    >(
+      `SELECT complaint.complaint_id, evidence.evidence_id,
+                  evidence.content_hash AS evidence_hash, evidence.source_item_id,
+                  source_item.source_record_id, evidence.normalized_text,
+                  evidence.language, evidence.product_candidate,
+                  evidence.company_candidate, evidence.feature_candidate,
+                  evidence.category_candidate, evidence.allowed_representation,
+                  evidence.redacted, source_item.captured_at, source_item.published_at,
+                  complaint.review_state
+             FROM appsea.research_run_source_items run_item
+             JOIN appsea.research_run_complaints run_complaint
+               ON run_complaint.workspace_id = run_item.workspace_id
+              AND run_complaint.run_id = run_item.run_id
+             JOIN appsea.complaint_observations complaint
+               ON complaint.workspace_id = run_complaint.workspace_id
+              AND complaint.complaint_id = run_complaint.complaint_id
+             JOIN appsea.evidence_records evidence
+               ON evidence.workspace_id = complaint.workspace_id
+              AND evidence.evidence_id = complaint.evidence_id
+              AND evidence.source_item_id = run_item.source_item_id
+             JOIN appsea.source_items source_item
+               ON source_item.workspace_id = run_item.workspace_id
+              AND source_item.source_item_id = run_item.source_item_id
+            WHERE run_item.workspace_id = $1 AND run_item.run_id = $2
+              AND complaint.review_state = 'confirmed'
+              AND evidence.deletion_state = 'active'
+              AND source_item.deletion_state = 'active'
+            ORDER BY source_item.captured_at, evidence.evidence_id`,
+      [workspaceId, runId]
+    )
+    if (
+      evidenceRows.rows.length === 0 ||
+      evidenceRows.rows.some((row) => row.allowed_representation !== 'excerpt' || !row.redacted)
+    ) {
+      throw new ProductionCollectionAnalysisUnavailableError()
+    }
+
+    const tombstoneRows = await client.query<
+      QueryResultRow & {
+        source_id: string
+        source_record_id: string
+        received_at: Date | string
+        reason: string
+      }
+    >(
+      `SELECT tombstone.source_id, tombstone.source_record_id,
+                  tombstone.received_at, tombstone.reason
+             FROM appsea.deletion_tombstones tombstone
+             JOIN appsea.source_items source_item
+               ON source_item.workspace_id = tombstone.workspace_id
+              AND source_item.source_id = tombstone.source_id
+              AND source_item.source_record_id = tombstone.source_record_id
+             JOIN appsea.research_run_source_items run_item
+               ON run_item.workspace_id = source_item.workspace_id
+              AND run_item.source_item_id = source_item.source_item_id
+            WHERE run_item.workspace_id = $1 AND run_item.run_id = $2
+            ORDER BY tombstone.received_at, tombstone.tombstone_id`,
+      [workspaceId, runId]
+    )
+    const deletions = tombstoneRows.rows.map((row) =>
+      sourceDeletionEventSchema.parse({
+        sourceId: row.source_id,
+        sourceRecordId: row.source_record_id,
+        observedAt: asIso(row.received_at),
+        reason: row.reason
+      })
+    )
+    const coverageGaps = snapshot.coverageGaps.filter(
+      (gap) => !gap.startsWith('Opportunity clustering, competitor research')
+    )
+    if (evidenceRows.rows.length < snapshot.complaintCount) {
+      coverageGaps.push(
+        'Only active complaint observations explicitly confirmed by a workspace reviewer enter this analysis.'
+      )
+    }
+    const complaints = evidenceRows.rows.map((row) =>
+      productionAnalysisComplaintSchema.parse({
+        id: row.complaint_id,
+        sourceId: snapshot.sourceId,
+        sourceRecordId: row.source_record_id,
+        capturedAt: asIso(row.captured_at),
+        publishedAt: row.published_at === null ? null : asIso(row.published_at),
+        query: snapshot.query || 'reviewed collection',
+        product: row.product_candidate,
+        company: row.company_candidate,
+        feature: row.feature_candidate,
+        category: row.category_candidate,
+        text: row.normalized_text,
+        language: row.language,
+        synthetic: false,
+        redacted: row.redacted,
+        allowedRepresentation: row.allowed_representation,
+        evidenceId: row.evidence_id,
+        sourceItemId: row.source_item_id,
+        evidenceHash: row.evidence_hash
+      })
+    )
+    return productionCollectionAnalysisSourceSchema.parse({
+      request,
+      collectionArtifactId: run.artifact_id,
+      runId,
+      policySnapshot,
+      complaints,
+      deletions,
+      coverageGaps: [...new Set(coverageGaps)],
+      warnings: snapshot.warnings
+    })
+  }
+
+  async persist(input: ProductionCollectionPersistenceInput): Promise<ProductionCollectionResult> {
+    const parsed = productionCollectionPersistenceInputSchema.parse(input)
+    const inputHash = contentHash(parsed)
+    const artifactId = hashIdentifier('production-collection', {
+      workspaceId: parsed.request.workspaceId,
+      campaignId: parsed.request.campaignId,
+      runId: parsed.request.runId,
+      inputHash
+    })
+
+    try {
+      return await withWorkspaceTransaction(
+        this.pool,
+        parsed.request.workspaceId,
+        async (client) => {
+          if (!(await isProductionWorkspace(client, parsed.request.workspaceId))) {
+            throw new Error(
+              'Production collection requires an active private non-fixture workspace'
+            )
+          }
+          const existing = await readRun(
+            client,
+            parsed.request.workspaceId,
+            parsed.request.idempotencyKey
+          )
+          if (existing) {
+            if (existing.input_hash !== inputHash) {
+              throw new IdempotencyConflictError(parsed.request.idempotencyKey)
+            }
+            if (existing.state !== 'completed') {
+              throw new Error(`Production collection run ${existing.run_id} is ${existing.state}`)
+            }
+            return resultFromRun(client, parsed.request.workspaceId, existing, true)
+          }
+
+          const existingCampaign = await client.query<{ synthetic: boolean }>(
+            `SELECT synthetic
+               FROM appsea.research_campaigns
+              WHERE workspace_id = $1 AND campaign_id = $2
+              FOR UPDATE`,
+            [parsed.request.workspaceId, parsed.request.campaignId]
+          )
+          if (existingCampaign.rows[0]?.synthetic) {
+            throw new Error('Production collection cannot reuse a synthetic campaign')
+          }
+
+          const sourcePolicy = await client.query<
+            QueryResultRow & {
+              source_id: string
+              display_name: string
+              source_type: string
+              lifecycle_state: string
+              current_policy_version: string | null
+              policy_state: string
+              display_mode: string
+              content_hash: string
+              reviewed_at: Date | string | null
+              expires_at: Date | string | null
+              policy_document_ref: string | null
+              policy_payload: unknown
+            }
+          >(
+            `SELECT source.source_id, source.display_name, source.source_type, source.lifecycle_state,
+                    source.current_policy_version, policy.policy_state,
+                    policy.display_mode, policy.content_hash,
+                    policy.reviewed_at, policy.expires_at,
+                    policy.policy_document_ref, policy.policy_payload
+               FROM appsea.sources source
+               JOIN appsea.source_policy_versions policy
+                 ON policy.source_id = source.source_id
+                AND policy.policy_version = $2
+              WHERE source.source_id = $1
+              FOR SHARE`,
+            [parsed.request.sourceId, parsed.request.policyVersion]
+          )
+          const storedPolicy = sourcePolicy.rows[0]
+          if (
+            !storedPolicy ||
+            storedPolicy.source_type === 'fixture' ||
+            storedPolicy.lifecycle_state !== 'active' ||
+            storedPolicy.current_policy_version !== parsed.request.policyVersion ||
+            storedPolicy.policy_state !== 'approved' ||
+            storedPolicy.display_mode !== parsed.request.requestedDisplayMode ||
+            !storedPolicy.reviewed_at ||
+            (storedPolicy.expires_at && Date.parse(asIso(storedPolicy.expires_at)) <= Date.now())
+          ) {
+            throw new Error('Source policy is not approved for production collection')
+          }
+          const storedDraft = sourcePolicySchema.safeParse(storedPolicy.policy_payload)
+          if (!storedDraft.success || contentHash(storedDraft.data) !== storedPolicy.content_hash) {
+            throw new Error('Stored source policy failed its immutable content hash check')
+          }
+          const effectivePolicy = sourcePolicySchema.parse({
+            ...storedDraft.data,
+            displayName: storedPolicy.display_name,
+            enabled: true,
+            policyState: 'approved',
+            reviewedAt: asIso(storedPolicy.reviewed_at),
+            expiresAt: storedPolicy.expires_at ? asIso(storedPolicy.expires_at) : null,
+            policyDocumentRef:
+              storedPolicy.policy_document_ref ?? storedDraft.data.policyDocumentRef
+          })
+          if (
+            parsed.policy.sourceId !== storedPolicy.source_id ||
+            contentHash(parsed.policy) !== contentHash(effectivePolicy)
+          ) {
+            throw new Error('Collection policy does not match the approved database snapshot')
+          }
+
+          await client.query(
+            `INSERT INTO appsea.research_campaigns
+             (workspace_id, campaign_id, name, purpose, state, configuration, budget,
+              synthetic, created_at, updated_at)
+           VALUES ($1, $2, $3, $4, 'running', $5::jsonb, $6::jsonb, false, $7, $7)
+           ON CONFLICT (workspace_id, campaign_id) DO UPDATE
+             SET state = CASE
+                   WHEN appsea.research_campaigns.state IN ('failed', 'canceled') THEN 'running'
+                   ELSE appsea.research_campaigns.state
+                 END,
+                 configuration = EXCLUDED.configuration,
+                 budget = EXCLUDED.budget,
+                 updated_at = GREATEST(appsea.research_campaigns.updated_at, EXCLUDED.updated_at)`,
+            [
+              parsed.request.workspaceId,
+              parsed.request.campaignId,
+              'Production source collection',
+              parsed.request.purpose,
+              JSON.stringify({
+                mode: 'production-collection',
+                sourceId: parsed.request.sourceId,
+                policyVersion: parsed.request.policyVersion,
+                query: parsed.request.query,
+                requestedDisplayMode: parsed.request.requestedDisplayMode
+              }),
+              JSON.stringify(parsed.request.budget),
+              parsed.request.requestedAt
+            ]
+          )
+
+          const snapshotBeforeCounts = buildSnapshot(parsed, artifactId, 0, 0, 0, 0)
+          await client.query(
+            `INSERT INTO appsea.research_runs
+             (workspace_id, run_id, campaign_id, idempotency_key, mode, state,
+              artifact_id, input_hash, artifact_snapshot, coverage_gaps, warnings,
+              requested_at, started_at)
+           VALUES ($1, $2, $3, $4, 'production', 'running', $5, $6, $7::jsonb,
+                   $8, $9, $10, $10)`,
+            [
+              parsed.request.workspaceId,
+              parsed.request.runId,
+              parsed.request.campaignId,
+              parsed.request.idempotencyKey,
+              artifactId,
+              inputHash,
+              JSON.stringify(snapshotBeforeCounts),
+              snapshotBeforeCounts.coverageGaps,
+              snapshotBeforeCounts.warnings,
+              parsed.request.requestedAt
+            ]
+          )
+          await client.query(
+            `INSERT INTO appsea.research_run_source_policies
+             (workspace_id, run_id, source_id, policy_version, linked_at)
+           VALUES ($1, $2, $3, $4, $5)
+           ON CONFLICT DO NOTHING`,
+            [
+              parsed.request.workspaceId,
+              parsed.request.runId,
+              parsed.request.sourceId,
+              parsed.request.policyVersion,
+              parsed.request.requestedAt
+            ]
+          )
+
+          for (const complaint of parsed.complaints) {
+            const text = normalizeText(complaint.text)
+            const sourceItemId = hashIdentifier('source-item', {
+              sourceId: complaint.sourceId,
+              sourceRecordId: complaint.sourceRecordId
+            })
+            const sourceItemHash = contentHash({
+              sourceId: complaint.sourceId,
+              sourceRecordId: complaint.sourceRecordId,
+              capturedAt: complaint.capturedAt,
+              publishedAt: complaint.publishedAt,
+              query: complaint.query,
+              product: complaint.product,
+              company: complaint.company,
+              feature: complaint.feature,
+              category: complaint.category,
+              text,
+              synthetic: false
+            })
+            await client.query(
+              `INSERT INTO appsea.source_items
+               (workspace_id, source_item_id, source_id, source_policy_version,
+                source_record_id, query_route, content_hash, captured_at, published_at,
+                synthetic, created_at, collection_purpose, requested_display_mode)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, false, $8, $10, $11)
+             ON CONFLICT (workspace_id, source_id, source_record_id) DO NOTHING`,
+              [
+                parsed.request.workspaceId,
+                sourceItemId,
+                complaint.sourceId,
+                parsed.request.policyVersion,
+                complaint.sourceRecordId,
+                complaint.query,
+                sourceItemHash,
+                complaint.capturedAt,
+                complaint.publishedAt,
+                parsed.request.purpose,
+                parsed.request.requestedDisplayMode
+              ]
+            )
+            const storedSourceItem = await client.query<
+              QueryResultRow & {
+                content_hash: string
+                source_policy_version: string
+                collection_purpose: string
+                requested_display_mode: string
+                deletion_state: string
+              }
+            >(
+              `SELECT content_hash, source_policy_version, collection_purpose,
+                      requested_display_mode, deletion_state
+                 FROM appsea.source_items
+                WHERE workspace_id = $1 AND source_id = $2 AND source_record_id = $3`,
+              [parsed.request.workspaceId, complaint.sourceId, complaint.sourceRecordId]
+            )
+            const storedSourceItemRow = storedSourceItem.rows[0]
+            if (
+              !storedSourceItemRow ||
+              storedSourceItemRow.content_hash !== sourceItemHash ||
+              storedSourceItemRow.source_policy_version !== parsed.request.policyVersion ||
+              storedSourceItemRow.collection_purpose !== parsed.request.purpose ||
+              storedSourceItemRow.requested_display_mode !== parsed.request.requestedDisplayMode ||
+              storedSourceItemRow.deletion_state !== 'active'
+            ) {
+              throw new ImmutableRecordConflictError('source item', sourceItemId)
+            }
+            await client.query(
+              `INSERT INTO appsea.research_run_source_items
+               (workspace_id, run_id, source_item_id, source_id, source_policy_version)
+             VALUES ($1, $2, $3, $4, $5)
+             ON CONFLICT DO NOTHING`,
+              [
+                parsed.request.workspaceId,
+                parsed.request.runId,
+                sourceItemId,
+                complaint.sourceId,
+                parsed.request.policyVersion
+              ]
+            )
+
+            const evidenceId = hashIdentifier('evidence', {
+              sourceItemId,
+              normalizationVersion: productionNormalizerVersion
+            })
+            const evidenceHash = contentHash({
+              sourceItemHash,
+              text,
+              language: complaint.language,
+              allowedRepresentation: complaint.allowedRepresentation,
+              redacted: complaint.redacted,
+              product: complaint.product,
+              company: complaint.company,
+              feature: complaint.feature,
+              category: complaint.category,
+              normalizationVersion: productionNormalizerVersion
+            })
+            await client.query(
+              `INSERT INTO appsea.evidence_records
+               (workspace_id, evidence_id, source_item_id, normalized_text, language,
+                allowed_representation, redacted, synthetic, normalization_version,
+                content_hash, product_candidate, company_candidate, feature_candidate,
+                category_candidate, policy_flags, created_at)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, false, $8, $9, $10, $11, $12, $13,
+                     $14::jsonb, $15)
+             ON CONFLICT (workspace_id, evidence_id) DO NOTHING`,
+              [
+                parsed.request.workspaceId,
+                evidenceId,
+                sourceItemId,
+                text,
+                complaint.language,
+                complaint.allowedRepresentation,
+                complaint.redacted,
+                productionNormalizerVersion,
+                evidenceHash,
+                complaint.product,
+                complaint.company,
+                complaint.feature,
+                complaint.category,
+                JSON.stringify({ sourcePolicyVersion: parsed.request.policyVersion }),
+                parsed.request.requestedAt
+              ]
+            )
+            await assertHash(
+              client,
+              `SELECT content_hash FROM appsea.evidence_records
+                WHERE workspace_id = $1 AND evidence_id = $2`,
+              [parsed.request.workspaceId, evidenceId],
+              evidenceHash,
+              'evidence record',
+              evidenceId
+            )
+
+            const complaintId = hashIdentifier('complaint', {
+              sourceItemId,
+              extractionVersion: productionExtractionVersion
+            })
+            const complaintHash = contentHash({
+              evidenceHash,
+              classification: 'complaint',
+              complaintType: complaint.category,
+              problemStatement: text,
+              affectedWorkflow: complaint.feature,
+              targetProduct: complaint.product,
+              targetCompany: complaint.company,
+              targetFeature: complaint.feature,
+              extractionVersion: productionExtractionVersion
+            })
+            await client.query(
+              `INSERT INTO appsea.complaint_observations
+               (workspace_id, complaint_id, evidence_id, classification, complaint_type,
+                problem_statement, affected_workflow, target_product, target_company,
+                target_feature, severity, confidence, review_state, extraction_version,
+                synthetic, content_hash, created_at)
+             VALUES ($1, $2, $3, 'complaint', $4, $5, $6, $7, $8, $9, 2, 0.5000,
+                     'unreviewed', $10, false, $11, $12)
+             ON CONFLICT (workspace_id, complaint_id) DO NOTHING`,
+              [
+                parsed.request.workspaceId,
+                complaintId,
+                evidenceId,
+                complaint.category,
+                text,
+                complaint.feature,
+                complaint.product,
+                complaint.company,
+                complaint.feature,
+                productionExtractionVersion,
+                complaintHash,
+                parsed.request.requestedAt
+              ]
+            )
+            await assertHash(
+              client,
+              `SELECT content_hash FROM appsea.complaint_observations
+                WHERE workspace_id = $1 AND complaint_id = $2`,
+              [parsed.request.workspaceId, complaintId],
+              complaintHash,
+              'complaint observation',
+              complaintId
+            )
+            await client.query(
+              `INSERT INTO appsea.research_run_complaints
+               (workspace_id, run_id, complaint_id)
+             VALUES ($1, $2, $3)
+             ON CONFLICT DO NOTHING`,
+              [parsed.request.workspaceId, parsed.request.runId, complaintId]
+            )
+          }
+
+          for (const deletion of parsed.deletions) {
+            const tombstoneId = hashIdentifier('tombstone', {
+              sourceId: deletion.sourceId,
+              sourceRecordId: deletion.sourceRecordId,
+              reason: deletion.reason
+            })
+            await client.query(
+              `INSERT INTO appsea.deletion_tombstones
+               (workspace_id, tombstone_id, source_id, source_record_id, reason, state, received_at)
+             VALUES ($1, $2, $3, $4, $5, 'pending', $6)
+             ON CONFLICT (workspace_id, source_id, source_record_id, reason) DO NOTHING`,
+              [
+                parsed.request.workspaceId,
+                tombstoneId,
+                deletion.sourceId,
+                deletion.sourceRecordId,
+                deletion.reason,
+                deletion.observedAt
+              ]
+            )
+          }
+
+          const sourceItemCount = await countRows(
+            client,
+            `SELECT count(*)::text AS count
+               FROM appsea.research_run_source_items run_item
+               JOIN appsea.source_items source_item
+                 ON source_item.workspace_id = run_item.workspace_id
+                AND source_item.source_item_id = run_item.source_item_id
+              WHERE run_item.workspace_id = $1 AND run_item.run_id = $2
+                AND source_item.deletion_state = 'active'`,
+            [parsed.request.workspaceId, parsed.request.runId]
+          )
+          const evidenceCount = await countRows(
+            client,
+            `SELECT count(*)::text AS count
+               FROM appsea.evidence_records evidence
+               JOIN appsea.research_run_source_items run_item
+                 ON run_item.workspace_id = evidence.workspace_id
+                AND run_item.source_item_id = evidence.source_item_id
+               JOIN appsea.source_items source_item
+                 ON source_item.workspace_id = run_item.workspace_id
+                AND source_item.source_item_id = run_item.source_item_id
+              WHERE run_item.workspace_id = $1 AND run_item.run_id = $2
+                AND source_item.deletion_state = 'active'
+                AND evidence.deletion_state = 'active'`,
+            [parsed.request.workspaceId, parsed.request.runId]
+          )
+          const complaintCount = await countRows(
+            client,
+            `SELECT count(*)::text AS count
+               FROM appsea.research_run_complaints run_complaint
+               JOIN appsea.complaint_observations complaint
+                 ON complaint.workspace_id = run_complaint.workspace_id
+                AND complaint.complaint_id = run_complaint.complaint_id
+               JOIN appsea.evidence_records evidence
+                 ON evidence.workspace_id = complaint.workspace_id
+                AND evidence.evidence_id = complaint.evidence_id
+              WHERE run_complaint.workspace_id = $1 AND run_complaint.run_id = $2
+                AND evidence.deletion_state = 'active'`,
+            [parsed.request.workspaceId, parsed.request.runId]
+          )
+          const snapshot = buildSnapshot(
+            parsed,
+            artifactId,
+            sourceItemCount,
+            evidenceCount,
+            complaintCount,
+            parsed.deletions.length
+          )
+          await client.query(
+            `UPDATE appsea.research_runs
+                SET state = 'completed',
+                    artifact_snapshot = $3::jsonb,
+                    coverage_gaps = $4,
+                    warnings = $5,
+                    completed_at = $6,
+                    finished_at = $6
+              WHERE workspace_id = $1 AND run_id = $2`,
+            [
+              parsed.request.workspaceId,
+              parsed.request.runId,
+              JSON.stringify(snapshot),
+              snapshot.coverageGaps,
+              snapshot.warnings,
+              parsed.request.requestedAt
+            ]
+          )
+          await client.query(
+            `UPDATE appsea.research_campaigns
+                SET state = 'completed', updated_at = GREATEST(updated_at, $3)
+              WHERE workspace_id = $1 AND campaign_id = $2`,
+            [parsed.request.workspaceId, parsed.request.campaignId, parsed.request.requestedAt]
+          )
+          await client.query(
+            `INSERT INTO appsea.audit_events
+             (workspace_id, audit_event_id, actor_type, actor_id, action, target_type,
+              target_id, correlation_id, metadata, occurred_at)
+           VALUES ($1, $2, 'service', 'appsea-worker', 'research.collection.completed',
+                   'research_run', $3, $3, $4::jsonb, $5)
+           ON CONFLICT DO NOTHING`,
+            [
+              parsed.request.workspaceId,
+              hashIdentifier('audit', {
+                runId: parsed.request.runId,
+                action: 'collection-completed'
+              }),
+              parsed.request.runId,
+              JSON.stringify({
+                sourceId: parsed.request.sourceId,
+                policyVersion: parsed.request.policyVersion,
+                sourceItemCount,
+                complaintCount,
+                deletionCount: parsed.deletions.length,
+                synthetic: false
+              }),
+              parsed.request.requestedAt
+            ]
+          )
+          await client.query(
+            `INSERT INTO appsea.outbox_events
+             (workspace_id, outbox_event_id, event_type, aggregate_type, aggregate_id,
+              schema_version, correlation_id, payload, occurred_at)
+           VALUES ($1, $2, 'research.collection.completed', 'research_run', $3,
+                   '1.0.0', $3, $4::jsonb, $5)
+           ON CONFLICT DO NOTHING`,
+            [
+              parsed.request.workspaceId,
+              hashIdentifier('outbox', {
+                runId: parsed.request.runId,
+                event: 'collection-completed'
+              }),
+              parsed.request.runId,
+              JSON.stringify({
+                workspaceId: parsed.request.workspaceId,
+                runId: parsed.request.runId,
+                sourceId: parsed.request.sourceId,
+                sourceItemCount,
+                complaintCount,
+                synthetic: false
+              }),
+              parsed.request.requestedAt
+            ]
+          )
+
+          const completed = await client.query<ExistingRunRow>(
+            `SELECT run_id, campaign_id, idempotency_key, input_hash, state, artifact_id,
+            artifact_snapshot, completed_at
+               FROM appsea.research_runs
+              WHERE workspace_id = $1 AND run_id = $2`,
+            [parsed.request.workspaceId, parsed.request.runId]
+          )
+          const completedRun = completed.rows[0]
+          if (!completedRun) throw new Error('Production collection run was not persisted')
+          return resultFromRun(client, parsed.request.workspaceId, completedRun, false)
+        },
+        { isolationLevel: 'SERIALIZABLE' }
+      )
+    } catch (error) {
+      if (!isUniqueViolation(error)) throw error
+      return withWorkspaceTransaction(
+        this.pool,
+        parsed.request.workspaceId,
+        async (client) => {
+          const existing = await readRun(
+            client,
+            parsed.request.workspaceId,
+            parsed.request.idempotencyKey
+          )
+          if (!existing) throw error
+          if (existing.input_hash !== inputHash) {
+            throw new IdempotencyConflictError(parsed.request.idempotencyKey)
+          }
+          if (existing.state !== 'completed') {
+            throw new Error(`Production collection run ${existing.run_id} is ${existing.state}`)
+          }
+          return resultFromRun(client, parsed.request.workspaceId, existing, true)
+        },
+        { isolationLevel: 'READ COMMITTED' }
+      )
+    }
+  }
+
+  private async readInTransaction(
+    client: PoolClient,
+    workspaceId: string,
+    runId: string
+  ): Promise<ProductionCollectionReadModel | null> {
+    if (!(await isProductionWorkspace(client, workspaceId))) return null
+    const run = await client.query<ExistingRunRow>(
+      `SELECT run_id, campaign_id, idempotency_key, input_hash, state, artifact_id,
+                    artifact_snapshot, completed_at
+             FROM appsea.research_runs
+            WHERE workspace_id = $1 AND run_id = $2
+              AND mode = 'production' AND state = 'completed'`,
+      [workspaceId, runId]
+    )
+    const storedRun = run.rows[0]
+    if (!storedRun) return null
+    productionCollectionSnapshotSchema.parse(storedRun.artifact_snapshot)
+    const evidenceRows = await client.query<
+      QueryResultRow & {
+        evidence_id: string
+        complaint_id: string
+        review_state: 'unreviewed' | 'confirmed' | 'corrected' | 'rejected'
+        source_item_id: string
+        source_record_id: string
+        normalized_text: string
+        language: string
+        product_candidate: string
+        company_candidate: string
+        feature_candidate: string
+        category_candidate: string
+        allowed_representation: 'excerpt' | 'metadata-only' | 'aggregate-only'
+        redacted: boolean
+        captured_at: Date | string
+        published_at: Date | string | null
+      }
+    >(
+      `SELECT evidence.evidence_id, complaint.complaint_id, complaint.review_state,
+                  evidence.source_item_id,
+                  source_item.source_record_id, evidence.normalized_text,
+                  evidence.language, evidence.product_candidate,
+                  evidence.company_candidate, evidence.feature_candidate,
+                  evidence.category_candidate, evidence.allowed_representation,
+                  evidence.redacted, source_item.captured_at, source_item.published_at
+             FROM appsea.research_run_source_items run_item
+             JOIN appsea.research_run_complaints run_complaint
+               ON run_complaint.workspace_id = run_item.workspace_id
+              AND run_complaint.run_id = run_item.run_id
+             JOIN appsea.complaint_observations complaint
+               ON complaint.workspace_id = run_complaint.workspace_id
+              AND complaint.complaint_id = run_complaint.complaint_id
+             JOIN appsea.evidence_records evidence
+               ON evidence.workspace_id = run_item.workspace_id
+              AND evidence.source_item_id = run_item.source_item_id
+             JOIN appsea.source_items source_item
+               ON source_item.workspace_id = run_item.workspace_id
+              AND source_item.source_item_id = run_item.source_item_id
+            WHERE run_item.workspace_id = $1 AND run_item.run_id = $2
+              AND evidence.deletion_state = 'active'
+              AND source_item.deletion_state = 'active'
+              AND (evidence.synthetic OR evidence.redacted)
+            ORDER BY source_item.captured_at DESC, evidence.evidence_id`,
+      [workspaceId, runId]
+    )
+    const sourceCoverage = await client.query<
+      QueryResultRow & {
+        source_id: string
+        display_name: string
+        source_type: 'fixture' | 'api' | 'export' | 'licensed-feed' | 'manual'
+        lifecycle_state: string
+        policy_state: 'approved' | 'pending_review' | 'expired' | 'revoked'
+        enabled: boolean
+        display_mode: 'excerpt' | 'metadata-only' | 'aggregate-only' | 'fixture'
+        coverage_notes: string[]
+        reviewed_at: Date | string | null
+        expires_at: Date | string | null
+        observation_count: string
+      }
+    >(
+      `SELECT source.source_id, source.display_name, source.source_type,
+                  source.lifecycle_state, policy.policy_state,
+                  (source.lifecycle_state = 'active') AS enabled,
+                  policy.display_mode, policy.coverage_notes,
+                  policy.reviewed_at, policy.expires_at,
+                  count(source_item.source_item_id)::text AS observation_count
+             FROM appsea.research_run_source_policies run_policy
+             JOIN appsea.sources source
+               ON source.source_id = run_policy.source_id
+             JOIN appsea.source_policy_versions policy
+               ON policy.source_id = run_policy.source_id
+              AND policy.policy_version = run_policy.policy_version
+            LEFT JOIN appsea.research_run_source_items run_item
+               ON run_item.workspace_id = run_policy.workspace_id
+              AND run_item.run_id = run_policy.run_id
+              AND run_item.source_id = run_policy.source_id
+            LEFT JOIN appsea.source_items source_item
+               ON source_item.workspace_id = run_item.workspace_id
+              AND source_item.source_item_id = run_item.source_item_id
+              AND source_item.deletion_state = 'active'
+            WHERE run_policy.workspace_id = $1 AND run_policy.run_id = $2
+            GROUP BY source.source_id, source.display_name, source.source_type,
+                     source.lifecycle_state, policy.policy_state, policy.display_mode,
+                     policy.coverage_notes, policy.reviewed_at, policy.expires_at
+            ORDER BY source.source_id`,
+      [workspaceId, runId]
+    )
+    const analysisHandoff = await client.query<AnalysisHandoffRow>(
+      `SELECT handoff_id, collection_workflow_id, collection_run_id, seed_review_id,
+              analysis_run_id, state, attempt_count, workflow_id, failure_code,
+              failure_summary, requested_at, next_attempt_at, started_at,
+              finished_at, updated_at
+         FROM appsea.production_analysis_handoffs
+        WHERE workspace_id = $1 AND collection_run_id = $2
+        ORDER BY requested_at DESC, handoff_id
+        LIMIT 1`,
+      [workspaceId, runId]
+    )
+    const handoffRow = analysisHandoff.rows[0]
+    const handoff: ProductionAnalysisHandoffReadModel | null = handoffRow
+      ? productionAnalysisHandoffReadModelSchema.parse({
+          handoffId: handoffRow.handoff_id,
+          collectionWorkflowId: handoffRow.collection_workflow_id,
+          collectionRunId: handoffRow.collection_run_id,
+          seedReviewId: handoffRow.seed_review_id,
+          analysisRunId: handoffRow.analysis_run_id,
+          state: handoffRow.state,
+          attemptCount: Number(handoffRow.attempt_count),
+          workflowId: handoffRow.workflow_id,
+          failureCode: handoffRow.failure_code,
+          failureSummary: handoffRow.failure_summary,
+          requestedAt: asIso(handoffRow.requested_at),
+          nextAttemptAt: asIso(handoffRow.next_attempt_at),
+          startedAt: handoffRow.started_at === null ? null : asIso(handoffRow.started_at),
+          finishedAt: handoffRow.finished_at === null ? null : asIso(handoffRow.finished_at),
+          updatedAt: asIso(handoffRow.updated_at)
+        })
+      : null
+    const result = await resultFromRun(client, workspaceId, storedRun, false)
+    return productionCollectionReadModelSchema.parse({
+      result,
+      evidence: evidenceRows.rows.map((row) => ({
+        id: row.evidence_id,
+        complaintId: row.complaint_id,
+        reviewState: row.review_state,
+        sourceItemId: row.source_item_id,
+        sourceRecordId: row.source_record_id,
+        text: row.allowed_representation === 'excerpt' ? row.normalized_text : null,
+        language: row.language,
+        product: row.product_candidate,
+        company: row.company_candidate,
+        feature: row.feature_candidate,
+        category: row.category_candidate,
+        synthetic: false,
+        redacted: row.redacted,
+        allowedRepresentation: row.allowed_representation,
+        capturedAt: asIso(row.captured_at),
+        publishedAt: row.published_at === null ? null : asIso(row.published_at)
+      })),
+      sourceCoverage: sourceCoverage.rows.map((row) => ({
+        sourceId: row.source_id,
+        displayName: row.display_name,
+        sourceType: row.source_type,
+        policyState: row.policy_state,
+        enabled: row.enabled,
+        displayMode: row.display_mode,
+        coverageNotes: row.coverage_notes,
+        reviewedAt: row.reviewed_at === null ? null : asIso(row.reviewed_at),
+        expiresAt: row.expires_at === null ? null : asIso(row.expires_at),
+        observationCount: Number(row.observation_count),
+        synthetic: false
+      })),
+      analysisHandoff: handoff
+    })
+  }
+
+  async read(workspaceId: string, runId: string): Promise<ProductionCollectionReadModel | null> {
+    return withWorkspaceTransaction(
+      this.pool,
+      workspaceId,
+      (client) => this.readInTransaction(client, workspaceId, runId),
+      { readOnly: true }
+    )
+  }
+
+  async readForUser(
+    userId: string,
+    workspaceId: string,
+    runId: string
+  ): Promise<ProductionCollectionReadModel | null> {
+    return withAuthenticatedWorkspaceTransaction(
+      this.pool,
+      userId,
+      workspaceId,
+      (client) => this.readInTransaction(client, workspaceId, runId),
+      { readOnly: true }
+    )
+  }
+
+  async updateComplaintReview(
+    userId: string,
+    workspaceId: string,
+    runId: string,
+    complaintId: string,
+    input: WorkspaceComplaintReviewInput
+  ): Promise<WorkspaceComplaintReviewReadModel> {
+    const parsedUserId = appseaIdentifierSchema.parse(userId)
+    const parsedWorkspaceId = appseaIdentifierSchema.parse(workspaceId)
+    const parsedRunId = appseaIdentifierSchema.parse(runId)
+    const parsedComplaintId = appseaIdentifierSchema.parse(complaintId)
+    const parsedInput = workspaceComplaintReviewInputSchema.parse(input)
+
+    try {
+      return await withAuthenticatedWorkspaceTransaction(
+        this.pool,
+        parsedUserId,
+        parsedWorkspaceId,
+        async (client) => {
+          const actor = await client.query<{ role: string }>(
+            `SELECT role
+               FROM appsea.workspace_memberships
+              WHERE workspace_id = $1 AND user_id = $2
+              FOR SHARE`,
+            [parsedWorkspaceId, parsedUserId]
+          )
+          if (!['owner', 'editor'].includes(actor.rows[0]?.role ?? '')) {
+            throw new ProductionComplaintReviewPermissionError()
+          }
+
+          const result = await client.query<
+            QueryResultRow & {
+              complaint_id: string
+              review_state: 'unreviewed' | 'confirmed' | 'corrected' | 'rejected'
+              evidence_state: string
+              source_state: string
+            }
+          >(
+            `SELECT complaint.complaint_id, complaint.review_state,
+                    evidence.deletion_state AS evidence_state,
+                    source_item.deletion_state AS source_state
+               FROM appsea.research_run_complaints run_complaint
+               JOIN appsea.complaint_observations complaint
+                 ON complaint.workspace_id = run_complaint.workspace_id
+                AND complaint.complaint_id = run_complaint.complaint_id
+               JOIN appsea.evidence_records evidence
+                 ON evidence.workspace_id = complaint.workspace_id
+                AND evidence.evidence_id = complaint.evidence_id
+               JOIN appsea.source_items source_item
+                 ON source_item.workspace_id = evidence.workspace_id
+                AND source_item.source_item_id = evidence.source_item_id
+              WHERE run_complaint.workspace_id = $1
+                AND run_complaint.run_id = $2
+                AND run_complaint.complaint_id = $3
+              FOR UPDATE OF complaint`,
+            [parsedWorkspaceId, parsedRunId, parsedComplaintId]
+          )
+          const row = result.rows[0]
+          if (!row || row.evidence_state !== 'active' || row.source_state !== 'active') {
+            throw new ProductionComplaintReviewNotFoundError()
+          }
+          if (row.review_state === parsedInput.action) {
+            return workspaceComplaintReviewReadModelSchema.parse({
+              complaintId: row.complaint_id,
+              reviewState: row.review_state
+            })
+          }
+          const allowed =
+            (row.review_state === 'unreviewed' &&
+              (parsedInput.action === 'confirmed' || parsedInput.action === 'rejected')) ||
+            (row.review_state === 'confirmed' && parsedInput.action === 'rejected')
+          if (!allowed) throw new ProductionComplaintReviewConflictError()
+
+          await client.query(
+            `UPDATE appsea.complaint_observations
+                SET review_state = $4
+              WHERE workspace_id = $1
+                AND complaint_id = $2
+                AND EXISTS (
+                  SELECT 1
+                    FROM appsea.research_run_complaints run_complaint
+                   WHERE run_complaint.workspace_id = $1
+                     AND run_complaint.run_id = $3
+                     AND run_complaint.complaint_id = $2
+                )`,
+            [parsedWorkspaceId, parsedComplaintId, parsedRunId, parsedInput.action]
+          )
+          return workspaceComplaintReviewReadModelSchema.parse({
+            complaintId: parsedComplaintId,
+            reviewState: parsedInput.action
+          })
+        },
+        { isolationLevel: 'SERIALIZABLE' }
+      )
+    } catch (error) {
+      if (isComplaintReviewConflict(error)) {
+        throw new ProductionComplaintReviewConflictError()
+      }
+      throw error
+    }
+  }
+}
+
+function isComplaintReviewConflict(error: unknown): boolean {
+  return (
+    typeof error === 'object' &&
+    error !== null &&
+    'code' in error &&
+    (error as { code?: unknown }).code === '23514' &&
+    'message' in error &&
+    String((error as { message?: unknown }).message).includes('complaint review')
+  )
+}

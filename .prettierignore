@@ -1,0 +1,11 @@
+node_modules
+.next
+dist
+.turbo
+artifacts
+design/references
+package_manifest.json
+PACKAGE_MANIFEST.md
+pnpm-lock.yaml
+
+apps/web/next-env.d.ts

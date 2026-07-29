@@ -1,0 +1,4 @@
+interface:
+  display_name: 'AppSea Vertical Slice'
+  short_description: 'Use when implementing an AppSea feature that crosses contracts, processing, APIs, UI, tests, and documentation.'
+  default_prompt: 'Apply the appsea-vertical-slice skill to the current AppSea task.'

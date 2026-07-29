@@ -1,0 +1,4 @@
+interface:
+  display_name: 'AppSea Opportunity Scoring'
+  short_description: 'Use when changing opportunity factors, weights, penalties, calibration, ranking, or score explanations.'
+  default_prompt: 'Apply the appsea-opportunity-scoring skill to the current AppSea task.'
