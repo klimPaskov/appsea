@@ -1,10 +1,10 @@
 # AppSea package manifest
 
 - Version: `0.3.0`
-- Generated: `2026-07-26T11:44:10+00:00`
-- Indexed files: `591`
-- Indexed bytes: `24742908`
-- Package digest: `bd706ac99ec06a005c83948ad25c97a47b7186b9426b8b0736c19b6027e297ac`
+- Generated: `2026-07-29T07:36:49+00:00`
+- Indexed files: `579`
+- Indexed bytes: `24084366`
+- Package digest: `0c59465c88baa0b05e6e9a8c6a26b07cd3e9994dfc557ae752658c1fb3caf088`
 
 ## Category counts
 
@@ -12,18 +12,18 @@
 | --- | ---: |
 | Codex subagent | 11 |
 | JSON Schema | 15 |
-| UI reference image | 33 |
+| UI reference image | 21 |
 | application code | 146 |
 | deep specification | 28 |
 | design source | 26 |
-| documentation | 65 |
+| documentation | 66 |
 | example artifact | 25 |
 | generated sample artifact | 18 |
 | native Codex skill | 42 |
-| project memory | 23 |
-| repository control | 25 |
+| project memory | 24 |
+| repository control | 22 |
 | repository tooling | 10 |
-| shared package | 124 |
+| shared package | 125 |
 
 ## Files
 
@@ -87,11 +87,8 @@
 | `.env.example` | repository control | 1560 | `dcdb9c0044a0` |
 | `.gitattributes` | repository control | 19 | `c1723482f505` |
 | `.github/workflows/ci.yml` | repository control | 1120 | `4130d8dd8581` |
-| `.gitignore` | repository control | 207 | `44c8ebced532` |
+| `.gitignore` | repository control | 253 | `e4e6aecfe869` |
 | `.npmrc` | repository control | 81 | `563d401189a7` |
-| `.pnpm-store/v11/index.db` | repository control | 8192 | `cd7dcaaff323` |
-| `.pnpm-store/v11/index.db-shm` | repository control | 32768 | `fd4c9fda9cd3` |
-| `.pnpm-store/v11/index.db-wal` | repository control | 0 | `e3b0c44298fc` |
 | `.prettierignore` | repository control | 140 | `09c92241231e` |
 | `AGENTS.md` | repository control | 17263 | `54f19105d302` |
 | `apps/desktop/package.json` | application code | 310 | `0e20efc02dec` |
@@ -197,7 +194,7 @@
 | `apps/web/src/server/temporal.test.ts` | application code | 2117 | `598061eece6a` |
 | `apps/web/src/server/temporal.ts` | application code | 5590 | `3d19cadf8f69` |
 | `apps/web/tsconfig.json` | application code | 294 | `21018296f4bc` |
-| `apps/web/tsconfig.tsbuildinfo` | application code | 241558 | `4bd884d64b56` |
+| `apps/web/tsconfig.tsbuildinfo` | application code | 241696 | `b146844f668f` |
 | `apps/worker/AGENTS.md` | application code | 942 | `9266e791f069` |
 | `apps/worker/package.json` | application code | 1442 | `0c90261919a8` |
 | `apps/worker/src/analysis-sample.test.ts` | application code | 1454 | `6a83df025231` |
@@ -211,10 +208,10 @@
 | `apps/worker/src/durable-worker.ts` | application code | 2890 | `6d8d1572d353` |
 | `apps/worker/src/fixture-persist.ts` | application code | 1367 | `20bed38ef347` |
 | `apps/worker/src/fixture.ts` | application code | 728 | `bad5399a24fb` |
-| `apps/worker/src/maintenance-runner.test.ts` | application code | 8492 | `821576ab3f78` |
-| `apps/worker/src/maintenance-runner.ts` | application code | 5698 | `63068b92eaac` |
-| `apps/worker/src/observability.test.ts` | application code | 2961 | `8914d62415ac` |
-| `apps/worker/src/observability.ts` | application code | 4954 | `be2b62ff6e6e` |
+| `apps/worker/src/maintenance-runner.test.ts` | application code | 8560 | `b67d15a0fb4b` |
+| `apps/worker/src/maintenance-runner.ts` | application code | 6023 | `ee54b207767a` |
+| `apps/worker/src/observability.test.ts` | application code | 3081 | `f7008425bb67` |
+| `apps/worker/src/observability.ts` | application code | 5205 | `97b64a229da5` |
 | `apps/worker/src/plan-sample.ts` | application code | 1208 | `7840551dbafc` |
 | `apps/worker/src/production-analysis-activities.ts` | application code | 3574 | `945d53d3f880` |
 | `apps/worker/src/production-analysis-handoff.ts` | application code | 6606 | `60380cbaf2a3` |
@@ -225,7 +222,7 @@
 | `apps/worker/src/signed-delivery.ts` | application code | 3009 | `44c2620b1fc3` |
 | `apps/worker/src/source-deletion-adapter.test.ts` | application code | 2005 | `35227027b3b4` |
 | `apps/worker/src/source-deletion-adapter.ts` | application code | 1130 | `bac7531e1488` |
-| `apps/worker/src/source-maintenance.ts` | application code | 3068 | `fe5a833ab37c` |
+| `apps/worker/src/source-maintenance.ts` | application code | 3228 | `6861e028da22` |
 | `apps/worker/src/source-policy-cfpb-review.ts` | application code | 2042 | `f0e14de5ccf3` |
 | `apps/worker/src/source-quota-adapter.ts` | application code | 652 | `41d7a176622f` |
 | `apps/worker/src/temporal-local.test.ts` | application code | 877 | `65b7935ec994` |
@@ -250,14 +247,14 @@
 | `artifacts/analysis-sample/plan/README.md` | generated sample artifact | 612 | `79999a74b3da` |
 | `artifacts/analysis-sample/report.json` | generated sample artifact | 6383 | `57b621b87bc3` |
 | `artifacts/plans/.gitkeep` | generated sample artifact | 0 | `e3b0c44298fc` |
-| `artifacts/plans/inbox-relay/01-product-brief.md` | generated sample artifact | 3694 | `aa0248867047` |
+| `artifacts/plans/inbox-relay/01-product-brief.md` | generated sample artifact | 3694 | `64e96ab597e0` |
 | `artifacts/plans/inbox-relay/02-mvp-scope.md` | generated sample artifact | 653 | `1c8387af8d68` |
 | `artifacts/plans/inbox-relay/03-architecture.md` | generated sample artifact | 510 | `5b7f07c2b385` |
-| `artifacts/plans/inbox-relay/04-task-graph.json` | generated sample artifact | 4730 | `29dc00583eec` |
+| `artifacts/plans/inbox-relay/04-task-graph.json` | generated sample artifact | 4730 | `c5e68ccd7272` |
 | `artifacts/plans/inbox-relay/05-validation.md` | generated sample artifact | 814 | `de37e0f8051f` |
 | `artifacts/plans/inbox-relay/README.md` | generated sample artifact | 483 | `6b4d104eb04c` |
 | `artifacts/research/.gitkeep` | generated sample artifact | 0 | `e3b0c44298fc` |
-| `artifacts/research/seed-research-artifact.json` | generated sample artifact | 8625 | `c126ee9b472d` |
+| `artifacts/research/seed-research-artifact.json` | generated sample artifact | 8625 | `536546b4ecde` |
 | `CHANGELOG.md` | repository control | 456 | `03797146f9c4` |
 | `design/DESIGN_TOKENS.md` | design source | 999 | `4b5aaffa4ba9` |
 | `design/IMPLEMENTATION_NOTES.md` | design source | 1216 | `ddf93f26538b` |
@@ -267,18 +264,12 @@
 | `design/PACKAGE_MANIFEST.md` | design source | 299 | `d8587a0a6f49` |
 | `design/README.md` | design source | 3086 | `6defb6c49d15` |
 | `design/REFERENCE_MANIFEST.md` | design source | 1690 | `19cc4593d2e1` |
-| `design/references/competitors-mobile.png` | UI reference image | 49775 | `95c392260010` |
-| `design/references/competitors.png` | UI reference image | 68812 | `591a4775dd33` |
-| `design/references/complaints-mobile.png` | UI reference image | 53180 | `1c2f2b1bdf40` |
-| `design/references/complaints.png` | UI reference image | 68780 | `f74be6fc2c9f` |
 | `design/references/desktop/competitors.png` | UI reference image | 1375767 | `18d85e0458d5` |
 | `design/references/desktop/complaints.png` | UI reference image | 1489451 | `aeac8829b608` |
 | `design/references/desktop/leaderboard.png` | UI reference image | 1290611 | `35f0fc36ac89` |
 | `design/references/desktop/opportunity.png` | UI reference image | 1444144 | `5615efadbc2e` |
 | `design/references/desktop/plan.png` | UI reference image | 1497572 | `edef95532edf` |
 | `design/references/desktop/security.png` | UI reference image | 49224 | `15b36eee6a5d` |
-| `design/references/leaderboard-mobile.png` | UI reference image | 32596 | `d2c20fc0c26e` |
-| `design/references/leaderboard.png` | UI reference image | 49772 | `39dacaeb4a20` |
 | `design/references/mobile/competitors.png` | UI reference image | 387416 | `25e82695d859` |
 | `design/references/mobile/complaints.png` | UI reference image | 407248 | `c6bdd97e7574` |
 | `design/references/mobile/leaderboard.png` | UI reference image | 389145 | `0ff7bd0af69d` |
@@ -290,18 +281,12 @@
 | `design/references/mobile/source/leaderboard.png` | UI reference image | 1259550 | `0ec1635fc92e` |
 | `design/references/mobile/source/opportunity.png` | UI reference image | 1307414 | `8da66a13e827` |
 | `design/references/mobile/source/plan.png` | UI reference image | 1285161 | `565d63b38022` |
-| `design/references/opportunity-mobile.png` | UI reference image | 49907 | `4d5e8e413f68` |
-| `design/references/opportunity.png` | UI reference image | 68621 | `2e8300dbbfd6` |
 | `design/references/overview-all.png` | UI reference image | 1984301 | `3eb98908671e` |
 | `design/references/overview-desktop.png` | UI reference image | 1136965 | `7f86fd763464` |
 | `design/references/overview-mobile.png` | UI reference image | 605151 | `c5b9198a8c21` |
 | `design/references/overview.png` | UI reference image | 1984301 | `3eb98908671e` |
-| `design/references/plan-mobile.png` | UI reference image | 41558 | `225e35f9f0bd` |
-| `design/references/plan.png` | UI reference image | 59646 | `7538402b5914` |
 | `design/references/reference-map.json` | design source | 2064 | `ac43c2d3f231` |
 | `design/references/REFERENCE_BRIEF.md` | design source | 1051 | `e451092ccd48` |
-| `design/references/security-mobile.png` | UI reference image | 37106 | `023c639ff7d6` |
-| `design/references/security.png` | UI reference image | 49224 | `15b36eee6a5d` |
 | `design/references/source/competitors-mobile.svg` | design source | 5848 | `955d10351264` |
 | `design/references/source/competitors.svg` | design source | 5101 | `6c4ae38dee78` |
 | `design/references/source/complaints-mobile.svg` | design source | 5397 | `cadf038f2e6c` |
@@ -334,13 +319,13 @@
 | `docs/AGENTS.md` | documentation | 326 | `da7080695bd5` |
 | `docs/architecture/data-flow.md` | documentation | 4656 | `b8e0e17b9903` |
 | `docs/architecture/repository-map.md` | documentation | 1204 | `967baf264628` |
-| `docs/architecture/security-boundaries.md` | documentation | 11124 | `3d6f0d132e33` |
+| `docs/architecture/security-boundaries.md` | documentation | 11580 | `2cb38420b09d` |
 | `docs/architecture/system-overview.md` | documentation | 3182 | `76204379d6d7` |
 | `docs/generated/repository-map.md` | documentation | 362 | `5f82174f1cf5` |
 | `docs/generated/skill-catalog.md` | documentation | 5674 | `9e9558f5f7ca` |
 | `docs/generated/subagent-catalog.md` | documentation | 3208 | `4b22a84ea338` |
-| `docs/INDEX.md` | documentation | 4778 | `63d85a1cc21a` |
-| `docs/plans/active/001-foundation-to-mvp.md` | documentation | 11332 | `126a8936d75f` |
+| `docs/INDEX.md` | documentation | 4927 | `a66afad8203b` |
+| `docs/plans/active/001-foundation-to-mvp.md` | documentation | 11490 | `cd074e5ea690` |
 | `docs/product/account-closure.md` | documentation | 1413 | `6be177f329bb` |
 | `docs/product/cfpb-source-policy.md` | documentation | 7034 | `3e27715ab21b` |
 | `docs/product/leaderboard.md` | documentation | 702 | `738c3987f7c1` |
@@ -361,7 +346,7 @@
 | `docs/runbooks/postgresql-local.md` | documentation | 5466 | `cb7f6328b563` |
 | `docs/runbooks/production-analysis.md` | documentation | 6421 | `5f93ff8f244b` |
 | `docs/runbooks/production-source-collection.md` | documentation | 6449 | `62e317caf389` |
-| `docs/runbooks/source-maintenance.md` | documentation | 2404 | `b51c13e527cb` |
+| `docs/runbooks/source-maintenance.md` | documentation | 2772 | `75f6851c92a6` |
 | `docs/runbooks/source-policy-review.md` | documentation | 1941 | `54cb467b0b56` |
 | `docs/runbooks/temporal-local.md` | documentation | 3312 | `2827caacc699` |
 | `docs/runbooks/ui-reference-loop.md` | documentation | 670 | `02d115c049ef` |
@@ -397,13 +382,14 @@
 | `docs/specs/appsea/27_documentation_and_knowledge_system.md` | deep specification | 764 | `540572b963ae` |
 | `docs/status/account-session-lifecycle-completion-report.md` | documentation | 2697 | `c66450a55a60` |
 | `docs/status/auth-recovery-completion-report.md` | documentation | 3442 | `4d10aa9e353a` |
-| `docs/status/current.md` | documentation | 6184 | `62690469c37c` |
+| `docs/status/current.md` | documentation | 6542 | `4e3365f24979` |
 | `docs/status/durable-workflow-completion-report.md` | documentation | 9449 | `e66cad3a4c16` |
 | `docs/status/evidence-report-completion-report.md` | documentation | 3255 | `07f56fb78183` |
-| `docs/status/known-gaps.md` | documentation | 10843 | `5e3f53dac22b` |
+| `docs/status/known-gaps.md` | documentation | 10966 | `ee9a1be89c43` |
+| `docs/status/opportunity-availability-repair-completion-report-2026-07-29.md` | documentation | 2313 | `1448aa8ab2d1` |
 | `docs/status/opportunity-seed-review-completion-report-2026-07-26.md` | documentation | 5951 | `0e2d51c42187` |
 | `docs/status/production-analysis-completion-report-2026-07-26.md` | documentation | 8413 | `347e77f3a62a` |
-| `docs/status/production-analysis-handoff-completion-report-2026-07-26.md` | documentation | 6331 | `bbcd3c15cd21` |
+| `docs/status/production-analysis-handoff-completion-report-2026-07-26.md` | documentation | 6421 | `de2e4bab968c` |
 | `docs/status/production-readiness-audit-2026-07-25.md` | documentation | 10790 | `f5142606571a` |
 | `docs/status/starter-completion-report.md` | documentation | 2042 | `b39d21a20afd` |
 | `docs/status/worker-maintenance-hardening-completion-report.md` | documentation | 3359 | `3a5942064dd6` |
@@ -440,10 +426,10 @@
 | `GOAL_PROMPT.md` | repository control | 2314 | `3c7b0de673e9` |
 | `infra/local/compose.yaml` | repository control | 1117 | `68627245500c` |
 | `infra/local/init/0001-create-test-database.sql` | repository control | 807 | `71f73dad8102` |
-| `memory/ACTIVE.md` | project memory | 7983 | `e4d711908bb7` |
+| `memory/ACTIVE.md` | project memory | 7899 | `13fc9c5d5b21` |
 | `memory/AGENTS.md` | project memory | 288 | `4ac39e6496a2` |
 | `memory/DECISIONS.md` | project memory | 17644 | `f464e75646ed` |
-| `memory/HOT.md` | project memory | 2448 | `13809936c5ee` |
+| `memory/HOT.md` | project memory | 2480 | `4475bce21058` |
 | `memory/LESSONS.md` | project memory | 1955 | `2f1b2fffc727` |
 | `memory/PROJECT.md` | project memory | 4780 | `503160b60882` |
 | `memory/README.md` | project memory | 529 | `095c2b1c046a` |
@@ -462,6 +448,7 @@
 | `memory/sessions/2026-07-26-analysis-provenance.md` | project memory | 5116 | `da43503f11d9` |
 | `memory/sessions/2026-07-26-object-store-boundary.md` | project memory | 1417 | `66fea2db660e` |
 | `memory/sessions/2026-07-26-production-analysis.md` | project memory | 1784 | `da59960d107c` |
+| `memory/sessions/2026-07-29-opportunity-availability.md` | project memory | 1126 | `e9ebd94ff56b` |
 | `memory/USER.md` | project memory | 1373 | `cb89307ce7a9` |
 | `package.json` | repository control | 3161 | `876a017ec01f` |
 | `packages/agent-memory/AGENTS.md` | shared package | 394 | `516d7e1a16ad` |
@@ -480,12 +467,12 @@
 | `packages/connectors/tsconfig.json` | shared package | 121 | `9e388ea60852` |
 | `packages/contracts/package.json` | shared package | 425 | `ea37efa2cdae` |
 | `packages/contracts/src/analysis-contracts.test.ts` | shared package | 8531 | `e72d736c9491` |
-| `packages/contracts/src/contracts.test.ts` | shared package | 35174 | `72ca1db335ee` |
-| `packages/contracts/src/index.ts` | shared package | 94781 | `b81e7e4a2ed4` |
+| `packages/contracts/src/contracts.test.ts` | shared package | 35264 | `7ed1980a555c` |
+| `packages/contracts/src/index.ts` | shared package | 94867 | `892078264bad` |
 | `packages/contracts/src/object-storage-contracts.test.ts` | shared package | 1117 | `4cb1a2ab8dcc` |
 | `packages/contracts/tsconfig.json` | shared package | 121 | `9e388ea60852` |
 | `packages/db/AGENTS.md` | shared package | 749 | `0a2f0a069a63` |
-| `packages/db/integration/db.integration.test.ts` | shared package | 89956 | `e2b1a2af0e49` |
+| `packages/db/integration/db.integration.test.ts` | shared package | 89984 | `ac0547be1983` |
 | `packages/db/migrations/0001_production_persistence.sql` | shared package | 22432 | `0c5d6ef9b205` |
 | `packages/db/migrations/0002_plan_run_lineage.sql` | shared package | 2743 | `932c4f08e9cf` |
 | `packages/db/migrations/0003_run_scoped_cluster_snapshots.sql` | shared package | 315 | `905a65ca6ca0` |
@@ -520,15 +507,16 @@
 | `packages/db/migrations/0032_complaint_review_governance.sql` | shared package | 4049 | `6d8e037758bf` |
 | `packages/db/migrations/0033_opportunity_seed_reviews.sql` | shared package | 8084 | `8907fc61a6bb` |
 | `packages/db/migrations/0034_production_analysis_handoffs.sql` | shared package | 5207 | `1ff9958a9045` |
+| `packages/db/migrations/0035_opportunity_availability_repair.sql` | shared package | 1916 | `9f86b10af4d8` |
 | `packages/db/package.json` | shared package | 1191 | `2a6f4c20a83b` |
 | `packages/db/src/auth-repository.test.ts` | shared package | 31261 | `35a284a70a43` |
-| `packages/db/src/auth-repository.ts` | shared package | 79567 | `234f624c7c64` |
+| `packages/db/src/auth-repository.ts` | shared package | 79722 | `8e528ed4fe04` |
 | `packages/db/src/auth.ts` | shared package | 1001 | `daf2e7ea2c18` |
 | `packages/db/src/cli/migrate.ts` | shared package | 787 | `402ada328267` |
 | `packages/db/src/config.ts` | shared package | 3586 | `e80345a8095e` |
-| `packages/db/src/db.test.ts` | shared package | 14458 | `c65662ccc6b0` |
-| `packages/db/src/deletion-propagation-repository.test.ts` | shared package | 6661 | `c3d28e8bfa9d` |
-| `packages/db/src/deletion-propagation-repository.ts` | shared package | 20746 | `cd7c41c611fa` |
+| `packages/db/src/db.test.ts` | shared package | 14965 | `fd196af1bad9` |
+| `packages/db/src/deletion-propagation-repository.test.ts` | shared package | 6832 | `66d2e0f7ab7e` |
+| `packages/db/src/deletion-propagation-repository.ts` | shared package | 22778 | `27096e6c6144` |
 | `packages/db/src/fixture-repository.ts` | shared package | 45197 | `67294e4a565c` |
 | `packages/db/src/hash.ts` | shared package | 883 | `3b39e48fbb73` |
 | `packages/db/src/index.ts` | shared package | 3852 | `e7a12c75afe5` |
@@ -538,7 +526,7 @@
 | `packages/db/src/production-analysis-handoff-repository.test.ts` | shared package | 7333 | `a251ac5aa364` |
 | `packages/db/src/production-analysis-handoff-repository.ts` | shared package | 14853 | `5614123f69ce` |
 | `packages/db/src/production-analysis-repository.test.ts` | shared package | 5744 | `7e100c4f0b14` |
-| `packages/db/src/production-analysis-repository.ts` | shared package | 51985 | `f59814f3a884` |
+| `packages/db/src/production-analysis-repository.ts` | shared package | 52149 | `aef070b529a8` |
 | `packages/db/src/production-analysis.ts` | shared package | 260 | `0629c4b40ebc` |
 | `packages/db/src/production-collection-repository.test.ts` | shared package | 3713 | `0be4410c6813` |
 | `packages/db/src/production-collection-repository.ts` | shared package | 58411 | `97e32653c97f` |
@@ -609,7 +597,7 @@
 | `schemas/task_graph.schema.json` | JSON Schema | 3934 | `73409ba7afeb` |
 | `scripts/check_repo.py` | repository tooling | 7997 | `3d7c4e7f8c0c` |
 | `scripts/clean.mjs` | repository tooling | 239 | `2b3aebe92a5e` |
-| `scripts/generate_manifest.py` | repository tooling | 3853 | `fd15344e45c0` |
+| `scripts/generate_manifest.py` | repository tooling | 3902 | `1c26b5d66eda` |
 | `scripts/memory.py` | repository tooling | 6619 | `9726189361d8` |
 | `scripts/render_references.py` | repository tooling | 22006 | `5790ade9f81f` |
 | `scripts/run_db_integration.mjs` | repository tooling | 3043 | `1ff8f0b1e4cf` |

@@ -303,7 +303,8 @@ describe('contracts', () => {
         quotaReservationsPurged: 4,
         retentionTombstonesQueued: 5,
         deletionTombstonesProcessed: 6,
-        deletionObjectsAffected: 7
+        deletionObjectsAffected: 7,
+        deletionOpportunitiesInvalidated: 1
       }).success
     ).toBe(true)
     expect(
@@ -318,7 +319,8 @@ describe('contracts', () => {
         quotaReservationsPurged: 4,
         retentionTombstonesQueued: 5,
         deletionTombstonesProcessed: 5,
-        deletionObjectsAffected: 10_000_001
+        deletionObjectsAffected: 10_000_001,
+        deletionOpportunitiesInvalidated: 1
       }).success
     ).toBe(false)
 

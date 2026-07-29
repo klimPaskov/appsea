@@ -25,7 +25,7 @@ Status: production-shaped foundation implemented and validated locally; producti
 
 Implemented:
 
-- PostgreSQL 18 schema and thirty-four forward, checksummed migrations
+- PostgreSQL 18 schema and thirty-five forward, checksummed migrations
 - normalized source, evidence, complaint, cluster, competitor, opportunity, score, report, plan, audit, cost, deletion, outbox, and lineage tables
 - no-login owner, separate migrator, and least-privilege runtime role contract
 - forced workspace RLS and transaction-scoped workspace context
@@ -136,7 +136,9 @@ persistence/reference wiring, an idempotent post-collection repository, a
 Temporal activity, an opt-in approved-seed handoff queue, and private
 active-output reads are implemented after a completed collection; live
 activation, cloud object-store deployment, automatic aggregate recomputation,
-deployed scheduling, and handoff alerting remain open. The private
+deployed scheduling, and handoff alerting remain open. Source deletion now
+invalidates/de-ranks mutable opportunity projections through migration `0035`,
+but it does not automatically re-collect deleted evidence. The private
 review-start route now reconstructs the confirmed collection subset and starts
 the durable workflow explicitly; the local adapter does not
 authorize a production source activation.

@@ -18,8 +18,12 @@ every workspace's deletion queue unless `APPSEA_DELETION_WORKSPACE_ID` is
 supplied to narrow a run. Claims use `FOR UPDATE SKIP LOCKED` and reclaim
 processing claims older than the lease. Propagation is idempotent, retains
 tombstone identifiers, removes source-item raw references, replaces normalized
-evidence/report/plan payloads with deletion markers, and marks dependent
-versions unavailable.
+evidence/report/plan payloads with deletion markers, marks dependent versions
+unavailable, and invalidates/de-ranks any mutable opportunity projection whose
+completed production analysis used the deleted source record. The invalidation
+clears current score and plan pointers while preserving immutable clusters,
+score snapshots, and lineage. A later completed analysis from a new collection
+run reactivates the projection.
 
 Retention policies using `redact` or `tombstone` reuse this path. Policy drafts
 using `purge` are rejected until a separately reviewed object-store/database
@@ -42,5 +46,5 @@ independent bounded budgets.
 Workspace enumeration is sorted and deduplicated, and a retry may reuse
 `APPSEA_SOURCE_MAINTENANCE_JOB_ID` (the default is a UTC-minute bucket). Run it
 from a scheduler with retry and alerting. External object storage/backups,
-exports, complaint/cluster/score recomputation, and production deployment
-behavior remain explicit release blockers.
+exports, complaint/cluster recomputation, explicit re-collection after source
+deletion, and production deployment behavior remain explicit release blockers.

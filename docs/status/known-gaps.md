@@ -53,10 +53,12 @@ Deletion tombstones now have a bounded skip-locked propagation worker. Source-it
 raw references are cleared, active source/evidence payload rewrites are blocked,
 terminal tombstone state/count rewrites are blocked, normalized evidence is
 replaced with a redaction marker, dependent report/plan versions are marked
-unavailable, and active production analysis runs are marked `invalidated` while
-provenance remains. Object references are retained for an authorized purge
-pass. Complaint/cluster/opportunity recomputation, object storage/backups, and
-export purge are not implemented. Complaint review transitions and the
+unavailable, active production analysis runs are marked `invalidated`, and
+mutable opportunity projections are invalidated/de-ranked when no newer active
+analysis remains while provenance remains. Object references are retained for
+an authorized purge pass. Complaint/cluster recomputation, automatic
+re-collection, object storage/backups, and export purge are not implemented.
+Complaint review transitions and the
 explicit reviewed analysis-start route are implemented. Migration `0034` also
 provides an opt-in, seed-bound post-collection handoff with stale-claim
 recovery; deployed scheduling, Temporal authorization, and alert ownership
@@ -95,9 +97,9 @@ is not yet wired to a scheduler. Durable cross-workspace quota reservations,
 bounded all-workspace maintenance through a migration-owner security-definer
 workspace enumerator, stale-claim recovery, and deletion propagation now exist.
 No source is currently enabled for market research, and production Temporal
-provisioning/cloud-storage deployment, complaint/cluster/opportunity
-recomputation, object-store/backups purge, and legal/privacy/security approval
-remain required. CFPB collection currently
+provisioning/cloud-storage deployment, complaint/cluster recomputation,
+automatic re-collection, object-store/backups purge, and
+legal/privacy/security approval remain required. CFPB collection currently
 records zero source cost because the reviewed policy declares zero API cost;
 non-zero billing adapters are not implemented. Retention enqueue now derives
 bounded tombstones from the stored policy and reuses deletion propagation;

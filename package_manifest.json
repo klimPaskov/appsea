@@ -1,10 +1,10 @@
 {
   "name": "AppSea Codex Starter",
   "version": "0.3.0",
-  "generatedAt": "2026-07-26T11:44:10+00:00",
-  "fileCount": 591,
-  "byteCount": 24742908,
-  "packageDigest": "bd706ac99ec06a005c83948ad25c97a47b7186b9426b8b0736c19b6027e297ac",
+  "generatedAt": "2026-07-29T07:36:49+00:00",
+  "fileCount": 579,
+  "byteCount": 24084366,
+  "packageDigest": "0c59465c88baa0b05e6e9a8c6a26b07cd3e9994dfc557ae752658c1fb3caf088",
   "files": [
     {
       "path": ".agents/skills/AGENTS.md",
@@ -357,32 +357,14 @@
     {
       "path": ".gitignore",
       "category": "repository control",
-      "bytes": 207,
-      "sha256": "44c8ebced5324c29eaa8391cd979a8760abdef69e945e448ab0eba0ca2c08c22"
+      "bytes": 253,
+      "sha256": "e4e6aecfe86968cc63e98420902b1ac4752d5f9fcb0d7133b45793f798796310"
     },
     {
       "path": ".npmrc",
       "category": "repository control",
       "bytes": 81,
       "sha256": "563d401189a7a6cdda3b6a79fab0d6d88e5be92b445f92573b4ac01b41196991"
-    },
-    {
-      "path": ".pnpm-store/v11/index.db",
-      "category": "repository control",
-      "bytes": 8192,
-      "sha256": "cd7dcaaff3237bf367c869a8d46abec8342638105eb326e176582e91559c2d81"
-    },
-    {
-      "path": ".pnpm-store/v11/index.db-shm",
-      "category": "repository control",
-      "bytes": 32768,
-      "sha256": "fd4c9fda9cd3f9ae7c962b0ddf37232294d55580e1aa165aa06129b8549389eb"
-    },
-    {
-      "path": ".pnpm-store/v11/index.db-wal",
-      "category": "repository control",
-      "bytes": 0,
-      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
     },
     {
       "path": ".prettierignore",
@@ -1017,8 +999,8 @@
     {
       "path": "apps/web/tsconfig.tsbuildinfo",
       "category": "application code",
-      "bytes": 241558,
-      "sha256": "4bd884d64b5661802c857fa269a7e1299b8945758e2f63a7ad315111b7d81874"
+      "bytes": 241696,
+      "sha256": "b146844f668fff3b498729215df6bf4a53c40df5744a758d2d90a5f6747c2efc"
     },
     {
       "path": "apps/worker/AGENTS.md",
@@ -1101,26 +1083,26 @@
     {
       "path": "apps/worker/src/maintenance-runner.test.ts",
       "category": "application code",
-      "bytes": 8492,
-      "sha256": "821576ab3f78b3c4cc50dfc9e2454a60ea9bc1105b65fd4276c56000dbcb970d"
+      "bytes": 8560,
+      "sha256": "b67d15a0fb4b68e087e934323e72afc9172748ad5740bc81b5451fee6e45a921"
     },
     {
       "path": "apps/worker/src/maintenance-runner.ts",
       "category": "application code",
-      "bytes": 5698,
-      "sha256": "63068b92eaac843a9e82a2a1982503dc0519545af3cf4ba3f5e72283d9330765"
+      "bytes": 6023,
+      "sha256": "ee54b207767a7d3cbf1c3f1878f86699b9e47b4a0cdf4d675319997b8aa4a32e"
     },
     {
       "path": "apps/worker/src/observability.test.ts",
       "category": "application code",
-      "bytes": 2961,
-      "sha256": "8914d62415acaf1a99b12f5690fbcea52087c2da2c2a6607078231080c482c04"
+      "bytes": 3081,
+      "sha256": "f7008425bb679f1ad85316df35c62a7f252bf1f2ce59c89086df53e35aaea76f"
     },
     {
       "path": "apps/worker/src/observability.ts",
       "category": "application code",
-      "bytes": 4954,
-      "sha256": "be2b62ff6e6e259d0bdc762aafb45a4da0bc95d99719c2ead4df38663d747d23"
+      "bytes": 5205,
+      "sha256": "97b64a229da53d6229fda37650b14a89c023e6131395fb3efcc125462cf2d196"
     },
     {
       "path": "apps/worker/src/plan-sample.ts",
@@ -1185,8 +1167,8 @@
     {
       "path": "apps/worker/src/source-maintenance.ts",
       "category": "application code",
-      "bytes": 3068,
-      "sha256": "fe5a833ab37ca07159facf5f9d3fdf22c319479912d3fc10cacf65a8e47e2ae0"
+      "bytes": 3228,
+      "sha256": "6861e028da22d02e1f7bd21862535f287b05d6aed57e1695078aa3615dc8ffcf"
     },
     {
       "path": "apps/worker/src/source-policy-cfpb-review.ts",
@@ -1336,7 +1318,7 @@
       "path": "artifacts/plans/inbox-relay/01-product-brief.md",
       "category": "generated sample artifact",
       "bytes": 3694,
-      "sha256": "aa0248867047f7b2dedacb2ba4a31aab838ade23dc4ac5f80deb6961ceae42b4"
+      "sha256": "64e96ab597e05b1660436871f9620e76c81bf0ca0664bb7c5cef295ea33f8ad9"
     },
     {
       "path": "artifacts/plans/inbox-relay/02-mvp-scope.md",
@@ -1354,7 +1336,7 @@
       "path": "artifacts/plans/inbox-relay/04-task-graph.json",
       "category": "generated sample artifact",
       "bytes": 4730,
-      "sha256": "29dc00583eece55de1e3e6d83a1717618ec6b9da1a48a088a70da20cab9ffbc8"
+      "sha256": "c5e68ccd72723df793c0fa0c78762935776781d0b07a2716bc3496c0f8229946"
     },
     {
       "path": "artifacts/plans/inbox-relay/05-validation.md",
@@ -1378,7 +1360,7 @@
       "path": "artifacts/research/seed-research-artifact.json",
       "category": "generated sample artifact",
       "bytes": 8625,
-      "sha256": "c126ee9b472d5daac9bad202f776dee2df428c55ca66c86a5a8409bdc30595ef"
+      "sha256": "536546b4ecde0933c6d51fccff12add3489042df0e5b6f488acaea66e7e4ed1f"
     },
     {
       "path": "CHANGELOG.md",
@@ -1435,30 +1417,6 @@
       "sha256": "19cc4593d2e14a5a8b06b6e3a19e9e788ab958e64d4bb727ecbdf62e784bea19"
     },
     {
-      "path": "design/references/competitors-mobile.png",
-      "category": "UI reference image",
-      "bytes": 49775,
-      "sha256": "95c392260010e4a12d487bf86bb0ba12b07201e2fc38b12fcbe10e8b2db1b78c"
-    },
-    {
-      "path": "design/references/competitors.png",
-      "category": "UI reference image",
-      "bytes": 68812,
-      "sha256": "591a4775dd33ccaf5c9d26eae51f08068baadbca9911d1bfd43e1b26240ffb8d"
-    },
-    {
-      "path": "design/references/complaints-mobile.png",
-      "category": "UI reference image",
-      "bytes": 53180,
-      "sha256": "1c2f2b1bdf4040685351b3ee57b3afd3f9f84db863acedb4cf2ec273a69a7c18"
-    },
-    {
-      "path": "design/references/complaints.png",
-      "category": "UI reference image",
-      "bytes": 68780,
-      "sha256": "f74be6fc2c9f6cebb0f5a4c49a5e3a0d5def447d446de17548938f691b7dc16a"
-    },
-    {
       "path": "design/references/desktop/competitors.png",
       "category": "UI reference image",
       "bytes": 1375767,
@@ -1493,18 +1451,6 @@
       "category": "UI reference image",
       "bytes": 49224,
       "sha256": "15b36eee6a5d9af817da5407f72ec570c3a868e92b007fe62e15973611a02c3b"
-    },
-    {
-      "path": "design/references/leaderboard-mobile.png",
-      "category": "UI reference image",
-      "bytes": 32596,
-      "sha256": "d2c20fc0c26e9e1e38da4812f6d4a8f7c8ac860937d76116d6b340d8d1eea320"
-    },
-    {
-      "path": "design/references/leaderboard.png",
-      "category": "UI reference image",
-      "bytes": 49772,
-      "sha256": "39dacaeb4a20b8df45ae5257ab7205ee73f0514d62943e0aa8ae6ca1b82b394d"
     },
     {
       "path": "design/references/mobile/competitors.png",
@@ -1573,18 +1519,6 @@
       "sha256": "565d63b380226cfa679fc56606413ac1f3e2a0aa465ef15675c6790c4079ec5f"
     },
     {
-      "path": "design/references/opportunity-mobile.png",
-      "category": "UI reference image",
-      "bytes": 49907,
-      "sha256": "4d5e8e413f68056c127a0fbd6320ba6e3f803406f3b0c0afa2ffea37041de8d2"
-    },
-    {
-      "path": "design/references/opportunity.png",
-      "category": "UI reference image",
-      "bytes": 68621,
-      "sha256": "2e8300dbbfd63e6687a2e33768dc40c3ddc77b1bf1da1cd33e172117354fa3bd"
-    },
-    {
       "path": "design/references/overview-all.png",
       "category": "UI reference image",
       "bytes": 1984301,
@@ -1609,18 +1543,6 @@
       "sha256": "3eb98908671e1669727a995ea98399c85bfdc7faf66d0819ee2c717e9089b443"
     },
     {
-      "path": "design/references/plan-mobile.png",
-      "category": "UI reference image",
-      "bytes": 41558,
-      "sha256": "225e35f9f0bde5525fc262001b11745d40f4808731754f450eeb968fa8fcdb21"
-    },
-    {
-      "path": "design/references/plan.png",
-      "category": "UI reference image",
-      "bytes": 59646,
-      "sha256": "7538402b5914104565cb6114ee4d2d07063cdb345a795d5423dd4037fed53a1e"
-    },
-    {
       "path": "design/references/reference-map.json",
       "category": "design source",
       "bytes": 2064,
@@ -1631,18 +1553,6 @@
       "category": "design source",
       "bytes": 1051,
       "sha256": "e451092ccd489f2b7a3d6dc514c9afa6ba51cc7d58826fdc7061d91ee8cbd165"
-    },
-    {
-      "path": "design/references/security-mobile.png",
-      "category": "UI reference image",
-      "bytes": 37106,
-      "sha256": "023c639ff7d6dde0c7514d8bf6626a5eb1f6f5448d8dcb328d73de0cef87dbe4"
-    },
-    {
-      "path": "design/references/security.png",
-      "category": "UI reference image",
-      "bytes": 49224,
-      "sha256": "15b36eee6a5d9af817da5407f72ec570c3a868e92b007fe62e15973611a02c3b"
     },
     {
       "path": "design/references/source/competitors-mobile.svg",
@@ -1839,8 +1749,8 @@
     {
       "path": "docs/architecture/security-boundaries.md",
       "category": "documentation",
-      "bytes": 11124,
-      "sha256": "3d6f0d132e335fe349f220ae93b9461d1184e20a4e89ffedf0cd0d594ac565cd"
+      "bytes": 11580,
+      "sha256": "2cb38420b09d09f59f874ff6452e7f1380d20bbbcc8c6acf9f8b12f83eb00aff"
     },
     {
       "path": "docs/architecture/system-overview.md",
@@ -1869,14 +1779,14 @@
     {
       "path": "docs/INDEX.md",
       "category": "documentation",
-      "bytes": 4778,
-      "sha256": "63d85a1cc21aab103d150382ef474832f6b932c2c56ac500f34b2015197a6540"
+      "bytes": 4927,
+      "sha256": "a66afad8203b026fe20859155058d2b9fe3d20df25af411d561a89c7db7b6e7c"
     },
     {
       "path": "docs/plans/active/001-foundation-to-mvp.md",
       "category": "documentation",
-      "bytes": 11332,
-      "sha256": "126a8936d75f82e30f3fce5c2d7de673b6ee4e2ee79292720100b7af4d539493"
+      "bytes": 11490,
+      "sha256": "cd074e5ea690caa4a88cbd016d64b5fa74f5875a8c8e0ee30cd2c47627e286bf"
     },
     {
       "path": "docs/product/account-closure.md",
@@ -2001,8 +1911,8 @@
     {
       "path": "docs/runbooks/source-maintenance.md",
       "category": "documentation",
-      "bytes": 2404,
-      "sha256": "b51c13e527cbec7da1c82a41d25479daa86ef481fde23f736ade29cf396752c1"
+      "bytes": 2772,
+      "sha256": "75f6851c92a6f58858b3ecc393737d4c768fa0540a014d2e10a32e5a97aa5b5b"
     },
     {
       "path": "docs/runbooks/source-policy-review.md",
@@ -2217,8 +2127,8 @@
     {
       "path": "docs/status/current.md",
       "category": "documentation",
-      "bytes": 6184,
-      "sha256": "62690469c37ceec27e899508fa6ac0ae3f2f1a584ff8d1bbcb1a444ade5143af"
+      "bytes": 6542,
+      "sha256": "4e3365f24979619f71eccf2e026d98c08e39306efb1b478aac7ab159b15cd421"
     },
     {
       "path": "docs/status/durable-workflow-completion-report.md",
@@ -2235,8 +2145,14 @@
     {
       "path": "docs/status/known-gaps.md",
       "category": "documentation",
-      "bytes": 10843,
-      "sha256": "5e3f53dac22b394d9410f8f9770c26eeb47a7defb11853d9d2f3f9289c5dc216"
+      "bytes": 10966,
+      "sha256": "ee9a1be89c43d8c03e1338d6138d4484f93b2596e5da4e03d38cfd3c48e3db00"
+    },
+    {
+      "path": "docs/status/opportunity-availability-repair-completion-report-2026-07-29.md",
+      "category": "documentation",
+      "bytes": 2313,
+      "sha256": "1448aa8ab2d19f9ac36d7d1f5719f505720c601cb7316426124a202a717e9748"
     },
     {
       "path": "docs/status/opportunity-seed-review-completion-report-2026-07-26.md",
@@ -2253,8 +2169,8 @@
     {
       "path": "docs/status/production-analysis-handoff-completion-report-2026-07-26.md",
       "category": "documentation",
-      "bytes": 6331,
-      "sha256": "bbcd3c15cd21a6d3f8f1b4adcd24cf82461449ced6bfc1d6921a12643802957c"
+      "bytes": 6421,
+      "sha256": "de2e4bab968c26513c17e39d9d245b4f702269151f94c0b7e11087f3b4a1c3fb"
     },
     {
       "path": "docs/status/production-readiness-audit-2026-07-25.md",
@@ -2475,8 +2391,8 @@
     {
       "path": "memory/ACTIVE.md",
       "category": "project memory",
-      "bytes": 7983,
-      "sha256": "e4d711908bb70832b7ee60f383606efb2f42939ea7a72f245e5d2f5c593c215a"
+      "bytes": 7899,
+      "sha256": "13fc9c5d5b2162934d6136dd7824bffa4c9809fbe58b0edf253525369d52739e"
     },
     {
       "path": "memory/AGENTS.md",
@@ -2493,8 +2409,8 @@
     {
       "path": "memory/HOT.md",
       "category": "project memory",
-      "bytes": 2448,
-      "sha256": "13809936c5ee58aed7255cefabd9a312651eb3ae7db10738f037b10cd347218d"
+      "bytes": 2480,
+      "sha256": "4475bce21058a778f545d0b3cd5e8fdde9c055b9c9b22fea8d87bef34acdbc1b"
     },
     {
       "path": "memory/LESSONS.md",
@@ -2603,6 +2519,12 @@
       "category": "project memory",
       "bytes": 1784,
       "sha256": "da59960d107c2e0f0b4cbbce396aac77fd8f6cc3f4c6c64c97c02b34f451504e"
+    },
+    {
+      "path": "memory/sessions/2026-07-29-opportunity-availability.md",
+      "category": "project memory",
+      "bytes": 1126,
+      "sha256": "e9ebd94ff56befa7b0f601c24fc6ac03cc04a3d069adeaf742cc74edbbc80974"
     },
     {
       "path": "memory/USER.md",
@@ -2715,14 +2637,14 @@
     {
       "path": "packages/contracts/src/contracts.test.ts",
       "category": "shared package",
-      "bytes": 35174,
-      "sha256": "72ca1db335eefb39b1ada49264fadaa386dce6a17ea3acbe2c6e518f046ea8ee"
+      "bytes": 35264,
+      "sha256": "7ed1980a555c9acb83448c513e1b6f14764f6434f39c5191ee2bcc394bf8c782"
     },
     {
       "path": "packages/contracts/src/index.ts",
       "category": "shared package",
-      "bytes": 94781,
-      "sha256": "b81e7e4a2ed444d615cdfc5fae58640526b236bf88b25068dfec9dc37a89b83f"
+      "bytes": 94867,
+      "sha256": "892078264bad9b2e0ff997afeee4efd485e1003b3e63c8b1a7a78e5186ba3d31"
     },
     {
       "path": "packages/contracts/src/object-storage-contracts.test.ts",
@@ -2745,8 +2667,8 @@
     {
       "path": "packages/db/integration/db.integration.test.ts",
       "category": "shared package",
-      "bytes": 89956,
-      "sha256": "e2b1a2af0e49fafcce834448583bbc9e2f74c8d2f582df7f0df4ebd0d442a624"
+      "bytes": 89984,
+      "sha256": "ac0547be19834df8ea3dd065729fc786aaa3f4949a94da8be68b126b11ffc44e"
     },
     {
       "path": "packages/db/migrations/0001_production_persistence.sql",
@@ -2953,6 +2875,12 @@
       "sha256": "1ff9958a9045eece33b8e963f78952d2bb59ac999aa03daf0f63c868f1db182d"
     },
     {
+      "path": "packages/db/migrations/0035_opportunity_availability_repair.sql",
+      "category": "shared package",
+      "bytes": 1916,
+      "sha256": "9f86b10af4d8d7aa7ac98225f3c49f5b300892f1a2364bf0730d0874a73f02e1"
+    },
+    {
       "path": "packages/db/package.json",
       "category": "shared package",
       "bytes": 1191,
@@ -2967,8 +2895,8 @@
     {
       "path": "packages/db/src/auth-repository.ts",
       "category": "shared package",
-      "bytes": 79567,
-      "sha256": "234f624c7c6433624cb6e828256376d935845a32f41dc62a7be48ca1136635d0"
+      "bytes": 79722,
+      "sha256": "8e528ed4fe044f5810802142f3d86caad39fa836beb4bffb0295766274135b46"
     },
     {
       "path": "packages/db/src/auth.ts",
@@ -2991,20 +2919,20 @@
     {
       "path": "packages/db/src/db.test.ts",
       "category": "shared package",
-      "bytes": 14458,
-      "sha256": "c65662ccc6b07d80ec1d097d00a8cfb33860a4d6204c7c03267051740e34ed20"
+      "bytes": 14965,
+      "sha256": "fd196af1bad9d3e8e30a95ea75ee4af9beda80c363519349f8bc399abb2c8268"
     },
     {
       "path": "packages/db/src/deletion-propagation-repository.test.ts",
       "category": "shared package",
-      "bytes": 6661,
-      "sha256": "c3d28e8bfa9de065a9da3008efc7b5f058ac49ca7fb63b7f08a14437a26df24f"
+      "bytes": 6832,
+      "sha256": "66d2e0f7ab7ecdf26cfadadb2f87e59dc75961f2e4971330253c1160f8df279d"
     },
     {
       "path": "packages/db/src/deletion-propagation-repository.ts",
       "category": "shared package",
-      "bytes": 20746,
-      "sha256": "cd7c41c611fa9d65c776e1097795c80629eb4a6659597abccd779d4f8ba78280"
+      "bytes": 22778,
+      "sha256": "27096e6c614457e9920665ebda93c2d3e771736b97aef07b5da2cfc5f79802cc"
     },
     {
       "path": "packages/db/src/fixture-repository.ts",
@@ -3063,8 +2991,8 @@
     {
       "path": "packages/db/src/production-analysis-repository.ts",
       "category": "shared package",
-      "bytes": 51985,
-      "sha256": "f59814f3a88496f5e0ff45e3662afe6fc954a4f7b76c85bcb0bdcb5ec5faa63f"
+      "bytes": 52149,
+      "sha256": "aef070b529a8255802375055d889d4c32c9fdff72fe614d1b00c08f593a9cc22"
     },
     {
       "path": "packages/db/src/production-analysis.ts",
@@ -3489,8 +3417,8 @@
     {
       "path": "scripts/generate_manifest.py",
       "category": "repository tooling",
-      "bytes": 3853,
-      "sha256": "fd15344e45c0cf8ce52b6c5db2b91796544023ef57ee9ece10181f6ca3f4e60f"
+      "bytes": 3902,
+      "sha256": "1c26b5d66eda30c90e64efb4e70d2286fee37dd06dd09f4fc315f57a7d72c73b"
     },
     {
       "path": "scripts/memory.py",

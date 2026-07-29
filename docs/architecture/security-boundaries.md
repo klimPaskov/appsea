@@ -52,6 +52,12 @@ for that pre-context authorization lookup.
   and the worker reconstructs active policy/evidence lineage before starting
   Temporal. Handoff claims are skip-locked and stale claims are reclaimable;
   a handoff cannot activate a connector or bypass complaint confirmation.
+- Migration `0035` makes source-deletion invalidation visible in the mutable
+  opportunity projection. Propagation clears current score/plan pointers and
+  records bounded invalidation metadata only when no completed active analysis
+  remains; a later analysis on a new collection run may reactivate the same
+  opportunity. Immutable clusters, score snapshots, and lineage remain
+  traceable, and deletion never triggers an unreviewed source recollection.
 - Source-item acquisition policy and evidence display representation are relationally enforced.
 - Fixture report generation keeps retained observations, deterministic score
   inference, contrary evidence, recommendation, and source coverage in separate

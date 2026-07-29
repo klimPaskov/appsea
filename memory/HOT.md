@@ -9,7 +9,7 @@
 - Private web research uses scrypt credentials, revocable sessions, membership-before-RLS, owner mutations, and a 15-minute step-up; the public leaderboard remains DB-free fixture data. Invitation/recovery delivery is kill-switched pending identity review; MFA/OIDC remain open.
 - Production collection persists approved-policy CFPB items, redacted evidence, complaints, tombstones, gaps, and audit/outbox lineage idempotently. Migrations `0028`/`0029` add policy-gated jobs/checkpoints and retention enqueue; private reads live at `/workspace/:workspaceId/research/:runId`.
 - Migration `0032` adds editor/owner complaint curation: active observations use guarded `unreviewed`/`confirmed`/`rejected` transitions and identifier-only page actions. Only confirmed observations may enter reviewed analysis; recomputation is open.
-- Migrations `0033`/`0034` add immutable approved seed reviews and a durable seed-bound post-collection analysis handoff; persistence rechecks seed hash/version. Manual analysis remains available.
+- Migrations `0033`/`0034` add immutable approved seed reviews and a durable seed-bound post-collection analysis handoff; `0035` invalidates stale opportunity projections after source deletion. Manual analysis remains available.
 - Reports use migration 0022 `draft` → `reviewed` → `approved`/`withdrawn`; plans use migration 0031 `unreviewed` → `reviewed` → `approved`/`withdrawn`. Editors review, owners approve/withdraw, and only approved JSON exports.
 - Auth throttles, sessions, quotas, retention enqueue, owner maintenance, and tombstone propagation are durable; workspace enumeration remains forced-RLS fail-closed. Scheduler/alerts, recomputation, and object/backup purge remain open.
 - Skills `.agents/skills`; agents `.codex/agents`.

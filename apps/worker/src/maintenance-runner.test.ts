@@ -86,7 +86,8 @@ describe('maintenance runners', () => {
       quotaReservationsPurged: 2,
       retentionTombstonesQueued: 0,
       deletionTombstonesProcessed: 2,
-      deletionObjectsAffected: 8
+      deletionObjectsAffected: 8,
+      deletionOpportunitiesInvalidated: 0
     })
     expect(quotaCalls).toEqual([
       'expire:workspace:a:2026-07-10T00:00:00.000Z:2',

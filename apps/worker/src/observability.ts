@@ -23,6 +23,7 @@ export interface WorkerEvent {
   retentionTombstonesQueued?: number
   deletionTombstonesProcessed?: number
   deletionObjectsAffected?: number
+  deletionOpportunitiesInvalidated?: number
   failureCode?: string
 }
 
@@ -112,6 +113,11 @@ export function emitWorkerEvent(event: WorkerEvent): void {
       : {}),
     ...(finiteInteger(event.deletionObjectsAffected) !== undefined
       ? { deletionObjectsAffected: finiteInteger(event.deletionObjectsAffected) }
+      : {}),
+    ...(finiteInteger(event.deletionOpportunitiesInvalidated) !== undefined
+      ? {
+          deletionOpportunitiesInvalidated: finiteInteger(event.deletionOpportunitiesInvalidated)
+        }
       : {}),
     ...(event.failureCode ? { failureCode: event.failureCode } : {})
   }

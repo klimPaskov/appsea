@@ -8,7 +8,16 @@ from collections import Counter
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-EXCLUDED_PARTS = {'node_modules', '.next', 'dist', '.turbo', '.git', '.appsea', '__pycache__'}
+EXCLUDED_PARTS = {
+    'node_modules',
+    '.next',
+    'dist',
+    '.turbo',
+    '.git',
+    '.appsea',
+    '.pnpm-store',
+    '__pycache__'
+}
 EXCLUDED_FILES = {'package_manifest.json', 'PACKAGE_MANIFEST.md', 'memory/index.sqlite3'}
 
 
