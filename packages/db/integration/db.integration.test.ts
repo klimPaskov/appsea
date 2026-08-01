@@ -30,6 +30,9 @@ import {
   PostgresAuthRepository,
   PostgresDeletionPropagationRepository,
   PostgresOpportunitySeedReviewRepository,
+  PostgresProductionWorkflowAdmissionRepository,
+  ProductionWorkflowConcurrencyLimitError,
+  ProductionWorkflowRateLimitError,
   PostgresWorkflowJobRepository,
   WorkflowCheckpointConflictError,
   WorkflowJobConflictError,
@@ -434,7 +437,8 @@ describe.sequential('PostgreSQL fixture persistence lifecycle', () => {
       '0034',
       '0035',
       '0036',
-      '0037'
+      '0037',
+      '0038'
     ])
     expect(secondMigrationResult.applied).toEqual([])
     expect(secondMigrationResult.alreadyApplied).toEqual([
@@ -474,7 +478,8 @@ describe.sequential('PostgreSQL fixture persistence lifecycle', () => {
       '0034',
       '0035',
       '0036',
-      '0037'
+      '0037',
+      '0038'
     ])
   })
 
@@ -535,6 +540,83 @@ describe.sequential('PostgreSQL fixture persistence lifecycle', () => {
         "UPDATE appsea.evidence_records SET normalized_text = 'changed' WHERE false"
       )
     ).rejects.toMatchObject({ code: '42501' })
+  })
+
+  it('serializes production workflow admission and preserves replay semantics', async () => {
+    const workspaceId = 'workspace-admission'
+    const userId = 'user-admission'
+    await withOwnerClient(async (client) => {
+      await client.query(
+        `INSERT INTO appsea.users
+           (user_id, email, display_name, password_hash, created_at, updated_at)
+         VALUES ($1, 'admission@example.test', 'Admission Owner', repeat('x', 64), $2, $2)`,
+        [userId, fixedAt]
+      )
+      await client.query(
+        `INSERT INTO appsea.workspaces
+           (workspace_id, slug, display_name, visibility, fixture_only, status, created_at, updated_at)
+         VALUES ($1, 'admission-workspace', 'Admission Workspace', 'private', false, 'active', $2, $2)`,
+        [workspaceId, fixedAt]
+      )
+      await client.query(
+        `INSERT INTO appsea.workspace_memberships
+           (workspace_id, user_id, role, created_at, updated_at)
+         VALUES ($1, $2, 'owner', $3, $3)`,
+        [workspaceId, userId, fixedAt]
+      )
+    })
+    const admissionRepository = new PostgresProductionWorkflowAdmissionRepository(servicePool)
+    const input = (digest: string, hash: string) => ({
+      workspaceId,
+      userId,
+      idempotencyDigest: digest,
+      inputHash: hash
+    })
+    try {
+      const first = await admissionRepository.admitForUser(input('a'.repeat(64), 'b'.repeat(64)))
+      expect(first.replayed).toBe(false)
+      await expect(
+        admissionRepository.admitForUser(input('a'.repeat(64), 'b'.repeat(64)))
+      ).resolves.toMatchObject({ replayed: true })
+      const second = await admissionRepository.admitForUser(input('c'.repeat(64), 'd'.repeat(64)))
+      expect(second.replayed).toBe(false)
+      await expect(
+        admissionRepository.admitForUser(input('e'.repeat(64), 'f'.repeat(64)))
+      ).rejects.toBeInstanceOf(ProductionWorkflowConcurrencyLimitError)
+
+      await admissionRepository.consume(workspaceId, 'a'.repeat(64), 'b'.repeat(64))
+      await admissionRepository.consume(workspaceId, 'c'.repeat(64), 'd'.repeat(64))
+      for (const [digest, hash] of [
+        ['e', 'f'],
+        ['g', 'h'],
+        ['i', 'j']
+      ] as const) {
+        const admitted = await admissionRepository.admitForUser(
+          input(digest.repeat(64), hash.repeat(64))
+        )
+        expect(admitted.replayed).toBe(false)
+        await admissionRepository.consume(workspaceId, digest.repeat(64), hash.repeat(64))
+      }
+      await expect(
+        admissionRepository.admitForUser(input('k'.repeat(64), 'l'.repeat(64)))
+      ).rejects.toBeInstanceOf(ProductionWorkflowRateLimitError)
+    } finally {
+      await withOwnerClient(async (client) => {
+        await client.query(
+          'DELETE FROM appsea.production_collection_workflow_admissions WHERE workspace_id = $1',
+          [workspaceId]
+        )
+        await client.query(
+          'DELETE FROM appsea.production_collection_workflow_start_buckets WHERE workspace_id = $1',
+          [workspaceId]
+        )
+        await client.query('DELETE FROM appsea.workspace_memberships WHERE workspace_id = $1', [
+          workspaceId
+        ])
+        await client.query('DELETE FROM appsea.workspaces WHERE workspace_id = $1', [workspaceId])
+        await client.query('DELETE FROM appsea.users WHERE user_id = $1', [userId])
+      })
+    }
   })
 
   it('enumerates active workspaces only through the maintenance function', async () => {

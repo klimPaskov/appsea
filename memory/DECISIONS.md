@@ -317,3 +317,17 @@ and active confirmed policy-allowed evidence can be reconstructed. Seed
 withdrawal is visible as `blocked`; readiness and transient dispatch failures
 are bounded retries; Temporal start is idempotent. Production scheduling,
 alerting, and source re-collection remain separate deployment/review work.
+
+## 2026-08-01: Gate production workflow starts before Temporal
+
+Authenticated production collection starts must not create unbounded failed
+Temporal executions while source policy or infrastructure is pending. Migration
+`0038` therefore keeps a digest-only admission row and a workspace rate bucket,
+serializes decisions under a workspace advisory lock, and fixes the limits at
+five distinct starts per fifteen minutes and two active jobs/reservations.
+Replayed digests are allowed without another slot; the existing workflow
+initialization transaction consumes the reservation, and source maintenance
+purges terminal or expired admission rows. A reservation is not released on an
+ambiguous Temporal error, so a late-starting workflow cannot bypass the
+concurrency gate. The public leaderboard and source-policy boundary remain
+unchanged; deployment configuration and Temporal authorization remain open.

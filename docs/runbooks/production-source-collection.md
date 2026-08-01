@@ -113,7 +113,17 @@ The private web boundary also exposes the same checkpoint through an
 authenticated owner/editor gateway:
 
 - `POST /api/workspaces/:workspaceId/research/production` starts the Temporal
-  workflow after binding `requestedBy` to the session user.
+  workflow after binding `requestedBy` to the session user. Before contacting
+  Temporal, migration `0038` authorizes the same workspace in PostgreSQL and
+  admits at most five distinct starts per 15-minute window and two active
+  starts per workspace. The decision is serialized under a workspace advisory
+  lock; only the idempotency and input digests are stored. A replay of the same
+  digest returns the existing admission without consuming another slot. A new
+  request receives `429` with a bounded `Retry-After` value when either limit
+  is reached. The workflow initialization transaction consumes the short-lived
+  reservation, and source maintenance purges terminal or expired admission
+  rows. These limits are fixed in reviewed migration `0038`; request payloads
+  cannot raise them.
 - `GET /api/workspaces/:workspaceId/research/production/workflow/:workflowId`
   queries Temporal and falls back to the RLS-protected PostgreSQL workflow
   projection during worker/service interruption. The degraded projection

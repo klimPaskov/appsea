@@ -50,7 +50,8 @@ describe('database foundation', () => {
       '0034',
       '0035',
       '0036',
-      '0037'
+      '0037',
+      '0038'
     ])
     expect(migrations[0]?.checksum).toMatch(/^[a-f0-9]{64}$/)
     expect(migrations[0]?.sql).toContain('CREATE TABLE appsea.evidence_records')
@@ -99,6 +100,9 @@ describe('database foundation', () => {
     )
     const sameRunRecoveryMigration = migrations.find((migration) => migration.version === '0036')
     const recomputationMigration = migrations.find((migration) => migration.version === '0037')
+    const productionAdmissionMigration = migrations.find(
+      (migration) => migration.version === '0038'
+    )
     expect(authMigration?.sql).toContain('CREATE TABLE appsea.users')
     expect(authMigration?.sql).toContain('CREATE TABLE appsea.auth_sessions')
     expect(authMigration?.sql).toContain('FORCE ROW LEVEL SECURITY')
@@ -271,6 +275,22 @@ describe('database foundation', () => {
     expect(recomputationMigration?.sql).toContain(
       'production analysis recomputation seed does not match its opportunity'
     )
+    expect(productionAdmissionMigration?.sql).toContain(
+      'CREATE TABLE appsea.production_collection_workflow_admissions'
+    )
+    expect(productionAdmissionMigration?.sql).toContain(
+      'CREATE OR REPLACE FUNCTION appsea.admit_production_collection_workflow'
+    )
+    expect(productionAdmissionMigration?.sql).toContain('pg_advisory_xact_lock')
+    expect(productionAdmissionMigration?.sql).toContain('p_idempotency_digest IS NULL')
+    expect(productionAdmissionMigration?.sql).toContain('p_input_hash IS NULL')
+    expect(productionAdmissionMigration?.sql).toContain(
+      'CREATE OR REPLACE FUNCTION appsea.consume_production_collection_workflow_admission'
+    )
+    expect(productionAdmissionMigration?.sql).toContain(
+      'CREATE OR REPLACE FUNCTION appsea.purge_production_collection_workflow_admissions'
+    )
+    expect(productionAdmissionMigration?.sql).toContain('FORCE ROW LEVEL SECURITY')
   })
 
   it('requires verified TLS for production database connections', () => {

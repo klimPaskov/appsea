@@ -3,6 +3,7 @@ import {
   createDatabasePool,
   databaseConfigFromEnv,
   PostgresDeletionPropagationRepository,
+  PostgresProductionWorkflowAdmissionRepository,
   PostgresSourceQuotaRepository
 } from '@appsea/db'
 import { emitWorkerEvent } from './observability'
@@ -32,16 +33,19 @@ const pool = createDatabasePool(databaseConfigFromEnv())
 try {
   const quotaRepository = new PostgresSourceQuotaRepository(pool)
   const deletionRepository = new PostgresDeletionPropagationRepository(pool)
+  const admissionRepository = new PostgresProductionWorkflowAdmissionRepository(pool)
   const result = await runSourceMaintenance(input, {
     quota: quotaRepository,
-    deletion: deletionRepository
+    deletion: deletionRepository,
+    admission: admissionRepository
   })
   emitWorkerEvent({
     event: 'source_quota_expiry_finished',
     taskQueue,
     jobId: result.jobId,
     quotaReservationsExpired: result.quotaReservationsExpired,
-    quotaReservationsPurged: result.quotaReservationsPurged
+    quotaReservationsPurged: result.quotaReservationsPurged,
+    productionWorkflowAdmissionsPurged: result.productionWorkflowAdmissionsPurged
   })
   if (result.retentionTombstonesQueued > 0) {
     emitWorkerEvent({
@@ -69,6 +73,7 @@ try {
     workspacesScanned: result.quotaWorkspacesScanned + result.deletionWorkspacesScanned,
     quotaReservationsExpired: result.quotaReservationsExpired,
     quotaReservationsPurged: result.quotaReservationsPurged,
+    productionWorkflowAdmissionsPurged: result.productionWorkflowAdmissionsPurged,
     retentionTombstonesQueued: result.retentionTombstonesQueued,
     deletionTombstonesProcessed: result.deletionTombstonesProcessed,
     deletionObjectsAffected: result.deletionObjectsAffected,

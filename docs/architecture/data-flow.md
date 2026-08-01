@@ -1,7 +1,11 @@
 # Data flow
 
 1. An authorized client submits a bounded, hashed workflow request; the web
-   boundary binds the authenticated user as the requesting principal.
+   boundary binds the authenticated user as the requesting principal, then
+   migration `0038` verifies the active private non-fixture workspace and
+   atomically admits or rejects the start using a workspace-scoped rate bucket
+   and active-job/reservation count. A replayed digest is returned without a
+   second reservation.
 2. Temporal records the durable execution and schedules validated activities.
 3. An approved connector emits bounded observations with source metadata; raw
    provider payloads stop at the connector boundary.

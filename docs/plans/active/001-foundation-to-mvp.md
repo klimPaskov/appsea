@@ -25,7 +25,7 @@ Status: production-shaped foundation implemented and validated locally; producti
 
 Implemented:
 
-- PostgreSQL 18 schema and thirty-seven forward, checksummed migrations
+- PostgreSQL 18 schema and thirty-eight forward, checksummed migrations
 - normalized source, evidence, complaint, cluster, competitor, opportunity, score, report, plan, audit, cost, deletion, outbox, and lineage tables
 - no-login owner, separate migrator, and least-privilege runtime role contract
 - forced workspace RLS and transaction-scoped workspace context
@@ -89,6 +89,11 @@ Implemented:
   idempotency, and user/service actor attribution
 - post-collection `productionAnalysisWorkflow` and worker activity that pass a
   hashed idempotency digest to the idempotent analysis repository
+- migration `0038_production_workflow_ingress_admission.sql` adds a database-
+  serialized per-workspace start rate/concurrency gate before Temporal;
+  replayed digests do not consume another slot, workflow initialization
+  consumes reservations, and bounded source maintenance purges terminal or
+  expired admission rows
 - migration `0034_production_analysis_handoffs.sql` adds an approved-seed-bound,
   skip-locked handoff queue written in the collection completion transaction;
   the durable worker reconstructs active policy/evidence lineage and starts the
@@ -101,7 +106,9 @@ Remaining production work: authenticated/TLS-protected Temporal, HA,
 object-store/backups retention and purge, deployment, metrics, alerts, and worker
 crash fault-injection proof. Migration `0037` now queues deletion-triggered
 active-evidence repairs; deployed scheduling, alerting, and production
-Temporal remain open.
+Temporal remain open. The repository-level production ingress gate is now
+implemented; deployed scheduler ownership and infrastructure authorization
+remain separate release work.
 
 ### 3. First real connector
 

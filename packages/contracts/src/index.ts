@@ -1606,6 +1606,15 @@ export const productionCollectionWorkflowStartRequestSchema = z
   })
   .strict()
 
+/** Internal, identifier-only decision from the authenticated production ingress gate. */
+export const productionWorkflowAdmissionDecisionSchema = z
+  .object({
+    decision: z.enum(['admitted', 'replayed', 'rate_limited', 'concurrency_limited']),
+    retryAfterSeconds: z.number().int().nonnegative().max(86_400),
+    reservationExpiresAt: z.string().datetime()
+  })
+  .strict()
+
 export const productionCollectionWorkflowInputSchema = z
   .object({
     workspaceId: appseaIdentifierSchema,
@@ -2103,6 +2112,7 @@ export const sourceMaintenanceResultSchema = z
     deletionWorkspacesScanned: z.number().int().nonnegative().max(10_000),
     quotaReservationsExpired: z.number().int().nonnegative().max(10_000),
     quotaReservationsPurged: z.number().int().nonnegative().max(10_000),
+    productionWorkflowAdmissionsPurged: z.number().int().nonnegative().max(10_000),
     retentionTombstonesQueued: z.number().int().nonnegative().max(1_000),
     deletionTombstonesProcessed: z.number().int().nonnegative().max(1_000),
     deletionObjectsAffected: z.number().int().nonnegative().max(10_000_000),
@@ -2526,6 +2536,9 @@ export type FixtureResearchWorkflowHashMaterial = z.infer<
 >
 export type ProductionCollectionWorkflowStartRequest = z.infer<
   typeof productionCollectionWorkflowStartRequestSchema
+>
+export type ProductionWorkflowAdmissionDecision = z.infer<
+  typeof productionWorkflowAdmissionDecisionSchema
 >
 export type ProductionCollectionWorkflowInput = z.infer<
   typeof productionCollectionWorkflowInputSchema

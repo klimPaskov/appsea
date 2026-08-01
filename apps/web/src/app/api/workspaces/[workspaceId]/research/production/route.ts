@@ -2,8 +2,17 @@ import {
   appseaIdentifierSchema,
   productionCollectionWorkflowStartRequestSchema
 } from '@appsea/contracts'
+import {
+  PostgresProductionWorkflowAdmissionRepository,
+  ProductionWorkflowAdmissionConflictError,
+  ProductionWorkflowConcurrencyLimitError,
+  ProductionWorkflowRateLimitError
+} from '@appsea/db/production-workflow-admission'
 import { PostgresOpportunitySeedReviewRepository } from '@appsea/db/opportunity-seed-review'
-import { startProductionCollectionWorkflow } from '@appsea/workflows'
+import {
+  prepareProductionCollectionWorkflowStart,
+  startProductionCollectionWorkflow
+} from '@appsea/workflows'
 import { NextResponse } from 'next/server'
 import {
   forbiddenResponse,
@@ -100,6 +109,45 @@ export async function POST(
     ...strict.data,
     requestedBy: { actorType: 'user', actorId: session.user.userId }
   })
+  const prepared = prepareProductionCollectionWorkflowStart(actorBoundRequest)
+  try {
+    await new PostgresProductionWorkflowAdmissionRepository(getDatabasePool()).admitForUser({
+      workspaceId: parsedWorkspaceId.data,
+      userId: session.user.userId,
+      idempotencyDigest: prepared.input.idempotencyDigest,
+      inputHash: prepared.input.inputHash
+    })
+  } catch (error) {
+    if (error instanceof ProductionWorkflowRateLimitError) {
+      const headers = new Headers(privateResponseHeaders)
+      headers.set('retry-after', String(error.retryAfterSeconds))
+      return Response.json(
+        { error: 'Production collection start rate limit exceeded' },
+        { status: 429, headers }
+      )
+    }
+    if (error instanceof ProductionWorkflowConcurrencyLimitError) {
+      const headers = new Headers(privateResponseHeaders)
+      headers.set('retry-after', String(error.retryAfterSeconds))
+      return Response.json(
+        { error: 'Production collection concurrency limit reached' },
+        { status: 429, headers }
+      )
+    }
+    if (error instanceof ProductionWorkflowAdmissionConflictError) {
+      return Response.json(
+        { error: 'Workflow idempotency key conflicts with a previous request' },
+        { status: 409, headers: privateResponseHeaders }
+      )
+    }
+    console.error('AppSea production workflow admission failed', {
+      name: error instanceof Error ? error.name : 'unknown'
+    })
+    return Response.json(
+      { error: 'Unable to admit production collection' },
+      { status: 503, headers: privateResponseHeaders }
+    )
+  }
   try {
     const client = await getTemporalWorkflowClient()
     const handle = await startProductionCollectionWorkflow(client, actorBoundRequest)

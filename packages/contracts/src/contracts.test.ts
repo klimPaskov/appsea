@@ -25,6 +25,7 @@ import {
   productionCollectionPersistenceInputSchema,
   productionCollectionResultSchema,
   productionCollectionWorkflowStartRequestSchema,
+  productionWorkflowAdmissionDecisionSchema,
   researchJobBudgetSchema,
   sourcePolicySchema,
   sourceMaintenanceInputSchema,
@@ -301,6 +302,7 @@ describe('contracts', () => {
         deletionWorkspacesScanned: 2,
         quotaReservationsExpired: 3,
         quotaReservationsPurged: 4,
+        productionWorkflowAdmissionsPurged: 2,
         retentionTombstonesQueued: 5,
         deletionTombstonesProcessed: 6,
         deletionObjectsAffected: 7,
@@ -318,6 +320,7 @@ describe('contracts', () => {
         deletionWorkspacesScanned: 2,
         quotaReservationsExpired: 3,
         quotaReservationsPurged: 4,
+        productionWorkflowAdmissionsPurged: 2,
         retentionTombstonesQueued: 5,
         deletionTombstonesProcessed: 5,
         deletionObjectsAffected: 10_000_001,
@@ -841,6 +844,24 @@ describe('contracts', () => {
     })
     expect(parsed.success).toBe(true)
     expect(parsed.success && parsed.data.analysisSeedReviewId).toBe('seed-review:billing')
+  })
+
+  it('keeps production workflow admission decisions bounded and identifier-only', () => {
+    expect(
+      productionWorkflowAdmissionDecisionSchema.safeParse({
+        decision: 'admitted',
+        retryAfterSeconds: 0,
+        reservationExpiresAt: now
+      }).success
+    ).toBe(true)
+    expect(
+      productionWorkflowAdmissionDecisionSchema.safeParse({
+        decision: 'rate_limited',
+        retryAfterSeconds: 86_401,
+        reservationExpiresAt: now,
+        idempotencyKey: 'must-not-cross-the-admission-boundary'
+      }).success
+    ).toBe(false)
   })
 
   it('keeps the private analysis handoff status identifier-only and bounded', () => {

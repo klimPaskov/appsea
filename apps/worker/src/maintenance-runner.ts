@@ -12,6 +12,7 @@ import {
 import type {
   PostgresAuthRepository,
   PostgresDeletionPropagationRepository,
+  PostgresProductionWorkflowAdmissionRepository,
   PostgresSourceQuotaRepository
 } from '@appsea/db'
 
@@ -26,6 +27,8 @@ export interface SourceMaintenanceDependencies {
   >
   deletion: Pick<PostgresDeletionPropagationRepository, 'listActiveWorkspaceIds' | 'processNext'> &
     Pick<PostgresDeletionPropagationRepository, 'enqueueExpired'>
+  /** Production entry points provide this; legacy fixture test doubles may omit it. */
+  admission?: Pick<PostgresProductionWorkflowAdmissionRepository, 'purge'>
 }
 
 export interface AuthRetentionDependencies {
@@ -99,7 +102,20 @@ export async function runSourceMaintenance(
   let deletionObjectsAffected = 0
   let deletionOpportunitiesInvalidated = 0
   let recomputationJobsQueued = 0
+  let productionWorkflowAdmissionsPurged = 0
   let retentionTombstonesQueued = 0
+  if (dependencies.admission) {
+    for (const workspaceId of deletionWorkspaceIds) {
+      if (productionWorkflowAdmissionsPurged >= parsed.retentionBatchSize) break
+      const remaining = parsed.retentionBatchSize - productionWorkflowAdmissionsPurged
+      const purged = countWithin(
+        await dependencies.admission.purge(workspaceId, before, remaining),
+        'productionWorkflowAdmissionsPurged',
+        remaining
+      )
+      productionWorkflowAdmissionsPurged += purged
+    }
+  }
   for (const workspaceId of deletionWorkspaceIds) {
     if (retentionTombstonesQueued >= parsed.retentionBatchSize) break
     const remaining = parsed.retentionBatchSize - retentionTombstonesQueued
@@ -143,6 +159,7 @@ export async function runSourceMaintenance(
     deletionWorkspacesScanned: deletionWorkspaceIds.length,
     quotaReservationsExpired,
     quotaReservationsPurged,
+    productionWorkflowAdmissionsPurged,
     retentionTombstonesQueued,
     deletionTombstonesProcessed,
     deletionObjectsAffected,

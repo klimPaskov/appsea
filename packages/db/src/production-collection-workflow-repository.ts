@@ -26,6 +26,7 @@ import {
   enqueueProductionAnalysisHandoffInTransaction,
   productionAnalysisHandoffIdentity
 } from './production-analysis-handoff-repository'
+import { consumeProductionWorkflowAdmissionInTransaction } from './production-workflow-admission-repository'
 
 interface ProductionWorkflowRow extends QueryResultRow {
   workspace_id: string
@@ -383,6 +384,12 @@ export class PostgresProductionCollectionWorkflowRepository {
             // Actor identity is immutable and is part of the persisted request boundary.
             throw new WorkflowJobConflictError()
           }
+          await consumeProductionWorkflowAdmissionInTransaction(
+            client,
+            parsed.input.workspaceId,
+            parsed.input.idempotencyDigest,
+            parsed.input.inputHash
+          )
           return mapRow(row)
         }
         await client.query(
@@ -417,6 +424,12 @@ export class PostgresProductionCollectionWorkflowRepository {
             parsed.input.budget.maxActivityAttempts,
             parsed.input.requestedAt
           ]
+        )
+        await consumeProductionWorkflowAdmissionInTransaction(
+          client,
+          parsed.input.workspaceId,
+          parsed.input.idempotencyDigest,
+          parsed.input.inputHash
         )
         await insertCheckpoint(
           client,

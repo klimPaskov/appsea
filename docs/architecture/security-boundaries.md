@@ -68,6 +68,14 @@ for that pre-context authorization lookup.
   lineage. The worker blocks an unapproved or mismatched seed, retries only
   bounded readiness/dispatch failures, and starts Temporal idempotently; it
   never re-fetches a source record or accepts caller-supplied complaint text.
+- Migration `0038` places an authenticated production collection start behind
+  a security-definer admission function. The function verifies the active
+  private non-fixture workspace and owner/editor membership, serializes one
+  workspace's rate bucket and active-job/reservation count under an advisory
+  lock, and stores only hashed idempotency/input digests. Replays do not
+  consume another slot; workflow initialization consumes the reservation, and
+  bounded maintenance purges terminal or expired rows. The limits are fixed in
+  the reviewed migration rather than accepted from request input.
 - Source-item acquisition policy and evidence display representation are relationally enforced.
 - Fixture report generation keeps retained observations, deterministic score
   inference, contrary evidence, recommendation, and source coverage in separate

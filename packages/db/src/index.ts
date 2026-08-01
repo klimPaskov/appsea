@@ -57,6 +57,17 @@ export {
 } from './opportunity-seed-review-repository'
 export { PostgresProductionCollectionWorkflowRepository } from './production-collection-workflow-repository'
 export {
+  PostgresProductionWorkflowAdmissionRepository,
+  ProductionWorkflowAdmissionConflictError,
+  ProductionWorkflowConcurrencyLimitError,
+  ProductionWorkflowRateLimitError,
+  productionWorkflowAdmissionLimits,
+  consumeProductionWorkflowAdmissionInTransaction,
+  type ProductionWorkflowAdmissionDecision,
+  type ProductionWorkflowAdmissionInput,
+  type ProductionWorkflowAdmissionResult
+} from './production-workflow-admission-repository'
+export {
   PostgresProductionAnalysisHandoffRepository,
   ProductionAnalysisHandoffConflictError,
   ProductionAnalysisHandoffStateError,

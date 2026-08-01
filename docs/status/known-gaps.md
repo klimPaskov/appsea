@@ -74,10 +74,15 @@ result events. The existing repository operations are idempotent for safe
 reruns, but production still needs a deployed scheduler, alert ownership,
 cross-run operational accounting, and a fresh Docker-backed recovery proof.
 
-The production workflow start route now caps both declared and chunked JSON
-bodies. Production ingress still needs a per-workspace start rate limit and
-concurrency cap so authenticated users cannot queue unbounded failed jobs while
-source policy is pending.
+The production workflow start route caps both declared and chunked JSON bodies
+and now calls the migration `0038` admission function before Temporal. The
+database serializes each workspace's five-start/15-minute and two-active-job
+limits, preserves replayed digests, consumes a short-lived reservation during
+workflow initialization, and source maintenance purges terminal or expired
+admission rows. The limits are repository-owned defaults, not caller-configurable
+payload fields. A deployed scheduler, authenticated Temporal namespace, and
+multi-instance failure proof are still required before this boundary can be
+called production-operated.
 
 Non-fixture report, plan, and production-analysis artifact payloads require
 object storage; inline JSONB is deliberately restricted to compact metadata

@@ -14,12 +14,16 @@ Migrations `0028_production_collection_workflow_projection.sql`,
 `0035_opportunity_availability_repair.sql`,
 `0036_same_run_analysis_recovery.sql`, and
 `0037_production_analysis_recompute_jobs.sql`
-now add the production collection
+and `0038_production_workflow_ingress_admission.sql` now add the production collection
 job/checkpoint projection, policy trigger, bounded policy-derived retention
 tombstone enqueue, hashed idempotency, terminal reconciliation, and user/service
 actor attribution, and deletion-triggered recomputation dispatch state;
-the workflow/client/activity boundary is package-tested but not deployed. Next
-is infrastructure hardening: Temporal provisioning, role separation, automatic
+the workflow/client/activity boundary is package-tested but not deployed.
+Migration `0038_production_workflow_ingress_admission.sql` adds a fixed,
+database-serialized per-workspace production start rate/concurrency gate before
+Temporal, consumes short-lived reservations during workflow initialization, and
+purges terminal or expired admissions through source maintenance. Next is
+infrastructure hardening: Temporal provisioning, role separation, automatic
 re-collection, non-fixture outputs, and identity-provider approval. Fixture and
 production collection routes are Temporal gateways; signup workspaces remain
 non-fixture by design.
@@ -36,61 +40,29 @@ auth/workspaces, retry-safe fixture Temporal boundary. Provider
 delivery, MFA/OIDC, production identity, infrastructure, and Docker-backed
 integration remain open.
 
-Implemented on 2026-07-25 (production collection checkpoint):
-
-- additive production collection contracts preserve the fixture artifact
-  boundary and require source/policy/request/display-mode alignment
-- migration `0027_source_policy_approval_boundary.sql` creates immutable
-  source-policy review evidence and exposes draft registration/approval only to
-  `appsea_migrator`; runtime workers can read approved snapshots but cannot
-  activate sources
-- `PostgresSourcePolicyRepository` verifies stored policy hashes and derives an
-  effective approved runtime policy without mutating the draft payload
-- `PostgresProductionCollectionRepository` validates active non-fixture
-  workspaces and approved policy snapshots, persists source/evidence/complaint
-  lineage, queues deletion tombstones, records coverage gaps, and emits
-  identifier-only audit/outbox completion receipts with idempotent replay
-- `pnpm worker:source:policy:cfpb` is the explicit operator draft/approval
-  wrapper; `pnpm worker:source:cfpb` is the bounded collection command
-- private page/API reads expose source coverage and policy-allowed evidence at
-  `/workspace/:workspaceId/research/:runId` and its production API route
-- production collection Temporal workflow/client/activity boundaries use a
-  separate PostgreSQL job/checkpoint projection, source-policy trigger,
-  idempotent collection safe point, actor attribution, and workspace-bound
-  status reads; no source is approved or live
-- migration `0029_source_retention_enforcement.sql` queues bounded,
-  policy-derived retention tombstones and reuses deletion propagation;
-  purge/object storage and automatic re-collection remain open; migration
-  `0035` now invalidates/de-ranks stale mutable opportunity projections after
-  source deletion, `0036` protects explicit same-run active-evidence repair,
-  and `0037` queues that repair for the durable worker
-- production analysis contracts, normalization/deduplication/clustering,
-  explicit reviewed-seed scoring, policy/evidence provenance, generic
-  report/package composition, deterministic report/plan object encoding,
-  idempotent post-collection persistence plus an approved-seed handoff queue,
-  private active output reads, private collection handoff status, and
-  non-fixture plan approval/export are implemented; cloud storage and
-  recomputation alerting remain open. Migration `0031` keeps the active plan URI contract
-  strict while explicitly accepting the `deleted:<tombstone>` marker written by
-  the existing source-deletion propagation path.
-- migration `0032` adds editor/owner complaint review transitions and private
-  collection confirm/reject actions. Migrations `0033`/`0034` add immutable
-  approved seed reviews, private seed routes, and a crash-reclaimable automatic
-  analysis handoff; migration `0035` repairs the mutable opportunity projection
-  after source deletion and `0036` protects explicit same-run re-analysis;
-  `0037` queues active-evidence repair. Explicit re-collection and deployed
-  scheduling/alerting remain open.
+Implemented production checkpoint (2026-07-25): contracts, approved-policy
+source gate, non-fixture collection persistence, provenance/coverage/tombstones,
+private evidence/status reads, durable workflow projection, actor attribution,
+retention/deletion propagation, deterministic analysis/report/plan persistence,
+reviewed-seed handoff, complaint review, and plan approval/export. Migrations
+`0027` through `0037` provide those boundaries; `0031` accepts the existing
+`deleted:<tombstone>` URI marker. Cloud storage, purge, recomputation alerting,
+explicit re-collection, and deployed scheduling remain open. No source is
+approved or live.
 
 ## Validated commands
 
 - `pnpm verify` passed 2026-08-01: packages, samples, smoke, repo checks
+- 2026-08-01 ingress-admission focus: 198 contract/db/worker/web suite tests passed;
+  the integration suite now contains PostgreSQL admission serialization,
+  replay, rate, concurrency, and purge coverage but remains Docker-blocked
 - Direct TypeScript, ESLint, Prettier, memory, and focused recomputation checks pass; the handoff
   focus passed 62, the private status focus 59, and contracts/db/worker/web suites passed 165. Seed SVG
   generated; raster awaits `cairosvg`; Temporal suites remain blocked by missing
   `protobufjs`
 - `pnpm verify:persistence` and `pnpm verify:workflows` attempted on
-  2026-07-25; both are blocked by the unavailable Docker Desktop Linux engine
-  pipe (`//./pipe/dockerDesktopLinuxEngine`)
+  2026-07-25 and 2026-08-01; both are blocked by the unavailable Docker
+  Desktop Linux engine pipe (`//./pipe/dockerDesktopLinuxEngine`)
 
 ## Next production tranche
 
@@ -125,6 +97,10 @@ Implemented on 2026-07-25 (production collection checkpoint):
   explicit re-collection, and
   scheduled reconciliation remain open; a settled quota without a persisted
   result requires operator reconciliation.
+- Production workflow admission is implemented in migration `0038` with five
+  starts per 15 minutes, two active jobs, a five-minute reservation TTL, and
+  bounded maintenance purge. Deployment authorization, scheduler ownership,
+  and Docker-backed concurrency proof remain open.
 - Migration 0029 retention selection and propagation still have only static
   assertions until the Docker-backed integration suite is available.
 - Windows/macOS packaging remains open.

@@ -87,3 +87,4 @@
 - [`status/opportunity-seed-review-completion-report-2026-07-26.md`](status/opportunity-seed-review-completion-report-2026-07-26.md)
 - [`status/opportunity-availability-repair-completion-report-2026-07-29.md`](status/opportunity-availability-repair-completion-report-2026-07-29.md)
 - [`status/automatic-recomputation-completion-report-2026-08-01.md`](status/automatic-recomputation-completion-report-2026-08-01.md)
+- [`status/production-workflow-ingress-admission-completion-report-2026-08-01.md`](status/production-workflow-ingress-admission-completion-report-2026-08-01.md)

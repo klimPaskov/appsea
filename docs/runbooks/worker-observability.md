@@ -13,7 +13,8 @@ log sink and alert on:
 - `workflow_budget_rejected` events grouped by `cost_budget_exceeded` and
   `source_item_budget_exceeded` failure codes;
 - `source_maintenance_finished` and `auth_retention_finished` events grouped by
-  their bounded counters and job ID;
+  their bounded counters (including `productionWorkflowAdmissionsPurged`) and
+  job ID;
 - missing `worker_started`/`worker_stopped` heartbeats for the task queue;
 - database connection or migration failures from the process supervisor.
 

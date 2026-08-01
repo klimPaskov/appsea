@@ -49,6 +49,9 @@ reactivate until its active output is linked. Migration `0037` records a
 deletion-triggered recomputation job in the same propagation transaction; the
 durable worker claims it with bounded retries and starts the existing analysis
 workflow only from active evidence and an approved immutable seed.
+Migration `0038` adds a pre-Temporal, workspace-serialized production start
+admission with fixed rate/concurrency limits, digest-only replay identity, and
+bounded terminal/expired-row purge.
 
 Production evolution still requires authenticated/TLS-protected Temporal,
 production identity/recovery policy and scheduled/distributed validation of the

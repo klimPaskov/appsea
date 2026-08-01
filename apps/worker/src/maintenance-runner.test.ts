@@ -85,6 +85,7 @@ describe('maintenance runners', () => {
       deletionWorkspacesScanned: 2,
       quotaReservationsExpired: 2,
       quotaReservationsPurged: 2,
+      productionWorkflowAdmissionsPurged: 0,
       retentionTombstonesQueued: 0,
       deletionTombstonesProcessed: 2,
       deletionObjectsAffected: 8,
@@ -139,6 +140,54 @@ describe('maintenance runners', () => {
 
     expect(result.deletionWorkspacesScanned).toBe(1)
     expect(calls).toEqual(['workspace:target'])
+  })
+
+  it('purges expired production workflow admissions with the retention budget', async () => {
+    const calls: string[] = []
+    const result = await runSourceMaintenance(
+      {
+        jobId: 'maintenance:source:admissions',
+        occurredAt,
+        quotaBatchSize: 1,
+        deletionBatchSize: 1,
+        retentionBatchSize: 2,
+        quotaRetentionDays: 7,
+        workspaceId: null
+      },
+      {
+        quota: {
+          async listActiveWorkspaceIds() {
+            return []
+          },
+          async expireStale() {
+            return 0
+          },
+          async purgeSettled() {
+            return 0
+          }
+        },
+        deletion: {
+          async listActiveWorkspaceIds() {
+            return ['workspace:b', 'workspace:a']
+          },
+          async enqueueExpired() {
+            return 0
+          },
+          async processNext() {
+            return null
+          }
+        },
+        admission: {
+          async purge(workspaceId, before, batchSize) {
+            calls.push(`${workspaceId}:${before}:${batchSize}`)
+            return batchSize ?? 0
+          }
+        }
+      }
+    )
+
+    expect(result.productionWorkflowAdmissionsPurged).toBe(2)
+    expect(calls).toEqual(['workspace:a:2026-07-03T00:00:00.000Z:2'])
   })
 
   it('queues policy retention tombstones with an independent bounded budget', async () => {
