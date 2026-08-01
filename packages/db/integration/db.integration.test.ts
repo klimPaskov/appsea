@@ -2638,7 +2638,7 @@ describe.sequential('PostgreSQL fixture persistence lifecycle', () => {
     expect(runCount.rows[0]?.count).toBe('0')
   })
 
-  it('guards active content and makes tombstone terminal fields monotonic', async () => {
+  it('guards active content and retries tombstone failures within a bounded budget', async () => {
     const target = await withWorkspaceTransaction(
       servicePool,
       'workspace-fixture-a',
@@ -2731,6 +2731,7 @@ describe.sequential('PostgreSQL fixture persistence lifecycle', () => {
 
     const claimed = await deletionRepository.claimNext('workspace-fixture-a')
     expect(claimed?.state).toBe('processing')
+    expect(claimed?.attemptCount).toBe(1)
     const completed = await deletionRepository.complete(
       'workspace-fixture-a',
       tombstone.tombstoneId,
@@ -2738,6 +2739,88 @@ describe.sequential('PostgreSQL fixture persistence lifecycle', () => {
     )
     expect(completed.state).toBe('completed')
     expect(completed.affectedObjectCount).toBe(2)
+
+    const retryTombstone = await deletionRepository.enqueue({
+      workspaceId: 'workspace-fixture-a',
+      tombstoneId: 'tombstone:retryable-integrity',
+      sourceId: target.source_id,
+      sourceRecordId: 'record-without-evidence',
+      reason: 'retry-integrity-test',
+      receivedAt: fixedAt
+    })
+    const retryClaim = await deletionRepository.claimNext('workspace-fixture-a')
+    expect(retryClaim).toMatchObject({
+      tombstoneId: retryTombstone.tombstoneId,
+      state: 'processing',
+      attemptCount: 1
+    })
+    const failed = await deletionRepository.fail('workspace-fixture-a', retryTombstone.tombstoneId)
+    expect(failed).toMatchObject({
+      state: 'failed',
+      attemptCount: 1,
+      failureCode: 'deletion_propagation_failed'
+    })
+    expect(failed.nextAttemptAt).not.toBeNull()
+    await withWorkspaceTransaction(servicePool, 'workspace-fixture-a', async (client) => {
+      await client.query(
+        `UPDATE appsea.deletion_tombstones
+            SET next_attempt_at = clock_timestamp() - interval '1 second'
+          WHERE workspace_id = $1 AND tombstone_id = $2`,
+        ['workspace-fixture-a', retryTombstone.tombstoneId]
+      )
+    })
+    const reclaimedRetry = await deletionRepository.claimNext('workspace-fixture-a')
+    expect(reclaimedRetry).toMatchObject({
+      tombstoneId: retryTombstone.tombstoneId,
+      state: 'processing',
+      attemptCount: 2
+    })
+    expect(reclaimedRetry?.failureCode).toBeNull()
+    await deletionRepository.complete('workspace-fixture-a', retryTombstone.tombstoneId, 0)
+
+    const exhaustedTombstone = await deletionRepository.enqueue({
+      workspaceId: 'workspace-fixture-a',
+      tombstoneId: 'tombstone:exhausted-integrity',
+      sourceId: target.source_id,
+      sourceRecordId: 'record-exhausted',
+      reason: 'exhausted-integrity-test',
+      receivedAt: fixedAt
+    })
+    await withWorkspaceTransaction(servicePool, 'workspace-fixture-a', async (client) => {
+      await client.query(
+        `UPDATE appsea.deletion_tombstones
+            SET state = 'processing',
+                attempt_count = 8,
+                processing_started_at = $3,
+                next_attempt_at = NULL
+          WHERE workspace_id = $1 AND tombstone_id = $2`,
+        ['workspace-fixture-a', exhaustedTombstone.tombstoneId, fixedAt]
+      )
+    })
+    expect(await deletionRepository.claimNext('workspace-fixture-a')).toBeNull()
+    const exhausted = await withWorkspaceTransaction(
+      servicePool,
+      'workspace-fixture-a',
+      (client) =>
+        client.query<{
+          state: string
+          attempt_count: number
+          next_attempt_at: string | null
+          failure_code: string | null
+        }>(
+          `SELECT state, attempt_count, next_attempt_at, failure_code
+             FROM appsea.deletion_tombstones
+            WHERE workspace_id = $1 AND tombstone_id = $2`,
+          ['workspace-fixture-a', exhaustedTombstone.tombstoneId]
+        ),
+      { readOnly: true }
+    )
+    expect(exhausted.rows[0]).toMatchObject({
+      state: 'failed',
+      attempt_count: 8,
+      next_attempt_at: null,
+      failure_code: 'deletion_propagation_failed'
+    })
 
     await expect(
       withWorkspaceTransaction(servicePool, 'workspace-fixture-a', async (client) => {

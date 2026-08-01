@@ -172,6 +172,7 @@ export {
   DeletionTombstoneStateError,
   PostgresDeletionPropagationRepository,
   PostgresDeletionRepository,
+  deletionPropagationLimits,
   type DeletionPropagationResult,
   type DeletionTombstoneInput,
   type DeletionTombstoneRecord,

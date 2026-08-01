@@ -119,8 +119,9 @@ for that pre-context authorization lookup.
   granted `appsea.list_active_workspaces_for_maintenance()` function, owned by
   the migration role; direct runtime workspace reads remain forced-RLS
   fail-closed.
-- Deletion propagation uses skip-locked tombstone claims with stale-lease
-  recovery, preserves the first tombstone link, clears raw source references,
+- Deletion propagation uses skip-locked tombstone claims with server-clock
+  stale-lease recovery, bounded retry scheduling, and exhausted terminal
+  failure. It preserves the first tombstone link, clears raw source references,
   redacts normalized evidence, replaces stored report/plan payloads with
   deletion markers, and marks reports/plans unavailable. Active
   source/evidence/report/plan payloads and terminal tombstone fields are
@@ -129,9 +130,10 @@ for that pre-context authorization lookup.
   object worker marks them deleted, waits for immutable retention, and purges
   with bounded stale-claim recovery. Cloud object storage, backups, workspace
   closure, and export deletion require separate reviewed deployment workers;
-  stale-claim ownership processing rows require a non-null lease start, but
-  stale-claim ownership races outside this queue still need a claim-token
-  design.
+  stale-claim ownership processing rows require a non-null lease start, while
+  migration `0044` keeps retryable failures inspectable and blocks re-entry
+  after the attempt budget is exhausted. Stale-claim ownership races outside
+  this queue still need a claim-token design.
 - `appsea.users`, `appsea.auth_sessions`, and `appsea.workspace_memberships` store only
   scrypt password hashes and SHA-256 session-token hashes. The web boundary uses an
   `HttpOnly`, `SameSite=Lax` cookie and revokes sessions durably. Production uses

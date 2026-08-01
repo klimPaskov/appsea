@@ -45,6 +45,11 @@ This skill may change `packages/db`, directly affected contracts and producers, 
    clock for stale-claim eligibility, a bounded attempt limit, and a fixed
    terminal failure state for exhausted claims. Keep the downstream workflow
    identity deterministic so recovery cannot create a second run.
+   For deletion propagation queues, retain the tombstone's immutable source
+   identity and use a server-clock retry deadline plus a bounded attempt
+   count. Recover stale processing claims, keep failed rows inspectable, and
+   make exhausted failure metadata terminal through the trigger and grants;
+   do not treat the first propagation exception as permanent deletion proof.
 9. Add both a populated forward-upgrade test and a fresh-install test. Include negative privilege, RLS, policy, immutability, and cross-wire assertions.
 10. Update the local runbook, source-of-truth docs, and memory in the same tranche.
 

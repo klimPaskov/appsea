@@ -17,6 +17,8 @@ function deletionResult(affectedObjectCount: number): DeletionPropagationResult 
       processingStartedAt: occurredAt,
       completedAt: occurredAt,
       affectedObjectCount,
+      attemptCount: 1,
+      nextAttemptAt: null,
       failureCode: null,
       failureSummary: null
     },

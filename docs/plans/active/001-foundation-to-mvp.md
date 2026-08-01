@@ -25,7 +25,7 @@ Status: production-shaped foundation implemented and validated locally; producti
 
 Implemented:
 
-- PostgreSQL 18 schema and forty-three forward, checksummed migrations
+- PostgreSQL 18 schema and forty-four forward, checksummed migrations
 - normalized source, evidence, complaint, cluster, competitor, opportunity, score, report, plan, audit, cost, deletion, outbox, and lineage tables
 - no-login owner, separate migrator, and least-privilege runtime role contract
 - forced workspace RLS and transaction-scoped workspace context
@@ -64,6 +64,9 @@ Implemented:
   skip-locked scheduler claims, and same-transaction tombstone finalization
 - skip-locked deletion tombstone propagation that redacts source/evidence rows
   and marks dependent report/plan versions unavailable
+- migration `0044_retryable_deletion_propagation.sql` adds server-clock stale
+  claim recovery, bounded retry scheduling, and terminal exhausted tombstones
+  without weakening the immutable deletion identity boundary
 - global-auth password-reset tokens with latest-only semantics, encrypted
   delivery outbox, security events, narrow security-definer functions, bounded
   purge, and a retryable signed provider worker; delivery remains kill-switched
@@ -246,7 +249,8 @@ Status: bounded worker events, workflow budgets, schema-validated/idempotent
 auth and source maintenance runners with stable job IDs, independent quota and
 retention budgets, source-policy warnings, centralized source-quota
 reservations, owner-scoped all-workspace maintenance, policy-derived retention
-tombstones, terminal/expired source-lease purge, stale-claim recovery, and bounded deletion propagation, and retryable password-recovery/workspace-invitation
+tombstones, terminal/expired source-lease purge, server-clock stale-claim
+recovery, bounded retryable deletion propagation, and retryable password-recovery/workspace-invitation
 delivery are implemented. Deletion propagation durably queues source-scoped
 active-evidence recomputation jobs with bounded retries, blocked-seed recovery,
 and Temporal-start idempotency;

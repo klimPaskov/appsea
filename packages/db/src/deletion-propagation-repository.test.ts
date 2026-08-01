@@ -13,24 +13,37 @@ const initialTombstone = {
   processing_started_at: null,
   completed_at: null,
   affected_object_count: 0,
+  attempt_count: 0,
+  next_attempt_at: '2026-07-24T00:00:00.000Z',
   failure_code: null,
   failure_summary: null
 }
 
 type MutableTombstone = Omit<
   typeof initialTombstone,
-  'state' | 'processing_started_at' | 'completed_at' | 'failure_code' | 'failure_summary'
+  | 'state'
+  | 'processing_started_at'
+  | 'completed_at'
+  | 'next_attempt_at'
+  | 'failure_code'
+  | 'failure_summary'
 > & {
   state: 'pending' | 'processing' | 'completed' | 'failed'
   processing_started_at: string | null
   completed_at: string | null
+  attempt_count: number
+  next_attempt_at: string | null
   failure_code: string | null
   failure_summary: string | null
 }
 
-function fakePool(): { pool: Pool; statements: Array<{ text: string; values: unknown[] }> } {
+function fakePool(seed: Partial<MutableTombstone> = {}): {
+  pool: Pool
+  statements: Array<{ text: string; values: unknown[] }>
+  getTombstone: () => MutableTombstone
+} {
   const statements: Array<{ text: string; values: unknown[] }> = []
-  const tombstone: MutableTombstone = { ...initialTombstone }
+  const tombstone: MutableTombstone = { ...initialTombstone, ...seed }
   const client = {
     query: async (text: string, values: unknown[] = []) => {
       statements.push({ text, values })
@@ -43,10 +56,22 @@ function fakePool(): { pool: Pool; statements: Array<{ text: string; values: unk
       if (text.includes('INSERT INTO appsea.deletion_tombstones')) {
         return { rows: [{ ...tombstone }], rowCount: 1 }
       }
-      if (text.includes('WITH candidate AS')) {
-        if (tombstone.state !== 'pending') return { rows: [], rowCount: 0 }
+      if (text.includes('candidate AS')) {
+        if (tombstone.state === 'processing' && tombstone.attempt_count >= 8) {
+          tombstone.state = 'failed'
+          tombstone.processing_started_at = null
+          tombstone.next_attempt_at = null
+          tombstone.failure_code = 'deletion_propagation_failed'
+          tombstone.failure_summary = 'Deletion propagation exhausted its bounded retry budget.'
+          return { rows: [], rowCount: 0 }
+        }
+        if (!['pending', 'failed'].includes(tombstone.state)) return { rows: [], rowCount: 0 }
         tombstone.state = 'processing'
+        tombstone.attempt_count += 1
         tombstone.processing_started_at = '2026-07-24T00:00:01.000Z'
+        tombstone.next_attempt_at = null
+        tombstone.failure_code = null
+        tombstone.failure_summary = null
         return { rows: [{ ...tombstone }], rowCount: 1 }
       }
       if (text.includes('UPDATE appsea.source_items')) {
@@ -76,8 +101,10 @@ function fakePool(): { pool: Pool; statements: Array<{ text: string; values: unk
       if (text.includes("SET state = 'completed'")) {
         if (tombstone.state !== 'processing') return { rows: [], rowCount: 0 }
         tombstone.state = 'completed'
+        tombstone.processing_started_at = null
         tombstone.completed_at = '2026-07-24T00:00:02.000Z'
         tombstone.affected_object_count = Number(values[2])
+        tombstone.next_attempt_at = null
         tombstone.failure_code = null
         tombstone.failure_summary = null
         return { rows: [{ ...tombstone }], rowCount: 1 }
@@ -85,8 +112,10 @@ function fakePool(): { pool: Pool; statements: Array<{ text: string; values: unk
       if (text.includes("SET state = 'failed'")) {
         if (tombstone.state !== 'processing') return { rows: [], rowCount: 0 }
         tombstone.state = 'failed'
+        tombstone.processing_started_at = null
+        tombstone.next_attempt_at = '2026-07-24T00:01:01.000Z'
         tombstone.failure_code = 'deletion_propagation_failed'
-        tombstone.failure_summary = 'Deletion propagation failed before completion'
+        tombstone.failure_summary = 'Deletion propagation failed; a bounded retry is scheduled.'
         return { rows: [{ ...tombstone }], rowCount: 1 }
       }
       if (text.includes('SELECT') && text.includes('deletion_tombstones')) {
@@ -99,7 +128,8 @@ function fakePool(): { pool: Pool; statements: Array<{ text: string; values: unk
   } as unknown as PoolClient
   return {
     pool: { connect: async () => client } as unknown as Pool,
-    statements
+    statements,
+    getTombstone: () => ({ ...tombstone })
   }
 }
 
@@ -128,7 +158,47 @@ describe('PostgresDeletionPropagationRepository', () => {
     const claimed = await repository.claimNext('workspace:one')
 
     expect(claimed?.state).toBe('processing')
+    expect(claimed?.attemptCount).toBe(1)
     expect(statements.some(({ text }) => text.includes('FOR UPDATE SKIP LOCKED'))).toBe(true)
+  })
+
+  it('schedules a retry after a propagation failure', async () => {
+    const { pool, statements } = fakePool()
+    const repository = new PostgresDeletionPropagationRepository(pool)
+
+    await repository.claimNext('workspace:one')
+    const failed = await repository.fail('workspace:one', 'tombstone:one')
+
+    expect(failed).toMatchObject({
+      state: 'failed',
+      attemptCount: 1,
+      failureCode: 'deletion_propagation_failed'
+    })
+    expect(failed.nextAttemptAt).not.toBeNull()
+    expect(failed.failureSummary).toContain('retry')
+    const failureStatement = statements.find(({ text }) => text.includes('next_attempt_at = CASE'))
+    expect(failureStatement?.text).toContain('attempt_count < $3')
+  })
+
+  it('terminalizes an exhausted stale claim without reprocessing it', async () => {
+    const { pool, getTombstone, statements } = fakePool({
+      state: 'processing',
+      attempt_count: 8,
+      processing_started_at: '2026-07-23T00:00:00.000Z',
+      next_attempt_at: null
+    })
+    const repository = new PostgresDeletionPropagationRepository(pool)
+
+    const claimed = await repository.claimNext('workspace:one')
+
+    expect(claimed).toBeNull()
+    expect(getTombstone()).toMatchObject({
+      state: 'failed',
+      attempt_count: 8,
+      next_attempt_at: null,
+      failure_code: 'deletion_propagation_failed'
+    })
+    expect(statements.some(({ text }) => text.includes('attempt_count >= $2'))).toBe(true)
   })
 
   it('propagates availability state and completes with the affected row count', async () => {

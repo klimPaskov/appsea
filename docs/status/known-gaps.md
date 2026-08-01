@@ -49,8 +49,10 @@ Account closure is a shared-workspace-safe profile closure, not workspace
 research deletion. Recovery mechanics exist behind a production kill switch;
 delivery and identity verification remain unapproved.
 
-Deletion tombstones now have a bounded skip-locked propagation worker. Source-item
-raw references are cleared, active source/evidence payload rewrites are blocked,
+Deletion tombstones now have a bounded skip-locked propagation worker with
+server-clock stale-claim recovery and retryable failures that terminalize only
+after eight attempts. Source-item raw references are cleared, active
+source/evidence payload rewrites are blocked,
 terminal tombstone state/count rewrites are blocked, normalized evidence is
 replaced with a redaction marker, dependent report/plan versions are marked
 unavailable, active production analysis runs are marked `invalidated`, and
@@ -58,7 +60,9 @@ mutable opportunity projections are invalidated/de-ranked when no newer active
 analysis remains while provenance remains. Migration `0043` now queues the
 complete artifact/report/plan references for an authorized, retention-aware
 purge pass; the local adapter also removes orphaned bodies after a metadata
-sidecar crash. An explicit reviewed analysis can now re-cluster the
+sidecar crash. Migration `0044` makes failed tombstone propagation retryable
+with a server-clock deadline and bounded exhausted terminal state. An explicit
+reviewed analysis can now re-cluster the
 remaining active evidence after deletion, but automatic recomputation
 scheduling now persists a source-tombstone/seed-bound job and dispatches through
 the existing analysis workflow. Automatic re-collection, object
@@ -100,9 +104,9 @@ leakage, but v1 histories need a controlled drain/retention plan. The activity
 still persists object-backed outputs before finalization; migration `0043` and
 the maintenance worker now cover invalidated output-object marking, retention,
 bounded retry, and local orphan cleanup. Cloud object-store/backup deletion and
-external conditional-delete verification remain deployment work; retryable
-tombstone propagation and authentication for the direct source CLI remain
-open. The recomputation dispatcher now reclaims stale `dispatching` rows from
+external conditional-delete verification remain deployment work; authentication
+for the direct source CLI remains open. The recomputation dispatcher now
+reclaims stale `dispatching` rows from
 the server clock and terminalizes exhausted claims, so a worker crash cannot
 strand that queue indefinitely. Retention is anchored to
 server-observed activity time and final

@@ -4,6 +4,12 @@ import { withDatabaseTransaction, withWorkspaceTransaction } from './transaction
 
 export type DeletionTombstoneState = 'pending' | 'processing' | 'completed' | 'failed'
 
+export const deletionPropagationLimits = {
+  staleClaimSeconds: 15 * 60,
+  maxAttempts: 8,
+  retryDelaySeconds: 60
+} as const
+
 interface DeletionTombstoneRow extends QueryResultRow {
   workspace_id: string
   tombstone_id: string
@@ -15,6 +21,8 @@ interface DeletionTombstoneRow extends QueryResultRow {
   processing_started_at: Date | string | null
   completed_at: Date | string | null
   affected_object_count: number | string
+  attempt_count: number | string
+  next_attempt_at: Date | string | null
   failure_code: string | null
   failure_summary: string | null
 }
@@ -30,6 +38,8 @@ export interface DeletionTombstoneRecord {
   processingStartedAt: string | null
   completedAt: string | null
   affectedObjectCount: number
+  attemptCount: number
+  nextAttemptAt: string | null
   failureCode: string | null
   failureSummary: string | null
 }
@@ -83,6 +93,8 @@ function mapTombstone(row: DeletionTombstoneRow): DeletionTombstoneRecord {
     processingStartedAt: iso(row.processing_started_at),
     completedAt: iso(row.completed_at),
     affectedObjectCount: Number(row.affected_object_count),
+    attemptCount: Number(row.attempt_count),
+    nextAttemptAt: iso(row.next_attempt_at),
     failureCode: row.failure_code,
     failureSummary: row.failure_summary
   }
@@ -91,7 +103,7 @@ function mapTombstone(row: DeletionTombstoneRow): DeletionTombstoneRecord {
 const tombstoneColumns = `
   workspace_id, tombstone_id, source_id, source_record_id, reason, state,
   received_at, processing_started_at, completed_at, affected_object_count,
-  failure_code, failure_summary`
+  attempt_count, next_attempt_at, failure_code, failure_summary`
 
 export class PostgresDeletionPropagationRepository {
   constructor(private readonly pool: Pool) {}
@@ -134,8 +146,9 @@ export class PostgresDeletionPropagationRepository {
     return withWorkspaceTransaction(this.pool, workspaceId, async (client) => {
       const inserted = await client.query<DeletionTombstoneRow>(
         `INSERT INTO appsea.deletion_tombstones
-           (workspace_id, tombstone_id, source_id, source_record_id, reason, state, received_at)
-         VALUES ($1, $2, $3, $4, $5, 'pending', $6::timestamptz)
+           (workspace_id, tombstone_id, source_id, source_record_id, reason, state,
+            received_at, next_attempt_at)
+         VALUES ($1, $2, $3, $4, $5, 'pending', $6::timestamptz, clock_timestamp())
          ON CONFLICT (workspace_id, source_id, source_record_id, reason) DO NOTHING
          RETURNING ${tombstoneColumns}`,
         [workspaceId, tombstoneId, sourceId, input.sourceRecordId, input.reason, input.receivedAt]
@@ -176,7 +189,7 @@ export class PostgresDeletionPropagationRepository {
     )
   }
 
-  /** Claim the oldest pending tombstone without waiting on another worker. */
+  /** Claim the oldest due tombstone without waiting on another worker. */
   async claimNext(workspaceId: string): Promise<DeletionTombstoneRecord | null> {
     const validatedWorkspaceId = appseaIdentifierSchema.parse(workspaceId)
     return withWorkspaceTransaction(this.pool, validatedWorkspaceId, (client) =>
@@ -205,8 +218,9 @@ export class PostgresDeletionPropagationRepository {
         return { tombstone, ...counts }
       })
     } catch (error) {
-      // Persist the terminal failure in a separate transaction. The caller
-      // still receives the original propagation error for retry/alerting.
+      // Persist the retry or bounded terminal failure in a separate
+      // transaction. The caller still receives the original propagation error
+      // for retry/alerting.
       await this.fail(validatedWorkspaceId, claimed.tombstoneId)
       throw error
     }
@@ -233,7 +247,7 @@ export class PostgresDeletionPropagationRepository {
     )
   }
 
-  /** Mark a claimed tombstone failed; repeating a failure is a no-op. */
+  /** Mark a claimed tombstone failed and schedule a bounded retry when possible. */
   async fail(workspaceId: string, tombstoneId: string): Promise<DeletionTombstoneRecord> {
     const validatedWorkspaceId = appseaIdentifierSchema.parse(workspaceId)
     const validatedTombstoneId = appseaIdentifierSchema.parse(tombstoneId)
@@ -241,13 +255,28 @@ export class PostgresDeletionPropagationRepository {
       const updated = await client.query<DeletionTombstoneRow>(
         `UPDATE appsea.deletion_tombstones
             SET state = 'failed',
+                processing_started_at = NULL,
+                next_attempt_at = CASE
+                  WHEN attempt_count < $3
+                  THEN clock_timestamp() + ($4::text || ' seconds')::interval
+                  ELSE NULL
+                END,
                 failure_code = 'deletion_propagation_failed',
-                failure_summary = 'Deletion propagation failed before completion'
+                failure_summary = CASE
+                  WHEN attempt_count < $3
+                  THEN 'Deletion propagation failed; a bounded retry is scheduled.'
+                  ELSE 'Deletion propagation exhausted its bounded retry budget.'
+                END
           WHERE workspace_id = $1
             AND tombstone_id = $2
             AND state = 'processing'
         RETURNING ${tombstoneColumns}`,
-        [validatedWorkspaceId, validatedTombstoneId]
+        [
+          validatedWorkspaceId,
+          validatedTombstoneId,
+          deletionPropagationLimits.maxAttempts,
+          deletionPropagationLimits.retryDelaySeconds
+        ]
       )
       if (updated.rows[0]) return mapTombstone(updated.rows[0])
 
@@ -277,32 +306,55 @@ export class PostgresDeletionPropagationRepository {
     workspaceId: string
   ): Promise<DeletionTombstoneRecord | null> {
     const claimed = await client.query<DeletionTombstoneRow>(
-      `WITH candidate AS (
+      `WITH exhausted AS (
+         UPDATE appsea.deletion_tombstones
+            SET state = 'failed',
+                processing_started_at = NULL,
+                next_attempt_at = NULL,
+                failure_code = 'deletion_propagation_failed',
+                failure_summary = 'Deletion propagation exhausted its bounded retry budget.'
+          WHERE workspace_id = $1
+            AND state = 'processing'
+            AND attempt_count >= $2
+            AND processing_started_at IS NOT NULL
+            AND processing_started_at <= clock_timestamp() - ($3::text || ' seconds')::interval
+       ), candidate AS (
          SELECT workspace_id, tombstone_id
            FROM appsea.deletion_tombstones
           WHERE workspace_id = $1
             AND (
-              state = 'pending'
+              (
+                state IN ('pending', 'failed')
+                AND next_attempt_at <= clock_timestamp()
+                AND attempt_count < $2
+              )
               OR (
                 state = 'processing'
                 AND processing_started_at IS NOT NULL
-                AND processing_started_at <= clock_timestamp() - interval '15 minutes'
+                AND processing_started_at <= clock_timestamp() - ($3::text || ' seconds')::interval
+                AND attempt_count < $2
               )
             )
-          ORDER BY received_at, tombstone_id
+          ORDER BY COALESCE(next_attempt_at, received_at), received_at, tombstone_id
           FOR UPDATE SKIP LOCKED
           LIMIT 1
        )
        UPDATE appsea.deletion_tombstones tombstone
           SET state = 'processing',
+              attempt_count = tombstone.attempt_count + 1,
               processing_started_at = clock_timestamp(),
+              next_attempt_at = NULL,
               failure_code = NULL,
               failure_summary = NULL
          FROM candidate
         WHERE tombstone.workspace_id = candidate.workspace_id
           AND tombstone.tombstone_id = candidate.tombstone_id
        RETURNING ${tombstoneColumns}`,
-      [workspaceId]
+      [
+        workspaceId,
+        deletionPropagationLimits.maxAttempts,
+        deletionPropagationLimits.staleClaimSeconds
+      ]
     )
     return claimed.rows[0] ? mapTombstone(claimed.rows[0]) : null
   }
@@ -349,8 +401,10 @@ export class PostgresDeletionPropagationRepository {
     const updated = await client.query<DeletionTombstoneRow>(
       `UPDATE appsea.deletion_tombstones
           SET state = 'completed',
+              processing_started_at = NULL,
               completed_at = COALESCE(completed_at, clock_timestamp()),
               affected_object_count = $3,
+              next_attempt_at = NULL,
               failure_code = NULL,
               failure_summary = NULL
         WHERE workspace_id = $1

@@ -36,6 +36,12 @@ description: Use when adding or changing AppSea worker commands, scheduled jobs,
     terminalize exhausted stale claims with fixed failure metadata. Use a
     deterministic downstream workflow identity so a late worker start is an
     idempotent replay rather than a duplicate research run.
+13. For source-deletion tombstones, keep the complete provenance row in a
+    forced-RLS queue, claim with `FOR UPDATE SKIP LOCKED`, and make failed
+    propagation retryable with a server-clock deadline and bounded attempts.
+    Recover stale processing claims, preserve fixed failure metadata, and
+    terminalize only exhausted rows; never turn a transient propagation error
+    into an uninspectable or silently dropped deletion.
 
 Do not rely on an in-memory loop for production durability. Do not hide a partial result behind a successful exit code.
 

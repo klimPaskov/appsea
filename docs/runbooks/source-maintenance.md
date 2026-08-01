@@ -17,7 +17,10 @@ tombstones from each stored source policy's `retentionDays` and
 `deletionRequired` fields, then processes
 every workspace's deletion queue unless `APPSEA_DELETION_WORKSPACE_ID` is
 supplied to narrow a run. Claims use `FOR UPDATE SKIP LOCKED` and reclaim
-processing claims older than the lease. Propagation is idempotent, retains
+processing claims older than the lease. A failed propagation keeps fixed
+failure metadata and is retried after a server-clock delay until the bounded
+eight-attempt budget is exhausted; stale exhausted claims become terminal
+failures. Propagation is idempotent, retains
 tombstone identifiers, removes source-item raw references, replaces normalized
 evidence/report/plan payloads with deletion markers, marks dependent versions
 unavailable, and invalidates/de-ranks any mutable opportunity projection whose
@@ -94,6 +97,13 @@ The queue retains no raw complaint content and is idempotent when a worker
 crashes after the external mark or purge. The worker requires
 `APPSEA_OBJECT_STORE_ROOT`; an encrypted/versioned cloud adapter and backup
 deletion verification remain deployment gates.
+
+Migration `0044` adds the retry schedule and attempt counter to deletion
+tombstones. Pending and retryable failed rows have a due `next_attempt_at`,
+processing rows hold a server-observed lease, and exhausted failed rows have
+no next attempt. The database trigger and runtime grants keep source identity,
+failure metadata, and terminal counts fail-closed; a first transient exception
+does not erase the tombstone or turn a partial propagation into completion.
 
 Configuration is bounded by the command:
 
