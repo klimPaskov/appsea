@@ -65,6 +65,7 @@ try {
       sourceItemCount: result.sourceItemCount,
       complaintCount: result.complaintCount,
       deletionCount: result.deletionCount,
+      costMicros: result.costMicros,
       replayed: result.replayed
     })
   )

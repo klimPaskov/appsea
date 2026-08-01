@@ -31,6 +31,18 @@ export class ProductionCollectionReconciliationError extends Error {
   }
 }
 
+export class ProductionCollectionCostBudgetExceededError extends Error {
+  readonly estimatedCostMicros: number
+
+  constructor(estimatedCostMicros: number, maximumCostMicros: number) {
+    super(
+      `Production collection source cost ${estimatedCostMicros} micro-USD exceeds the approved ${maximumCostMicros} micro-USD budget`
+    )
+    this.name = 'ProductionCollectionCostBudgetExceededError'
+    this.estimatedCostMicros = estimatedCostMicros
+  }
+}
+
 export interface ProductionCfpbCollectionOptions {
   /** Workflow/server-observed timestamp used to make capture provenance stable across retries. */
   observedAt?: string
@@ -91,6 +103,13 @@ export async function runProductionCfpbCollection(
       'The production worker has no connector for this source'
     )
   }
+  const estimatedCostMicros = collectible.policy.quota.costPerRequestMicros
+  if (estimatedCostMicros > effectiveRequest.budget.maxCostMicros) {
+    throw new ProductionCollectionCostBudgetExceededError(
+      estimatedCostMicros,
+      effectiveRequest.budget.maxCostMicros
+    )
+  }
   const observedAt = new Date(options.observedAt ?? new Date().toISOString())
   if (!Number.isFinite(observedAt.getTime())) {
     throw new Error('Production collection observedAt must be a valid timestamp')
@@ -145,6 +164,7 @@ export async function runProductionCfpbCollection(
         {
           request: effectiveRequest,
           observedAt: stableObservedAt,
+          costMicros: collected.costMicros,
           policy: collected.policy,
           complaints: collected.complaints,
           deletions: collected.deletions,

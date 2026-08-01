@@ -71,6 +71,21 @@ function applicationFailureType(error: unknown): string | undefined {
   return undefined
 }
 
+function applicationFailureDetails(error: unknown): readonly unknown[] {
+  if (error instanceof ApplicationFailure) return error.details ?? []
+  if (typeof error === 'object' && error !== null && 'cause' in error) {
+    return applicationFailureDetails(error.cause)
+  }
+  return []
+}
+
+function productionEstimatedCost(error: unknown, fallback: number): number {
+  const candidate = applicationFailureDetails(error)[0]
+  return typeof candidate === 'number' && Number.isSafeInteger(candidate) && candidate >= 0
+    ? candidate
+    : fallback
+}
+
 function productionFailureSummary(error: unknown): string {
   switch (applicationFailureType(error)) {
     case 'APPSEA_POLICY_DENIED':
@@ -83,6 +98,8 @@ function productionFailureSummary(error: unknown): string {
       return 'Production collection state or immutable content is invalid.'
     case 'APPSEA_INPUT_INVALID':
       return 'Production collection input is invalid.'
+    case 'APPSEA_BUDGET_EXCEEDED':
+      return 'The production collection source cost exceeds the approved workflow budget.'
     default:
       return productionFailureSummaries.activity_failed
   }
@@ -535,7 +552,8 @@ export async function productionCollectionWorkflow(
         'APPSEA_INPUT_INVALID',
         'APPSEA_IDEMPOTENCY_CONFLICT',
         'APPSEA_IMMUTABLE_CONFLICT',
-        'APPSEA_POLICY_DENIED'
+        'APPSEA_POLICY_DENIED',
+        'APPSEA_BUDGET_EXCEEDED'
       ]
     }
   })
@@ -551,7 +569,8 @@ export async function productionCollectionWorkflow(
         'APPSEA_INPUT_INVALID',
         'APPSEA_IDEMPOTENCY_CONFLICT',
         'APPSEA_IMMUTABLE_CONFLICT',
-        'APPSEA_POLICY_DENIED'
+        'APPSEA_POLICY_DENIED',
+        'APPSEA_BUDGET_EXCEEDED'
       ]
     }
   })
@@ -664,8 +683,19 @@ export async function productionCollectionWorkflow(
     return result
   } catch (error) {
     const canceled = isCancellation(error)
-    const state = canceled ? 'canceled' : 'failed'
-    const failureCode: WorkflowFailureCode = canceled ? 'workflow_canceled' : 'activity_failed'
+    const budgetExceeded = applicationFailureType(error) === 'APPSEA_BUDGET_EXCEEDED'
+    const state: 'canceled' | 'failed' | 'budget_rejected' = canceled
+      ? 'canceled'
+      : budgetExceeded
+        ? 'budget_rejected'
+        : 'failed'
+    const failureCode: WorkflowFailureCode = canceled
+      ? 'workflow_canceled'
+      : budgetExceeded
+        ? 'cost_budget_exceeded'
+        : 'activity_failed'
+    const failureSummary =
+      state === 'failed' ? productionFailureSummary(error) : productionFailureSummaries[failureCode]
     const terminal = initialized
       ? await CancellationScope.nonCancellable(() =>
           cleanupActivities.terminateProductionCollectionJob({
@@ -674,10 +704,7 @@ export async function productionCollectionWorkflow(
             state,
             checkpoint: state,
             failureCode,
-            failureSummary:
-              state === 'failed'
-                ? productionFailureSummary(error)
-                : productionFailureSummaries[failureCode],
+            failureSummary,
             consumedSourceItems: status.consumedSourceItems,
             consumedCostMicros: status.consumedCostMicros,
             occurredAt: transitionTime()
@@ -704,6 +731,22 @@ export async function productionCollectionWorkflow(
         consumedCostMicros: reconciled.costMicros,
         result
       }
+      return result
+    }
+    if (state === 'budget_rejected') {
+      const result: ProductionCollectionWorkflowResult = {
+        state: 'budget_rejected',
+        workflowId: execution.workflowId,
+        temporalFirstExecutionRunId: execution.temporalFirstExecutionRunId,
+        failureCode: 'cost_budget_exceeded',
+        failureSummary,
+        sourceItemsInspected: input.limit,
+        estimatedCostMicros: productionEstimatedCost(
+          error,
+          Math.min(1_000_000_000_000, input.budget.maxCostMicros + 1)
+        )
+      }
+      status = { ...status, state, checkpoint: state, result }
       return result
     }
     status = { ...status, state, checkpoint: state }

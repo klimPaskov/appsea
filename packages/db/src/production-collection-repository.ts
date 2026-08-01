@@ -251,6 +251,7 @@ function buildSnapshot(
     evidenceCount,
     complaintCount,
     deletionCount,
+    costMicros: input.costMicros,
     coverageGaps: coverageGaps(input),
     warnings: input.warnings,
     capturedAt: input.observedAt
@@ -275,6 +276,7 @@ async function resultFromRun(
     evidenceCount: snapshot.evidenceCount,
     complaintCount: snapshot.complaintCount,
     deletionCount: snapshot.deletionCount,
+    costMicros: snapshot.costMicros,
     coverageGaps: snapshot.coverageGaps,
     warnings: snapshot.warnings,
     state: 'completed',
@@ -1128,6 +1130,7 @@ export class PostgresProductionCollectionRepository {
                 sourceItemCount,
                 complaintCount,
                 deletionCount: parsed.deletions.length,
+                costMicros: parsed.costMicros,
                 synthetic: false
               }),
               parsed.observedAt
@@ -1153,6 +1156,7 @@ export class PostgresProductionCollectionRepository {
                 sourceId: parsed.request.sourceId,
                 sourceItemCount,
                 complaintCount,
+                costMicros: parsed.costMicros,
                 synthetic: false
               }),
               parsed.observedAt

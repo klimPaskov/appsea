@@ -56,6 +56,14 @@ The typed record is `cfpbSourcePolicy` in
   reservations are hashed, idempotent, shared across workspaces, and expired
   and purged by the all-workspace source-maintenance job. A live source still
   requires an approved policy version and deployment-level quota monitoring.
+  Every completed collection preserves the settled reservation cost in its
+  snapshot, result, workflow checkpoint, and audit/outbox metadata. CFPB is
+  currently modeled as zero-cost by policy; the propagation is retained so a
+  reviewed source-policy revision with a non-zero request cost cannot disappear
+  between quota settlement and workflow accounting.
+  The production workflow also compares the approved request cost with the
+  caller-owned cost budget before acquiring a source lease; a known overage is a
+  bounded budget rejection and never reaches the external API.
 - Credentials: none. A future proxy must keep service identity and secrets
   outside connector code and workflow history.
 - Response safety: the connector enforces a 30-second request/body timeout and

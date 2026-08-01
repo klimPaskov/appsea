@@ -42,6 +42,7 @@ describe('connector policy gate', () => {
     })
     expect(result.complaints.length).toBeGreaterThan(0)
     expect(result.complaints.every((entry) => entry.synthetic)).toBe(true)
+    expect(result.costMicros).toBe(0)
   })
 
   it('fails closed for an unapproved purpose', () => {
@@ -174,6 +175,7 @@ describe('connector policy gate', () => {
   it('uses a durable quota capability and refuses committed reservation replays', async () => {
     const reservations = new Map<string, 'reserved' | 'committed'>()
     const inputs: string[] = []
+    let settledCostMicros = -1
     const ledger: SourceQuotaLedger = {
       async reserve(input) {
         inputs.push(input.idempotencyKey)
@@ -198,6 +200,7 @@ describe('connector policy gate', () => {
       },
       async commit(input) {
         expect(input.workspaceId).toBe('workspace:one')
+        settledCostMicros = input.actualCostMicros
         reservations.set(inputs[0]!, 'committed')
       },
       async release() {
@@ -206,7 +209,10 @@ describe('connector policy gate', () => {
     }
     let requestCount = 0
     const connector = new CfpbConnector({
-      policy: approvedCfpbPolicy,
+      policy: sourcePolicySchema.parse({
+        ...approvedCfpbPolicy,
+        quota: { ...approvedCfpbPolicy.quota, costPerRequestMicros: 17 }
+      }),
       quotaLedger: ledger,
       fetchImpl: async () => {
         requestCount += 1
@@ -224,7 +230,9 @@ describe('connector policy gate', () => {
       policyVersion: 'cfpb-policy-v1',
       idempotencyKey: 'sensitive query material'
     }
-    await connector.collect(request)
+    const result = await connector.collect(request)
+    expect(result.costMicros).toBe(17)
+    expect(settledCostMicros).toBe(17)
     expect(inputs[0]).toMatch(/^quota-key:[a-f0-9]{64}$/)
     expect(inputs[0]).not.toContain('sensitive')
     await expect(connector.collect(request)).rejects.toBeInstanceOf(

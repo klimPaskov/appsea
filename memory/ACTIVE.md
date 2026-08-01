@@ -75,6 +75,15 @@ deployment-level service-role/secret rotation, and scheduler ownership.
 Collection persistence now locks and rechecks the lease in its write
 transaction; these and production deployment remain readiness blockers.
 
+The production collection cost slice now preserves the settled source-request
+cost from `CfpbConnector` through `productionCollectionPersistenceInputSchema`,
+the immutable collection snapshot/result, Temporal persistence checkpoints,
+and audit/outbox metadata. The reviewed CFPB policy still declares zero API
+cost; non-zero billing adapters and deployment-level cost monitoring remain
+open. The runner rejects a known source-cost overage before lease acquisition,
+and the workflow records a bounded `cost_budget_exceeded` result. Existing
+snapshots parse with a zero default for backward compatibility.
+
 ## Validated commands
 
 - `pnpm verify` passed 2026-08-01: packages, samples, smoke, and repo checks.
@@ -82,11 +91,13 @@ transaction; these and production deployment remain readiness blockers.
   recomputation-reclaim focused suites passed; real PostgreSQL fixtures remain
   Docker-blocked.
 - 2026-08-01 tombstone-retry focus: db lint, db typecheck, db 73-test suite,
-  worker typecheck, worker 47-test suite passed; migration and integration
+  worker typecheck, worker 48-test suite passed; migration and integration
   assertions are present.
 - 2026-08-01 source-maintenance scheduler focus: contracts 62-test suite and
-  worker 47-test suite passed; the real PostgreSQL scheduler path remains
+  worker 48-test suite passed; the real PostgreSQL scheduler path remains
   Docker-blocked.
+- 2026-08-01 collection-cost focus: contracts 62, connectors 16, db 74,
+  workflows 21, and worker 48 tests passed; full repository verification passed.
 - `pnpm verify:persistence` and `pnpm verify:workflows` attempted on
   2026-07-25 and 2026-08-01; both are blocked by the unavailable Docker
   Desktop Linux engine pipe (`//./pipe/dockerDesktopLinuxEngine`).

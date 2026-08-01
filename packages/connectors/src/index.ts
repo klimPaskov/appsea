@@ -99,6 +99,8 @@ export interface ConnectorResult {
   complaints: Complaint[]
   deletions: SourceDeletionEvent[]
   warnings: string[]
+  /** Settled source request cost, in micro-USD. */
+  costMicros: number
 }
 
 export interface SourceConnector {
@@ -197,7 +199,10 @@ export class FixtureConnector implements SourceConnector {
       policy: this.policy,
       complaints: matches.slice(0, request.limit),
       deletions: [],
-      warnings: ['Fixture results are synthetic and must not be presented as real market research.']
+      warnings: [
+        'Fixture results are synthetic and must not be presented as real market research.'
+      ],
+      costMicros: 0
     }
   }
 }
@@ -536,8 +541,10 @@ export class CfpbConnector implements SourceConnector {
     request: CollectionRequest,
     reservation: SourceQuotaReservation | undefined,
     actualRecords: number
-  ): Promise<void> {
-    if (!reservation || !this.quotaLedger || !request.workspaceId) return
+  ): Promise<number> {
+    if (!reservation || !this.quotaLedger || !request.workspaceId) {
+      return this.policy.quota.costPerRequestMicros
+    }
     try {
       await this.quotaLedger.commit({
         workspaceId: request.workspaceId,
@@ -546,6 +553,7 @@ export class CfpbConnector implements SourceConnector {
         actualCostMicros: reservation.requestedCostMicros,
         occurredAt: asIsoDate(this.now())
       })
+      return reservation.requestedCostMicros
     } catch {
       throw new Error('CFPB quota settlement failed; collection result is not trusted')
     }
@@ -654,8 +662,8 @@ export class CfpbConnector implements SourceConnector {
     warnings.push(
       'Deletion synchronization requires a full snapshot; this filtered request emitted no tombstones.'
     )
-    await this.commitDurableQuota(request, reservation, records.length)
-    return { policy: this.policy, complaints, deletions: [], warnings }
+    const costMicros = await this.commitDurableQuota(request, reservation, records.length)
+    return { policy: this.policy, complaints, deletions: [], warnings, costMicros }
   }
 
   /**

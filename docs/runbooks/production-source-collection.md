@@ -39,7 +39,12 @@ complaint `capturedAt`, quota occurrence, and the collection snapshot remain
 stable. PostgreSQL
 persists the source-native record identity, policy version, capture/published
 times, redacted evidence, unreviewed complaint observation, coverage gaps, and
-an outbox/audit receipt. A filtered collection does not emit deletion events;
+an outbox/audit receipt. The settled source request cost is carried in the
+immutable collection snapshot/result and audit/outbox metadata in micro-USD;
+the reviewed CFPB policy currently sets that value to zero. A known policy
+cost above the workflow's `APPSEA_PRODUCTION_CFPB_MAX_COST_MICROS` budget is
+rejected before the source lease or external request. A filtered collection
+does not emit deletion events;
 full-snapshot deletion reconciliation is a separate durable maintenance job;
 see [`source-reconciliation.md`](source-reconciliation.md). A
 repeated request with a different input is an idempotency conflict.

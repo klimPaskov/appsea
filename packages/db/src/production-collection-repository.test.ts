@@ -36,6 +36,7 @@ const snapshot = {
   evidenceCount: 0,
   complaintCount: 0,
   deletionCount: 0,
+  costMicros: 17,
   coverageGaps: ['No evidence was retained in this bounded repository test.'],
   warnings: [],
   capturedAt: at
@@ -74,6 +75,7 @@ const persistenceInput = productionCollectionPersistenceInputSchema.parse({
     requestedAt: at
   },
   observedAt: at,
+  costMicros: 17,
   policy: {
     sourceId: 'source:cfpb',
     displayName: 'Test source',
@@ -181,6 +183,7 @@ describe('production collection read model', () => {
     )
 
     expect(result.replayed).toBe(true)
+    expect(result.costMicros).toBe(17)
     expect(mocks.leaseAssertions).toBe(1)
   })
 })

@@ -62,7 +62,11 @@ actor, and consumes/releases that reservation with run persistence; duplicate
 consumed/released digests replay without another slot.
 Production collection persistence now locks and rechecks its source lease in the
 same transaction as the collection write; lease revocation cannot win between
-the assertion and commit.
+the assertion and commit. The settled source-request cost now travels from the
+quota reservation through the immutable collection snapshot/result, workflow
+checkpoint, and audit/outbox metadata; the reviewed CFPB policy still declares
+zero request cost. A known policy-cost overage is rejected before source lease
+acquisition and returns a bounded workflow budget rejection.
 The identifier-only CFPB reconciliation path now persists warning-bearing page
 checkpoints in migrations `0040`/`0041`, resumes queued or stale jobs without
 the raw caller key, and finalizes missing active source items atomically only

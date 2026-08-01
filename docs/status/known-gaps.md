@@ -148,9 +148,13 @@ workspace enumerator, stale-claim recovery, and deletion propagation now exist.
 No source is currently enabled for market research, and production Temporal
 provisioning/cloud-storage deployment, automatic re-collection,
 cloud object-store/backups purge, recomputation alerting, and
-legal/privacy/security approval remain required. CFPB collection currently
+legal/privacy/security approval remain required. Collection now carries the
+settled source-request cost from the quota reservation through the immutable
+snapshot/result, workflow checkpoint, and audit/outbox metadata. CFPB currently
 records zero source cost because the reviewed policy declares zero API cost;
-non-zero billing adapters are not implemented. Retention enqueue now derives
+non-zero billing adapters and deployment-level cost monitoring are not
+implemented. Known policy-cost overages are now rejected before a source lease
+is acquired. Retention enqueue now derives
 bounded tombstones from the stored policy and reuses deletion propagation;
 policy drafts requesting a general `purge` retention action remain rejected
 until source/object/backups scope is approved. Invalidated analysis output

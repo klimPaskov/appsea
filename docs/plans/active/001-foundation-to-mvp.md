@@ -262,7 +262,10 @@ recovery, bounded identifier-only snapshot resume with terminal/retry/coverage
 counters, bounded retryable deletion propagation, and retryable password-recovery/workspace-invitation
 delivery are implemented. Deletion propagation durably queues source-scoped
 active-evidence recomputation jobs with bounded retries, blocked-seed recovery,
-and Temporal-start idempotency;
+and Temporal-start idempotency. Production collection now carries settled source
+request cost from quota settlement through its immutable snapshot/result,
+workflow checkpoint, and audit/outbox metadata; known policy-cost overages are
+rejected before source lease acquisition;
 deployment scheduler ownership/alerting, metrics, traces, role separation,
 incident drills, and production security review remain.
 

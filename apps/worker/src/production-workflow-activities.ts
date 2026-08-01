@@ -24,6 +24,7 @@ import type {
 import { fixtureResearchTaskQueue } from '@appsea/workflows'
 import {
   ProductionCollectionPolicyDeniedError,
+  ProductionCollectionCostBudgetExceededError,
   ProductionCollectionReconciliationError,
   runProductionCfpbCollection
 } from './production-cfpb-runner'
@@ -48,6 +49,13 @@ function sanitizedProductionActivityFailure(error: unknown): ApplicationFailure 
     return ApplicationFailure.nonRetryable(
       'The production collection policy boundary rejected the request.',
       'APPSEA_POLICY_DENIED'
+    )
+  }
+  if (error instanceof ProductionCollectionCostBudgetExceededError) {
+    return ApplicationFailure.nonRetryable(
+      'The production collection source cost exceeds the approved workflow budget.',
+      'APPSEA_BUDGET_EXCEEDED',
+      error.estimatedCostMicros
     )
   }
   if (
@@ -153,7 +161,7 @@ export function createProductionCollectionActivities(pool: Pool): ProductionColl
         const result = productionCollectionWorkflowPersistenceActivityResultSchema.parse({
           persistence,
           sourceItemsProcessed: persistence.sourceItemCount,
-          costMicros: 0,
+          costMicros: persistence.costMicros,
           activityAttempt
         })
         await workflowRepository.recordCheckpoint({
@@ -197,7 +205,7 @@ export function createProductionCollectionActivities(pool: Pool): ProductionColl
           const reconciled = productionCollectionWorkflowPersistenceActivityResultSchema.parse({
             persistence: { ...completed.result, replayed: true },
             sourceItemsProcessed: completed.result.sourceItemCount,
-            costMicros: 0,
+            costMicros: completed.result.costMicros,
             activityAttempt: 1
           })
           await workflowRepository.complete({

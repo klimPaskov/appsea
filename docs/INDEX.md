@@ -97,3 +97,4 @@
 - [`status/retryable-deletion-propagation-completion-report-2026-08-01.md`](status/retryable-deletion-propagation-completion-report-2026-08-01.md)
 - [`status/source-reconciliation-admission-completion-report-2026-08-01.md`](status/source-reconciliation-admission-completion-report-2026-08-01.md)
 - [`status/source-maintenance-snapshot-scheduler-completion-report-2026-08-01.md`](status/source-maintenance-snapshot-scheduler-completion-report-2026-08-01.md)
+- [`status/production-collection-cost-completion-report-2026-08-01.md`](status/production-collection-cost-completion-report-2026-08-01.md)

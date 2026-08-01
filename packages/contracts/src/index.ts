@@ -977,6 +977,8 @@ export const productionCollectionPersistenceInputSchema = z
     request: productionCollectionRequestSchema,
     /** Server-observed collection time; requestedAt remains caller metadata. */
     observedAt: z.string().datetime(),
+    /** Settled source cost for this request, recorded in micro-USD. */
+    costMicros: z.number().int().nonnegative().max(1_000_000_000_000).default(0),
     policy: sourcePolicySchema,
     complaints: z.array(complaintSchema).max(5_000),
     deletions: z.array(sourceDeletionEventSchema).max(5_000),
@@ -1467,6 +1469,8 @@ export const productionCollectionResultSchema = z
     evidenceCount: z.number().int().nonnegative(),
     complaintCount: z.number().int().nonnegative(),
     deletionCount: z.number().int().nonnegative(),
+    /** Settled source cost for this request, recorded in micro-USD. */
+    costMicros: z.number().int().nonnegative().max(1_000_000_000_000).default(0),
     coverageGaps: z.array(z.string()),
     warnings: z.array(z.string()),
     state: z.literal('completed'),
@@ -1493,6 +1497,8 @@ export const productionCollectionSnapshotSchema = z
     evidenceCount: z.number().int().nonnegative(),
     complaintCount: z.number().int().nonnegative(),
     deletionCount: z.number().int().nonnegative(),
+    /** Settled source cost for this request, recorded in micro-USD. */
+    costMicros: z.number().int().nonnegative().max(1_000_000_000_000).default(0),
     coverageGaps: z.array(z.string()),
     warnings: z.array(z.string()),
     capturedAt: z.string().datetime()

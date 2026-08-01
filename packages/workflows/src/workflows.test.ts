@@ -96,6 +96,7 @@ const productionPersistenceResult: ProductionCollectionWorkflowPersistenceActivi
     evidenceCount: 4,
     complaintCount: 4,
     deletionCount: 0,
+    costMicros: 17,
     coverageGaps: ['Not a statistical sample.'],
     warnings: [],
     state: 'completed',
@@ -103,7 +104,7 @@ const productionPersistenceResult: ProductionCollectionWorkflowPersistenceActivi
     replayed: false
   },
   sourceItemsProcessed: 4,
-  costMicros: 0,
+  costMicros: 17,
   activityAttempt: 1
 }
 
@@ -440,7 +441,7 @@ describe.sequential('production collection Temporal workflow', () => {
       })
       const result = await handle.result()
       const status = await handle.query(productionCollectionStatusQueryName)
-      expect(result).toMatchObject({ state: 'completed', sourceItemsProcessed: 4 })
+      expect(result).toMatchObject({ state: 'completed', sourceItemsProcessed: 4, costMicros: 17 })
       expect(status).toMatchObject({ state: 'completed', checkpoint: 'completed' })
     })
   })
@@ -483,6 +484,57 @@ describe.sequential('production collection Temporal workflow', () => {
       })
     })
     expect(persistenceCalls).toBe(0)
+  })
+
+  it('rejects a production collection over its source-cost budget before persistence', async () => {
+    let persistenceCalls = 0
+    let termination:
+      Parameters<ProductionCollectionActivities['terminateProductionCollectionJob']>[0] | undefined
+    const activities = baseProductionActivities()
+    activities.persistProductionCollection = async () => {
+      persistenceCalls += 1
+      throw ApplicationFailure.nonRetryable(
+        'source cost exceeds budget',
+        'APPSEA_BUDGET_EXCEEDED',
+        17
+      )
+    }
+    activities.terminateProductionCollectionJob = async (input) => {
+      termination = input
+      return { state: input.state, reconciled: null }
+    }
+    const prepared = prepareProductionCollectionWorkflowStart({
+      ...productionRequest,
+      workspaceId: 'workspace-production-cost-budget-test',
+      campaignId: 'campaign-production-cost-budget-test',
+      runId: 'run-production-cost-budget-test',
+      idempotencyKey: 'production-cost-budget-idempotency-key',
+      budget: { ...productionRequest.budget, maxCostMicros: 10 }
+    })
+    const worker = await Worker.create({
+      connection: testEnvironment.nativeConnection,
+      taskQueue: fixtureResearchTaskQueue,
+      workflowsPath,
+      activities
+    })
+    await worker.runUntil(async () => {
+      const handle = await testEnvironment.client.workflow.start('productionCollectionWorkflow', {
+        taskQueue: fixtureResearchTaskQueue,
+        workflowId: `${prepared.workflowId}:cost-budget`,
+        args: [prepared.input]
+      })
+      await expect(handle.result()).resolves.toMatchObject({
+        state: 'budget_rejected',
+        failureCode: 'cost_budget_exceeded',
+        estimatedCostMicros: 17
+      })
+    })
+    expect(persistenceCalls).toBe(1)
+    expect(termination).toMatchObject({
+      state: 'budget_rejected',
+      checkpoint: 'budget_rejected',
+      failureCode: 'cost_budget_exceeded'
+    })
   })
 
   it('records operator reconciliation detail when quota settlement has no result', async () => {

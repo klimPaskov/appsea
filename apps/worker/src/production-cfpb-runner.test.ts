@@ -3,6 +3,7 @@ import { ProductionCollectionLeaseAssertionError } from '@appsea/db'
 
 const state = vi.hoisted(() => ({
   completed: undefined as unknown,
+  policyCostMicros: 0,
   lease: {
     decision: 'acquired' as 'acquired' | 'replayed',
     replayed: false,
@@ -46,11 +47,18 @@ vi.mock('@appsea/connectors', () => ({
           displayMode: 'excerpt',
           coverageNotes: ['test'],
           reviewedAt: '2026-07-10T00:00:00.000Z',
-          policyDocumentRef: 'https://example.com/policy'
+          policyDocumentRef: 'https://example.com/policy',
+          quota: {
+            requestsPerMinute: 6,
+            maxRecordsPerRequest: 1000,
+            maxRecordsPerRun: 1000,
+            costPerRequestMicros: state.policyCostMicros
+          }
         },
         complaints: [],
         deletions: [],
-        warnings: []
+        warnings: [],
+        costMicros: state.policyCostMicros
       }
     }
   },
@@ -81,6 +89,7 @@ vi.mock('@appsea/db', () => ({
         evidenceCount: 0,
         complaintCount: 0,
         deletionCount: 0,
+        costMicros: 0,
         coverageGaps: [],
         warnings: [],
         state: 'completed',
@@ -107,7 +116,13 @@ vi.mock('@appsea/db', () => ({
           displayMode: 'excerpt',
           coverageNotes: ['test'],
           reviewedAt: '2026-07-10T00:00:00.000Z',
-          policyDocumentRef: 'https://example.com/policy'
+          policyDocumentRef: 'https://example.com/policy',
+          quota: {
+            requestsPerMinute: 6,
+            maxRecordsPerRequest: 1000,
+            maxRecordsPerRun: 1000,
+            costPerRequestMicros: state.policyCostMicros
+          }
         },
         policyVersion: 'cfpb-v1',
         contentHash: 'b'.repeat(64)
@@ -206,6 +221,27 @@ describe('production CFPB runner lease lifecycle', () => {
 
     expect(state.connectorObservedAt).toBe('2026-07-09T23:59:00.000Z')
     expect(state.persistInput).toMatchObject({ observedAt: '2026-07-09T23:59:00.000Z' })
+  })
+
+  it('rejects a source cost above the workflow budget before acquiring a lease', async () => {
+    state.policyCostMicros = 17
+    state.acquireInput = undefined
+    state.connectorObservedAt = undefined
+    state.persistInput = undefined
+    await expect(
+      runProductionCfpbCollection(
+        {} as never,
+        { ...request, budget: { ...request.budget, maxCostMicros: 10 } },
+        { observedAt: '2026-07-10T00:00:00.000Z' }
+      )
+    ).rejects.toMatchObject({
+      name: 'ProductionCollectionCostBudgetExceededError',
+      estimatedCostMicros: 17
+    })
+    expect(state.acquireInput).toBeUndefined()
+    expect(state.connectorObservedAt).toBeUndefined()
+    expect(state.persistInput).toBeUndefined()
+    state.policyCostMicros = 0
   })
 
   it('turns an inactive lease at the atomic persistence boundary into reconciliation', async () => {

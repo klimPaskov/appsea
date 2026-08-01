@@ -1075,6 +1075,13 @@ describe('contracts', () => {
       warnings: []
     })
     expect(result.success).toBe(true)
+    if (result.success) expect(result.data.costMicros).toBe(0)
+    expect(
+      productionCollectionPersistenceInputSchema.safeParse({
+        ...(result.success ? result.data : {}),
+        costMicros: 1_000_000_000_001
+      }).success
+    ).toBe(false)
     expect(
       productionCollectionPersistenceInputSchema.safeParse({
         ...(result.success ? result.data : {}),
