@@ -294,6 +294,45 @@ export const appseaIdentifierSchema = z
   .max(160)
   .regex(/^[a-z][a-z0-9_:-]*$/)
 
+export const sourcePolicyReviewerRoleSchema = z.enum([
+  'legal',
+  'privacy',
+  'security',
+  'independent_operator'
+])
+
+const sourcePolicyReviewerIdentitySchema = z
+  .string()
+  .min(3)
+  .max(160)
+  .regex(/^[a-z0-9][a-z0-9._:@/+~-]*$/)
+  .refine((value) => value === value.toLowerCase(), 'Reviewer identity must be lowercase')
+
+export const sourcePolicyApprovalInputSchema = z
+  .object({
+    sourceId: appseaIdentifierSchema,
+    policyVersion: z
+      .string()
+      .min(1)
+      .max(80)
+      .regex(/^[a-zA-Z0-9._:-]+$/),
+    reviewId: appseaIdentifierSchema,
+    reviewer: z.string().min(1).max(160),
+    reviewerIdentity: sourcePolicyReviewerIdentitySchema,
+    reviewerRole: sourcePolicyReviewerRoleSchema,
+    independenceAttested: z.literal(true),
+    approvalReference: z.string().min(1).max(500),
+    notes: z.array(z.string().min(1).max(500)).max(100),
+    contentHash: z
+      .string()
+      .length(64)
+      .regex(/^[a-f0-9]{64}$/),
+    reviewedAt: z.string().datetime(),
+    expiresAt: z.string().datetime().nullable(),
+    recordedAt: z.string().datetime()
+  })
+  .strict()
+
 export const workflowActorSchema = z.discriminatedUnion('actorType', [
   z
     .object({
@@ -3135,6 +3174,8 @@ export type SourcePolicy = z.infer<typeof sourcePolicySchema>
 export type SourceQuota = z.infer<typeof sourceQuotaSchema>
 export type SourceDeletionPolicy = z.infer<typeof sourceDeletionPolicySchema>
 export type SourcePolicyState = z.infer<typeof sourcePolicyStateSchema>
+export type SourcePolicyReviewerRole = z.infer<typeof sourcePolicyReviewerRoleSchema>
+export type SourcePolicyApprovalInput = z.infer<typeof sourcePolicyApprovalInputSchema>
 export type SourceDeletionEvent = z.infer<typeof sourceDeletionEventSchema>
 export type Complaint = z.infer<typeof complaintSchema>
 export type ComplaintReviewState = z.infer<typeof complaintReviewStateSchema>

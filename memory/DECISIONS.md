@@ -64,13 +64,11 @@ deletion remain separate identity work.
 
 ## 2026-07-24: Bounded maintenance runners and scheduler correlation
 
-Keep source quota/deletion and authentication retention entry points as pure
-runners behind strict contracts. Validate and cap inputs before repository
-work, sort and deduplicate workspace IDs, give quota expiry and settled purge
-independent budgets, and emit only bounded counters with a stable scheduler job
-ID. The existing PostgreSQL operations are the idempotency boundary; do not add
-a second polling queue or claim production scheduling until deployment,
-alerting, and recovery ownership are reviewed.
+Keep source quota/deletion and authentication retention entry points as pure,
+contract-validated runners. Cap inputs, sort/deduplicate workspace IDs, use
+independent budgets, and emit bounded counters with stable scheduler IDs.
+PostgreSQL remains the idempotency boundary; deployment, alerting, and recovery
+ownership must be reviewed before claiming production scheduling.
 
 ## 2026-07-24: Provider-neutral password recovery boundary
 
@@ -342,5 +340,10 @@ failure metadata and cannot re-enter processing; completion remains idempotent.
 
 ## 2026-08-01: Versioned complaint analysis snapshots
 
-`0053` stores replayable derived analysis beside each complaint; unresolved
-entity types stay explicit and reports carry the snapshot lineage.
+`0053` stores derived analysis beside each complaint; unresolved entity types
+stay explicit.
+
+## 2026-08-01: Source-policy review integrity
+
+`0054` requires reviewer identity, independent role, and attestation; legacy
+approvals require re-review.

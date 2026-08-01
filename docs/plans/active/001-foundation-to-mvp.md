@@ -25,7 +25,7 @@ Status: production-shaped foundation implemented and validated locally; producti
 
 Implemented:
 
-- PostgreSQL 18 schema and fifty-three forward, checksummed migrations
+- PostgreSQL 18 schema and fifty-four forward, checksummed migrations
 - normalized source, evidence, complaint, cluster, competitor, opportunity, score, report, plan, audit, cost, deletion, outbox, and lineage tables
 - no-login owner, separate migrator, and least-privilege runtime role contract
 - forced workspace RLS and transaction-scoped workspace context
@@ -123,6 +123,12 @@ Migration `0053_complaint_analysis_snapshots.sql` persists one validated,
 versioned derived classification/entity-resolution snapshot per complaint and
 upgrades historical run snapshots without changing source evidence. Missing
 competitor and substitute research remains explicitly unresolved.
+
+Migration `0054_source_policy_review_integrity.sql` binds new source-policy
+approvals to a lowercase reviewer identity, an independent review role, and an
+explicit independence attestation. Historical approvals remain immutable audit
+history but are returned to pending review until re-approved; no source is
+activated by this migration.
 
 ### 2. Durable workflows
 

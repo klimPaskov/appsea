@@ -110,4 +110,47 @@ describe('source policy repository', () => {
       })
     ).rejects.toThrow(/disabled non-fixture policy drafts/)
   })
+
+  it('binds approvals to an independent canonical reviewer identity', async () => {
+    const client = new FakeClient()
+    const repository = new PostgresSourcePolicyRepository(fakePool(client))
+    await repository.approve({
+      sourceId: draft.sourceId,
+      policyVersion: 'cfpb-v1',
+      reviewId: 'review:cfpb:v1',
+      reviewer: 'Privacy review queue',
+      reviewerIdentity: 'privacy-reviewer@example.invalid',
+      reviewerRole: 'privacy',
+      independenceAttested: true,
+      approvalReference: 'ticket:cfpb:v1',
+      notes: ['Reviewed intended use.'],
+      contentHash: contentHash(draft),
+      reviewedAt: now,
+      expiresAt: draft.expiresAt,
+      recordedAt: now
+    })
+    const statement = client.statements.find((entry) =>
+      entry.text.includes('appsea.approve_source_policy')
+    )
+    expect(statement?.values).toContain('privacy-reviewer@example.invalid')
+    expect(statement?.values).toContain('privacy')
+    expect(statement?.values).toContain(true)
+    await expect(
+      repository.approve({
+        sourceId: draft.sourceId,
+        policyVersion: 'cfpb-v1',
+        reviewId: 'review:cfpb:v2',
+        reviewer: 'Policy owner',
+        reviewerIdentity: 'Review Queue',
+        reviewerRole: 'privacy',
+        independenceAttested: true,
+        approvalReference: 'ticket:cfpb:v2',
+        notes: [],
+        contentHash: contentHash(draft),
+        reviewedAt: now,
+        expiresAt: draft.expiresAt,
+        recordedAt: now
+      })
+    ).rejects.toThrow(/lowercase/)
+  })
 })

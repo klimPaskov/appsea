@@ -434,6 +434,7 @@ async function assertCollectionAndPolicyLineage(
         AND review.policy_version = policy.policy_version
         AND review.content_hash = policy.content_hash
         AND review.decision = 'approved'
+        AND review.independence_attested
       WHERE run_policy.workspace_id = $1
         AND run_policy.run_id = $2
         AND run_policy.source_id = $3

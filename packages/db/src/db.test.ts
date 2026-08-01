@@ -66,7 +66,8 @@ describe('database foundation', () => {
       '0050',
       '0051',
       '0052',
-      '0053'
+      '0053',
+      '0054'
     ])
     expect(migrations[0]?.checksum).toMatch(/^[a-f0-9]{64}$/)
     expect(migrations[0]?.sql).toContain('CREATE TABLE appsea.evidence_records')
@@ -149,6 +150,9 @@ describe('database foundation', () => {
     )
     const explicitRecollectionMigration = migrations.find(
       (migration) => migration.version === '0050'
+    )
+    const sourcePolicyIntegrityMigration = migrations.find(
+      (migration) => migration.version === '0054'
     )
     expect(authMigration?.sql).toContain('CREATE TABLE appsea.users')
     expect(authMigration?.sql).toContain('CREATE TABLE appsea.auth_sessions')
@@ -250,6 +254,12 @@ describe('database foundation', () => {
       'source policy approval requires the migration operator role'
     )
     expect(sourcePolicyApprovalMigration?.sql).toContain("retentionAction}' = 'purge'")
+    expect(sourcePolicyIntegrityMigration?.sql).toContain('source_policy_review_integrity_guard')
+    expect(sourcePolicyIntegrityMigration?.sql).toContain('reviewer_identity')
+    expect(sourcePolicyIntegrityMigration?.sql).toContain('independence_attested')
+    expect(sourcePolicyIntegrityMigration?.sql).toContain(
+      'source policy owner cannot approve its own policy'
+    )
     expect(productionWorkflowMigration?.sql).toContain(
       'CREATE TABLE appsea.production_collection_workflow_jobs'
     )

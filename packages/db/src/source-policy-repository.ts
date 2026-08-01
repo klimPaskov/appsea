@@ -1,5 +1,11 @@
 import type { Pool, QueryResultRow } from 'pg'
-import { appseaIdentifierSchema, sourcePolicySchema, type SourcePolicy } from '@appsea/contracts'
+import {
+  appseaIdentifierSchema,
+  sourcePolicyApprovalInputSchema,
+  sourcePolicySchema,
+  type SourcePolicy,
+  type SourcePolicyApprovalInput as SourcePolicyApprovalInputContract
+} from '@appsea/contracts'
 import { contentHash } from './hash'
 import { withDatabaseTransaction } from './transaction'
 
@@ -43,18 +49,7 @@ export interface SourcePolicyDraftInput {
   recordedAt: string
 }
 
-export interface SourcePolicyApprovalInput {
-  sourceId: string
-  policyVersion: string
-  reviewId: string
-  reviewer: string
-  approvalReference: string
-  notes: string[]
-  contentHash: string
-  reviewedAt: string
-  expiresAt: string | null
-  recordedAt: string
-}
+export type SourcePolicyApprovalInput = SourcePolicyApprovalInputContract
 
 function policyVersion(value: string): string {
   if (value.length < 1 || value.length > 80 || !/^[a-zA-Z0-9._:-]+$/.test(value)) {
@@ -168,6 +163,15 @@ export class PostgresSourcePolicyRepository {
               AND source.current_policy_version = policy.policy_version
               AND policy.policy_state = 'approved'
               AND policy.reviewed_at IS NOT NULL
+              AND EXISTS (
+                SELECT 1
+                  FROM appsea.source_policy_reviews review
+                 WHERE review.source_id = policy.source_id
+                   AND review.policy_version = policy.policy_version
+                   AND review.decision = 'approved'
+                   AND review.content_hash = policy.content_hash
+                   AND review.independence_attested
+              )
               AND (policy.expires_at IS NULL OR policy.expires_at > clock_timestamp())`,
           [validatedSourceId, requestedVersion]
         )
@@ -237,25 +241,29 @@ export class PostgresSourcePolicyRepository {
 
   /** Operator-only operation; creates immutable approval evidence and activates exactly one version. */
   async approve(input: SourcePolicyApprovalInput): Promise<void> {
-    const sourceId = appseaIdentifierSchema.parse(input.sourceId)
-    const version = policyVersion(input.policyVersion)
+    const parsed = sourcePolicyApprovalInputSchema.parse(input)
+    const sourceId = appseaIdentifierSchema.parse(parsed.sourceId)
+    const version = policyVersion(parsed.policyVersion)
     await withDatabaseTransaction(this.pool, async (client) => {
       await client.query(
         `SELECT appsea.approve_source_policy(
-           $1, $2, $3, $4, $5, $6, $7, $8::timestamptz,
-           $9::timestamptz, $10::timestamptz
+           $1, $2, $3, $4, $5, $6, $7, $8, $9, $10,
+           $11, $12::timestamptz, $13::timestamptz, $14::timestamptz
          )`,
         [
           sourceId,
           version,
-          input.reviewId,
-          input.reviewer,
-          input.approvalReference,
-          input.notes,
-          input.contentHash,
-          input.reviewedAt,
-          input.expiresAt,
-          input.recordedAt
+          parsed.reviewId,
+          parsed.reviewer,
+          parsed.reviewerIdentity,
+          parsed.reviewerRole,
+          parsed.independenceAttested,
+          parsed.approvalReference,
+          parsed.notes,
+          parsed.contentHash,
+          parsed.reviewedAt,
+          parsed.expiresAt,
+          parsed.recordedAt
         ]
       )
     })

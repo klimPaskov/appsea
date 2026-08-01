@@ -33,7 +33,10 @@ $env:APPSEA_SOURCE_POLICY_ACTION = 'approve'
 $env:APPSEA_CFPB_POLICY_VERSION = 'cfpb-2026-07-v1'
 $env:APPSEA_POLICY_DATABASE_URL = '<migration-role-url>'
 $env:APPSEA_POLICY_REVIEW_ID = 'review:cfpb:2026-07'
-$env:APPSEA_POLICY_REVIEWER = 'review-owner@example.invalid'
+$env:APPSEA_POLICY_REVIEWER = 'Privacy review queue'
+$env:APPSEA_POLICY_REVIEWER_IDENTITY = 'privacy-reviewer@example.invalid'
+$env:APPSEA_POLICY_REVIEWER_ROLE = 'privacy'
+$env:APPSEA_POLICY_INDEPENDENCE_ATTESTED = 'true'
 $env:APPSEA_POLICY_APPROVAL_REFERENCE = 'ticket-or-record-reference'
 $env:APPSEA_POLICY_REVIEWED_AT = '2026-07-25T00:00:00.000Z'
 $env:APPSEA_POLICY_EXPIRES_AT = '2026-10-25T00:00:00.000Z'
@@ -42,5 +45,9 @@ pnpm worker:source:policy:cfpb
 ```
 
 Do not put credentials, complaint text, or provider responses in review notes.
-If terms, API behavior, or deletion semantics change, register a new version
-and leave the old version disabled or expired.
+The reviewer identity must be a lowercase stable identifier, the role must be
+`legal`, `privacy`, `security`, or `independent_operator`, and the reviewer
+must attest that they are independent of the policy owner. The database rejects
+self-approval and retains pre-0054 approvals as audit history without treating
+them as collectible. If terms, API behavior, or deletion semantics change,
+register a new version and leave the old version disabled or expired.

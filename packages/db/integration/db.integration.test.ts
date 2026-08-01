@@ -1201,8 +1201,10 @@ describe.sequential('PostgreSQL fixture persistence lifecycle', () => {
       await client.query(
         `INSERT INTO appsea.source_policy_reviews
            (review_id, source_id, policy_version, decision, reviewer,
+            reviewer_identity, reviewer_role, independence_attested,
             approval_reference, notes, content_hash, reviewed_at, recorded_at)
          VALUES ('review:lease:test', $1, $2, 'approved', 'integration-test',
+                 'integration-test', 'independent_operator', true,
                  'approval:lease:test', ARRAY['test-only'], $3, $4, $4)`,
         [sourceId, policyVersion, policyHash, fixedAt]
       )
@@ -1311,8 +1313,10 @@ describe.sequential('PostgreSQL fixture persistence lifecycle', () => {
       await client.query(
         `INSERT INTO appsea.source_policy_reviews
            (review_id, source_id, policy_version, decision, reviewer,
+            reviewer_identity, reviewer_role, independence_attested,
             approval_reference, notes, content_hash, reviewed_at, recorded_at)
          VALUES ('review:snapshot:test', $1, $2, 'approved', 'integration-test',
+                 'integration-test', 'independent_operator', true,
                  'approval:snapshot:test', ARRAY['test-only'], $3, $4, $4)`,
         [sourceId, policyVersion, policyHash, fixedAt]
       )

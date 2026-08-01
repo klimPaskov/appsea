@@ -40,6 +40,7 @@ import {
   sourceSnapshotReconciliationStartRequestSchema,
   researchJobBudgetSchema,
   sourcePolicySchema,
+  sourcePolicyApprovalInputSchema,
   sourceMaintenanceInputSchema,
   sourceMaintenanceResultSchema,
   maintenanceSchedulerNameSchema,
@@ -331,6 +332,34 @@ describe('contracts', () => {
   it('rejects a source without a reviewed policy', () => {
     const result = sourcePolicySchema.safeParse({ sourceId: 'missing-fields' })
     expect(result.success).toBe(false)
+  })
+
+  it('requires a canonical independent source-policy reviewer', () => {
+    const valid = {
+      sourceId: 'cfpb-consumer-complaints',
+      policyVersion: 'cfpb-policy-v1',
+      reviewId: 'review:cfpb:v1',
+      reviewer: 'Privacy review queue',
+      reviewerIdentity: 'privacy-reviewer@example.invalid',
+      reviewerRole: 'privacy' as const,
+      independenceAttested: true as const,
+      approvalReference: 'ticket:cfpb:v1',
+      notes: ['Reviewed intended use and retention.'],
+      contentHash: 'a'.repeat(64),
+      reviewedAt: now,
+      expiresAt: null,
+      recordedAt: now
+    }
+    expect(sourcePolicyApprovalInputSchema.safeParse(valid).success).toBe(true)
+    expect(
+      sourcePolicyApprovalInputSchema.safeParse({
+        ...valid,
+        reviewerIdentity: 'Privacy-Reviewer@example.invalid'
+      }).success
+    ).toBe(false)
+    expect(
+      sourcePolicyApprovalInputSchema.safeParse({ ...valid, independenceAttested: false }).success
+    ).toBe(false)
   })
 
   it('validates bounded authentication inputs and excludes secrets from read models', () => {

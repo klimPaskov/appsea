@@ -107,6 +107,10 @@ Migration `0053` adds a JSONB complaint-analysis snapshot with a validated
 deterministic classification/entity-resolution contract. Historical run
 snapshots are upgraded from already persisted complaint observations; missing
 competitor and substitute evidence remains an explicit unresolved gap.
+Migration `0054` hardens source-policy activation by requiring a canonical
+reviewer identity, an independent review role, and an explicit independence
+attestation. Historical approvals remain audit evidence but are returned to
+pending review until re-approved; the CFPB connector stays disabled.
 The post-collection production analysis workflow is versioned as `v2`: only
 workspace/collection/analysis/seed identifiers and immutable digests cross
 Temporal, while the worker rebuilds the evidence-backed artifact inside its

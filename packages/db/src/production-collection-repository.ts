@@ -540,6 +540,7 @@ export class PostgresProductionCollectionRepository {
               AND review.policy_version = policy.policy_version
               AND review.decision = 'approved'
               AND review.content_hash = policy.content_hash
+              AND review.independence_attested
             WHERE source.source_id = $1
               AND source.source_type <> 'fixture'
               AND source.lifecycle_state = 'active'
@@ -811,6 +812,7 @@ export class PostgresProductionCollectionRepository {
                      AND review.policy_version = policy.policy_version
                      AND review.decision = 'approved'
                      AND review.content_hash = policy.content_hash
+                     AND review.independence_attested
                 )
               FOR SHARE`,
             [parsed.request.sourceId, parsed.request.policyVersion]

@@ -22,6 +22,7 @@ Before implementation, document:
 - allowed display mode
 - known coverage gaps
 - policy review date and owner
+- reviewer identity, independent review role, and independence attestation
 
 ## Procedure
 
@@ -38,9 +39,14 @@ Before implementation, document:
 7. Redact or minimize personal data.
 8. Add fixtures that never contain real private content.
 9. Test disabled, quota, malformed, deletion, and partial-failure paths.
+10. Keep activation bound to an immutable review whose canonical reviewer
+    identity is independent of the policy owner; legacy or free-form reviewer
+    text is not sufficient authorization.
 
 Never scrape around an access restriction. Never claim coverage beyond the implemented collection route. A capped, malformed, or quota-uncertain full snapshot is an explicit coverage gap, not evidence of absence.
 
 ## Completion
 
-The connector fails closed, preserves provenance, obeys policy, has deterministic fixtures, and exposes its coverage limits.
+The connector fails closed, preserves provenance, obeys policy, has
+deterministic fixtures, exposes its coverage limits, and cannot activate from
+an unattested or self-owned policy review.

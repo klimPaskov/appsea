@@ -90,12 +90,10 @@ completed matching tombstone.
 
 ## Validated commands
 
-- `pnpm verify` passed 2026-08-01 for the prior repository tranche; affected
-  contract/database/worker tests and typechecks pass for the current fence.
-- `pnpm agents:sync`, formatting, memory, and docs checks pass after each
-  guidance checkpoint.
-- PostgreSQL migration/read/deletion/concurrency/role integration is staged but
-  Docker-blocked because the Docker Desktop Linux engine pipe is unavailable.
+- `pnpm verify` passed 2026-08-01; affected contract/database/worker checks and
+  guidance, formatting, memory, and docs checks pass.
+- PostgreSQL integration is staged but Docker-blocked because the Docker Desktop
+  Linux engine pipe is unavailable.
 
 On 2026-08-01, migration `0053_complaint_analysis_snapshots.sql` added a
 validated JSONB derived-analysis checkpoint beside each complaint. Research
@@ -106,32 +104,28 @@ conservatively. This is a rule-based checkpoint, not live market research;
 aliases, unique authors, contextual resolution, field correction, and sourced
 competitor research remain open.
 
+On 2026-08-01, migration `0054_source_policy_review_integrity.sql` bound new
+source approvals to lowercase reviewer identity, independent role, and explicit
+attestation; obvious self-approval is rejected and legacy approvals require
+re-review. CFPB remains disabled pending external legal/privacy/security review.
+
 ## Next production tranche
 
-1. Legal/privacy/security approval and activation of the CFPB connector policy.
-2. Provision production Temporal and add Docker-backed crash/retry proof.
-3. Provider/identity approval, verified recovery/invitation delivery, and
-   deployed auth/source maintenance jobs.
-4. Downstream report/export workflows and explicit re-collection operational
-   deployment proof.
-5. Operational monitoring, deployed scheduler ownership, provider pricing and
-   billing controls, production database/Temporal provisioning, and security
+1. Legal/privacy/security approval and CFPB policy activation.
+2. Production Temporal/DB provisioning and Docker crash/retry proof.
+3. Provider/identity approval, delivery, deployed maintenance, and export/
+   recollection operations.
+4. Monitoring, scheduler ownership, pricing/billing controls, and security
    review.
 
 ## Current blockers
 
-- No real source is approved or enabled; CFPB is policy-gated.
-- No production database/Temporal deployment exists; local fixtures are not
-  production infrastructure. Identity delivery, role separation, cloud/backup
+- CFPB is disabled pending source approval; no real source is enabled.
+- Production DB/Temporal, identity delivery, role separation, cloud/backup
   purge, and deployment validation remain.
-- Recovery and invitation delivery are disabled pending provider, identity,
-  DPA/retention, key-rotation, monitoring, and failure-drill approval.
-- Deletion propagation retries and terminalizes bounded failures. Explicit
-  re-collection is implemented as a private one-record path, but
-  workspace-closure/export purge, cloud object storage, and backup purge
-  remain open.
-- Production collection is locally package-tested and PostgreSQL-idempotent,
-  but no production Temporal deployment or integration proof exists. Cloud
-  storage, recomputation alerting, deployed reconciliation scheduling, and
-  quota-case alert ownership remain open.
+- Recovery/invitations await provider, DPA/retention, key-rotation, monitoring,
+  and failure-drill approval.
+- Deletion retries and explicit one-record recollection exist; workspace/export
+  purge, cloud storage, recomputation alerts, deployed scheduling, and quota
+  case alert ownership remain open.
 - Windows/macOS packaging remains open.

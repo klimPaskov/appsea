@@ -14,10 +14,14 @@ deployment.
 
 The source-policy registry now makes that boundary executable. Drafts are
 registered as disabled rows by an operator connection, and activation requires
-an immutable review record through `appsea.approve_source_policy`. Runtime
-workers can read only the resulting active snapshot; they cannot insert policy
-rows or change lifecycle state. The repository does not seed or auto-approve
-this CFPB policy.
+an immutable review record through `appsea.approve_source_policy`. Migration
+`0054_source_policy_review_integrity.sql` binds each new approval to a
+lowercase reviewer identity, an independent legal/privacy/security role, and an
+explicit independence attestation; the policy owner cannot approve its own
+policy. Runtime workers can read only the resulting active snapshot; they
+cannot insert policy rows or change lifecycle state. Pre-0054 approvals remain
+audit history but are returned to pending review until re-approved. The
+repository does not seed or auto-approve this CFPB policy.
 
 ## Permitted route
 

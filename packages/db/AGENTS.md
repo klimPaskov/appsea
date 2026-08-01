@@ -23,3 +23,8 @@ Complaint-derived fields must be persisted with the immutable observation in a
 versioned `analysis_snapshot` JSONB column. Backfill older rows conservatively,
 keep unresolved entity types explicit, and expose snapshot review-state changes
 through the same workspace transaction as the relational review state.
+
+Source-policy approvals must retain canonical reviewer identity, independent
+role, and explicit attestation. Preserve legacy review rows for audit, but do
+not treat them as collectible until an integrity-attested review re-approves
+the policy.

@@ -34,6 +34,11 @@ for that pre-context authorization lookup.
   read an active approved snapshot but cannot activate a connector. Production
   collection additionally compares the connector snapshot with the approved
   database policy before inserting any source item.
+- Migration `0054` stores a lowercase reviewer identity, allowed independent
+  review role, and explicit independence attestation on new approvals. A
+  trigger rejects unattested or self-owned approvals, and pre-0054 approvals
+  are conservatively disabled until re-reviewed. This strengthens the gate but
+  does not grant legal, privacy, or security approval or activate a source.
 - Migration `0032` makes complaint curation an explicit workspace boundary:
   only active workspace editors and owners can transition an active complaint
   observation from `unreviewed` to `confirmed`/`rejected` or from `confirmed`

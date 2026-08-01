@@ -4,6 +4,12 @@
 
 No live social platform is enabled. Fixture data cannot estimate market size, complaint frequency, or current momentum.
 
+Source-policy approval integrity is now database-bound: new approvals require a
+canonical reviewer identity, an independent legal/privacy/security role, and an
+explicit attestation; pre-0054 approvals are conservatively disabled until
+re-reviewed. Legal/privacy/security owners still must approve the CFPB policy,
+and production deployment controls remain absent.
+
 Complaint observations now carry a deterministic, versioned classification and
 entity-resolution snapshot with severity and uncertainty fields. The rules are
 not a trained classifier, do not estimate unique authors, and intentionally
