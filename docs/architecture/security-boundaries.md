@@ -58,6 +58,11 @@ for that pre-context authorization lookup.
   remains; a later analysis on a new collection run may reactivate the same
   opportunity. Immutable clusters, score snapshots, and lineage remain
   traceable, and deletion never triggers an unreviewed source recollection.
+- Migration `0036` also permits a same-run repair only after a new active
+  analysis output is linked to the opportunity. The analysis must be built from
+  active, confirmed, policy-allowed evidence; deleted records remain excluded
+  and visible as coverage gaps. No source acquisition or policy bypass is
+  introduced by this recovery path.
 - Source-item acquisition policy and evidence display representation are relationally enforced.
 - Fixture report generation keeps retained observations, deterministic score
   inference, contrary evidence, recommendation, and source coverage in separate

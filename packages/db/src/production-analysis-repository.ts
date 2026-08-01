@@ -949,8 +949,22 @@ export class PostgresProductionAnalysisRepository {
                   first_wedge = EXCLUDED.first_wedge, complaint_count = EXCLUDED.complaint_count,
                   tags = EXCLUDED.tags, contrary_evidence = EXCLUDED.contrary_evidence,
                   state = 'researched', source_run_id = EXCLUDED.source_run_id,
-                  availability_state = 'active', invalidated_at = NULL,
-                  invalidation_reason = NULL, updated_at = EXCLUDED.updated_at`,
+                  availability_state = CASE
+                    WHEN appsea.opportunities.availability_state = 'invalidated'
+                      THEN 'invalidated'
+                    ELSE 'active'
+                  END,
+                  invalidated_at = CASE
+                    WHEN appsea.opportunities.availability_state = 'invalidated'
+                      THEN appsea.opportunities.invalidated_at
+                    ELSE NULL
+                  END,
+                  invalidation_reason = CASE
+                    WHEN appsea.opportunities.availability_state = 'invalidated'
+                      THEN appsea.opportunities.invalidation_reason
+                    ELSE NULL
+                  END,
+                  updated_at = EXCLUDED.updated_at`,
             [
               parsed.workspaceId,
               opportunityId,
@@ -1149,14 +1163,6 @@ export class PostgresProductionAnalysisRepository {
           )
 
           await client.query(
-            `UPDATE appsea.opportunities
-                SET current_score_snapshot_id = $3,
-                    current_plan_package_id = $4,
-                    updated_at = $5
-              WHERE workspace_id = $1 AND opportunity_id = $2`,
-            [parsed.workspaceId, opportunityId, scoreSnapshotId, planPackageId, completedAt]
-          )
-          await client.query(
             `INSERT INTO appsea.research_analysis_run_outputs
              (workspace_id, analysis_run_id, opportunity_id, score_snapshot_id, report_id,
               plan_package_id, linked_at)
@@ -1171,6 +1177,21 @@ export class PostgresProductionAnalysisRepository {
               planPackageId,
               completedAt
             ]
+          )
+
+          // Link the new analysis while its run is active before clearing a
+          // source-deletion invalidation. Migration 0036 permits same-run
+          // reactivation only when this explicit active analysis output exists.
+          await client.query(
+            `UPDATE appsea.opportunities
+                SET availability_state = 'active',
+                    invalidated_at = NULL,
+                    invalidation_reason = NULL,
+                    current_score_snapshot_id = $3,
+                    current_plan_package_id = $4,
+                    updated_at = $5
+              WHERE workspace_id = $1 AND opportunity_id = $2`,
+            [parsed.workspaceId, opportunityId, scoreSnapshotId, planPackageId, completedAt]
           )
 
           await client.query(

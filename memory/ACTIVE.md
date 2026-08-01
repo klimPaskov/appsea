@@ -11,14 +11,15 @@ persists approved CFPB items, redacted evidence, unreviewed complaints,
 tombstones, coverage gaps, and audit/outbox lineage with idempotent replay.
 Migrations `0028_production_collection_workflow_projection.sql`,
 `0029_source_retention_enforcement.sql`, `0034_production_analysis_handoffs.sql`,
-and `0035_opportunity_availability_repair.sql`
+`0035_opportunity_availability_repair.sql`, and
+`0036_same_run_analysis_recovery.sql`
 now add the production collection
 job/checkpoint projection, policy trigger, bounded policy-derived retention
 tombstone enqueue, hashed idempotency, terminal reconciliation, and user/service
 actor attribution;
 the workflow/client/activity boundary is package-tested but not deployed. Next
 is infrastructure hardening: Temporal provisioning, role separation, deletion
-recomputation/re-collection, non-fixture outputs, and identity-provider approval. Fixture and
+automatic recomputation/re-collection, non-fixture outputs, and identity-provider approval. Fixture and
 production collection routes are Temporal gateways; signup workspaces remain
 non-fixture by design.
 
@@ -32,9 +33,9 @@ invalidation. The post-collection workflow/activity, private reads, and the
 separate plan approval/export boundary are package-tested. Cloud storage,
 purge, and deployment proof remain open.
 
-Foundation (2026-07-11 through 2026-07-25) remains implemented: PostgreSQL
-18/RLS/provenance, deterministic fixture analysis and sparse leaderboard,
-private auth/workspaces, and a retry-safe fixture Temporal boundary. Provider
+Foundation (2026-07-11 through 2026-07-25): PostgreSQL
+18/RLS/provenance, deterministic fixture analysis/sparse leaderboard,
+auth/workspaces, retry-safe fixture Temporal boundary. Provider
 delivery, MFA/OIDC, production identity, infrastructure, and Docker-backed
 integration remain open.
 
@@ -62,9 +63,10 @@ Implemented on 2026-07-25 (production collection checkpoint):
   status reads; no source is approved or live
 - migration `0029_source_retention_enforcement.sql` queues bounded,
   policy-derived retention tombstones and reuses deletion propagation;
-  purge/object storage and complaint/cluster recomputation remain open; migration
-  `0035` now invalidates/de-ranks stale mutable opportunity projections after
-  source deletion
+  purge/object storage and automatic recomputation scheduling remain open;
+  migration `0035` now invalidates/de-ranks stale mutable opportunity
+  projections after source deletion and `0036` permits an explicit same-run
+  active-evidence re-analysis before reactivation
 - production analysis contracts, normalization/deduplication/clustering,
   explicit reviewed-seed scoring, policy/evidence provenance, generic
   report/package composition, deterministic report/plan object encoding,
@@ -78,13 +80,14 @@ Implemented on 2026-07-25 (production collection checkpoint):
   collection confirm/reject actions. Migrations `0033`/`0034` add immutable
   approved seed reviews, private seed routes, and a crash-reclaimable automatic
   analysis handoff; migration `0035` repairs the mutable opportunity projection
-  after source deletion. Complaint/cluster recomputation, explicit re-collection,
-  and deployed scheduling remain open.
+  after source deletion and `0036` protects explicit same-run re-analysis.
+  Automatic recomputation, explicit re-collection, and deployed scheduling
+  remain open.
 
 ## Validated commands
 
 - `pnpm verify` passed 2026-07-26: packages, samples, smoke, repo checks
-- Direct TypeScript, ESLint, Prettier, memory, and checks pass; the handoff
+- Direct TypeScript, ESLint, Prettier, memory, checks pass; the handoff
   focus passed 62, the private status focus 59, and contracts/db/worker/web suites passed 165. Seed SVG
   generated; raster awaits `cairosvg`; Temporal suites remain blocked by missing
   `protobufjs`
@@ -98,8 +101,8 @@ Implemented on 2026-07-25 (production collection checkpoint):
 2. Provision the production Temporal boundary and add Docker-backed repository/
    activity crash/retry proof for the production collection workflow.
 3. Provider/identity approval, verified recovery/invitation delivery, and
-   deploy/operate the validated auth/source maintenance jobs.
-4. Complaint/cluster recomputation, explicit re-collection after deletion, and general report/export
+   deploy/operate validated auth/source maintenance jobs.
+4. Automatic recomputation, explicit re-collection after deletion, and general report/export
    workflows; the current seed editor is JSON-backed and needs richer revision
    UX.
 5. Operational monitoring, cost controls, production database/Temporal
@@ -114,16 +117,16 @@ Implemented on 2026-07-25 (production collection checkpoint):
   and deployment validation remain.
 - Account recovery and invitation delivery remain disabled pending provider, identity, DPA/retention, key-rotation, monitoring, and failure-drill approval; invitations accept existing accounts only.
 - Deletion propagation invalidates dependent production analysis runs and
-  source/evidence/report/plan projections, and migration `0035` invalidates/de-ranks
-  affected mutable opportunity projections; complaint/cluster recomputation,
-  explicit re-collection, cloud object storage, exports, and backup purge are not implemented.
+  evidence/report/plan projections, and migration `0035` invalidates/de-ranks
+  affected mutable opportunity projections; automatic recomputation,
+  explicit re-collection, cloud object storage, exports, and backup purge remain open.
 - The production collection workflow is locally package-tested and PostgreSQL-
   idempotent, but no production Temporal deployment or integration proof exists;
   an optional approved-seed completion now queues analysis for a worker
-  handoff. Cloud object-storage handling, complaint/cluster recomputation, explicit
-  re-collection, and
+  handoff. Cloud object-storage handling, automatic recomputation,
+  explicit re-collection, and
   scheduled reconciliation remain open; a settled quota without a persisted
   result requires operator reconciliation.
 - Migration 0029 retention selection and propagation still have only static
   assertions until the Docker-backed integration suite is available.
-- Windows and macOS packaging remains staged.
+- Windows/macOS packaging remains open.

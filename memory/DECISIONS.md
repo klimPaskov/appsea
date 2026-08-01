@@ -293,3 +293,14 @@ reconstructs active policy/evidence lineage before starting the idempotent
 analysis workflow. This keeps Temporal outages and worker crashes recoverable
 without making collection persistence depend on a remote start call, while
 preserving the complaint-confirmation gate.
+
+## 2026-08-01: Require linked active output before same-run recovery
+
+Source deletion invalidates mutable opportunity projections and must not be
+undone by an ordinary update with the old collection run. Migration `0036`
+allows a same-run reactivation only after a new production analysis has linked
+its active score/plan output; that analysis is reconstructed from active,
+confirmed, policy-allowed evidence and retains deletion coverage gaps. The
+private reviewed analysis route can perform this repair explicitly, while
+automatic scheduling and source re-collection remain separate approval-gated
+work.

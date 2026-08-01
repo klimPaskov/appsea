@@ -43,11 +43,14 @@ and verify approved seed content by ID, version, and hash.
 Migration `0034` adds a deterministic, approved-seed-bound handoff queue written
 with collection completion; the worker claims stale-recoverable rows and starts
 the existing analysis workflow only after rebuilding active evidence lineage.
+Migration `0036` protects the same-run deletion-recovery path: a new analysis
+may re-cluster remaining active evidence, but an invalidated opportunity cannot
+reactivate until its active output is linked.
 
 Production evolution still requires authenticated/TLS-protected Temporal,
 production identity/recovery policy and scheduled/distributed validation of the
 new login/source maintenance jobs, approved live connectors, production
 database provisioning, encrypted cloud object storage and backup purge,
-complaint/cluster deletion recomputation,
+automatic complaint/cluster recomputation scheduling,
 and operational controls. The local
 fixture workflow is not a production deployment or market-research claim.

@@ -48,7 +48,8 @@ describe('database foundation', () => {
       '0032',
       '0033',
       '0034',
-      '0035'
+      '0035',
+      '0036'
     ])
     expect(migrations[0]?.checksum).toMatch(/^[a-f0-9]{64}$/)
     expect(migrations[0]?.sql).toContain('CREATE TABLE appsea.evidence_records')
@@ -95,6 +96,7 @@ describe('database foundation', () => {
     const opportunityAvailabilityMigration = migrations.find(
       (migration) => migration.version === '0035'
     )
+    const sameRunRecoveryMigration = migrations.find((migration) => migration.version === '0036')
     expect(authMigration?.sql).toContain('CREATE TABLE appsea.users')
     expect(authMigration?.sql).toContain('CREATE TABLE appsea.auth_sessions')
     expect(authMigration?.sql).toContain('FORCE ROW LEVEL SECURITY')
@@ -258,6 +260,8 @@ describe('database foundation', () => {
     expect(opportunityAvailabilityMigration?.sql).toContain(
       'invalidated opportunity requires a new source run before reactivation'
     )
+    expect(sameRunRecoveryMigration?.sql).toContain('linked active re-analysis')
+    expect(sameRunRecoveryMigration?.sql).toContain("analysis.state IN ('running', 'completed')")
   })
 
   it('requires verified TLS for production database connections', () => {

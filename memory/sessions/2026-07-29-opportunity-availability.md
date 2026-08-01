@@ -14,6 +14,10 @@
 - Private opportunity list/detail reads filter invalidated projections. Source
   maintenance exposes `deletionOpportunitiesInvalidated` separately from total
   affected objects.
+- Migration `0036_same_run_analysis_recovery.sql` now permits a reviewed
+  same-run analysis over remaining active evidence to reactivate an invalidated
+  opportunity only after its active output is linked; it never re-collects
+  deleted records.
 - Focused contracts/database/worker/private-web tests passed (10 files, 95
   tests); affected TypeScript and ESLint checks passed, and Prettier formatted
   the tranche. Docker-backed migration integration remains unavailable.

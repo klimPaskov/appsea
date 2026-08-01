@@ -42,7 +42,9 @@
 16. A workspace transaction persists immutable production projections,
     output IDs, audit/outbox receipts, and active availability state. Source
     deletion propagation invalidates the analysis run while retaining lineage
-    for authorized object purge.
+    for authorized object purge; migration `0036` permits a reviewed same-run
+    analysis to reactivate a projection only after its new active output is
+    linked.
 17. Checkpoints, budget counters, and fixed failure records make progress inspectable and retry-safe.
 18. An outbox event records accepted run completion without making delivery part of the database transaction.
 19. The durable report package path converts a validated persisted artifact into

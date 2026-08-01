@@ -216,6 +216,41 @@ describe('production analysis start route', () => {
     expect(mocks.buildProductionResearchArtifact).not.toHaveBeenCalled()
   })
 
+  it('carries deletion coverage gaps into an explicit active-evidence repair', async () => {
+    const deletion = {
+      sourceId: 'source:one',
+      sourceRecordId: 'record:deleted',
+      observedAt: '2026-07-26T01:00:00.000Z',
+      reason: 'source deletion'
+    }
+    mocks.readForAnalysis.mockResolvedValue({
+      collectionArtifactId: 'artifact:one',
+      runId: 'run:one',
+      request: {},
+      policySnapshot: {},
+      complaints: [{ id: 'complaint:active' }],
+      deletions: [deletion],
+      coverageGaps: ['One source record was deleted before re-analysis.'],
+      warnings: []
+    })
+    const response = await POST(
+      request({
+        analysisRunId: 'analysis:repair',
+        idempotencyKey: 'analysis-repair-idempotency',
+        requestedAt: '2026-07-26T00:00:00.000Z',
+        seedReviewId: 'seed-review:one'
+      }),
+      { params: Promise.resolve({ workspaceId: 'workspace:one', runId: 'run:one' }) }
+    )
+    expect(response.status).toBe(202)
+    expect(mocks.buildProductionResearchArtifact).toHaveBeenCalledWith(
+      expect.objectContaining({
+        deletions: [deletion],
+        coverageGaps: ['One source record was deleted before re-analysis.']
+      })
+    )
+  })
+
   it('keeps an unapproved seed out of the analysis boundary', async () => {
     mocks.readApprovedForUser.mockResolvedValue(null)
     const response = await POST(

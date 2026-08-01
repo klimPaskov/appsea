@@ -23,7 +23,8 @@ unavailable, and invalidates/de-ranks any mutable opportunity projection whose
 completed production analysis used the deleted source record. The invalidation
 clears current score and plan pointers while preserving immutable clusters,
 score snapshots, and lineage. A later completed analysis from a new collection
-run reactivates the projection.
+run, or an explicit reviewed analysis over the remaining active evidence,
+reactivates the projection only after the new active output is linked.
 
 Retention policies using `redact` or `tombstone` reuse this path. Policy drafts
 using `purge` are rejected until a separately reviewed object-store/database
@@ -46,5 +47,7 @@ independent bounded budgets.
 Workspace enumeration is sorted and deduplicated, and a retry may reuse
 `APPSEA_SOURCE_MAINTENANCE_JOB_ID` (the default is a UTC-minute bucket). Run it
 from a scheduler with retry and alerting. External object storage/backups,
-exports, complaint/cluster recomputation, explicit re-collection after source
-deletion, and production deployment behavior remain explicit release blockers.
+exports, automatic recomputation scheduling, explicit re-collection after
+source deletion, and production deployment behavior remain explicit release
+blockers. Operators may start a reviewed analysis over the remaining active
+evidence; the migration guard prevents reactivation until that output is linked.
