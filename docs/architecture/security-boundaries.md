@@ -66,8 +66,10 @@ for that pre-context authorization lookup.
 - Migration `0037` queues that repair in the deletion transaction with the
   source tombstone, collection run, opportunity, and immutable seed review
   lineage. The worker blocks an unapproved or mismatched seed, retries only
-  bounded readiness/dispatch failures, and starts Temporal idempotently; it
-  never re-fetches a source record or accepts caller-supplied complaint text.
+  bounded readiness/dispatch failures, reclaims server-clock-stale
+  `dispatching` claims, terminalizes exhausted claims, and starts Temporal
+  idempotently; it never re-fetches a source record or accepts caller-supplied
+  complaint text.
 - Migration `0038` places an authenticated production collection start behind
   a security-definer admission function. The function verifies the active
   private non-fixture workspace and owner/editor membership, serializes one

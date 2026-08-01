@@ -100,9 +100,11 @@ leakage, but v1 histories need a controlled drain/retention plan. The activity
 still persists object-backed outputs before finalization; migration `0043` and
 the maintenance worker now cover invalidated output-object marking, retention,
 bounded retry, and local orphan cleanup. Cloud object-store/backup deletion and
-external conditional-delete verification remain deployment work; stale
-recompute-claim reclamation, retryable tombstone propagation, and authentication
-for the direct source CLI also remain open. Retention is anchored to
+external conditional-delete verification remain deployment work; retryable
+tombstone propagation and authentication for the direct source CLI remain
+open. The recomputation dispatcher now reclaims stale `dispatching` rows from
+the server clock and terminalizes exhausted claims, so a worker crash cannot
+strand that queue indefinitely. Retention is anchored to
 server-observed activity time and final
 lineage rechecks active/current/unexpired policy, commercial-use eligibility,
 and confirmed redacted evidence. The manual analysis route now has a workspace

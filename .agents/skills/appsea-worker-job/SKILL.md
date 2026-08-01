@@ -31,6 +31,11 @@ description: Use when adding or changing AppSea worker commands, scheduled jobs,
     for the stored retention deadline, then purge through the adapter. Use a
     skip-locked claim with stale recovery and fixed retry metadata; a missing
     sidecar/body must be safe to reconcile on a later attempt.
+12. For database-backed dispatch queues, reclaim `dispatching` rows only from
+    a server-clock stale window, bound attempts before claiming, and
+    terminalize exhausted stale claims with fixed failure metadata. Use a
+    deterministic downstream workflow identity so a late worker start is an
+    idempotent replay rather than a duplicate research run.
 
 Do not rely on an in-memory loop for production durability. Do not hide a partial result behind a successful exit code.
 

@@ -11,6 +11,11 @@ export type ProductionAnalysisRecomputeFailureCode =
   | 'recompute_dispatch_failed'
   | 'analysis_already_repaired'
 
+export const productionAnalysisRecomputeLimits = {
+  staleClaimSeconds: 15 * 60,
+  maxAttempts: 24
+} as const
+
 export interface ProductionAnalysisRecomputeRecord {
   workspaceId: string
   recomputeId: string
@@ -110,7 +115,12 @@ export class PostgresProductionAnalysisRecomputeRepository {
     )
   }
 
-  /** Claim due work, first closing jobs superseded by a newer active analysis. */
+  /**
+   * Claim due work, first closing jobs superseded by a newer active analysis.
+   * A dispatching row is reclaimable after the stale lease window so a worker
+   * crash cannot strand the repair queue. The deterministic Temporal workflow
+   * identity makes a late start replay-safe.
+   */
   async claimNext(workspaceId: string): Promise<ProductionAnalysisRecomputeRecord | null> {
     const parsedWorkspaceId = appseaIdentifierSchema.parse(workspaceId)
     return withWorkspaceTransaction(this.pool, parsedWorkspaceId, async (client) => {
@@ -164,6 +174,23 @@ export class PostgresProductionAnalysisRecomputeRepository {
             )`,
         [parsedWorkspaceId]
       )
+      await client.query(
+        `UPDATE appsea.production_analysis_recompute_jobs job
+            SET state = 'failed',
+                failure_code = 'recompute_dispatch_failed',
+                failure_summary = 'The recomputation dispatch claim expired after the retry limit.',
+                finished_at = COALESCE(job.finished_at, clock_timestamp()),
+                updated_at = clock_timestamp()
+          WHERE job.workspace_id = $1
+            AND job.state = 'dispatching'
+            AND job.attempt_count >= $2
+            AND job.updated_at <= clock_timestamp() - ($3::text || ' seconds')::interval`,
+        [
+          parsedWorkspaceId,
+          productionAnalysisRecomputeLimits.maxAttempts,
+          productionAnalysisRecomputeLimits.staleClaimSeconds
+        ]
+      )
       const claimed = await client.query<RecomputeRow>(
         `WITH candidate AS (
            SELECT workspace_id, recompute_id
@@ -196,7 +223,14 @@ export class PostgresProductionAnalysisRecomputeRepository {
                    AND running_analysis.seed_review_id = job.seed_review_id
                    AND running_analysis.state IN ('queued', 'running')
               )
-              AND job.state IN ('queued', 'blocked')
+              AND (
+                job.state IN ('queued', 'blocked')
+                OR (
+                  job.state = 'dispatching'
+                  AND job.updated_at <= clock_timestamp() - ($2::text || ' seconds')::interval
+                  AND job.attempt_count < $3
+                )
+              )
               AND EXISTS (
                 SELECT 1
                   FROM appsea.opportunity_seed_reviews seed
@@ -219,7 +253,11 @@ export class PostgresProductionAnalysisRecomputeRepository {
           WHERE job.workspace_id = candidate.workspace_id
             AND job.recompute_id = candidate.recompute_id
          RETURNING ${recomputeColumns}`,
-        [parsedWorkspaceId]
+        [
+          parsedWorkspaceId,
+          productionAnalysisRecomputeLimits.staleClaimSeconds,
+          productionAnalysisRecomputeLimits.maxAttempts
+        ]
       )
       return claimed.rows[0] ? mapRow(claimed.rows[0]) : null
     })

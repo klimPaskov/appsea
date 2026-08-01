@@ -137,7 +137,8 @@ Remaining production work: legacy v1 history drain/retention for the analysis
 workflow, authenticated/TLS-protected Temporal, HA,
 cloud object-store/backups retention and purge, deployment, metrics, alerts, deployed
 snapshot scheduler ownership, and worker crash fault-injection proof. Migration `0037` now queues deletion-triggered
-active-evidence repairs; deployed scheduling, alerting, and production
+active-evidence repairs and the dispatcher reclaims stale dispatch claims with
+bounded terminal failure; deployed scheduling, alerting, and production
 Temporal remain open. The repository-level collection and manual-analysis
 ingress gates are now implemented; deployed scheduler ownership and
 infrastructure authorization remain separate release work.

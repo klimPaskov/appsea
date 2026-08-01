@@ -93,3 +93,4 @@
 - [`status/production-analysis-history-boundary-completion-report-2026-08-01.md`](status/production-analysis-history-boundary-completion-report-2026-08-01.md)
 - [`status/production-analysis-admission-completion-report-2026-08-01.md`](status/production-analysis-admission-completion-report-2026-08-01.md)
 - [`status/production-analysis-object-purge-completion-report-2026-08-01.md`](status/production-analysis-object-purge-completion-report-2026-08-01.md)
+- [`status/production-analysis-recompute-reclaim-completion-report-2026-08-01.md`](status/production-analysis-recompute-reclaim-completion-report-2026-08-01.md)

@@ -31,7 +31,10 @@ opportunity/tombstone when prior analysis lineage provides a seed review. The
 durable worker claims due jobs with `FOR UPDATE SKIP LOCKED`, reconstructs the
 remaining active evidence, and starts the existing analysis workflow. A
 withdrawn seed is visible as `blocked` and becomes dispatchable only after a
-new approval; no job performs source acquisition.
+new approval; a `dispatching` claim older than 15 minutes is reclaimable from
+the PostgreSQL clock, and a stale claim at the 24-attempt limit becomes a fixed
+terminal failure. The deterministic workflow identity makes a late Temporal
+start an idempotent replay; no job performs source acquisition.
 
 Migration `0038` adds transient production workflow admission rows before a
 user-triggered Temporal start. The admission function serializes each

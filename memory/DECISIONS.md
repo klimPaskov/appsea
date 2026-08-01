@@ -130,18 +130,13 @@ pretending legal approval or market completeness.
 ## 2026-07-25: Production collection workflow boundary
 
 Keep the production collection Temporal workflow additive to the fixture
-workflow. Migrations `0028` and `0029` store a separate RLS-protected
-job/checkpoint projection plus bounded policy-derived source-retention enqueue,
-with an active-approved source-policy trigger, source-item/cost budgets,
-terminal transition guards, hashed idempotency, and immutable
-requesting-user/service attribution. The workflow deliberately uses the
-PostgreSQL collection repository as its persistence authority and treats the
-persist/complete boundary as non-cancellable. Direct CLI starts normalize into
-the same canonical hashed idempotency domain as Temporal activities, and a settled quota
-without a committed collection result stops for operator reconciliation rather
-than issuing an unbounded retry. This proves the contract locally without
-claiming production Temporal deployment, live source approval, object-store or
-backup purge, aggregate recomputation, or downstream opportunity analysis.
+workflow. Migrations `0028`/`0029` store an RLS job/checkpoint projection,
+policy-derived retention enqueue, source/cost budgets, terminal guards, hashed
+idempotency, and immutable user/service attribution. PostgreSQL remains the
+non-cancellable persistence authority; a settled quota without a committed
+result stops for operator reconciliation. This proves the contract locally,
+without claiming production Temporal, live-source approval, object/backups
+purge, aggregate recomputation, or downstream opportunity analysis.
 
 ## 2026-07-25: Policy-derived source retention
 
@@ -282,31 +277,23 @@ alerting, and source re-collection remain separate deployment/review work.
 
 Authenticated production collection starts must not create unbounded failed
 Temporal executions while source policy or infrastructure is pending. Migration
-`0038` therefore keeps a digest-only admission row and a workspace rate bucket,
-serializes decisions under a workspace advisory lock, and fixes the limits at
-five distinct starts per fifteen minutes and two active jobs/reservations.
-Replayed digests are allowed without another slot; the existing workflow
-initialization transaction consumes the reservation, and source maintenance
-purges terminal or expired admission rows. Both existing-job and insert paths
-fail closed if consumption returns false, so a late-starting workflow cannot
-bypass the concurrency gate. A reservation is not released on an ambiguous
-Temporal error. The public leaderboard and source-policy boundary remain
-unchanged; deployment configuration and Temporal authorization remain open.
+`0038` keeps a digest-only admission row, serializes a workspace rate bucket
+under advisory lock, and fixes five starts/15 minutes plus two active
+jobs/reservations. Replays consume no slot; initialization consumes the
+reservation and maintenance purges terminal/expired rows. Missing consumption
+fails closed, and ambiguous Temporal errors do not release a reservation.
+Deployment configuration and Temporal authorization remain open.
 
 ## 2026-08-01: Bind external collection to a policy lease
 
 The worker must not read an approved source policy, perform an external fetch,
-and then trust that policy snapshot after a revocation or expiry race. Migration
-`0039` therefore stores a workspace-scoped, digest-only lease whose acquisition
-requires the active source, current policy version, and a matching immutable
-operator approval review. The lease owns one server/workflow-observed capture
-timestamp, which retries replay rather than re-stamping complaint provenance.
-The worker passes the lease identity into the persistence repository, which
-asserts and row-locks the lease inside the same transaction as the collection
-write; release occurs only after commit. Terminal leases are purged through the
-existing bounded source-maintenance job. An uncertain quota settlement remains
-explicit operator reconciliation; automatic re-fetch would risk duplicate
-external collection.
+and then trust that policy after a revocation or expiry race. Migration `0039`
+stores a workspace-scoped digest-only lease requiring the active source, policy
+version, and immutable operator approval. It owns one server/workflow-observed
+capture timestamp for replay. Persistence asserts and locks the lease in the
+same transaction as collection; release follows commit. Terminal leases are
+purged by source maintenance, while uncertain quota settlement remains
+operator reconciliation rather than an automatic re-fetch.
 
 ## 2026-08-01: Keep production analysis artifacts out of Temporal history
 
@@ -334,3 +321,12 @@ the run stores an immutable membership-checked actor. The digest excludes the
 actor so a workspace key cannot fork; actor remains in the input hash and a
 mismatch conflicts. Consumed/released digests replay; expired reservations
 alone are reclaimable.
+
+## 2026-08-01: Reclaim stale recomputation dispatches from the server clock
+
+Deletion-triggered analysis repair claims are committed before a worker calls
+Temporal. A crash in that gap must not strand the job, and caller time must not
+control recovery. The repository reclaims `dispatching` rows older than 15
+minutes from PostgreSQL's clock, allows 24 claims, and records fixed terminal
+failure for exhausted stale rows. Deterministic workflow identity makes a late
+start replay the same run; per-attempt claim tokens remain future fencing work.

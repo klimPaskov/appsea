@@ -30,6 +30,7 @@ import {
   PostgresAuthRepository,
   PostgresDeletionPropagationRepository,
   PostgresProductionAnalysisAdmissionRepository,
+  PostgresProductionAnalysisRecomputeRepository,
   PostgresOpportunitySeedReviewRepository,
   PostgresProductionWorkflowAdmissionRepository,
   PostgresSourceCollectionLeaseRepository,
@@ -2884,6 +2885,148 @@ describe.sequential('PostgreSQL fixture persistence lifecycle', () => {
             workspaceId
           ])
           await client.query('DELETE FROM appsea.workspaces WHERE workspace_id = $1', [workspaceId])
+          await client.query('COMMIT')
+        } catch (error) {
+          await client.query('ROLLBACK')
+          throw error
+        }
+      })
+    }
+  })
+
+  it('reclaims a stale production-analysis recomputation dispatch claim', async () => {
+    const workspaceId = 'workspace-recompute-reclaim'
+    const sourceId = 'source-recompute-reclaim'
+    const userId = 'user-recompute-reclaim'
+    const campaignId = 'campaign-recompute-reclaim'
+    const runId = 'run-recompute-reclaim'
+    const opportunityId = 'opportunity-recompute-reclaim'
+    const seedReviewId = 'seed-review-recompute-reclaim'
+    const tombstoneId = 'tombstone-recompute-reclaim'
+    const recomputeId = `recompute:analysis:${'a'.repeat(32)}`
+    const analysisRunId = `analysis-run:${'b'.repeat(32)}`
+    const recompute = new PostgresProductionAnalysisRecomputeRepository(servicePool)
+
+    try {
+      await withOwnerClient(async (client) => {
+        await client.query('BEGIN')
+        try {
+          await client.query(
+            `INSERT INTO appsea.users
+               (user_id, email, display_name, password_hash, created_at, updated_at)
+             VALUES ($1, $2, 'Recompute test user', repeat('x', 64), $3, $3)`,
+            [userId, `${userId}@example.test`, fixedAt]
+          )
+          await client.query(
+            `INSERT INTO appsea.workspaces
+               (workspace_id, slug, display_name, visibility, fixture_only, status, created_at, updated_at)
+             VALUES ($1, 'recompute-reclaim', 'Recompute reclaim test', 'private', false, 'active', $2, $2)`,
+            [workspaceId, fixedAt]
+          )
+          await client.query(
+            `INSERT INTO appsea.sources
+               (source_id, display_name, source_type, lifecycle_state, created_at, updated_at)
+             VALUES ($1, 'Recompute reclaim source', 'manual', 'disabled_pending_review', $2, $2)`,
+            [sourceId, fixedAt]
+          )
+          await client.query(
+            `INSERT INTO appsea.research_campaigns
+               (workspace_id, campaign_id, name, purpose, state, configuration, budget, synthetic,
+                created_at, updated_at)
+             VALUES ($1, $2, 'Recompute reclaim campaign', 'deletion-repair', 'completed', '{}', '{}', false, $3, $3)`,
+            [workspaceId, campaignId, fixedAt]
+          )
+          await client.query(
+            `INSERT INTO appsea.research_runs
+               (workspace_id, run_id, campaign_id, idempotency_key, mode, state, artifact_id,
+                input_hash, artifact_snapshot, requested_at, started_at, completed_at)
+             VALUES ($1, $2, $3, 'recompute-reclaim-run-key', 'production', 'completed',
+                     'artifact-recompute-reclaim', repeat('c', 64), '{}', $4, $4, $4)`,
+            [workspaceId, runId, campaignId, fixedAt]
+          )
+          await client.query(
+            `INSERT INTO appsea.opportunities
+               (workspace_id, opportunity_id, slug, name, one_line, thesis, audience, first_wedge,
+                complaint_count, synthetic, state, source_run_id, invalidated_at, invalidation_reason,
+                availability_state, created_at, updated_at)
+             VALUES ($1, $2, 'recompute-reclaim', 'Recompute reclaim opportunity', 'Repair test',
+                     'Repair test thesis', 'Test operators', 'Repair dispatch', 1, false, 'researched',
+                     $3, $4, 'Source deletion test', 'invalidated', $4, $4)`,
+            [workspaceId, opportunityId, runId, laterAt]
+          )
+          await client.query(
+            `INSERT INTO appsea.opportunity_seed_reviews
+               (workspace_id, seed_review_id, seed_version, seed_payload, content_hash, review_state,
+                created_by, reviewed_by, reviewed_at, approved_by, approved_at, created_at, updated_at)
+             VALUES ($1, $2, 'seed-v1', $3::jsonb, repeat('d', 64), 'approved',
+                     $4, $4, $5, $4, $5, $5, $5)`,
+            [workspaceId, seedReviewId, JSON.stringify({ id: opportunityId }), userId, fixedAt]
+          )
+          await client.query(
+            `INSERT INTO appsea.deletion_tombstones
+               (workspace_id, tombstone_id, source_id, source_record_id, reason, state,
+                received_at, completed_at, affected_object_count)
+             VALUES ($1, $2, $3, 'recompute-record', 'source deletion', 'completed', $4, $5, 1)`,
+            [workspaceId, tombstoneId, sourceId, fixedAt, laterAt]
+          )
+          await client.query(
+            `INSERT INTO appsea.production_analysis_recompute_jobs
+               (workspace_id, recompute_id, opportunity_id, collection_run_id, seed_review_id,
+                source_tombstone_id, analysis_run_id, idempotency_key, requested_at, state,
+                attempt_count, next_attempt_at, updated_at)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, 'production-recompute-reclaim-key', $8,
+                     'dispatching', 1, $8, $8)`,
+            [
+              workspaceId,
+              recomputeId,
+              opportunityId,
+              runId,
+              seedReviewId,
+              tombstoneId,
+              analysisRunId,
+              fixedAt
+            ]
+          )
+          await client.query('COMMIT')
+        } catch (error) {
+          await client.query('ROLLBACK')
+          throw error
+        }
+      })
+
+      const reclaimed = await recompute.claimNext(workspaceId)
+      expect(reclaimed).toMatchObject({
+        recomputeId,
+        state: 'dispatching',
+        attemptCount: 2
+      })
+    } finally {
+      await withOwnerClient(async (client) => {
+        await client.query('BEGIN')
+        try {
+          await client.query(
+            'DELETE FROM appsea.production_analysis_recompute_jobs WHERE workspace_id = $1',
+            [workspaceId]
+          )
+          await client.query(
+            'DELETE FROM appsea.opportunity_seed_reviews WHERE workspace_id = $1',
+            [workspaceId]
+          )
+          await client.query('DELETE FROM appsea.opportunities WHERE workspace_id = $1', [
+            workspaceId
+          ])
+          await client.query('DELETE FROM appsea.deletion_tombstones WHERE workspace_id = $1', [
+            workspaceId
+          ])
+          await client.query('DELETE FROM appsea.research_runs WHERE workspace_id = $1', [
+            workspaceId
+          ])
+          await client.query('DELETE FROM appsea.research_campaigns WHERE workspace_id = $1', [
+            workspaceId
+          ])
+          await client.query('DELETE FROM appsea.workspaces WHERE workspace_id = $1', [workspaceId])
+          await client.query('DELETE FROM appsea.sources WHERE source_id = $1', [sourceId])
+          await client.query('DELETE FROM appsea.users WHERE user_id = $1', [userId])
           await client.query('COMMIT')
         } catch (error) {
           await client.query('ROLLBACK')

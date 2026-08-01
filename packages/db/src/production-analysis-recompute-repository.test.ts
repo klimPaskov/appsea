@@ -46,10 +46,25 @@ function fakePool(): { pool: Pool; row: typeof baseRow; statements: string[] } {
       if (text.includes("SET state = 'blocked'")) {
         return { rows: [], rowCount: 0 }
       }
+      if (
+        text.includes("SET state = 'failed'") &&
+        text.includes('attempt_count >=') &&
+        text.includes('dispatching')
+      ) {
+        if (row.state === 'dispatching' && row.attempt_count >= 24) {
+          row.state = 'failed'
+          row.failure_code = 'recompute_dispatch_failed'
+          row.failure_summary = 'The recomputation dispatch claim expired after the retry limit.'
+          row.finished_at = '2026-08-01T00:00:03.000Z'
+        }
+        return { rows: [], rowCount: 0 }
+      }
       if (text.includes('WITH candidate AS')) {
-        if (row.state !== 'queued') return { rows: [], rowCount: 0 }
+        if (!['queued', 'blocked', 'dispatching'].includes(row.state)) {
+          return { rows: [], rowCount: 0 }
+        }
         row.state = 'dispatching'
-        row.attempt_count = 1
+        row.attempt_count += 1
         return { rows: [{ ...row }], rowCount: 1 }
       }
       if (text.includes("SET state = 'started'")) {
@@ -109,6 +124,39 @@ describe('production analysis recomputation repository', () => {
 
     expect(started).toMatchObject({ state: 'started', workflowId: replay.workflowId })
     expect(statements.some((text) => text.includes('FOR UPDATE SKIP LOCKED'))).toBe(true)
+  })
+
+  it('reclaims a stale dispatch claim after a worker crash', async () => {
+    const { pool, row, statements } = fakePool()
+    row.state = 'dispatching'
+    row.attempt_count = 1
+    row.updated_at = '2026-07-01T00:00:00.000Z'
+    const repository = new PostgresProductionAnalysisRecomputeRepository(pool)
+
+    const reclaimed = await repository.claimNext('workspace:one')
+
+    expect(reclaimed).toMatchObject({ state: 'dispatching', attemptCount: 2 })
+    expect(
+      statements.some(
+        (text) =>
+          text.includes("job.state = 'dispatching'") &&
+          text.includes('updated_at <= clock_timestamp()')
+      )
+    ).toBe(true)
+  })
+
+  it('terminalizes an exhausted stale dispatch claim instead of retrying forever', async () => {
+    const { pool, row } = fakePool()
+    row.state = 'dispatching'
+    row.attempt_count = 24
+    row.updated_at = '2026-07-01T00:00:00.000Z'
+    const repository = new PostgresProductionAnalysisRecomputeRepository(pool)
+
+    await expect(repository.claimNext('workspace:one')).resolves.toBeNull()
+    expect(row).toMatchObject({
+      state: 'failed',
+      failure_code: 'recompute_dispatch_failed'
+    })
   })
 
   it('returns active-evidence readiness failures to the bounded queue', async () => {

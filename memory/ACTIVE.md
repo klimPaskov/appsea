@@ -2,31 +2,15 @@
 
 ## State
 
-The fixture product, PostgreSQL persistence, durable workflow, connector,
-authenticated private workspace, report/plan approval/export, recovery, and
-workspace invitations are implemented. Migration
-`0027_source_policy_approval_boundary.sql` now records operator-only source
-policy draft/approval evidence. The first non-fixture collection checkpoint
-persists approved CFPB items, redacted evidence, unreviewed complaints,
-tombstones, coverage gaps, and audit/outbox lineage with idempotent replay.
-Migrations `0028_production_collection_workflow_projection.sql`,
-`0029_source_retention_enforcement.sql`, `0034_production_analysis_handoffs.sql`,
-`0035_opportunity_availability_repair.sql`,
-`0036_same_run_analysis_recovery.sql`, and
-`0037_production_analysis_recompute_jobs.sql`,
-`0038_production_workflow_ingress_admission.sql`, and
-`0039_source_collection_leases.sql` now add the production collection
-job/checkpoint projection, policy trigger, bounded policy-derived retention
-tombstone enqueue, hashed idempotency, terminal reconciliation, and user/service
-actor attribution, and deletion-triggered recomputation dispatch state;
-the workflow/client/activity boundary is package-tested but not deployed.
-Migration `0038` gates collection starts, `0039` binds external fetches to
-policy leases, and `0040`/`0041` add identifier-only snapshot reconciliation.
-CFPB remains disabled; deployed scheduler ownership, policy approval, and
-infrastructure hardening remain open. Next: Temporal provisioning, role
-separation, re-collection, non-fixture outputs, and identity-provider approval.
-Fixture and production collection routes are Temporal gateways; signup workspaces remain
-non-fixture by design.
+The fixture product, PostgreSQL persistence, durable workflows, policy-gated
+CFPB collection checkpoint, authenticated private workspaces, report/plan
+approval/export, recovery, and invitations are implemented. Migrations
+`0027`–`0042` add policy evidence, collection checkpoints, deletion repair,
+leases, snapshot reconciliation, and separate workflow admissions. CFPB remains
+disabled; deployed Temporal/scheduler ownership, policy approval, role
+separation, re-collection, non-fixture outputs, and identity-provider approval
+remain open. Fixture and production collection routes are Temporal gateways;
+signup workspaces remain non-fixture by design.
 
 Migration `0042_production_analysis_ingress_admission.sql` adds the reviewed
 manual-analysis boundary. The private route binds an authenticated owner/editor,
@@ -44,6 +28,12 @@ retention, and purges with stale recovery/bounded retries; local orphan bodies
 are cleaned after sidecar loss. Cloud encryption/versioning, backups, closure,
 exports, and Docker integration proof remain open.
 
+The recomputation repository now reclaims server-clock-stale `dispatching`
+claims after 15 minutes and terminalizes stale claims at the 24-attempt limit.
+The deterministic Temporal identity makes a late worker start idempotent. A
+real PostgreSQL fixture is present for the RLS claim path, but Docker remains
+unavailable here.
+
 On 2026-08-01, the production analysis Temporal envelope was versioned to
 `production-analysis-v2`. New starts carry only workspace, collection, analysis,
 seed-review, timestamp, and digest identifiers. `apps/worker` reconstructs the
@@ -57,9 +47,8 @@ the active, current, unexpired policy, requires allowed/restricted commercial
 use, and rechecks confirmed redacted evidence before linking outputs.
 Collection initialization fails closed without one.
 
-Open security follow-ups are cloud object/backup deletion verification, stale
-recomputation claims, retryable tombstone propagation, and authenticated
-source-CLI admission.
+Open security follow-ups are cloud object/backup deletion verification,
+retryable tombstone propagation, and authenticated source-CLI admission.
 Collection persistence now locks and rechecks the lease in its write transaction;
 these remain production-readiness blockers.
 
@@ -86,6 +75,9 @@ these remain production-readiness blockers.
   Desktop Linux engine pipe (`//./pipe/dockerDesktopLinuxEngine`)
 - 2026-08-01 object-purge focus: contracts, object-store, db, and worker suites
   passed; the real PostgreSQL trigger/RLS integration test is present but
+  remains Docker-blocked.
+- 2026-08-01 recomputation-reclaim focus: db lint, typecheck, and 71-test
+  suite passed; the real PostgreSQL stale-dispatch/RLS fixture is present but
   remains Docker-blocked.
 
 ## Next production tranche

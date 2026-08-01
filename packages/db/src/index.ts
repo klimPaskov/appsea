@@ -105,6 +105,7 @@ export {
 } from './production-analysis-handoff-repository'
 export {
   PostgresProductionAnalysisRecomputeRepository,
+  productionAnalysisRecomputeLimits,
   ProductionAnalysisRecomputeStateError,
   type ProductionAnalysisRecomputeFailureCode,
   type ProductionAnalysisRecomputeRecord,
