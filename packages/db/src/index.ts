@@ -68,6 +68,13 @@ export {
   type ProductionAnalysisHandoffState
 } from './production-analysis-handoff-repository'
 export {
+  PostgresProductionAnalysisRecomputeRepository,
+  ProductionAnalysisRecomputeStateError,
+  type ProductionAnalysisRecomputeFailureCode,
+  type ProductionAnalysisRecomputeRecord,
+  type ProductionAnalysisRecomputeState
+} from './production-analysis-recompute-repository'
+export {
   PostgresProductionAnalysisRepository,
   ProductionAnalysisAvailabilityError,
   ProductionAnalysisLineageError,

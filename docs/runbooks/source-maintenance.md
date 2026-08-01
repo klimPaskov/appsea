@@ -25,6 +25,12 @@ clears current score and plan pointers while preserving immutable clusters,
 score snapshots, and lineage. A later completed analysis from a new collection
 run, or an explicit reviewed analysis over the remaining active evidence,
 reactivates the projection only after the new active output is linked.
+Migration `0037` also inserts one durable recomputation job per invalidated
+opportunity/tombstone when prior analysis lineage provides a seed review. The
+durable worker claims due jobs with `FOR UPDATE SKIP LOCKED`, reconstructs the
+remaining active evidence, and starts the existing analysis workflow. A
+withdrawn seed is visible as `blocked` and becomes dispatchable only after a
+new approval; no job performs source acquisition.
 
 Retention policies using `redact` or `tombstone` reuse this path. Policy drafts
 using `purge` are rejected until a separately reviewed object-store/database
@@ -47,7 +53,8 @@ independent bounded budgets.
 Workspace enumeration is sorted and deduplicated, and a retry may reuse
 `APPSEA_SOURCE_MAINTENANCE_JOB_ID` (the default is a UTC-minute bucket). Run it
 from a scheduler with retry and alerting. External object storage/backups,
-exports, automatic recomputation scheduling, explicit re-collection after
-source deletion, and production deployment behavior remain explicit release
-blockers. Operators may start a reviewed analysis over the remaining active
-evidence; the migration guard prevents reactivation until that output is linked.
+exports, explicit re-collection after source deletion, and production deployment
+behavior remain explicit release blockers. Operators may still start a reviewed
+analysis over the remaining active evidence; the migration guard prevents
+reactivation until that output is linked. Production Temporal, scheduler
+alerting, and crash fault-injection remain deployment work.

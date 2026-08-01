@@ -11,27 +11,24 @@ persists approved CFPB items, redacted evidence, unreviewed complaints,
 tombstones, coverage gaps, and audit/outbox lineage with idempotent replay.
 Migrations `0028_production_collection_workflow_projection.sql`,
 `0029_source_retention_enforcement.sql`, `0034_production_analysis_handoffs.sql`,
-`0035_opportunity_availability_repair.sql`, and
-`0036_same_run_analysis_recovery.sql`
+`0035_opportunity_availability_repair.sql`,
+`0036_same_run_analysis_recovery.sql`, and
+`0037_production_analysis_recompute_jobs.sql`
 now add the production collection
 job/checkpoint projection, policy trigger, bounded policy-derived retention
 tombstone enqueue, hashed idempotency, terminal reconciliation, and user/service
-actor attribution;
+actor attribution, and deletion-triggered recomputation dispatch state;
 the workflow/client/activity boundary is package-tested but not deployed. Next
-is infrastructure hardening: Temporal provisioning, role separation, deletion
-automatic recomputation/re-collection, non-fixture outputs, and identity-provider approval. Fixture and
+is infrastructure hardening: Temporal provisioning, role separation, automatic
+re-collection, non-fixture outputs, and identity-provider approval. Fixture and
 production collection routes are Temporal gateways; signup workspaces remain
 non-fixture by design.
 
-The 2026-07-26 analysis checkpoint composes validated, redacted non-fixture
-collection data into deterministic clusters, a seeded score, report, and coding
-package. `pnpm analysis:sample` exercises a test-only offline payload; no
-connector or public UI is activated. Migration `0030` and
-`PostgresProductionAnalysisRepository` persist lineage, projections, and
-content-addressed artifact/report/plan references with replay and deletion
-invalidation. The post-collection workflow/activity, private reads, and the
-separate plan approval/export boundary are package-tested. Cloud storage,
-purge, and deployment proof remain open.
+The 2026-07-26 analysis checkpoint composes validated non-fixture collection
+data into deterministic clusters, score, report, and coding package; it is
+test-only. Migration `0030` and `PostgresProductionAnalysisRepository` persist
+lineage, projections, and content-addressed references with replay and
+deletion invalidation. Cloud storage, purge, and deployment proof remain open.
 
 Foundation (2026-07-11 through 2026-07-25): PostgreSQL
 18/RLS/provenance, deterministic fixture analysis/sparse leaderboard,
@@ -63,31 +60,31 @@ Implemented on 2026-07-25 (production collection checkpoint):
   status reads; no source is approved or live
 - migration `0029_source_retention_enforcement.sql` queues bounded,
   policy-derived retention tombstones and reuses deletion propagation;
-  purge/object storage and automatic recomputation scheduling remain open;
-  migration `0035` now invalidates/de-ranks stale mutable opportunity
-  projections after source deletion and `0036` permits an explicit same-run
-  active-evidence re-analysis before reactivation
+  purge/object storage and automatic re-collection remain open; migration
+  `0035` now invalidates/de-ranks stale mutable opportunity projections after
+  source deletion, `0036` protects explicit same-run active-evidence repair,
+  and `0037` queues that repair for the durable worker
 - production analysis contracts, normalization/deduplication/clustering,
   explicit reviewed-seed scoring, policy/evidence provenance, generic
   report/package composition, deterministic report/plan object encoding,
   idempotent post-collection persistence plus an approved-seed handoff queue,
   private active output reads, private collection handoff status, and
   non-fixture plan approval/export are implemented; cloud storage and
-  recomputation remain open. Migration `0031` keeps the active plan URI contract
+  recomputation alerting remain open. Migration `0031` keeps the active plan URI contract
   strict while explicitly accepting the `deleted:<tombstone>` marker written by
   the existing source-deletion propagation path.
 - migration `0032` adds editor/owner complaint review transitions and private
   collection confirm/reject actions. Migrations `0033`/`0034` add immutable
   approved seed reviews, private seed routes, and a crash-reclaimable automatic
   analysis handoff; migration `0035` repairs the mutable opportunity projection
-  after source deletion and `0036` protects explicit same-run re-analysis.
-  Automatic recomputation, explicit re-collection, and deployed scheduling
-  remain open.
+  after source deletion and `0036` protects explicit same-run re-analysis;
+  `0037` queues active-evidence repair. Explicit re-collection and deployed
+  scheduling/alerting remain open.
 
 ## Validated commands
 
-- `pnpm verify` passed 2026-07-26: packages, samples, smoke, repo checks
-- Direct TypeScript, ESLint, Prettier, memory, checks pass; the handoff
+- `pnpm verify` passed 2026-08-01: packages, samples, smoke, repo checks
+- Direct TypeScript, ESLint, Prettier, memory, and focused recomputation checks pass; the handoff
   focus passed 62, the private status focus 59, and contracts/db/worker/web suites passed 165. Seed SVG
   generated; raster awaits `cairosvg`; Temporal suites remain blocked by missing
   `protobufjs`
@@ -102,7 +99,7 @@ Implemented on 2026-07-25 (production collection checkpoint):
    activity crash/retry proof for the production collection workflow.
 3. Provider/identity approval, verified recovery/invitation delivery, and
    deploy/operate validated auth/source maintenance jobs.
-4. Automatic recomputation, explicit re-collection after deletion, and general report/export
+4. Explicit re-collection after deletion and general report/export
    workflows; the current seed editor is JSON-backed and needs richer revision
    UX.
 5. Operational monitoring, cost controls, production database/Temporal
@@ -118,12 +115,13 @@ Implemented on 2026-07-25 (production collection checkpoint):
 - Account recovery and invitation delivery remain disabled pending provider, identity, DPA/retention, key-rotation, monitoring, and failure-drill approval; invitations accept existing accounts only.
 - Deletion propagation invalidates dependent production analysis runs and
   evidence/report/plan projections, and migration `0035` invalidates/de-ranks
-  affected mutable opportunity projections; automatic recomputation,
-  explicit re-collection, cloud object storage, exports, and backup purge remain open.
+  affected mutable opportunity projections; migration `0037` queues
+  active-evidence recomputation, while explicit re-collection, cloud object
+  storage, exports, and backup purge remain open.
 - The production collection workflow is locally package-tested and PostgreSQL-
   idempotent, but no production Temporal deployment or integration proof exists;
   an optional approved-seed completion now queues analysis for a worker
-  handoff. Cloud object-storage handling, automatic recomputation,
+  handoff. Cloud object-storage handling, recomputation alerting,
   explicit re-collection, and
   scheduled reconciliation remain open; a settled quota without a persisted
   result requires operator reconciliation.

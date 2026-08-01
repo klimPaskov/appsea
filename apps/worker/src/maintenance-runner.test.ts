@@ -24,6 +24,7 @@ function deletionResult(affectedObjectCount: number): DeletionPropagationResult 
     evidenceCount: 0,
     analysisCount: 0,
     opportunityCount: 0,
+    recomputationJobsQueued: 0,
     reportCount: 0,
     planCount: 0,
     affectedObjectCount
@@ -87,7 +88,8 @@ describe('maintenance runners', () => {
       retentionTombstonesQueued: 0,
       deletionTombstonesProcessed: 2,
       deletionObjectsAffected: 8,
-      deletionOpportunitiesInvalidated: 0
+      deletionOpportunitiesInvalidated: 0,
+      recomputationJobsQueued: 0
     })
     expect(quotaCalls).toEqual([
       'expire:workspace:a:2026-07-10T00:00:00.000Z:2',

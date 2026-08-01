@@ -98,6 +98,7 @@ export async function runSourceMaintenance(
   let deletionTombstonesProcessed = 0
   let deletionObjectsAffected = 0
   let deletionOpportunitiesInvalidated = 0
+  let recomputationJobsQueued = 0
   let retentionTombstonesQueued = 0
   for (const workspaceId of deletionWorkspaceIds) {
     if (retentionTombstonesQueued >= parsed.retentionBatchSize) break
@@ -126,6 +127,12 @@ export async function runSourceMaintenance(
         maximumAffectedObjects - deletionOpportunitiesInvalidated
       )
       deletionOpportunitiesInvalidated += invalidated
+      const queuedRecomputations = countWithin(
+        result.recomputationJobsQueued,
+        'recomputationJobsQueued',
+        maximumAffectedObjects - recomputationJobsQueued
+      )
+      recomputationJobsQueued += queuedRecomputations
     }
     if (deletionTombstonesProcessed >= parsed.deletionBatchSize) break
   }
@@ -139,7 +146,8 @@ export async function runSourceMaintenance(
     retentionTombstonesQueued,
     deletionTombstonesProcessed,
     deletionObjectsAffected,
-    deletionOpportunitiesInvalidated
+    deletionOpportunitiesInvalidated,
+    recomputationJobsQueued
   })
 }
 

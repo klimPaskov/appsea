@@ -49,7 +49,8 @@ describe('database foundation', () => {
       '0033',
       '0034',
       '0035',
-      '0036'
+      '0036',
+      '0037'
     ])
     expect(migrations[0]?.checksum).toMatch(/^[a-f0-9]{64}$/)
     expect(migrations[0]?.sql).toContain('CREATE TABLE appsea.evidence_records')
@@ -97,6 +98,7 @@ describe('database foundation', () => {
       (migration) => migration.version === '0035'
     )
     const sameRunRecoveryMigration = migrations.find((migration) => migration.version === '0036')
+    const recomputationMigration = migrations.find((migration) => migration.version === '0037')
     expect(authMigration?.sql).toContain('CREATE TABLE appsea.users')
     expect(authMigration?.sql).toContain('CREATE TABLE appsea.auth_sessions')
     expect(authMigration?.sql).toContain('FORCE ROW LEVEL SECURITY')
@@ -262,6 +264,13 @@ describe('database foundation', () => {
     )
     expect(sameRunRecoveryMigration?.sql).toContain('linked active re-analysis')
     expect(sameRunRecoveryMigration?.sql).toContain("analysis.state IN ('running', 'completed')")
+    expect(recomputationMigration?.sql).toContain(
+      'CREATE TABLE appsea.production_analysis_recompute_jobs'
+    )
+    expect(recomputationMigration?.sql).toContain('FORCE ROW LEVEL SECURITY')
+    expect(recomputationMigration?.sql).toContain(
+      'production analysis recomputation seed does not match its opportunity'
+    )
   })
 
   it('requires verified TLS for production database connections', () => {

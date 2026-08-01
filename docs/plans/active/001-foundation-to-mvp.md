@@ -25,7 +25,7 @@ Status: production-shaped foundation implemented and validated locally; producti
 
 Implemented:
 
-- PostgreSQL 18 schema and thirty-six forward, checksummed migrations
+- PostgreSQL 18 schema and thirty-seven forward, checksummed migrations
 - normalized source, evidence, complaint, cluster, competitor, opportunity, score, report, plan, audit, cost, deletion, outbox, and lineage tables
 - no-login owner, separate migrator, and least-privilege runtime role contract
 - forced workspace RLS and transaction-scoped workspace context
@@ -99,7 +99,9 @@ Implemented:
 
 Remaining production work: authenticated/TLS-protected Temporal, HA,
 object-store/backups retention and purge, deployment, metrics, alerts, and worker
-crash fault-injection proof.
+crash fault-injection proof. Migration `0037` now queues deletion-triggered
+active-evidence repairs; deployed scheduling, alerting, and production
+Temporal remain open.
 
 ### 3. First real connector
 
@@ -133,14 +135,16 @@ workspace seed-review registry. Migration `0033` and the private seed-review
 routes now persist immutable seed content and editor/owner approval state.
 Durable analysis
 persistence/reference wiring, an idempotent post-collection repository, a
-Temporal activity, an opt-in approved-seed handoff queue, and private
-active-output reads are implemented after a completed collection; live
-activation, cloud object-store deployment, automatic recomputation scheduling,
-deployed scheduling, and handoff alerting remain open. Source deletion now
+Temporal activity, an opt-in approved-seed handoff queue, a deletion-triggered
+recomputation queue, and private active-output reads are implemented after a
+completed collection; live activation, cloud object-store deployment, deployed
+scheduling, and handoff/recomputation alerting remain open. Source deletion now
 invalidates/de-ranks mutable opportunity projections through migration `0035`.
 Migration `0036` allows an explicit reviewed analysis over the remaining active
 evidence to re-cluster and reactivate only after its new output is linked; it
-does not automatically re-collect deleted evidence. The private
+does not automatically re-collect deleted evidence. Migration `0037` queues a
+recovery analysis from that active evidence and waits for an approved immutable
+seed before dispatch. The private
 review-start route now reconstructs the confirmed collection subset and starts
 the durable workflow explicitly; the local adapter does not
 authorize a production source activation.
@@ -178,7 +182,7 @@ generation, stored report/plan reads, report approval governance, approved JSON
 export, a separate approved-source collection evidence view, durable production
 analysis/object references, active-output private reads, and a
 production-shaped report/package composition checkpoint are implemented;
-cloud object storage, automatic recomputation scheduling, and export retention remain. Report and plan
+cloud object storage, recomputation alerting, and export retention remain. Report and plan
 approval/export now hydrate validated object-backed production payloads before
 applying their separate governance boundaries.
 
@@ -196,7 +200,9 @@ auth and source maintenance runners with stable job IDs, independent quota and
 retention budgets, source-policy warnings, centralized source-quota
 reservations, owner-scoped all-workspace maintenance, policy-derived retention
 tombstones, stale-claim recovery, and bounded deletion propagation, and retryable password-recovery/workspace-invitation
-delivery are implemented;
+delivery are implemented. Deletion propagation durably queues source-scoped
+active-evidence recomputation jobs with bounded retries, blocked-seed recovery,
+and Temporal-start idempotency;
 deployment metrics, traces, role
 separation, incident drills, and production security review remain.
 

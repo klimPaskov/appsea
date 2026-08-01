@@ -27,6 +27,9 @@
 - Migration `0036_same_run_analysis_recovery.sql` allows a reviewed analysis over
   the remaining active evidence to re-cluster and reactivate the same opportunity
   after its new output is linked. It does not re-collect deleted records.
+- Migration `0037_production_analysis_recompute_jobs.sql` now queues that
+  active-evidence repair in the deletion transaction, preserves a blocked state
+  for withdrawn seeds, and lets the durable worker dispatch only after approval.
 
 ## Validation
 
@@ -41,8 +44,9 @@
 
 ## Remaining gaps
 
-- Automatic recomputation scheduling after deletion is still not implemented;
-  operators can use the private reviewed analysis route for an explicit repair.
+- Automatic recomputation dispatch is implemented through migration `0037` and
+  the durable worker; operators can still use the private reviewed analysis
+  route for an explicit repair. Deployed scheduler/alert ownership remains open.
 - Re-collection requires an explicit approved source policy, collection run, and
   reviewed seed; source deletion cannot silently launch one.
 - Production Temporal, object storage/backups purge, scheduler/alerts, and

@@ -304,3 +304,16 @@ confirmed, policy-allowed evidence and retains deletion coverage gaps. The
 private reviewed analysis route can perform this repair explicitly, while
 automatic scheduling and source re-collection remain separate approval-gated
 work.
+
+## 2026-08-01: Queue deletion-triggered active-evidence recomputation
+
+Source deletion must not leave an invalidated opportunity dependent on a human
+remembering to restart analysis, but it also must not re-fetch deleted source
+records or invent a seed. Migration `0037` records one tenant-scoped job per
+opportunity/tombstone in the propagation transaction, retaining collection,
+seed, and tombstone lineage. A skip-locked worker dispatches only when the
+opportunity is still invalidated, no active output exists, the seed is approved,
+and active confirmed policy-allowed evidence can be reconstructed. Seed
+withdrawal is visible as `blocked`; readiness and transient dispatch failures
+are bounded retries; Temporal start is idempotent. Production scheduling,
+alerting, and source re-collection remain separate deployment/review work.

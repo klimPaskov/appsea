@@ -9,6 +9,7 @@ import { createFixtureResearchActivities } from './workflow-activities'
 import { createProductionCollectionActivities } from './production-workflow-activities'
 import { createProductionAnalysisActivities } from './production-analysis-activities'
 import { createProductionAnalysisHandoffDispatcher } from './production-analysis-handoff'
+import { createProductionAnalysisRecomputeDispatcher } from './production-analysis-recompute'
 import { emitWorkerEvent } from './observability'
 
 const pool = createDatabasePool(databaseConfigFromEnv())
@@ -25,6 +26,7 @@ const workflowClient = new WorkflowClient({
   namespace: process.env.APPSEA_TEMPORAL_NAMESPACE?.trim() || 'default'
 })
 const handoffDispatcher = createProductionAnalysisHandoffDispatcher(pool, workflowClient)
+const recomputeDispatcher = createProductionAnalysisRecomputeDispatcher(pool, workflowClient)
 
 let stopping = false
 const wait = (milliseconds: number): Promise<void> =>
@@ -38,6 +40,15 @@ const handoffLoop = (async (): Promise<void> => {
         event: 'production_analysis_handoff_scan_failed',
         taskQueue: fixtureResearchTaskQueue,
         failureCode: 'APPSEA_HANDOFF_SCAN_FAILED'
+      })
+    }
+    try {
+      await recomputeDispatcher.dispatchBatch()
+    } catch {
+      emitWorkerEvent({
+        event: 'production_analysis_recompute_scan_failed',
+        taskQueue: fixtureResearchTaskQueue,
+        failureCode: 'APPSEA_RECOMPUTE_SCAN_FAILED'
       })
     }
     if (!stopping) await wait(5_000)

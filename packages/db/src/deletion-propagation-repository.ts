@@ -40,6 +40,7 @@ export interface DeletionPropagationResult {
   evidenceCount: number
   analysisCount: number
   opportunityCount: number
+  recomputationJobsQueued: number
   reportCount: number
   planCount: number
   affectedObjectCount: number
@@ -437,42 +438,104 @@ export class PostgresDeletionPropagationRepository {
       [tombstone.workspaceId, tombstone.sourceId, tombstone.sourceRecordId, tombstone.tombstoneId]
     )
 
-    const opportunities = await client.query(
-      `UPDATE appsea.opportunities opportunity
-          SET availability_state = 'invalidated',
-              invalidated_at = clock_timestamp(),
-              invalidation_reason = 'Source deletion tombstone ' || $4,
-              current_score_snapshot_id = NULL,
-              current_plan_package_id = NULL,
-              updated_at = clock_timestamp()
-        WHERE opportunity.workspace_id = $1
-          AND opportunity.availability_state = 'active'
-          AND EXISTS (
-            SELECT 1
-              FROM appsea.research_analysis_run_outputs output
-              JOIN appsea.production_analysis_runs analysis
-                ON analysis.workspace_id = output.workspace_id
-               AND analysis.analysis_run_id = output.analysis_run_id
-              WHERE output.workspace_id = opportunity.workspace_id
-                AND output.opportunity_id = opportunity.opportunity_id
-                AND analysis.state = 'completed'
-                AND analysis.availability_state = 'invalidated'
-                AND analysis.invalidation_reason = 'Source deletion tombstone ' || $4
-          )
-          AND NOT EXISTS (
-            SELECT 1
-              FROM appsea.research_analysis_run_outputs active_output
-              JOIN appsea.production_analysis_runs active_analysis
-                ON active_analysis.workspace_id = active_output.workspace_id
-               AND active_analysis.analysis_run_id = active_output.analysis_run_id
-              WHERE active_output.workspace_id = opportunity.workspace_id
-                AND active_output.opportunity_id = opportunity.opportunity_id
-                AND active_analysis.state = 'completed'
-                AND active_analysis.availability_state = 'active'
-          )
-      RETURNING opportunity_id`,
+    const opportunities = await client.query<
+      QueryResultRow & {
+        opportunity_count: number | string
+        recomputation_jobs_queued: number | string
+      }
+    >(
+      `WITH invalidated AS (
+         UPDATE appsea.opportunities opportunity
+            SET availability_state = 'invalidated',
+                invalidated_at = clock_timestamp(),
+                invalidation_reason = 'Source deletion tombstone ' || $4,
+                current_score_snapshot_id = NULL,
+                current_plan_package_id = NULL,
+                updated_at = clock_timestamp()
+          WHERE opportunity.workspace_id = $1
+            AND opportunity.availability_state = 'active'
+            AND EXISTS (
+              SELECT 1
+                FROM appsea.research_analysis_run_outputs output
+                JOIN appsea.production_analysis_runs analysis
+                  ON analysis.workspace_id = output.workspace_id
+                 AND analysis.analysis_run_id = output.analysis_run_id
+                WHERE output.workspace_id = opportunity.workspace_id
+                  AND output.opportunity_id = opportunity.opportunity_id
+                  AND analysis.state = 'completed'
+                  AND analysis.availability_state = 'invalidated'
+                  AND analysis.invalidation_reason = 'Source deletion tombstone ' || $4
+            )
+            AND NOT EXISTS (
+              SELECT 1
+                FROM appsea.research_analysis_run_outputs active_output
+                JOIN appsea.production_analysis_runs active_analysis
+                  ON active_analysis.workspace_id = active_output.workspace_id
+                 AND active_analysis.analysis_run_id = active_output.analysis_run_id
+                WHERE active_output.workspace_id = opportunity.workspace_id
+                  AND active_output.opportunity_id = opportunity.opportunity_id
+                  AND active_analysis.state = 'completed'
+                  AND active_analysis.availability_state = 'active'
+            )
+         RETURNING opportunity.workspace_id, opportunity.opportunity_id, opportunity.source_run_id
+       ), candidates AS (
+         SELECT DISTINCT ON (invalidated.workspace_id, invalidated.opportunity_id)
+                invalidated.workspace_id, invalidated.opportunity_id,
+                invalidated.source_run_id AS collection_run_id,
+                analysis.seed_review_id
+           FROM invalidated
+           JOIN appsea.research_analysis_run_outputs output
+             ON output.workspace_id = invalidated.workspace_id
+            AND output.opportunity_id = invalidated.opportunity_id
+           JOIN appsea.production_analysis_runs analysis
+             ON analysis.workspace_id = output.workspace_id
+            AND analysis.analysis_run_id = output.analysis_run_id
+            AND analysis.collection_run_id = invalidated.source_run_id
+          WHERE analysis.state = 'completed'
+            AND analysis.availability_state = 'invalidated'
+            AND analysis.invalidation_reason = 'Source deletion tombstone ' || $4
+          ORDER BY invalidated.workspace_id, invalidated.opportunity_id,
+                   analysis.completed_at DESC NULLS LAST, analysis.analysis_run_id DESC
+       ), enqueued AS (
+         INSERT INTO appsea.production_analysis_recompute_jobs
+           (workspace_id, recompute_id, opportunity_id, collection_run_id, seed_review_id,
+            source_tombstone_id, analysis_run_id, idempotency_key, requested_at, state,
+            failure_code, failure_summary, next_attempt_at, finished_at, updated_at)
+         SELECT candidates.workspace_id,
+                'recompute:analysis:' || md5(jsonb_build_array(candidates.workspace_id,
+                                                                candidates.opportunity_id, $4)::text),
+                candidates.opportunity_id,
+                candidates.collection_run_id,
+                candidates.seed_review_id,
+                $4,
+                'analysis-run:' || md5(jsonb_build_array(candidates.workspace_id,
+                                                         candidates.opportunity_id, $4)::text),
+                'production-analysis-recompute-' || md5(jsonb_build_array(candidates.workspace_id,
+                                                                           candidates.opportunity_id, $4)::text),
+                clock_timestamp(),
+                CASE WHEN seed.review_state = 'approved' THEN 'queued' ELSE 'blocked' END,
+                CASE WHEN seed.review_state = 'approved' THEN NULL ELSE 'seed_not_approved' END,
+                CASE WHEN seed.review_state = 'approved'
+                     THEN NULL
+                     ELSE 'The reviewed analysis seed must be approved before repair can start.'
+                END,
+                clock_timestamp(),
+                CASE WHEN seed.review_state = 'approved' THEN NULL ELSE clock_timestamp() END,
+                clock_timestamp()
+           FROM candidates
+           JOIN appsea.opportunity_seed_reviews seed
+             ON seed.workspace_id = candidates.workspace_id
+            AND seed.seed_review_id = candidates.seed_review_id
+         ON CONFLICT (workspace_id, opportunity_id, source_tombstone_id) DO NOTHING
+         RETURNING opportunity_id
+       )
+       SELECT (SELECT count(*) FROM invalidated)::int AS opportunity_count,
+              (SELECT count(*) FROM enqueued)::int AS recomputation_jobs_queued`,
       [tombstone.workspaceId, tombstone.sourceId, tombstone.sourceRecordId, tombstone.tombstoneId]
     )
+
+    const opportunityCount = Number(opportunities.rows[0]?.opportunity_count ?? 0)
+    const recomputationJobsQueued = Number(opportunities.rows[0]?.recomputation_jobs_queued ?? 0)
 
     const reports = await client.query(
       `UPDATE appsea.report_versions report
@@ -554,14 +617,15 @@ export class PostgresDeletionPropagationRepository {
       sourceItemCount: rowCount(sourceItems),
       evidenceCount: rowCount(evidence),
       analysisCount: rowCount(analyses),
-      opportunityCount: rowCount(opportunities),
+      opportunityCount,
+      recomputationJobsQueued,
       reportCount: rowCount(reports),
       planCount: rowCount(plans),
       affectedObjectCount:
         rowCount(sourceItems) +
         rowCount(evidence) +
         rowCount(analyses) +
-        rowCount(opportunities) +
+        opportunityCount +
         rowCount(reports) +
         rowCount(plans)
     }

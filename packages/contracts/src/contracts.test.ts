@@ -304,7 +304,8 @@ describe('contracts', () => {
         retentionTombstonesQueued: 5,
         deletionTombstonesProcessed: 6,
         deletionObjectsAffected: 7,
-        deletionOpportunitiesInvalidated: 1
+        deletionOpportunitiesInvalidated: 1,
+        recomputationJobsQueued: 2
       }).success
     ).toBe(true)
     expect(
@@ -320,7 +321,8 @@ describe('contracts', () => {
         retentionTombstonesQueued: 5,
         deletionTombstonesProcessed: 5,
         deletionObjectsAffected: 10_000_001,
-        deletionOpportunitiesInvalidated: 1
+        deletionOpportunitiesInvalidated: 1,
+        recomputationJobsQueued: 2
       }).success
     ).toBe(false)
 

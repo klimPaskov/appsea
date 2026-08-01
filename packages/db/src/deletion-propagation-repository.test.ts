@@ -62,7 +62,10 @@ function fakePool(): { pool: Pool; statements: Array<{ text: string; values: unk
         return { rows: [], rowCount: 0 }
       }
       if (text.includes('UPDATE appsea.opportunities')) {
-        return { rows: [{ opportunity_id: 'opportunity:one' }], rowCount: 1 }
+        return {
+          rows: [{ opportunity_count: 1, recomputation_jobs_queued: 1 }],
+          rowCount: 1
+        }
       }
       if (text.includes('UPDATE appsea.report_versions')) {
         return { rows: [{ report_id: 'report:one' }], rowCount: 1 }
@@ -139,12 +142,16 @@ describe('PostgresDeletionPropagationRepository', () => {
       evidenceCount: 2,
       analysisCount: 0,
       opportunityCount: 1,
+      recomputationJobsQueued: 1,
       reportCount: 1,
       planCount: 1,
       affectedObjectCount: 6,
       tombstone: { state: 'completed', affectedObjectCount: 6 }
     })
     expect(statements.some(({ text }) => text.includes("deletion_state = 'source_deleted'"))).toBe(
+      true
+    )
+    expect(statements.some(({ text }) => text.includes('production_analysis_recompute_jobs'))).toBe(
       true
     )
     expect(statements.some(({ text }) => text.includes("SET state = 'completed'"))).toBe(true)

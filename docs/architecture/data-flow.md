@@ -42,8 +42,10 @@
 16. A workspace transaction persists immutable production projections,
     output IDs, audit/outbox receipts, and active availability state. Source
     deletion propagation invalidates the analysis run while retaining lineage
-    for authorized object purge; migration `0036` permits a reviewed same-run
-    analysis to reactivate a projection only after its new active output is
+    for authorized object purge; migration `0037` queues a deletion-triggered
+    active-evidence repair with its source tombstone and reviewed seed lineage.
+    The worker dispatches that job only after the seed is approved, while
+    migration `0036` permits reactivation only after the new active output is
     linked.
 17. Checkpoints, budget counters, and fixed failure records make progress inspectable and retry-safe.
 18. An outbox event records accepted run completion without making delivery part of the database transaction.

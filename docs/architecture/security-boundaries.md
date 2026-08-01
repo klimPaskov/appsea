@@ -63,6 +63,11 @@ for that pre-context authorization lookup.
   active, confirmed, policy-allowed evidence; deleted records remain excluded
   and visible as coverage gaps. No source acquisition or policy bypass is
   introduced by this recovery path.
+- Migration `0037` queues that repair in the deletion transaction with the
+  source tombstone, collection run, opportunity, and immutable seed review
+  lineage. The worker blocks an unapproved or mismatched seed, retries only
+  bounded readiness/dispatch failures, and starts Temporal idempotently; it
+  never re-fetches a source record or accepts caller-supplied complaint text.
 - Source-item acquisition policy and evidence display representation are relationally enforced.
 - Fixture report generation keeps retained observations, deterministic score
   inference, contrary evidence, recommendation, and source coverage in separate

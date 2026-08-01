@@ -43,9 +43,10 @@
   start. Collections without that reference remain manual; this avoids silently
   selecting a seed or claiming model-derived market conclusions.
 - The queue waits for confirmed evidence only for a bounded two-hour retry
-  window. It does not replace a human review UI or automatically schedule
-  complaint/cluster recomputation after source deletion; migrations `0035`/`0036` now invalidate
-  stale projections and protect explicit active-evidence repair.
+  window. It does not replace a human review UI or automatically re-collect
+  deleted source records; migrations `0035`/`0036` invalidate stale
+  projections and protect explicit active-evidence repair, while migration
+  `0037` now queues that repair for the existing worker.
 - The worker uses the existing local loopback Temporal/object-store adapters;
   authenticated Temporal, HA, deployment scheduling, alert ownership,
   encrypted cloud storage, backup/object purge, live connector approval, and
@@ -57,5 +58,6 @@
    Docker and restore the complete Temporal dependency tree.
 2. Review and approve the CFPB source policy, then provision authenticated
    Temporal, encrypted object storage, scheduler, metrics, and alerts.
-3. Add automatic recomputation scheduling and exercise the private handoff
-   status plus opportunity reactivation under repeated production research runs.
+3. Exercise the migration `0037` recomputation queue and private opportunity
+   reactivation under repeated production research runs with Docker-backed
+   PostgreSQL and authenticated Temporal.

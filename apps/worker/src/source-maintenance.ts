@@ -58,7 +58,8 @@ try {
       jobId: result.jobId,
       deletionTombstonesProcessed: result.deletionTombstonesProcessed,
       deletionObjectsAffected: result.deletionObjectsAffected,
-      deletionOpportunitiesInvalidated: result.deletionOpportunitiesInvalidated
+      deletionOpportunitiesInvalidated: result.deletionOpportunitiesInvalidated,
+      recomputationJobsQueued: result.recomputationJobsQueued
     })
   }
   emitWorkerEvent({
@@ -71,7 +72,8 @@ try {
     retentionTombstonesQueued: result.retentionTombstonesQueued,
     deletionTombstonesProcessed: result.deletionTombstonesProcessed,
     deletionObjectsAffected: result.deletionObjectsAffected,
-    deletionOpportunitiesInvalidated: result.deletionOpportunitiesInvalidated
+    deletionOpportunitiesInvalidated: result.deletionOpportunitiesInvalidated,
+    recomputationJobsQueued: result.recomputationJobsQueued
   })
 } catch {
   emitWorkerEvent({

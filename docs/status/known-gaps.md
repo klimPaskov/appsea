@@ -58,8 +58,10 @@ mutable opportunity projections are invalidated/de-ranked when no newer active
 analysis remains while provenance remains. Object references are retained for
 an authorized purge pass. An explicit reviewed analysis can now re-cluster the
 remaining active evidence after deletion, but automatic recomputation
-scheduling, automatic re-collection, object storage/backups, and export purge
-are not implemented.
+scheduling now persists a source-tombstone/seed-bound job and dispatches through
+the existing analysis workflow. Automatic re-collection, object
+storage/backups, export purge, and deployed scheduler alerting are not
+implemented.
 Complaint review transitions and the
 explicit reviewed analysis-start route are implemented. Migration `0034` also
 provides an opt-in, seed-bound post-collection handoff with stale-claim
@@ -99,16 +101,17 @@ is not yet wired to a scheduler. Durable cross-workspace quota reservations,
 bounded all-workspace maintenance through a migration-owner security-definer
 workspace enumerator, stale-claim recovery, and deletion propagation now exist.
 No source is currently enabled for market research, and production Temporal
-provisioning/cloud-storage deployment, automatic recomputation scheduling,
-automatic re-collection, object-store/backups purge, and
+provisioning/cloud-storage deployment, automatic re-collection,
+object-store/backups purge, recomputation alerting, and
 legal/privacy/security approval remain required. CFPB collection currently
 records zero source cost because the reviewed policy declares zero API cost;
 non-zero billing adapters are not implemented. Retention enqueue now derives
 bounded tombstones from the stored policy and reuses deletion propagation;
 policy drafts requesting an unsupported `purge` retention action are rejected
-until a purge implementation exists. Object-store/backups purge and
-automatic recomputation scheduling remains open. A production-shaped offline
-composition checkpoint now proves normalization, deduplication, clustering,
+until a purge implementation exists. Object-store/backups purge remains open;
+automatic recomputation dispatch now exists through migration `0037`, but
+alerting and deployed scheduler ownership remain open. A production-shaped
+offline composition checkpoint now proves normalization, deduplication, clustering,
 explicit seeded scoring, generic report generation, and generic plan generation;
 it is test-only/in-memory and is not a live-source analysis run. The reviewed
 production analysis repository/workflow persists non-test artifacts after a

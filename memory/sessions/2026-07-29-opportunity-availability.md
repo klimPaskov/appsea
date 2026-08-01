@@ -18,6 +18,12 @@
   same-run analysis over remaining active evidence to reactivate an invalidated
   opportunity only after its active output is linked; it never re-collects
   deleted records.
+- Migration `0037_production_analysis_recompute_jobs.sql` now queues one
+  tombstone-bound active-evidence repair per invalidated opportunity. The
+  durable worker preserves deletion coverage gaps, blocks withdrawn seeds,
+  retries readiness/dispatch failures, and starts the existing idempotent
+  analysis workflow only after approval. See
+  `docs/status/automatic-recomputation-completion-report-2026-08-01.md`.
 - Focused contracts/database/worker/private-web tests passed (10 files, 95
   tests); affected TypeScript and ESLint checks passed, and Prettier formatted
   the tranche. Docker-backed migration integration remains unavailable.

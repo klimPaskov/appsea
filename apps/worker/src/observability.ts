@@ -24,6 +24,7 @@ export interface WorkerEvent {
   deletionTombstonesProcessed?: number
   deletionObjectsAffected?: number
   deletionOpportunitiesInvalidated?: number
+  recomputationJobsQueued?: number
   failureCode?: string
 }
 
@@ -118,6 +119,9 @@ export function emitWorkerEvent(event: WorkerEvent): void {
       ? {
           deletionOpportunitiesInvalidated: finiteInteger(event.deletionOpportunitiesInvalidated)
         }
+      : {}),
+    ...(finiteInteger(event.recomputationJobsQueued) !== undefined
+      ? { recomputationJobsQueued: finiteInteger(event.recomputationJobsQueued) }
       : {}),
     ...(event.failureCode ? { failureCode: event.failureCode } : {})
   }

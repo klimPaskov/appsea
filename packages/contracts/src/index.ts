@@ -2106,7 +2106,8 @@ export const sourceMaintenanceResultSchema = z
     retentionTombstonesQueued: z.number().int().nonnegative().max(1_000),
     deletionTombstonesProcessed: z.number().int().nonnegative().max(1_000),
     deletionObjectsAffected: z.number().int().nonnegative().max(10_000_000),
-    deletionOpportunitiesInvalidated: z.number().int().nonnegative().max(10_000_000)
+    deletionOpportunitiesInvalidated: z.number().int().nonnegative().max(10_000_000),
+    recomputationJobsQueued: z.number().int().nonnegative().max(10_000_000)
   })
   .strict()
 
