@@ -27,7 +27,9 @@ purges terminal or expired admissions through source maintenance. Migration
 `0039` also binds each external fetch to an approved policy review, replays one
 immutable server-observed capture timestamp, rechecks policy/expiry before
 persistence, releases after commit, and purges terminal leases through source
-maintenance. Next is infrastructure hardening: Temporal provisioning, role separation, automatic
+maintenance. Migration `0040` now adds a policy-gated, identifier-only full-snapshot
+reconciliation job and staging projection; its repository, connector page loop,
+atomic tombstone finalization, and scheduler boundary remain open. Next is infrastructure hardening: Temporal provisioning, role separation, automatic
 re-collection, non-fixture outputs, and identity-provider approval. Fixture and
 production collection routes are Temporal gateways; signup workspaces remain
 non-fixture by design.

@@ -2134,6 +2134,87 @@ export const sourceMaintenanceResultSchema = z
   })
   .strict()
 
+/** Durable, policy-gated full-snapshot reconciliation for sources without tombstone feeds. */
+export const sourceSnapshotReconciliationStateSchema = z.enum([
+  'queued',
+  'running',
+  'completed',
+  'incomplete',
+  'failed'
+])
+
+export const sourceSnapshotReconciliationFailureCodeSchema = z.enum([
+  'policy_denied',
+  'source_request_failed',
+  'snapshot_incomplete',
+  'reconciliation_failed'
+])
+
+export const sourceSnapshotReconciliationInputSchema = z
+  .object({
+    workspaceId: appseaIdentifierSchema,
+    reconciliationId: appseaIdentifierSchema,
+    sourceId: appseaIdentifierSchema,
+    policyVersion: z
+      .string()
+      .min(1)
+      .max(80)
+      .regex(/^[a-zA-Z0-9._:-]+$/),
+    idempotencyKey: z
+      .string()
+      .length(64)
+      .regex(/^[a-f0-9]{64}$/),
+    pageSize: z.number().int().min(1).max(1_000),
+    maxRecords: z.number().int().min(1).max(1_000),
+    requestedAt: z.string().datetime()
+  })
+  .strict()
+  .superRefine((input, context) => {
+    if (input.maxRecords < input.pageSize) {
+      context.addIssue({
+        code: 'custom',
+        path: ['maxRecords'],
+        message: 'maxRecords must be at least pageSize'
+      })
+    }
+  })
+
+export const sourceSnapshotReconciliationResultSchema = z
+  .object({
+    workspaceId: appseaIdentifierSchema,
+    reconciliationId: appseaIdentifierSchema,
+    sourceId: appseaIdentifierSchema,
+    policyVersion: z.string().min(1).max(80),
+    state: z.enum(['completed', 'incomplete', 'failed']),
+    attemptCount: z.number().int().nonnegative().max(100),
+    pagesScanned: z.number().int().nonnegative().max(1_000),
+    sourceRecordCount: z.number().int().nonnegative().max(1_000),
+    deletionCount: z.number().int().nonnegative().max(1_000_000),
+    coverageGaps: z.array(z.string().min(1).max(500)).max(50),
+    warnings: z.array(z.string().min(1).max(500)).max(50),
+    failureCode: sourceSnapshotReconciliationFailureCodeSchema.nullable(),
+    failureSummary: z.string().min(1).max(240).nullable(),
+    observedAt: z.string().datetime().nullable(),
+    requestedAt: z.string().datetime(),
+    finishedAt: z.string().datetime().nullable()
+  })
+  .strict()
+
+export const sourceSnapshotReconciliationReadModelSchema = z
+  .object({
+    ...sourceSnapshotReconciliationResultSchema.shape,
+    idempotencyKey: z
+      .string()
+      .length(64)
+      .regex(/^[a-f0-9]{64}$/),
+    pageSize: z.number().int().min(1).max(1_000),
+    maxRecords: z.number().int().min(1).max(1_000),
+    state: sourceSnapshotReconciliationStateSchema,
+    nextOffset: z.number().int().nonnegative().max(1_000),
+    updatedAt: z.string().datetime()
+  })
+  .strict()
+
 export const authRetentionInputSchema = z
   .object({
     jobId: maintenanceJobIdSchema,
@@ -2555,6 +2636,21 @@ export type ProductionWorkflowAdmissionDecision = z.infer<
 >
 export type SourceCollectionLeaseDecision = z.infer<typeof sourceCollectionLeaseDecisionSchema>
 export type SourceCollectionLeaseResult = z.infer<typeof sourceCollectionLeaseResultSchema>
+export type SourceSnapshotReconciliationState = z.infer<
+  typeof sourceSnapshotReconciliationStateSchema
+>
+export type SourceSnapshotReconciliationFailureCode = z.infer<
+  typeof sourceSnapshotReconciliationFailureCodeSchema
+>
+export type SourceSnapshotReconciliationInput = z.infer<
+  typeof sourceSnapshotReconciliationInputSchema
+>
+export type SourceSnapshotReconciliationResult = z.infer<
+  typeof sourceSnapshotReconciliationResultSchema
+>
+export type SourceSnapshotReconciliationReadModel = z.infer<
+  typeof sourceSnapshotReconciliationReadModelSchema
+>
 export type ProductionCollectionWorkflowInput = z.infer<
   typeof productionCollectionWorkflowInputSchema
 >

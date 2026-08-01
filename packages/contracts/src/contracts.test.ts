@@ -27,6 +27,8 @@ import {
   productionCollectionWorkflowStartRequestSchema,
   productionWorkflowAdmissionDecisionSchema,
   sourceCollectionLeaseResultSchema,
+  sourceSnapshotReconciliationInputSchema,
+  sourceSnapshotReconciliationReadModelSchema,
   researchJobBudgetSchema,
   sourcePolicySchema,
   sourceMaintenanceInputSchema,
@@ -168,6 +170,41 @@ const validFixturePersistenceInput: FixturePersistenceInput = {
 }
 
 describe('contracts', () => {
+  it('bounds full-snapshot reconciliation inputs and preserves visible incomplete state', () => {
+    const base = {
+      workspaceId: 'workspace-fixture',
+      reconciliationId: 'reconciliation:source:0123456789abcdef0123456789abcdef',
+      sourceId: 'cfpb-consumer-complaints',
+      policyVersion: 'cfpb-policy-v1',
+      idempotencyKey: 'a'.repeat(64),
+      pageSize: 100,
+      maxRecords: 1_000,
+      requestedAt: now
+    }
+    expect(sourceSnapshotReconciliationInputSchema.safeParse(base).success).toBe(true)
+    expect(
+      sourceSnapshotReconciliationInputSchema.safeParse({ ...base, maxRecords: 99 }).success
+    ).toBe(false)
+    expect(
+      sourceSnapshotReconciliationReadModelSchema.safeParse({
+        ...base,
+        state: 'incomplete',
+        attemptCount: 1,
+        pagesScanned: 10,
+        sourceRecordCount: 1_000,
+        deletionCount: 0,
+        coverageGaps: ['The bounded snapshot ended before a short page was observed.'],
+        warnings: [],
+        failureCode: 'snapshot_incomplete',
+        failureSummary: 'The source snapshot was incomplete.',
+        observedAt: now,
+        finishedAt: now,
+        nextOffset: 1_000,
+        updatedAt: now
+      }).success
+    ).toBe(true)
+  })
+
   it('rejects a source without a reviewed policy', () => {
     const result = sourcePolicySchema.safeParse({ sourceId: 'missing-fields' })
     expect(result.success).toBe(false)

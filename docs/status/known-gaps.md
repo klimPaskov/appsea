@@ -128,7 +128,9 @@ non-zero billing adapters are not implemented. Retention enqueue now derives
 bounded tombstones from the stored policy and reuses deletion propagation;
 policy drafts requesting an unsupported `purge` retention action are rejected
 until a purge implementation exists. Object-store/backups purge remains open;
-automatic recomputation dispatch now exists through migration `0037`, but
+automatic recomputation dispatch now exists through migration `0037`, and migration
+`0040` now provides a policy-gated identifier-only reconciliation job/staging
+projection, but
 alerting and deployed scheduler ownership remain open. A production-shaped
 offline composition checkpoint now proves normalization, deduplication, clustering,
 explicit seeded scoring, generic report generation, and generic plan generation;

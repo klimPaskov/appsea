@@ -52,7 +52,8 @@ describe('database foundation', () => {
       '0036',
       '0037',
       '0038',
-      '0039'
+      '0039',
+      '0040'
     ])
     expect(migrations[0]?.checksum).toMatch(/^[a-f0-9]{64}$/)
     expect(migrations[0]?.sql).toContain('CREATE TABLE appsea.evidence_records')
@@ -106,6 +107,9 @@ describe('database foundation', () => {
     )
     const sourceCollectionLeaseMigration = migrations.find(
       (migration) => migration.version === '0039'
+    )
+    const sourceSnapshotReconciliationMigration = migrations.find(
+      (migration) => migration.version === '0040'
     )
     expect(authMigration?.sql).toContain('CREATE TABLE appsea.users')
     expect(authMigration?.sql).toContain('CREATE TABLE appsea.auth_sessions')
@@ -306,6 +310,16 @@ describe('database foundation', () => {
     )
     expect(sourceCollectionLeaseMigration?.sql).toContain('source_policy_reviews')
     expect(sourceCollectionLeaseMigration?.sql).toContain('FORCE ROW LEVEL SECURITY')
+    expect(sourceSnapshotReconciliationMigration?.sql).toContain(
+      'CREATE TABLE appsea.source_snapshot_reconciliation_jobs'
+    )
+    expect(sourceSnapshotReconciliationMigration?.sql).toContain(
+      'CREATE TABLE appsea.source_snapshot_reconciliation_items'
+    )
+    expect(sourceSnapshotReconciliationMigration?.sql).toContain(
+      'enforce_source_snapshot_reconciliation_policy'
+    )
+    expect(sourceSnapshotReconciliationMigration?.sql).toContain('FORCE ROW LEVEL SECURITY')
   })
 
   it('requires verified TLS for production database connections', () => {
