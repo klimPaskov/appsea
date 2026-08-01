@@ -8,7 +8,6 @@ import {
   PostgresProductionCollectionRepository
 } from '@appsea/db/production-collection'
 import { PostgresOpportunitySeedReviewRepository } from '@appsea/db/opportunity-seed-review'
-import { buildProductionResearchArtifact } from '@appsea/research'
 import { startProductionAnalysisWorkflow } from '@appsea/workflows'
 import { NextResponse } from 'next/server'
 import {
@@ -105,36 +104,14 @@ export async function POST(
         { status: 422, headers: privateResponseHeaders }
       )
     }
-    const artifact = buildProductionResearchArtifact({
-      collectionArtifactId: source.collectionArtifactId,
-      runId: source.runId,
-      analysisRunId: parsed.data.analysisRunId,
-      transport: 'persisted-collection',
-      testOnly: false,
-      request: source.request,
-      policySnapshot: source.policySnapshot,
-      complaints: source.complaints,
-      deletions: source.deletions,
-      coverageGaps: source.coverageGaps,
-      warnings: source.warnings,
-      opportunitySeed: {
-        seed: seedReview.seed,
-        seedVersion: seedReview.seedVersion,
-        contentHash: seedReview.contentHash,
-        reviewId: seedReview.seedReviewId,
-        reviewedBy: seedReview.reviewedBy ?? seedReview.createdBy,
-        reviewedAt: seedReview.reviewedAt ?? seedReview.createdAt
-      },
-      analysisAt: parsed.data.requestedAt
-    })
     const workflowRequest: ProductionAnalysisWorkflowStartRequest = {
       workspaceId: parsedWorkspaceId.data,
       collectionRunId: parsedRunId.data,
       analysisRunId: parsed.data.analysisRunId,
       idempotencyKey: parsed.data.idempotencyKey,
-      workflowVersion: 'production-analysis-v1',
+      workflowVersion: 'production-analysis-v2',
       requestedAt: parsed.data.requestedAt,
-      artifact
+      seedReviewId: seedReview.seedReviewId
     }
     const handle = await startProductionAnalysisWorkflow(
       await getTemporalWorkflowClient(),

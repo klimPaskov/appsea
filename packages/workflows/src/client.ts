@@ -224,9 +224,6 @@ export function prepareProductionAnalysisWorkflowStart(
   request: ProductionAnalysisWorkflowStartRequest
 ): PreparedProductionAnalysisWorkflowStart {
   const parsed = productionAnalysisWorkflowStartRequestSchema.parse(request)
-  if (parsed.artifact.testOnly) {
-    throw new Error('Test-only analysis artifacts cannot be scheduled for production persistence')
-  }
   const idempotencyDigest = sha256(
     canonicalJson({
       endpoint: 'production-analysis',
@@ -243,7 +240,7 @@ export function prepareProductionAnalysisWorkflowStart(
     idempotencyDigest,
     workflowVersion: parsed.workflowVersion,
     requestedAt: parsed.requestedAt,
-    artifact: parsed.artifact
+    seedReviewId: parsed.seedReviewId
   }
   const input = productionAnalysisWorkflowInputSchema.parse({
     ...hashMaterial,

@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { calculateOpportunityScore } from '@appsea/scoring'
 import { contentHash } from './hash'
 import {
+  assertProductionAnalysisTimestamps,
   buildProductionAnalysisSnapshot,
   sanitizeProductionArtifact
 } from './production-analysis-repository'
@@ -192,5 +193,19 @@ describe('production analysis persistence helpers', () => {
       competitorCount: 0
     })
     expect(snapshot.policySnapshots[0]?.reviewId).toBe('review:one')
+  })
+
+  it('rejects caller-controlled timestamps that could extend retention into the future', () => {
+    const parsed = productionAnalysisPersistenceInputSchema.parse({
+      workspaceId: 'workspace:one',
+      collectionRunId: 'collection-run:one',
+      analysisRunId: 'analysis-run:one',
+      idempotencyKey: 'analysis-idempotency-key',
+      requestedAt: '2099-01-01T00:00:00.000Z',
+      artifact: { ...artifact(), createdAt: '2099-01-01T00:00:00.000Z' }
+    })
+    expect(() => assertProductionAnalysisTimestamps(parsed, Date.parse(at))).toThrow(
+      'must not be materially in the future'
+    )
   })
 })

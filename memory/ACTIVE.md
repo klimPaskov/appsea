@@ -32,6 +32,25 @@ re-collection, non-fixture outputs, and identity-provider approval. Fixture and
 production collection routes are Temporal gateways; signup workspaces remain
 non-fixture by design.
 
+On 2026-08-01, the production analysis Temporal envelope was versioned to
+`production-analysis-v2`. New starts carry only workspace, collection, analysis,
+seed-review, timestamp, and digest identifiers. `apps/worker` reconstructs the
+policy-validated artifact from workspace-bound rows inside the persistence
+activity, preserving the no-raw-source-in-history boundary. The old v1 shape is
+not accepted for new starts; legacy executions need a drain/retention plan.
+
+Retention uses server-observed activity time rather than caller `requestedAt`,
+and the repository rejects materially future timestamps. Final lineage locks
+the active, current, unexpired policy, requires allowed/restricted commercial
+use, and rechecks confirmed redacted evidence before linking outputs.
+Collection initialization fails closed without one.
+
+The same security review left these follow-ups open: object-store purge and
+crash races, lease assert-to-persist atomicity, stale recomputation claim
+recovery, retryable tombstone propagation, and authenticated admission for the
+direct source CLI. These are blockers to a production-readiness claim, not
+reasons to weaken the v2 history boundary.
+
 The 2026-07-26 analysis checkpoint composes validated non-fixture collection
 data into deterministic clusters, score, report, and coding package; it is
 test-only. Migration `0030` and `PostgresProductionAnalysisRepository` persist

@@ -64,6 +64,20 @@ idempotency digest rather than the caller's raw key. The worker requires
 proof only. A production deployment must replace it with an encrypted,
 versioned S3-compatible adapter and verify lifecycle/backup deletion.
 
+New starts use `production-analysis-v2`. The Temporal input contains only the
+workspace, collection, analysis, seed-review, digest, and timestamp identifiers.
+The activity reconstructs the policy-validated artifact from workspace-bound
+database rows immediately before persistence. This is a deliberate history
+boundary: complaint text, evidence, report data, and plan files do not cross
+Temporal. A rollout must keep workers that understand the prior v1 history
+shape until all v1 executions are drained or an approved retention plan is in
+place; v1 is not a valid new-start contract.
+
+The activity timestamp is the server-observed Temporal time and is the only
+clock used for the artifact, report, plan, and retention anchors. The caller's
+`requestedAt` remains idempotency metadata; the repository rejects materially
+future timestamps as a defense-in-depth check.
+
 When a production collection was started with an approved
 `analysisSeedReviewId`, migration `0034` queues a durable analysis handoff in
 the collection completion transaction. The worker dispatcher reconstructs the

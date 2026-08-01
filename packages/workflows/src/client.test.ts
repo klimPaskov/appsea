@@ -293,20 +293,23 @@ describe('production workflow client boundary', () => {
     expect(JSON.stringify(prepared)).not.toContain(productionRequest.idempotencyKey)
   })
 
-  it('prepares a post-collection analysis workflow without retaining the raw key', () => {
+  it('prepares an identifier-only post-collection analysis workflow', () => {
     const prepared = prepareProductionAnalysisWorkflowStart({
       workspaceId: 'workspace-analysis-workflow',
       collectionRunId: analysisArtifact.runId,
       analysisRunId: analysisArtifact.analysisRunId,
       idempotencyKey: 'sentinel-analysis-idempotency-key',
-      workflowVersion: 'production-analysis-v1',
+      workflowVersion: 'production-analysis-v2',
       requestedAt: analysisAt,
-      artifact: analysisArtifact
+      seedReviewId: analysisArtifact.opportunitySeedReview.reviewId
     })
     expect(prepared.workflowId).toMatch(
       /^workflow:analysis:workspace-analysis-workflow:[a-f0-9]{32}$/
     )
     expect(prepared.input.inputHash).toMatch(/^[a-f0-9]{64}$/)
     expect(JSON.stringify(prepared)).not.toContain('sentinel-analysis-idempotency-key')
+    expect(JSON.stringify(prepared)).not.toContain('Redacted observation')
+    expect(prepared.input).not.toHaveProperty('artifact')
+    expect(prepared.input.seedReviewId).toBe(analysisArtifact.opportunitySeedReview.reviewId)
   })
 })

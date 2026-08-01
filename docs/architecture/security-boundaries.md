@@ -74,8 +74,10 @@ for that pre-context authorization lookup.
   workspace's rate bucket and active-job/reservation count under an advisory
   lock, and stores only hashed idempotency/input digests. Replays do not
   consume another slot; workflow initialization consumes the reservation, and
-  bounded maintenance purges terminal or expired rows. The limits are fixed in
-  the reviewed migration rather than accepted from request input.
+  bounded maintenance purges terminal or expired rows. Initialization fails
+  closed and rolls back if the reservation cannot be consumed on either the
+  existing-job or insert path. The limits are fixed in the reviewed migration
+  rather than accepted from request input.
 - Migration `0039` places the external fetch itself behind a forced-RLS,
   digest-only collection lease. Acquisition requires the current active source,
   policy version, and matching operator approval review; retries replay the
@@ -179,6 +181,21 @@ for that pre-context authorization lookup.
   excluded from history and logs. Authenticated starts carry a bounded user
   actor (service starts use `appsea-worker`); PostgreSQL verifies workspace
   owner/editor membership and terminal audit events copy the immutable actor.
+- Production analysis workflow version `production-analysis-v2` carries only
+  workspace, collection, analysis, seed-review, digest, and timestamp
+  identifiers. The worker reconstructs the reviewed artifact inside the
+  persistence activity from workspace-bound rows, so complaint excerpts and
+  source payloads cannot enter Temporal history. The previous v1 input shape
+  is not accepted by new starts; deployments must drain or explicitly retain
+  legacy v1 histories before removing their workers.
+- Production analysis retention is anchored to the server-observed activity
+  timestamp, not caller-supplied `requestedAt`; the persistence repository also
+  rejects materially future timestamps. This prevents a caller from extending
+  object retention by submitting a date far in the future.
+- Analysis finalization rechecks and locks the active, current, unexpired source
+  policy, requires allowed or restricted commercial use, and verifies confirmed,
+  redacted evidence plus the policy display representation before linking any
+  report or plan output.
 - Activity errors are converted to fixed retryable/non-retryable failure types;
   imported content cannot choose a retry policy, execute code, or edit guidance.
 - The local Temporal endpoint is loopback-only and the worker refuses production

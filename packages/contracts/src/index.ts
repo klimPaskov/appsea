@@ -1092,6 +1092,15 @@ export const productionAnalysisInputSchema = z
       )
     }
     if (
+      input.policySnapshot.policy.commercialUse !== 'allowed' &&
+      input.policySnapshot.policy.commercialUse !== 'restricted'
+    ) {
+      addIssue(
+        ['policySnapshot', 'policy', 'commercialUse'],
+        'Production analysis requires allowed or restricted commercial use'
+      )
+    }
+    if (
       !input.policySnapshot.policy.enabled ||
       input.policySnapshot.policy.policyState !== 'approved'
     ) {
@@ -1201,12 +1210,13 @@ export const productionResearchArtifactSchema = researchArtifactSchema
       if (
         policy.sourceType === 'fixture' ||
         policy.displayMode === 'fixture' ||
+        (policy.commercialUse !== 'allowed' && policy.commercialUse !== 'restricted') ||
         !policy.enabled ||
         policy.policyState !== 'approved'
       ) {
         addIssue(
           ['sourcePolicies', index],
-          'Production artifacts require enabled approved non-fixture source policies'
+          'Production artifacts require enabled approved non-fixture policies with allowed or restricted commercial use'
         )
       }
     })
@@ -1789,9 +1799,9 @@ export const productionCollectionWorkflowTerminationInputSchema = z
   .strict()
 
 /**
- * Durable post-collection analysis workflow. The artifact is already
- * policy-validated and redacted at this boundary; the workflow only retries
- * the idempotent persistence activity and never performs source acquisition.
+ * Durable post-collection analysis workflow. Only identifiers and immutable
+ * lineage references cross the Temporal boundary; the worker reconstructs the
+ * policy-validated artifact inside an activity from workspace-bound rows.
  */
 export const productionAnalysisWorkflowStartRequestSchema = z
   .object({
@@ -1799,28 +1809,11 @@ export const productionAnalysisWorkflowStartRequestSchema = z
     collectionRunId: appseaIdentifierSchema,
     analysisRunId: appseaIdentifierSchema,
     idempotencyKey: z.string().min(16).max(200),
-    workflowVersion: z.literal('production-analysis-v1'),
+    workflowVersion: z.literal('production-analysis-v2'),
     requestedAt: z.string().datetime(),
-    artifact: productionResearchArtifactSchema
+    seedReviewId: appseaIdentifierSchema
   })
-
   .strict()
-  .superRefine((input, context) => {
-    if (input.artifact.runId !== input.collectionRunId) {
-      context.addIssue({
-        code: 'custom',
-        path: ['artifact', 'runId'],
-        message: 'Analysis workflow artifact must reference its collection run'
-      })
-    }
-    if (input.artifact.analysisRunId !== input.analysisRunId) {
-      context.addIssue({
-        code: 'custom',
-        path: ['artifact', 'analysisRunId'],
-        message: 'Analysis workflow artifact must reference its analysis run'
-      })
-    }
-  })
 
 /**
  * Private, human-initiated bridge from a completed collection to the durable
@@ -1852,9 +1845,9 @@ export const productionAnalysisWorkflowInputSchema = z
       .string()
       .length(64)
       .regex(/^[a-f0-9]{64}$/),
-    workflowVersion: z.literal('production-analysis-v1'),
+    workflowVersion: z.literal('production-analysis-v2'),
     requestedAt: z.string().datetime(),
-    artifact: productionResearchArtifactSchema
+    seedReviewId: appseaIdentifierSchema
   })
   .strict()
 
@@ -1863,7 +1856,7 @@ export const productionAnalysisWorkflowExecutionMetadataSchema = z
     workflowId: workflowIdSchema,
     temporalFirstExecutionRunId: z.string().uuid(),
     workflowType: z.literal('productionAnalysisWorkflow'),
-    workflowVersion: z.literal('production-analysis-v1'),
+    workflowVersion: z.literal('production-analysis-v2'),
     taskQueue: workflowTaskQueueSchema
   })
   .strict()

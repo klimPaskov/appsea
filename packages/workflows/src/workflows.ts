@@ -772,7 +772,7 @@ export async function productionAnalysisWorkflow(
   rawInput: ProductionAnalysisWorkflowInput
 ): Promise<ProductionAnalysisWorkflowResult> {
   const parsed = productionAnalysisWorkflowInputSchema.safeParse(rawInput)
-  if (!parsed.success || parsed.data.artifact.testOnly) {
+  if (!parsed.success) {
     throw ApplicationFailure.nonRetryable(
       'Production analysis workflow input is invalid.',
       'APPSEA_INPUT_INVALID'
@@ -806,8 +806,10 @@ export async function productionAnalysisWorkflow(
     }
   })
 
-  const occurredAt = (): string =>
-    new Date(Math.max(Date.parse(input.requestedAt), Date.now())).toISOString()
+  // The request timestamp is idempotency metadata, not an evidence or
+  // retention clock. Use Temporal's deterministic server time so a caller
+  // cannot move analysis artifacts into the future by supplying requestedAt.
+  const occurredAt = (): string => new Date(Date.now()).toISOString()
   let status: ProductionAnalysisWorkflowStatus = {
     workflowId: execution.workflowId,
     temporalFirstExecutionRunId: execution.temporalFirstExecutionRunId,

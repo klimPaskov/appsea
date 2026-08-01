@@ -30,6 +30,9 @@ Open `http://localhost:3000` after the web server starts.
 - durable fixture workflow with PostgreSQL checkpoints, bounded retries, budgets, cancellation, and Temporal restart/replay proof
 - authenticated production workflow ingress with durable per-workspace rate/concurrency admission, idempotent replay, and bounded admission retention
 - policy-bound production source collection leases with stable server-observed capture timestamps, post-fetch policy rechecks, and bounded lease retention
+- identifier-only production-analysis workflow v2; the worker reconstructs
+  reviewed artifacts inside the activity so complaint text is absent from new
+  Temporal histories
 - private workspace authentication with hashed/revocable sessions, authenticated active-session inventory and reauthenticated per-session revocation, password step-up for owner mutations, and membership-checked research reads
 - owner-scoped invitations for existing AppSea accounts with hash-only tokens, encrypted outbox delivery, acceptance/revocation, and a production kill switch
 - provider-neutral password recovery mechanics with hash-only reset tokens,
@@ -47,6 +50,8 @@ Open `http://localhost:3000` after the web server starts.
   closure is implemented but intentionally retains shared workspace research)
 - production database provisioning and production Temporal infrastructure (TLS/authentication, HA, backups, retention, deployment, and alerts)
 - production encrypted object storage, lifecycle rules, backup purge, and database lineage wiring
+- legacy production-analysis v1 history drain/retention and other deployment
+  security controls
 - autonomous production deployment
 - desktop release packaging
 - automatic activation of generated skills or connectors

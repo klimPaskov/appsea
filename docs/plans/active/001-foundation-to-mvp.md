@@ -91,8 +91,10 @@ Implemented:
   projection, policy trigger, source-item budget preflight, idempotent
   persistence safe point, terminal reconciliation, hashed cross-entry
   idempotency, and user/service actor attribution
-- post-collection `productionAnalysisWorkflow` and worker activity that pass a
-  hashed idempotency digest to the idempotent analysis repository
+- post-collection `productionAnalysisWorkflow` v2 and worker activity that pass
+  only a hashed idempotency digest plus workspace/collection/analysis/seed
+  identifiers to Temporal; the activity reconstructs the artifact from
+  workspace-bound rows before calling the idempotent analysis repository
 - migration `0038_production_workflow_ingress_admission.sql` adds a database-
   serialized per-workspace start rate/concurrency gate before Temporal;
   replayed digests do not consume another slot, workflow initialization
@@ -109,7 +111,8 @@ Implemented:
   retry, and failure metadata without exposing raw idempotency keys or source
   payloads.
 
-Remaining production work: authenticated/TLS-protected Temporal, HA,
+Remaining production work: legacy v1 history drain/retention for the analysis
+workflow, authenticated/TLS-protected Temporal, HA,
 object-store/backups retention and purge, deployment, metrics, alerts, and worker
 crash fault-injection proof. Migration `0037` now queues deletion-triggered
 active-evidence repairs; deployed scheduling, alerting, and production

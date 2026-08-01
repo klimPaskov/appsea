@@ -1,10 +1,10 @@
 {
   "name": "AppSea Codex Starter",
   "version": "0.3.0",
-  "generatedAt": "2026-08-01T07:23:30+00:00",
-  "fileCount": 597,
-  "byteCount": 24263356,
-  "packageDigest": "3ecc1f3c3f6edd66fcc87a80b78c6703a085f9aca07d30d3ab71de9771875570",
+  "generatedAt": "2026-08-01T08:04:48+00:00",
+  "fileCount": 599,
+  "byteCount": 24274368,
+  "packageDigest": "ac684921af9e74c1ff302610c3401531e2c013ec3657cc9a00379d1267aaa14c",
   "files": [
     {
       "path": ".agents/skills/AGENTS.md",
@@ -609,8 +609,8 @@
     {
       "path": "apps/web/src/app/api/workspaces/[workspaceId]/research/production/[runId]/analysis/route.ts",
       "category": "application code",
-      "bytes": 6659,
-      "sha256": "9779670150ee38dbbbf48cd9fb178c30f2e7e6268d694fa85c877f9a0bcdb7ba"
+      "bytes": 5768,
+      "sha256": "e0ed56fe9e72635513d30adf945eebadd6349684157a1f8e6283c31f3e85ba96"
     },
     {
       "path": "apps/web/src/app/api/workspaces/[workspaceId]/research/production/[runId]/complaints/[complaintId]/route.ts",
@@ -735,8 +735,8 @@
     {
       "path": "apps/web/src/app/production-analysis-start-route.test.ts",
       "category": "application code",
-      "bytes": 10024,
-      "sha256": "a1506ef6f9a157746ae2a312531c114fd5b4729cac0a6f5c785e400d25e9ead1"
+      "bytes": 9307,
+      "sha256": "c1d3c47994b6b74e62c6666d7c9b1aef8d89f77db356c72da2cd37673086b240"
     },
     {
       "path": "apps/web/src/app/production-collection-route.test.ts",
@@ -1005,8 +1005,8 @@
     {
       "path": "apps/web/tsconfig.tsbuildinfo",
       "category": "application code",
-      "bytes": 246245,
-      "sha256": "bf82cfe9618c8596760c23616dc2d483aee0c4ef8c30a0f29a4e828ea2be85d4"
+      "bytes": 246002,
+      "sha256": "0686bf2c43d9167a010ea0811b1c6baa216839361566084377a3e1280a068cf7"
     },
     {
       "path": "apps/worker/AGENTS.md",
@@ -1119,26 +1119,32 @@
     {
       "path": "apps/worker/src/production-analysis-activities.ts",
       "category": "application code",
-      "bytes": 3574,
-      "sha256": "945d53d3f8807164fc5b2c908dafc5e9df5bbb8ef98760dcd6f0bc61182afce1"
+      "bytes": 3966,
+      "sha256": "71f09c94baea969f3819e43e8f05c1ad38a7bcb214fe6554b56118bfbe0f22a8"
     },
     {
       "path": "apps/worker/src/production-analysis-handoff.ts",
       "category": "application code",
-      "bytes": 6606,
-      "sha256": "60380cbaf2a35035b2e207727fcdf9f356c0b0a20316de2f4e4e4a36e6602b72"
+      "bytes": 5679,
+      "sha256": "536fcf723b0b1363d631e484757e61a0cdbcf80d36623c379406a63ea09ea75b"
+    },
+    {
+      "path": "apps/worker/src/production-analysis-input.ts",
+      "category": "application code",
+      "bytes": 2248,
+      "sha256": "9520aa894add5c6beb7a8708530c757f9b2256485117b2cdf6fb64395253b43a"
     },
     {
       "path": "apps/worker/src/production-analysis-recompute.test.ts",
       "category": "application code",
-      "bytes": 6458,
-      "sha256": "984ad546a76afacafbf243c18bea7033fe2dd1e568258985fbcc507e1537932b"
+      "bytes": 5955,
+      "sha256": "48e62f444b66920748fabf80f2b7aadd6cb49f0ee806afd98b37d5abb15a123a"
     },
     {
       "path": "apps/worker/src/production-analysis-recompute.ts",
       "category": "application code",
-      "bytes": 6932,
-      "sha256": "9706d04dbc4c1296d770a8cb7822ec5ea36321a19f05e9d149352d301f4d12d9"
+      "bytes": 6005,
+      "sha256": "a4104caf91855b48e5cb112840c394cdae0ceaffc72c768c1aaf460cd9e72e9e"
     },
     {
       "path": "apps/worker/src/production-analysis-runner.ts",
@@ -1773,14 +1779,14 @@
     {
       "path": "docs/architecture/security-boundaries.md",
       "category": "documentation",
-      "bytes": 13408,
-      "sha256": "b3924017c85b306446075ebfbbfdc630d78ef04b9d10ae0759af71e7836970a4"
+      "bytes": 14468,
+      "sha256": "3faad0b93da3607c471c83b5b08f1bad7a172a0a16f2192d9a4433e38a3eeb71"
     },
     {
       "path": "docs/architecture/system-overview.md",
       "category": "documentation",
-      "bytes": 4109,
-      "sha256": "1cfea3777719e2037348c2748b08f3ed56d917ab92788259d44292537e6f0127"
+      "bytes": 4487,
+      "sha256": "149b27011eacf3f399c23af471906a6e81172e048236e9d298efbc45dc9fc4e5"
     },
     {
       "path": "docs/generated/repository-map.md",
@@ -1803,14 +1809,14 @@
     {
       "path": "docs/INDEX.md",
       "category": "documentation",
-      "bytes": 5354,
-      "sha256": "94a96f3647fc452ac02fff6852840688da714c9b8dea3550af5f3246dd4afbf3"
+      "bytes": 5513,
+      "sha256": "316a98433c39abd09a82041bcbb74bde25c63a56cdbf1000766cf80faf232263"
     },
     {
       "path": "docs/plans/active/001-foundation-to-mvp.md",
       "category": "documentation",
-      "bytes": 13330,
-      "sha256": "32f7dfd7394c271aab3164defe2e7ccd683f2280bafa76ee7536b8974a84a431"
+      "bytes": 13545,
+      "sha256": "25d881638256706b5361f46616b96d8c37fbef92269fa03844217a71efc3199f"
     },
     {
       "path": "docs/product/account-closure.md",
@@ -1923,8 +1929,8 @@
     {
       "path": "docs/runbooks/production-analysis.md",
       "category": "documentation",
-      "bytes": 6421,
-      "sha256": "5f93ff8f244bc1f7e48b84338e6c0fa67ca0cd839fa635ccfc83dc596f0275df"
+      "bytes": 7289,
+      "sha256": "ad786224c7eed154840b0528dd08d03da35fd5e5c4d48a9846638484a14ee33f"
     },
     {
       "path": "docs/runbooks/production-source-collection.md",
@@ -2157,8 +2163,8 @@
     {
       "path": "docs/status/current.md",
       "category": "documentation",
-      "bytes": 6936,
-      "sha256": "6be188ed8d9aec0f5effffdb71df277d4ff917b2de54814916b3d3b84e7223e5"
+      "bytes": 7920,
+      "sha256": "e768acdaa58fb834dcc763ac583a416663df1613fd7c943fca6aa1f4570ffe74"
     },
     {
       "path": "docs/status/durable-workflow-completion-report.md",
@@ -2175,8 +2181,8 @@
     {
       "path": "docs/status/known-gaps.md",
       "category": "documentation",
-      "bytes": 11806,
-      "sha256": "81f673da9bba453fe1c1be35e5f720ba571f6715a7c45f3e63e2e70e605e232f"
+      "bytes": 12708,
+      "sha256": "6429415b8ec6484b88e613865a970185072d9b4662507ce4124ad69415c3cbdf"
     },
     {
       "path": "docs/status/opportunity-availability-repair-completion-report-2026-07-29.md",
@@ -2203,6 +2209,12 @@
       "sha256": "e62b2825883596eef7c443b7fbd67a8acc0c745dd8b24d9e8f8c02ae596001c6"
     },
     {
+      "path": "docs/status/production-analysis-history-boundary-completion-report-2026-08-01.md",
+      "category": "documentation",
+      "bytes": 3021,
+      "sha256": "bdc85bb12245e5bf02bc4987a0a514c2467d6602abc28ce70effeff740b1db86"
+    },
+    {
       "path": "docs/status/production-readiness-audit-2026-07-25.md",
       "category": "documentation",
       "bytes": 10790,
@@ -2217,8 +2229,8 @@
     {
       "path": "docs/status/source-collection-lease-completion-report-2026-08-01.md",
       "category": "documentation",
-      "bytes": 3633,
-      "sha256": "9d4a8d75ff116e6edff99192e12d5215d80c09c7c8af8fea3f6757054c303fde"
+      "bytes": 3648,
+      "sha256": "c4ecd579f8febce0560b409c3207f52337d1f22f30a1f33cbf185948601be3e4"
     },
     {
       "path": "docs/status/starter-completion-report.md",
@@ -2433,8 +2445,8 @@
     {
       "path": "memory/ACTIVE.md",
       "category": "project memory",
-      "bytes": 6828,
-      "sha256": "27d26b9fecbb2282bf51a4b42eabe45863b85dc1f20b5131945af7280a761a5b"
+      "bytes": 7990,
+      "sha256": "f9bcea8fef2b5600bf2dfce1d941b683dfde3a093028325b17e53357a3007cfa"
     },
     {
       "path": "memory/AGENTS.md",
@@ -2451,14 +2463,14 @@
     {
       "path": "memory/DECISIONS.md",
       "category": "project memory",
-      "bytes": 19869,
-      "sha256": "12103bb3e506f98182a4ac189fee404279c9f14d9431b1b8b0ee43d2a70a4a85"
+      "bytes": 19409,
+      "sha256": "8cd6fdae09f121cdce950b41171ef6426d37639cb731d348af15df17325de314"
     },
     {
       "path": "memory/HOT.md",
       "category": "project memory",
-      "bytes": 2433,
-      "sha256": "09a03e1715c75e62165f26a329a93fdf541208437fd95eb52cbbaff3145e7bf3"
+      "bytes": 2416,
+      "sha256": "06b60010c84476a4170725f6d4f9625a91cf8409e8bedf7480e22a5aba8c5b30"
     },
     {
       "path": "memory/LESSONS.md",
@@ -2469,8 +2481,8 @@
     {
       "path": "memory/PROJECT.md",
       "category": "project memory",
-      "bytes": 4827,
-      "sha256": "1e44c26d8cef8ba081500ef1a791a93df22bd23bceb1301680e3e630ea84b73b"
+      "bytes": 5150,
+      "sha256": "24202454ae92e11d703936adc9d9d7e40cd956eec4b9ddfa6725337d46a4449f"
     },
     {
       "path": "memory/README.md",
@@ -2679,8 +2691,8 @@
     {
       "path": "packages/contracts/src/analysis-contracts.test.ts",
       "category": "shared package",
-      "bytes": 8531,
-      "sha256": "e72d736c9491b9116acc20a9f3ee94d92bbddf2a299dd3a535d671201e47684e"
+      "bytes": 8818,
+      "sha256": "58f344d19cb1a2cd36e4eccc392702ae649e941e985d38b4c8e0cb53b80e2fc4"
     },
     {
       "path": "packages/contracts/src/contracts.test.ts",
@@ -2691,8 +2703,8 @@
     {
       "path": "packages/contracts/src/index.ts",
       "category": "shared package",
-      "bytes": 96325,
-      "sha256": "e4eaccf4f1a025f041f7c8155c794b68d299cc7ee1b6cd6620ecefbe2162d8f3"
+      "bytes": 96218,
+      "sha256": "8bceb4f0d2fa25e913986d361a65e33c6f049bdd9cf1283065906cd86752904a"
     },
     {
       "path": "packages/contracts/src/object-storage-contracts.test.ts",
@@ -3069,14 +3081,14 @@
     {
       "path": "packages/db/src/production-analysis-repository.test.ts",
       "category": "shared package",
-      "bytes": 5744,
-      "sha256": "7e100c4f0b14401f8b19355bb251171e658a6612115d4e0b274a70eff2dee498"
+      "bytes": 6389,
+      "sha256": "a85d16dbb3721390b04a31d8164705990a2881df5ed5a98a51fd2f378fe524c8"
     },
     {
       "path": "packages/db/src/production-analysis-repository.ts",
       "category": "shared package",
-      "bytes": 53132,
-      "sha256": "fe3580ccdd30fb8e34d49317881221af6a654e200a54d8f57fed1a6ca9c6a9d3"
+      "bytes": 55379,
+      "sha256": "ba5d457411687b60ac707a0142603f47354d80ccf9399203f826b1c14eb01aec"
     },
     {
       "path": "packages/db/src/production-analysis.ts",
@@ -3093,8 +3105,8 @@
     {
       "path": "packages/db/src/production-collection-repository.ts",
       "category": "shared package",
-      "bytes": 58751,
-      "sha256": "f1bf6ea33a127b537ef07d5a0be3a1b0c8bc569ec58f662285a892ad06641749"
+      "bytes": 59032,
+      "sha256": "95a1fa99748ed2d1b781cfad4f18c5cb016a9bd54aca870e2dd35a2546aebaf6"
     },
     {
       "path": "packages/db/src/production-collection-workflow-repository.ts",
@@ -3357,20 +3369,20 @@
     {
       "path": "packages/workflows/src/client.test.ts",
       "category": "shared package",
-      "bytes": 9721,
-      "sha256": "9d08d7360424ccd6761948816b82ce9494a01e0cbc16c61a3bf4cd8fe5356049"
+      "bytes": 9970,
+      "sha256": "99eb525f3bc49f88c1a954f03735264bfd016143a9bd21b9064f1e69f0348ccb"
     },
     {
       "path": "packages/workflows/src/client.ts",
       "category": "shared package",
-      "bytes": 10715,
-      "sha256": "f9e721a1a913b0eed1a67d52a894b2de9488674f61418f3fabd2a753728063f5"
+      "bytes": 10586,
+      "sha256": "68ef63865e9662d35c147e32303065c02bc50a9c8907d3d1a836aad3b4c45279"
     },
     {
       "path": "packages/workflows/src/constants.ts",
       "category": "shared package",
-      "bytes": 439,
-      "sha256": "1a4b43eec12fb97106f3ca188de179a3dcd863e63ba5b7add79e64899f6d9ab4"
+      "bytes": 519,
+      "sha256": "1c45ed1917b66a0d9ee27087bb453e15cbebd89052f7d7cbf7d2f96fffa26742"
     },
     {
       "path": "packages/workflows/src/index.ts",
@@ -3387,8 +3399,8 @@
     {
       "path": "packages/workflows/src/workflows.ts",
       "category": "shared package",
-      "bytes": 29512,
-      "sha256": "4a667b01937b2faa9b61f78853a2079015612ac3f5e551900e5807e8c592b99c"
+      "bytes": 29658,
+      "sha256": "a3668ab7be953bb777a3c428efcb9de4883941a3e0223f4b68a3b0b36bf508ca"
     },
     {
       "path": "packages/workflows/tsconfig.json",
@@ -3573,8 +3585,8 @@
     {
       "path": "START_HERE.md",
       "category": "repository control",
-      "bytes": 2797,
-      "sha256": "1a50ce2ec0b6aec39ce913c3ba08ea01d3215fa1db103b4907245c8907a406d9"
+      "bytes": 3068,
+      "sha256": "e37944aa6c1d61285f66085b7f9c44482851a8b5379ecae34d787b8b26a7bbb0"
     },
     {
       "path": "tsconfig.base.json",

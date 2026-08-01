@@ -201,6 +201,16 @@ describe('production analysis contracts', () => {
     expect(
       productionAnalysisInputSchema.safeParse({
         ...input({
+          policySnapshot: {
+            ...input().policySnapshot,
+            policy: { ...input().policySnapshot.policy, commercialUse: 'unknown' }
+          }
+        })
+      }).success
+    ).toBe(false)
+    expect(
+      productionAnalysisInputSchema.safeParse({
+        ...input({
           complaints: [
             input().complaints[0]!,
             { ...input().complaints[0]!, id: 'complaint:sample-2' }

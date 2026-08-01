@@ -32,6 +32,7 @@ const analysisVersion = 'production-analysis-v1'
 const clusterVersion = 'production-cluster-v1'
 const planVersion = 'production-plan-v1'
 const normalizerRedactionMarker = '[Content withheld by source policy]'
+const MAX_FUTURE_TIMESTAMP_SKEW_MS = 5 * 60 * 1_000
 
 interface AnalysisRunRow extends QueryResultRow {
   workspace_id: string
@@ -66,8 +67,12 @@ interface PolicyLineageRow extends QueryResultRow {
   review_id: string
   decision: string
   policy_state: string
+  commercial_use: string
   source_type: string
+  source_lifecycle_state: string
+  current_policy_version: string | null
   display_mode: string
+  expires_at: Date | string | null
 }
 
 interface SeedReviewLineageRow extends QueryResultRow {
@@ -84,6 +89,9 @@ interface EvidenceLineageRow extends QueryResultRow {
   source_item_id: string
   evidence_content_hash: string
   source_record_id: string
+  review_state: string
+  allowed_representation: string
+  redacted: boolean
   evidence_deletion_state: string
   source_item_deletion_state: string
 }
@@ -150,6 +158,24 @@ function retentionUntil(input: ProductionAnalysisPersistenceInput): string | nul
   const requestedAt = Date.parse(input.requestedAt)
   const expiresAt = days === 0 ? requestedAt : requestedAt + days * 86_400_000
   return new Date(Math.max(createdAt, expiresAt)).toISOString()
+}
+
+export function assertProductionAnalysisTimestamps(
+  input: Pick<ProductionAnalysisPersistenceInput, 'requestedAt' | 'artifact'>,
+  now = Date.now()
+): void {
+  const latestAllowed = now + MAX_FUTURE_TIMESTAMP_SKEW_MS
+  for (const [label, value] of [
+    ['requestedAt', input.requestedAt],
+    ['artifact.createdAt', input.artifact.createdAt]
+  ] as const) {
+    const timestamp = Date.parse(value)
+    if (!Number.isFinite(timestamp) || timestamp > latestAllowed) {
+      throw new ProductionAnalysisLineageError(
+        `Production analysis ${label} must not be materially in the future.`
+      )
+    }
+  }
 }
 
 /** Remove text that a metadata-only or aggregate-only policy does not permit. */
@@ -338,7 +364,9 @@ async function assertCollectionAndPolicyLineage(
 
   const policy = await client.query<PolicyLineageRow>(
     `SELECT policy.content_hash, review.review_id, review.decision,
-            policy.policy_state, source.source_type, policy.display_mode
+            policy.policy_state, policy.commercial_use, source.source_type,
+            source.lifecycle_state AS source_lifecycle_state,
+            source.current_policy_version, policy.display_mode, policy.expires_at
        FROM appsea.research_run_source_policies run_policy
        JOIN appsea.source_policy_versions policy
          ON policy.source_id = run_policy.source_id
@@ -353,7 +381,14 @@ async function assertCollectionAndPolicyLineage(
         AND run_policy.run_id = $2
         AND run_policy.source_id = $3
         AND run_policy.policy_version = $4
-        AND review.review_id = $5`,
+        AND review.review_id = $5
+        AND source.lifecycle_state = 'active'
+        AND source.current_policy_version = policy.policy_version
+        AND policy.policy_state = 'approved'
+        AND policy.commercial_use IN ('allowed', 'restricted')
+        AND policy.reviewed_at IS NOT NULL
+        AND (policy.expires_at IS NULL OR policy.expires_at > clock_timestamp())
+      FOR SHARE`,
     [
       input.workspaceId,
       input.collectionRunId,
@@ -369,8 +404,15 @@ async function assertCollectionAndPolicyLineage(
     policyRow.review_id !== input.artifact.policySnapshot.reviewId ||
     policyRow.decision !== 'approved' ||
     policyRow.policy_state !== 'approved' ||
+    !['allowed', 'restricted'].includes(policyRow.commercial_use) ||
     policyRow.source_type === 'fixture' ||
-    policyRow.display_mode === 'fixture'
+    policyRow.display_mode === 'fixture' ||
+    policyRow.display_mode !== 'excerpt' ||
+    policyRow.display_mode !== input.artifact.policySnapshot.policy.displayMode ||
+    policyRow.commercial_use !== input.artifact.policySnapshot.policy.commercialUse ||
+    policyRow.source_lifecycle_state !== 'active' ||
+    policyRow.current_policy_version !== input.artifact.policySnapshot.policyVersion ||
+    (policyRow.expires_at !== null && Date.parse(iso(policyRow.expires_at)) <= Date.now())
   ) {
     throw new ProductionAnalysisLineageError(
       'Analysis policy snapshot is not the approved policy in the collection lineage'
@@ -412,8 +454,11 @@ async function assertEvidenceLineage(
   const rows = await client.query<EvidenceLineageRow>(
     `SELECT run_complaint.complaint_id,
             complaint.evidence_id,
+            complaint.review_state,
             evidence.source_item_id,
             evidence.content_hash AS evidence_content_hash,
+            evidence.allowed_representation,
+            evidence.redacted,
             source_item.source_record_id,
             evidence.deletion_state AS evidence_deletion_state,
             source_item.deletion_state AS source_item_deletion_state
@@ -446,6 +491,10 @@ async function assertEvidenceLineage(
       row.source_item_id !== complaint.sourceItemId ||
       row.evidence_content_hash !== complaint.evidenceHash ||
       row.source_record_id !== complaint.sourceRecordId ||
+      row.review_state !== 'confirmed' ||
+      row.allowed_representation !== 'excerpt' ||
+      row.allowed_representation !== complaint.allowedRepresentation ||
+      !row.redacted ||
       row.evidence_deletion_state !== 'active' ||
       row.source_item_deletion_state !== 'active'
     ) {
@@ -706,6 +755,7 @@ export class PostgresProductionAnalysisRepository {
 
   async persist(input: ProductionAnalysisPersistenceInput): Promise<ProductionAnalysisResult> {
     const parsed = productionAnalysisPersistenceInputSchema.parse(input)
+    assertProductionAnalysisTimestamps(parsed)
     assertDeterministicScoreSnapshot(parsed.artifact.opportunity.scoreSnapshot)
     const inputHash = contentHash(parsed)
     const run = await this.prepareRun(parsed, inputHash)

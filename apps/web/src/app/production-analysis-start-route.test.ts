@@ -7,7 +7,6 @@ const mocks = vi.hoisted(() => ({
   canStartProductionWorkflow: vi.fn(),
   readForAnalysis: vi.fn(),
   readApprovedForUser: vi.fn(),
-  buildProductionResearchArtifact: vi.fn(),
   startProductionAnalysisWorkflow: vi.fn(),
   errors: { ProductionCollectionAnalysisUnavailableError: class extends Error {} }
 }))
@@ -36,9 +35,6 @@ vi.mock('@appsea/db/opportunity-seed-review', () => ({
   PostgresOpportunitySeedReviewRepository: class {
     readApprovedForUser = mocks.readApprovedForUser
   }
-}))
-vi.mock('@appsea/research', () => ({
-  buildProductionResearchArtifact: mocks.buildProductionResearchArtifact
 }))
 vi.mock('@appsea/workflows', () => ({
   startProductionAnalysisWorkflow: mocks.startProductionAnalysisWorkflow
@@ -100,7 +96,6 @@ describe('production analysis start route', () => {
   beforeEach(() => {
     mocks.readForAnalysis.mockReset()
     mocks.readApprovedForUser.mockReset()
-    mocks.buildProductionResearchArtifact.mockReset()
     mocks.startProductionAnalysisWorkflow.mockReset()
     mocks.readSession.mockResolvedValue(session)
     mocks.sameOriginRequest.mockReturnValue(true)
@@ -116,7 +111,6 @@ describe('production analysis start route', () => {
       warnings: []
     })
     mocks.readApprovedForUser.mockResolvedValue(seedReview)
-    mocks.buildProductionResearchArtifact.mockReturnValue({ mode: 'production' })
     mocks.startProductionAnalysisWorkflow.mockResolvedValue({
       workflowId: 'workflow:analysis:workspace:one:abc'
     })
@@ -154,7 +148,7 @@ describe('production analysis start route', () => {
     expect(mocks.readForAnalysis).not.toHaveBeenCalled()
   })
 
-  it('builds a persisted-collection artifact and starts the durable workflow', async () => {
+  it('starts an identifier-only durable workflow after checking persisted evidence and seed review', async () => {
     const response = await POST(
       request({
         analysisRunId: 'analysis:one',
@@ -169,23 +163,6 @@ describe('production analysis start route', () => {
       data: { workflowId: 'workflow:analysis:workspace:one:abc', analysisRunId: 'analysis:one' }
     })
     expect(mocks.readForAnalysis).toHaveBeenCalledWith('user:owner', 'workspace:one', 'run:one')
-    expect(mocks.buildProductionResearchArtifact).toHaveBeenCalledWith(
-      expect.objectContaining({
-        collectionArtifactId: 'artifact:one',
-        runId: 'run:one',
-        analysisRunId: 'analysis:one',
-        transport: 'persisted-collection',
-        testOnly: false,
-        opportunitySeed: {
-          seed: seedReview.seed,
-          seedVersion: seedReview.seedVersion,
-          contentHash: seedReview.contentHash,
-          reviewId: seedReview.seedReviewId,
-          reviewedBy: seedReview.reviewedBy,
-          reviewedAt: seedReview.reviewedAt
-        }
-      })
-    )
     expect(mocks.startProductionAnalysisWorkflow).toHaveBeenCalledTimes(1)
     expect(mocks.startProductionAnalysisWorkflow.mock.calls[0]?.[0]).toBeUndefined()
     expect(mocks.startProductionAnalysisWorkflow.mock.calls[0]?.[1]).toEqual(
@@ -194,9 +171,11 @@ describe('production analysis start route', () => {
         collectionRunId: 'run:one',
         analysisRunId: 'analysis:one',
         idempotencyKey: 'analysis-idempotency-1',
-        artifact: { mode: 'production' }
+        seedReviewId: 'seed-review:one',
+        workflowVersion: 'production-analysis-v2'
       })
     )
+    expect(mocks.startProductionAnalysisWorkflow.mock.calls[0]?.[1]).not.toHaveProperty('artifact')
   })
 
   it('keeps an uncurated collection out of the analysis boundary', async () => {
@@ -213,7 +192,7 @@ describe('production analysis start route', () => {
       { params: Promise.resolve({ workspaceId: 'workspace:one', runId: 'run:one' }) }
     )
     expect(response.status).toBe(422)
-    expect(mocks.buildProductionResearchArtifact).not.toHaveBeenCalled()
+    expect(mocks.startProductionAnalysisWorkflow).not.toHaveBeenCalled()
   })
 
   it('carries deletion coverage gaps into an explicit active-evidence repair', async () => {
@@ -243,10 +222,11 @@ describe('production analysis start route', () => {
       { params: Promise.resolve({ workspaceId: 'workspace:one', runId: 'run:one' }) }
     )
     expect(response.status).toBe(202)
-    expect(mocks.buildProductionResearchArtifact).toHaveBeenCalledWith(
+    expect(mocks.startProductionAnalysisWorkflow).toHaveBeenCalledWith(
+      undefined,
       expect.objectContaining({
-        deletions: [deletion],
-        coverageGaps: ['One source record was deleted before re-analysis.']
+        seedReviewId: 'seed-review:one',
+        workflowVersion: 'production-analysis-v2'
       })
     )
   })
@@ -263,7 +243,7 @@ describe('production analysis start route', () => {
       { params: Promise.resolve({ workspaceId: 'workspace:one', runId: 'run:one' }) }
     )
     expect(response.status).toBe(422)
-    expect(mocks.buildProductionResearchArtifact).not.toHaveBeenCalled()
+    expect(mocks.startProductionAnalysisWorkflow).not.toHaveBeenCalled()
   })
 
   it('bounds chunked request bodies when content-length is unavailable', async () => {

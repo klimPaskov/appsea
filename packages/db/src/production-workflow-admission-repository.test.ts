@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import type { Pool, PoolClient } from 'pg'
 import {
+  assertProductionWorkflowAdmissionConsumed,
   PostgresProductionWorkflowAdmissionRepository,
   ProductionWorkflowAdmissionConflictError,
   ProductionWorkflowConcurrencyLimitError,
@@ -118,6 +119,13 @@ describe('production workflow admission repository', () => {
     expect(
       statements.some((text) => text.includes('consume_production_collection_workflow_admission'))
     ).toBe(true)
+  })
+
+  it('fails closed when workflow initialization has no active reservation', () => {
+    expect(() => assertProductionWorkflowAdmissionConsumed(false)).toThrow(
+      'requires an active admission reservation'
+    )
+    expect(() => assertProductionWorkflowAdmissionConsumed(true)).not.toThrow()
   })
 
   it('rejects malformed digests before opening a database transaction', async () => {

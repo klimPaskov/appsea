@@ -16,6 +16,7 @@ import type { Pool } from 'pg'
 import type { ProductionAnalysisActivities } from '@appsea/workflows'
 import { fixtureResearchTaskQueue } from '@appsea/workflows'
 import { emitWorkerEvent } from './observability'
+import { reconstructProductionAnalysisArtifact } from './production-analysis-input'
 
 function errorName(error: unknown): string {
   return typeof error === 'object' && error !== null && 'name' in error ? String(error.name) : ''
@@ -82,13 +83,20 @@ export function createProductionAnalysisActivities(
       runSanitized(async (): Promise<ProductionAnalysisResult> => {
         const parsed = persistProductionAnalysisWorkflowActivityInputSchema.parse(input)
         const attempt = Context.current().info.attempt
+        const artifact = await reconstructProductionAnalysisArtifact(pool, {
+          workspaceId: parsed.input.workspaceId,
+          collectionRunId: parsed.input.collectionRunId,
+          analysisRunId: parsed.input.analysisRunId,
+          seedReviewId: parsed.input.seedReviewId,
+          analysisAt: parsed.occurredAt
+        })
         const result = await repository.persist({
           workspaceId: parsed.input.workspaceId,
           collectionRunId: parsed.input.collectionRunId,
           analysisRunId: parsed.input.analysisRunId,
           idempotencyKey: parsed.input.idempotencyDigest,
-          requestedAt: parsed.input.requestedAt,
-          artifact: parsed.input.artifact
+          requestedAt: parsed.occurredAt,
+          artifact
         })
         emitWorkerEvent({
           event: 'production_analysis_activity_finished',

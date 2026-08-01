@@ -56,6 +56,11 @@ Migration `0039` adds a forced-RLS, digest-only source collection lease. It
 requires a matching operator-approved policy review, preserves one observed
 collection timestamp across retries, rechecks policy immediately before
 persistence, and exposes only bounded terminal-lease purge to maintenance.
+The post-collection production analysis workflow is versioned as `v2`: only
+workspace/collection/analysis/seed identifiers and immutable digests cross
+Temporal, while the worker rebuilds the evidence-backed artifact inside its
+activity. This keeps complaint text and source payloads out of new workflow
+histories; legacy v1 executions require a controlled drain/retention plan.
 
 Production evolution still requires authenticated/TLS-protected Temporal,
 production identity/recovery policy and scheduled/distributed validation of the

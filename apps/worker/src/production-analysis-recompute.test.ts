@@ -8,7 +8,6 @@ const mocks = vi.hoisted(() => ({
   fail: vi.fn(),
   readForAnalysisAsWorker: vi.fn(),
   readApprovedForWorker: vi.fn(),
-  buildProductionResearchArtifact: vi.fn(),
   startProductionAnalysisWorkflow: vi.fn(),
   emitWorkerEvent: vi.fn()
 }))
@@ -35,10 +34,6 @@ vi.mock('@appsea/db', () => ({
     readForAnalysisAsWorker = mocks.readForAnalysisAsWorker
   },
   ProductionCollectionAnalysisUnavailableError: MockProductionCollectionAnalysisUnavailableError
-}))
-
-vi.mock('@appsea/research', () => ({
-  buildProductionResearchArtifact: mocks.buildProductionResearchArtifact
 }))
 
 vi.mock('@appsea/workflows', () => ({
@@ -94,10 +89,6 @@ describe('production analysis recomputation dispatcher', () => {
       createdBy: 'user:owner',
       createdAt: '2026-08-01T00:00:00.000Z'
     })
-    mocks.buildProductionResearchArtifact.mockReturnValue({
-      testOnly: false,
-      analysisRunId: record.analysisRunId
-    })
     mocks.startProductionAnalysisWorkflow.mockResolvedValue({
       workflowId: 'workflow:analysis:workspace:one:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb'
     })
@@ -110,7 +101,7 @@ describe('production analysis recomputation dispatcher', () => {
     mocks.fail.mockResolvedValue({ ...record, state: 'failed' })
   })
 
-  it('rebuilds from active evidence and preserves deletion coverage in the workflow input', async () => {
+  it('starts an identifier-only workflow after checking active evidence and seed lineage', async () => {
     mocks.claimNext.mockResolvedValueOnce(record).mockResolvedValueOnce(null)
     const { createProductionAnalysisRecomputeDispatcher } =
       await import('./production-analysis-recompute')
@@ -119,18 +110,13 @@ describe('production analysis recomputation dispatcher', () => {
     const started = await dispatcher.dispatchOne('workspace:one')
 
     expect(started?.state).toBe('started')
-    expect(mocks.buildProductionResearchArtifact).toHaveBeenCalledWith(
-      expect.objectContaining({
-        complaints: [{ id: 'complaint:one' }],
-        deletions: [{ sourceId: 'source:one', sourceRecordId: 'record:deleted' }],
-        coverageGaps: ['A deleted record is excluded.']
-      })
-    )
     expect(mocks.startProductionAnalysisWorkflow).toHaveBeenCalledWith(
       expect.anything(),
       expect.objectContaining({
         analysisRunId: record.analysisRunId,
-        idempotencyKey: record.idempotencyKey
+        idempotencyKey: record.idempotencyKey,
+        seedReviewId: record.seedReviewId,
+        workflowVersion: 'production-analysis-v2'
       })
     )
   })

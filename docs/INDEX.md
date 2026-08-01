@@ -89,3 +89,4 @@
 - [`status/automatic-recomputation-completion-report-2026-08-01.md`](status/automatic-recomputation-completion-report-2026-08-01.md)
 - [`status/production-workflow-ingress-admission-completion-report-2026-08-01.md`](status/production-workflow-ingress-admission-completion-report-2026-08-01.md)
 - [`status/source-collection-lease-completion-report-2026-08-01.md`](status/source-collection-lease-completion-report-2026-08-01.md)
+- [`status/production-analysis-history-boundary-completion-report-2026-08-01.md`](status/production-analysis-history-boundary-completion-report-2026-08-01.md)

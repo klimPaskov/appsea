@@ -3,25 +3,10 @@
 The six foundation decisions from 2026-07-10 are archived in
 [`archive/DECISIONS-foundation-2026-07-10.md`](archive/DECISIONS-foundation-2026-07-10.md).
 
-## 2026-07-11: PostgreSQL persistence and role separation
-
-Use PostgreSQL 18 with forward, checksummed SQL migrations. A no-login role owns schema objects, a migrator may assume that owner for reviewed changes, and the runtime remains a non-owner without RLS bypass. Production role provisioning is deliberately out of band.
-
-## 2026-07-11: Forced workspace RLS plus authorization
-
-Enable and force one workspace policy on every workspace-scoped table. Set `appsea.workspace_id` only inside a transaction after application authorization. RLS is defense in depth and cannot establish workspace membership by itself.
-
-## 2026-07-11: Immutable run lineage
-
-Store current opportunity projections separately from immutable run links for clusters, competitors, source policies, acquired items, scores, plans, audit events, and outbox events. Use composite foreign keys to reject cross-run and cross-opportunity wiring.
-
-## 2026-07-11: PostgreSQL is state, not the job queue
-
-Keep workflow state, costs, idempotency records, and outbox events in PostgreSQL, but use a durable workflow engine for retries, timers, cancellation, and recovery rather than building a polling queue in database tables.
-
-## 2026-07-11: Fixture report template is explicit
-
-The current coding package generator supports only Inbox Relay fixture evidence. It must validate the canonical task-graph schema and serialize research-derived Markdown fields as inert JSON data until a reviewed general report composer exists.
+The five foundation decisions above remain archived with their original detail:
+PostgreSQL role separation and forced workspace RLS, immutable run lineage,
+PostgreSQL as workflow state rather than a polling queue, and an explicit
+fixture report template.
 
 ## 2026-07-24: Temporal orchestration with PostgreSQL commit authority
 
@@ -306,9 +291,10 @@ serializes decisions under a workspace advisory lock, and fixes the limits at
 five distinct starts per fifteen minutes and two active jobs/reservations.
 Replayed digests are allowed without another slot; the existing workflow
 initialization transaction consumes the reservation, and source maintenance
-purges terminal or expired admission rows. A reservation is not released on an
-ambiguous Temporal error, so a late-starting workflow cannot bypass the
-concurrency gate. The public leaderboard and source-policy boundary remain
+purges terminal or expired admission rows. Both existing-job and insert paths
+fail closed if consumption returns false, so a late-starting workflow cannot
+bypass the concurrency gate. A reservation is not released on an ambiguous
+Temporal error. The public leaderboard and source-policy boundary remain
 unchanged; deployment configuration and Temporal authorization remain open.
 
 ## 2026-08-01: Bind external collection to a policy lease
@@ -324,3 +310,15 @@ releases it only after the collection transaction commits. Terminal leases are
 purged through the existing bounded source-maintenance job. An uncertain quota
 settlement remains explicit operator reconciliation; automatic re-fetch would
 risk duplicate external collection.
+
+## 2026-08-01: Keep production analysis artifacts out of Temporal history
+
+The v1 workflow placed a redacted artifact, including complaint excerpts, in
+immutable Temporal history. New starts therefore use `production-analysis-v2`:
+only workspace, collection, analysis, seed-review, timestamp, and digest
+identifiers cross Temporal; the worker reconstructs the artifact inside the
+activity and PostgreSQL remains the commit authority. Existing v1 histories
+are not rewritten; deployment must drain or retain compatible workers under an
+approved retention plan. Retention uses the server-observed activity timestamp;
+repository checks reject materially future timestamps, and final lineage locks
+the active, current, unexpired policy with allowed/restricted commercial use.

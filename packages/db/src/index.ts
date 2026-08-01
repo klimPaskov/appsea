@@ -58,11 +58,13 @@ export {
 export { PostgresProductionCollectionWorkflowRepository } from './production-collection-workflow-repository'
 export {
   PostgresProductionWorkflowAdmissionRepository,
+  ProductionWorkflowAdmissionRequiredError,
   ProductionWorkflowAdmissionConflictError,
   ProductionWorkflowConcurrencyLimitError,
   ProductionWorkflowRateLimitError,
   productionWorkflowAdmissionLimits,
   consumeProductionWorkflowAdmissionInTransaction,
+  assertProductionWorkflowAdmissionConsumed,
   type ProductionWorkflowAdmissionDecision,
   type ProductionWorkflowAdmissionInput,
   type ProductionWorkflowAdmissionResult

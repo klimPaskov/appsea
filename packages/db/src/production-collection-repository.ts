@@ -385,6 +385,7 @@ export class PostgresProductionCollectionRepository {
         current_policy_version: string | null
         policy_version: string
         policy_state: string
+        commercial_use: string
         policy_payload: unknown
         content_hash: string
         reviewed_at: Date | string | null
@@ -395,7 +396,8 @@ export class PostgresProductionCollectionRepository {
     >(
       `SELECT source.source_id, source.display_name, source.source_type,
                   source.lifecycle_state, source.current_policy_version,
-                  policy.policy_version, policy.policy_state, policy.policy_payload,
+                  policy.policy_version, policy.policy_state, policy.commercial_use,
+                  policy.policy_payload,
                   policy.content_hash, policy.reviewed_at, policy.expires_at,
                   policy.policy_document_ref, review.review_id
              FROM appsea.sources source
@@ -412,6 +414,7 @@ export class PostgresProductionCollectionRepository {
               AND source.lifecycle_state = 'active'
               AND source.current_policy_version = policy.policy_version
               AND policy.policy_state = 'approved'
+              AND policy.commercial_use IN ('allowed', 'restricted')
               AND policy.reviewed_at IS NOT NULL
               AND (policy.expires_at IS NULL OR policy.expires_at > clock_timestamp())
             ORDER BY review.reviewed_at DESC, review.review_id
@@ -628,6 +631,7 @@ export class PostgresProductionCollectionRepository {
               lifecycle_state: string
               current_policy_version: string | null
               policy_state: string
+              commercial_use: string
               display_mode: string
               content_hash: string
               reviewed_at: Date | string | null
@@ -638,7 +642,7 @@ export class PostgresProductionCollectionRepository {
           >(
             `SELECT source.source_id, source.display_name, source.source_type, source.lifecycle_state,
                     source.current_policy_version, policy.policy_state,
-                    policy.display_mode, policy.content_hash,
+                    policy.commercial_use, policy.display_mode, policy.content_hash,
                     policy.reviewed_at, policy.expires_at,
                     policy.policy_document_ref, policy.policy_payload
                FROM appsea.sources source
@@ -664,6 +668,7 @@ export class PostgresProductionCollectionRepository {
             storedPolicy.lifecycle_state !== 'active' ||
             storedPolicy.current_policy_version !== parsed.request.policyVersion ||
             storedPolicy.policy_state !== 'approved' ||
+            !['allowed', 'restricted'].includes(storedPolicy.commercial_use) ||
             storedPolicy.display_mode !== parsed.request.requestedDisplayMode ||
             !storedPolicy.reviewed_at ||
             (storedPolicy.expires_at && Date.parse(asIso(storedPolicy.expires_at)) <= Date.now())

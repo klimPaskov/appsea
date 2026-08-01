@@ -3,4 +3,5 @@ export const fixtureResearchStatusQueryName = 'fixtureResearchStatus'
 export const productionCollectionStatusQueryName = 'productionCollectionStatus'
 export const productionCollectionWorkflowVersion = 'production-collection-v1'
 export const productionAnalysisStatusQueryName = 'productionAnalysisStatus'
-export const productionAnalysisWorkflowVersion = 'production-analysis-v1'
+// v2 removes complaint-bearing artifacts from Temporal workflow input/history.
+export const productionAnalysisWorkflowVersion = 'production-analysis-v2'

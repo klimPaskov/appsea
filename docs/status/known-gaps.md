@@ -80,9 +80,23 @@ database serializes each workspace's five-start/15-minute and two-active-job
 limits, preserves replayed digests, consumes a short-lived reservation during
 workflow initialization, and source maintenance purges terminal or expired
 admission rows. The limits are repository-owned defaults, not caller-configurable
-payload fields. A deployed scheduler, authenticated Temporal namespace, and
-multi-instance failure proof are still required before this boundary can be
-called production-operated.
+payload fields. Workflow initialization fails closed if the reservation is
+missing or already consumed, including the duplicate-job path. A deployed
+scheduler, authenticated Temporal namespace, and multi-instance failure proof
+are still required before this boundary can be called production-operated.
+
+Production analysis workflow version `v2` now carries only identifiers and
+immutable digests into Temporal; the worker reconstructs its redacted artifact
+from workspace-bound rows inside the activity. This closes new raw-history
+leakage, but v1 histories need a controlled drain/retention plan. The activity
+still persists object-backed outputs before finalization, so object-store purge
+and crash-race handling require a separate reviewed worker; lease
+assert-to-persist atomicity, stale recompute-claim reclamation, retryable
+tombstone propagation, and authentication for the direct source CLI also
+remain open. Retention is anchored to server-observed activity time and final
+lineage rechecks active/current/unexpired policy, commercial-use eligibility,
+and confirmed redacted evidence. The manual analysis route still needs a
+workspace admission/rate gate and authenticated initiator attribution.
 
 Non-fixture report, plan, and production-analysis artifact payloads require
 object storage; inline JSONB is deliberately restricted to compact metadata

@@ -49,6 +49,17 @@ export class ProductionWorkflowAdmissionConflictError extends Error {
   }
 }
 
+export class ProductionWorkflowAdmissionRequiredError extends Error {
+  constructor() {
+    super('Production workflow initialization requires an active admission reservation')
+    this.name = 'ProductionWorkflowAdmissionRequiredError'
+  }
+}
+
+export function assertProductionWorkflowAdmissionConsumed(consumed: boolean): void {
+  if (!consumed) throw new ProductionWorkflowAdmissionRequiredError()
+}
+
 export class ProductionWorkflowRateLimitError extends Error {
   readonly retryAfterSeconds: number
 

@@ -7,7 +7,6 @@ import {
   type ProductionAnalysisHandoffRecord
 } from '@appsea/db'
 import type { Pool } from 'pg'
-import { buildProductionResearchArtifact } from '@appsea/research'
 import { startProductionAnalysisWorkflow } from '@appsea/workflows'
 import { fixtureResearchTaskQueue } from '@appsea/workflows'
 import { emitWorkerEvent } from './observability'
@@ -68,36 +67,14 @@ export function createProductionAnalysisHandoffDispatcher(
         })
         return null
       }
-      const artifact = buildProductionResearchArtifact({
-        collectionArtifactId: source.collectionArtifactId,
-        runId: source.runId,
-        analysisRunId: claimed.analysisRunId,
-        transport: 'persisted-collection',
-        testOnly: false,
-        request: source.request,
-        policySnapshot: source.policySnapshot,
-        complaints: source.complaints,
-        deletions: source.deletions,
-        coverageGaps: source.coverageGaps,
-        warnings: source.warnings,
-        opportunitySeed: {
-          seed: seedReview.seed,
-          seedVersion: seedReview.seedVersion,
-          contentHash: seedReview.contentHash,
-          reviewId: seedReview.seedReviewId,
-          reviewedBy: seedReview.reviewedBy ?? seedReview.createdBy,
-          reviewedAt: seedReview.reviewedAt ?? seedReview.createdAt
-        },
-        analysisAt: claimed.requestedAt
-      })
       const handle = await startProductionAnalysisWorkflow(client, {
         workspaceId: claimed.workspaceId,
         collectionRunId: claimed.collectionRunId,
         analysisRunId: claimed.analysisRunId,
         idempotencyKey: claimed.idempotencyKey,
-        workflowVersion: 'production-analysis-v1',
+        workflowVersion: 'production-analysis-v2',
         requestedAt: claimed.requestedAt,
-        artifact
+        seedReviewId: seedReview.seedReviewId
       })
       const started = await handoffs.markStarted(
         claimed.workspaceId,
