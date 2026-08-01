@@ -1425,12 +1425,26 @@ export const productionAnalysisResultSchema = z
     }
   })
 
+/**
+ * Approval state for the object-backed report and plan linked to a completed
+ * production analysis. The analysis payload itself is immutable; governance
+ * transitions live on the report and plan projections and are read alongside
+ * the output so private clients never have to infer state from defaults.
+ */
+export const productionAnalysisGovernanceSchema = z
+  .object({
+    reportApprovalState: z.enum(['draft', 'reviewed', 'approved', 'withdrawn']),
+    planApprovalState: z.enum(['unreviewed', 'reviewed', 'approved', 'withdrawn'])
+  })
+  .strict()
+
 export const productionAnalysisReadModelSchema = z
   .object({
     result: productionAnalysisResultSchema,
     artifact: productionResearchArtifactSchema,
     report: opportunityReportSchema,
-    planPackage: planPackageSchema
+    planPackage: planPackageSchema,
+    governance: productionAnalysisGovernanceSchema
   })
   .strict()
 
@@ -3023,6 +3037,7 @@ export type ProductionAnalysisPersistenceInput = z.infer<
 >
 export type ProductionAnalysisSnapshot = z.infer<typeof productionAnalysisSnapshotSchema>
 export type ProductionAnalysisResult = z.infer<typeof productionAnalysisResultSchema>
+export type ProductionAnalysisGovernance = z.infer<typeof productionAnalysisGovernanceSchema>
 export type ProductionAnalysisReadModel = z.infer<typeof productionAnalysisReadModelSchema>
 export type ProductionAnalysisHandoffState = z.infer<typeof productionAnalysisHandoffStateSchema>
 export type ProductionAnalysisHandoffFailureCode = z.infer<

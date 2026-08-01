@@ -22,7 +22,10 @@ export interface PrivateOpportunityContext {
   detail: WorkspaceOpportunityDetailReadModel
 }
 
-function productionDetail(model: ProductionAnalysisReadModel): WorkspaceOpportunityDetailReadModel {
+/** Map a validated production analysis into the private opportunity read model. */
+export function mapProductionAnalysisToOpportunityDetail(
+  model: ProductionAnalysisReadModel
+): WorkspaceOpportunityDetailReadModel {
   const { artifact, result, report, planPackage } = model
   const opportunity = artifact.opportunity
   const summary = workspaceOpportunityReadModelSchema.parse({
@@ -67,7 +70,7 @@ function productionDetail(model: ProductionAnalysisReadModel): WorkspaceOpportun
       version: 'production-report-v1',
       structuredReport: report,
       generatedAt: report.generatedAt,
-      approvalState: 'draft'
+      approvalState: model.governance.reportApprovalState
     }),
     plan: workspacePlanReadModelSchema.parse({
       id: result.planPackageId,
@@ -75,7 +78,7 @@ function productionDetail(model: ProductionAnalysisReadModel): WorkspaceOpportun
       files: planPackage.files,
       generatedAt: planPackage.generatedAt,
       readinessState: 'ready',
-      approvalState: 'unreviewed',
+      approvalState: model.governance.planApprovalState,
       synthetic: false
     })
   })
@@ -103,7 +106,9 @@ export async function readPrivateOpportunityContext(
       getDatabasePool(),
       getObjectStore()
     ).readLatestForOpportunityForUser(session.user.userId, parsedWorkspaceId.data, parsedSlug.data)
-    if (production) return { session, workspace, detail: productionDetail(production) }
+    if (production) {
+      return { session, workspace, detail: mapProductionAnalysisToOpportunityDetail(production) }
+    }
   }
   const detail = await repository.readWorkspaceOpportunity(
     session.user.userId,

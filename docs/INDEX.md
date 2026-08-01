@@ -112,3 +112,4 @@
 - [`status/source-quota-reconciliation-completion-report-2026-08-01.md`](status/source-quota-reconciliation-completion-report-2026-08-01.md)
 - [`status/source-recollection-completion-report-2026-08-01.md`](status/source-recollection-completion-report-2026-08-01.md)
 - [`status/direct-source-admission-completion-report-2026-08-01.md`](status/direct-source-admission-completion-report-2026-08-01.md)
+- [`status/production-output-governance-completion-report-2026-08-01.md`](status/production-output-governance-completion-report-2026-08-01.md)

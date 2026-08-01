@@ -277,7 +277,9 @@ analysis/object references, active-output private reads, and a
 production-shaped report/package composition checkpoint are implemented;
 cloud object storage, recomputation alerting, and export retention remain. Report and plan
 approval/export now hydrate validated object-backed production payloads before
-applying their separate governance boundaries.
+applying their separate governance boundaries. Production analysis read models
+carry the linked report/plan approval states from PostgreSQL so private
+opportunity pages do not infer stale draft defaults.
 
 The report contract keeps retained observations, deterministic score inference,
 contrary evidence, recommendation, source coverage, and coverage gaps separate.

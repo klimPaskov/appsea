@@ -27,6 +27,7 @@ import {
   fixtureResearchWorkflowStartRequestSchema,
   opportunitySchema,
   productionAnalysisHandoffReadModelSchema,
+  productionAnalysisGovernanceSchema,
   productionCollectionRequestSchema,
   productionCollectionPersistenceInputSchema,
   productionCollectionResultSchema,
@@ -842,6 +843,28 @@ describe('contracts', () => {
     expect(
       workspacePlanExportReadModelSchema.safeParse({ plan, manifestHash: 'a'.repeat(64) }).success
     ).toBe(true)
+  })
+
+  it('keeps production output governance states explicit and bounded', () => {
+    expect(
+      productionAnalysisGovernanceSchema.safeParse({
+        reportApprovalState: 'approved',
+        planApprovalState: 'reviewed'
+      }).success
+    ).toBe(true)
+    expect(
+      productionAnalysisGovernanceSchema.safeParse({
+        reportApprovalState: 'unreviewed',
+        planApprovalState: 'approved'
+      }).success
+    ).toBe(false)
+    expect(
+      productionAnalysisGovernanceSchema.safeParse({
+        reportApprovalState: 'approved',
+        planApprovalState: 'reviewed',
+        sourceText: 'untrusted'
+      }).success
+    ).toBe(false)
   })
 
   it('rejects a persisted fixture plan for a different opportunity', () => {

@@ -248,6 +248,11 @@ implemented from the stored policy; invalidated analysis outputs now enqueue
 retention-aware local object purges, but source-wide object-store and backup
 purge remain deployment work.
 
+Production analysis private reads now carry the current report and plan
+approval states from PostgreSQL governance projections, so later review
+transitions remain visible without inferring stale object defaults. This does
+not change the separate approval or approved-only export gates.
+
 ## Desktop
 
 The Tauri boundary is staged without signing, update infrastructure, or platform release tests.

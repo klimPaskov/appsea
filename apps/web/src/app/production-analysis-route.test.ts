@@ -38,7 +38,8 @@ describe('production analysis read route', () => {
       collectionRunId: 'run:one',
       artifact: { artifactId: 'artifact:one' },
       report: { reportId: 'report:one' },
-      plan: { planId: 'plan:one' }
+      plan: { planId: 'plan:one' },
+      governance: { reportApprovalState: 'approved', planApprovalState: 'reviewed' }
     })
   })
 
@@ -72,7 +73,8 @@ describe('production analysis read route', () => {
         collectionRunId: 'run:one',
         artifact: { artifactId: 'artifact:one' },
         report: { reportId: 'report:one' },
-        plan: { planId: 'plan:one' }
+        plan: { planId: 'plan:one' },
+        governance: { reportApprovalState: 'approved', planApprovalState: 'reviewed' }
       }
     })
     expect(mocks.readForUser).toHaveBeenCalledWith('user:one', 'workspace:one', 'analysis:one')

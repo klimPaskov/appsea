@@ -72,7 +72,10 @@
 24. The website reads the accepted opportunity projection, evidence/source
     coverage, report, and plan through shared contracts; production analyses
     have an authenticated run read route and active-output mapping for private
-    opportunity pages. The public leaderboard remains fixture-only.
+    opportunity pages. Production analysis read models also carry the current
+    report/plan approval states from their governance projections so private
+    pages do not display stale inferred defaults. The public leaderboard remains
+    fixture-only.
 
 Every workspace table uses forced row-level security. Authentication must authorize a workspace before application code sets the transaction-local workspace context. Source policy state remains global and cannot be changed directly by the runtime role.
 

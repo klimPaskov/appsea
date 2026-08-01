@@ -1,6 +1,7 @@
 import type { Pool, PoolClient, QueryResultRow } from 'pg'
 import {
   objectReferenceSchema,
+  productionAnalysisGovernanceSchema,
   productionAnalysisPersistenceInputSchema,
   productionAnalysisReadModelSchema,
   productionAnalysisResultSchema,
@@ -58,6 +59,8 @@ interface AnalysisRunRow extends QueryResultRow {
   score_snapshot_id: string | null
   report_id: string | null
   plan_package_id: string | null
+  report_approval_state: 'draft' | 'reviewed' | 'approved' | 'withdrawn' | null
+  plan_approval_state: 'unreviewed' | 'reviewed' | 'approved' | 'withdrawn' | null
   requested_by_actor_type: 'user' | 'service'
   requested_by_actor_id: string
   completed_at: Date | string | null
@@ -279,6 +282,19 @@ function rowResult(row: AnalysisRunRow, replayed: boolean): ProductionAnalysisRe
   })
 }
 
+function rowGovernance(row: AnalysisRunRow) {
+  if (row.report_approval_state === null || row.plan_approval_state === null) {
+    throw new ProductionAnalysisAvailabilityError(
+      row.analysis_run_id,
+      'linked report or plan governance state is missing'
+    )
+  }
+  return productionAnalysisGovernanceSchema.parse({
+    reportApprovalState: row.report_approval_state,
+    planApprovalState: row.plan_approval_state
+  })
+}
+
 function isUniqueViolation(error: unknown): boolean {
   if (typeof error !== 'object' || error === null || !('code' in error)) return false
   if ((error as { code?: unknown }).code !== '23505') return false
@@ -327,14 +343,23 @@ async function readRun(
   forUpdate = false
 ): Promise<AnalysisRunRow | undefined> {
   const result = await client.query<AnalysisRunRow>(
-    `SELECT workspace_id, analysis_run_id, collection_run_id, idempotency_key,
+    `SELECT analysis.workspace_id, analysis.analysis_run_id, analysis.collection_run_id,
+            analysis.idempotency_key,
             input_hash, artifact_id, artifact_snapshot, artifact_object_ref,
             report_object_ref, plan_object_ref, state, availability_state,
             opportunity_id, score_snapshot_id, report_id, plan_package_id,
+            (SELECT report.approval_state
+               FROM appsea.report_versions report
+              WHERE report.workspace_id = analysis.workspace_id
+                AND report.report_id = analysis.report_id) AS report_approval_state,
+            (SELECT plan.approval_state
+               FROM appsea.plan_package_versions plan
+              WHERE plan.workspace_id = analysis.workspace_id
+                AND plan.plan_package_id = analysis.plan_package_id) AS plan_approval_state,
             requested_by_actor_type, requested_by_actor_id,
             completed_at, invalidated_at, invalidation_reason
-       FROM appsea.production_analysis_runs
-      WHERE workspace_id = $1 AND analysis_run_id = $2
+       FROM appsea.production_analysis_runs analysis
+      WHERE analysis.workspace_id = $1 AND analysis.analysis_run_id = $2
       ${forUpdate ? 'FOR UPDATE' : ''}`,
     [workspaceId, analysisRunId]
   )
@@ -348,14 +373,24 @@ async function readRunByIdempotency(
   forUpdate = false
 ): Promise<AnalysisRunRow | undefined> {
   const result = await client.query<AnalysisRunRow>(
-    `SELECT workspace_id, analysis_run_id, collection_run_id, idempotency_key,
-            input_hash, artifact_id, artifact_snapshot, artifact_object_ref,
-            report_object_ref, plan_object_ref, state, availability_state,
-            opportunity_id, score_snapshot_id, report_id, plan_package_id,
-            requested_by_actor_type, requested_by_actor_id,
-            completed_at, invalidated_at, invalidation_reason
-       FROM appsea.production_analysis_runs
-      WHERE workspace_id = $1 AND idempotency_key = $2
+    `SELECT analysis.workspace_id, analysis.analysis_run_id, analysis.collection_run_id,
+            analysis.idempotency_key, analysis.input_hash, analysis.artifact_id,
+            analysis.artifact_snapshot, analysis.artifact_object_ref,
+            analysis.report_object_ref, analysis.plan_object_ref, analysis.state,
+            analysis.availability_state, analysis.opportunity_id,
+            analysis.score_snapshot_id, analysis.report_id, analysis.plan_package_id,
+            (SELECT report.approval_state
+               FROM appsea.report_versions report
+              WHERE report.workspace_id = analysis.workspace_id
+                AND report.report_id = analysis.report_id) AS report_approval_state,
+            (SELECT plan.approval_state
+               FROM appsea.plan_package_versions plan
+              WHERE plan.workspace_id = analysis.workspace_id
+                AND plan.plan_package_id = analysis.plan_package_id) AS plan_approval_state,
+            analysis.requested_by_actor_type, analysis.requested_by_actor_id,
+            analysis.completed_at, analysis.invalidated_at, analysis.invalidation_reason
+       FROM appsea.production_analysis_runs analysis
+      WHERE analysis.workspace_id = $1 AND analysis.idempotency_key = $2
       ${forUpdate ? 'FOR UPDATE' : ''}`,
     [workspaceId, idempotencyKey]
   )
@@ -1477,7 +1512,13 @@ export class PostgresProductionAnalysisRepository {
     const artifact = productionResearchArtifactSchema.parse(decodeJson(artifactStored.body))
     const report = decodeOpportunityReport(reportStored.body)
     const planPackage = decodePlanPackage(planStored.body)
-    return productionAnalysisReadModelSchema.parse({ result, artifact, report, planPackage })
+    return productionAnalysisReadModelSchema.parse({
+      result,
+      artifact,
+      report,
+      planPackage,
+      governance: rowGovernance(row)
+    })
   }
 
   async read(
@@ -1514,7 +1555,17 @@ export class PostgresProductionAnalysisRepository {
                   analysis.artifact_object_ref, analysis.report_object_ref,
                   analysis.plan_object_ref, analysis.state, analysis.availability_state,
                   analysis.opportunity_id, analysis.score_snapshot_id, analysis.report_id,
-                  analysis.plan_package_id, analysis.completed_at,
+                  analysis.plan_package_id,
+                  (SELECT report.approval_state
+                     FROM appsea.report_versions report
+                    WHERE report.workspace_id = analysis.workspace_id
+                      AND report.report_id = analysis.report_id) AS report_approval_state,
+                  (SELECT plan.approval_state
+                     FROM appsea.plan_package_versions plan
+                    WHERE plan.workspace_id = analysis.workspace_id
+                      AND plan.plan_package_id = analysis.plan_package_id) AS plan_approval_state,
+                  analysis.requested_by_actor_type, analysis.requested_by_actor_id,
+                  analysis.completed_at,
                   analysis.invalidated_at, analysis.invalidation_reason
              FROM appsea.production_analysis_runs analysis
              JOIN appsea.opportunities opportunity

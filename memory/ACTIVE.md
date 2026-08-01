@@ -44,6 +44,11 @@ bounded hash-checked reads, and the retention purge queue. Provider
 encryption/versioning, backup deletion, credential rotation, and deployed cloud
 proof remain open; local filesystem fallback is not a production claim.
 
+Production analysis read models now include the linked report and plan approval
+states from their PostgreSQL governance projections. The private opportunity
+mapper uses those states, so a later report/plan approval transition is visible
+without inferring `draft` or `unreviewed` from an immutable object payload.
+
 Operational monitoring includes `/api/health/live`, `/api/health/ready`, and a
 secret-free worker heartbeat every 30 seconds. Web and durable worker share a
 fail-closed Temporal endpoint contract: production requires non-loopback
