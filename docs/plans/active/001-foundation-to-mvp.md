@@ -275,6 +275,9 @@ scheduled commands now share migration `0046`'s server-clock owner/token lease
 with renewal, stale takeover, guarded mutations, and fixed lease-loss failures;
 `0047` persists maintenance-role-only run outcomes with bounded
 numeric counters, fixed failure codes, and retention purge;
+`0048` adds an indexed, membership-authorized private workspace cost summary
+over the immutable ledger with exact micro-unit aggregates by currency and
+cost type;
 the long-lived worker emits a bounded 30-second heartbeat and the web service
 exposes fail-closed liveness/readiness probes; deployed scheduler ownership,
 alert ownership, traces, role separation, incident drills,

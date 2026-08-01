@@ -102,7 +102,7 @@ propagation still need the Docker-backed integration suite.
    recovery/invitation/provider identity security review before enabling the
    recovery kill switch.
 4. Implement deletion recomputation, non-fixture evidence/report storage,
-   object-store/backups retention and purge, export purge, and cross-run
-   cost/operational accounting. Add production ingress body/rate/concurrency
+   object-store/backups retention and purge, export purge, and provider-level
+   billing/operational controls. Add production ingress body/rate/concurrency
    limits for workflow starts.
 5. Complete Tauri signing, updates, platform testing, and release runbooks.

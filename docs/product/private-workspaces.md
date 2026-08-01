@@ -42,6 +42,12 @@ The public AppSea leaderboard is a sparse, synthetic fixture surface. Private re
 
 Private opportunity routes expose overview, evidence/coverage, report, and coding-plan pages. Evidence is filtered to source representations allowed for display, deletion-state active rows only, and explicit synthetic/redaction labels. Fixture persistence now generates a versioned deterministic report that keeps observations, score inference, contrary evidence, recommendation, and source coverage separate; the report is linked to its coding plan. Source coverage gaps remain visible; missing access is not presented as absence of demand.
 
+Workspace members can inspect bounded cross-run operational cost accounting at
+`GET /api/workspaces/:workspaceId/costs`. The read model keeps currencies and
+cost types separate, reports exact micro-unit strings, defaults to a 30-day
+window, and accepts at most a 365-day period. It is private operational data,
+not billing or payment functionality.
+
 Reviewed non-fixture analysis outputs use the same private routes after a
 completed collection: artifact, report, and plan payloads are read from
 workspace-bound object references. Reports and plans each have separate

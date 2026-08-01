@@ -78,7 +78,10 @@ metric alert ownership. Migration `0047` adds a maintenance-role-only
 record/list/purge boundary for bounded run outcomes: generated run IDs, owner,
 fixed state/failure code, duration, and numeric counters. Rows are purged by a
 configured retention window; lease tokens, source content, and raw errors are
-not stored.
+not stored. The private workspace cost route reads the existing immutable cost
+ledger through authenticated workspace RLS and returns bounded exact micro-unit
+aggregates by currency and cost type; it does not expose raw run or source
+identifiers.
 The post-collection production analysis workflow is versioned as `v2`: only
 workspace/collection/analysis/seed identifiers and immutable digests cross
 Temporal, while the worker rebuilds the evidence-backed artifact inside its

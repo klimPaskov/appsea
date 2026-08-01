@@ -5,7 +5,7 @@
 The fixture product, PostgreSQL persistence, durable workflows, policy-gated
 CFPB collection checkpoint, authenticated private workspaces, report/plan
 approval/export, recovery, and invitations are implemented. Migrations
-`0027`-`0047` add policy evidence, collection checkpoints, deletion repair,
+`0027`-`0048` add policy evidence, collection checkpoints, deletion repair,
 leases, snapshot reconciliation, workflow admissions, source-reconciliation
 admission, retryable tombstones, and maintenance-run telemetry. CFPB remains
 disabled; deployed Temporal/scheduler ownership, policy approval, role
@@ -60,14 +60,19 @@ validated numeric counters, purges rows older than the configured retention
 window, and never persists lease tokens, source content, credentials, or raw
 exception messages. This improves durable operator telemetry but does not
 provide fencing inside a long-running mutation, deployed scheduler ownership,
-alert routing, or cross-run cost accounting.
+or alert routing. Migration `0048` adds the ledger time index and a
+membership-authorized private workspace cost summary that groups exact
+micro-unit totals by currency and cost type over a bounded period; it is
+operational accounting, not billing.
 
 ## Validated commands
 
 - `pnpm verify` passed 2026-08-01 before this telemetry tranche: packages,
   samples, smoke, and repository checks.
-- Scheduler/metrics focus: contracts 62 tests, DB 79 tests, worker 58 tests,
+- Scheduler/metrics focus: contracts 63 tests, DB 82 tests, worker 58 tests,
   lint, typecheck, and format checks passed.
+- Workspace cost focus: private route tests 67 passed; exact micro-unit
+  aggregation, period bounds, and membership/error boundaries are covered.
 - PostgreSQL migration/read/deletion/concurrency/role/metrics integration is
   staged but Docker-blocked by the unavailable Docker Desktop Linux engine.
 - `pnpm agents:sync` passed; memory and docs checks must pass after this file
@@ -80,8 +85,9 @@ alert routing, or cross-run cost accounting.
 3. Provider/identity approval, verified recovery/invitation delivery, and
    deployed auth/source maintenance jobs.
 4. Explicit re-collection after deletion and general report/export workflows.
-5. Operational monitoring, deployed scheduler ownership, cost controls,
-   production database/Temporal provisioning, and security review.
+5. Operational monitoring, deployed scheduler ownership, provider pricing and
+   billing controls, production database/Temporal provisioning, and security
+   review.
 
 ## Current blockers
 

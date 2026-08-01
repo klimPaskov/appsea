@@ -86,6 +86,10 @@ export {
 } from './maintenance-scheduler-lease-repository'
 export { PostgresMaintenanceSchedulerRunRepository } from './maintenance-scheduler-run-repository'
 export {
+  PostgresWorkspaceCostRepository,
+  WorkspaceCostSummaryQueryError
+} from './workspace-cost-repository'
+export {
   PostgresSourceSnapshotReconciliationRepository,
   SourceSnapshotReconciliationAdmissionDeniedError,
   SourceSnapshotReconciliationClaimError,

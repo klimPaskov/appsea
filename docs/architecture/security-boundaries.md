@@ -158,6 +158,10 @@ for that pre-context authorization lookup.
   setting `appsea.workspace_id`; a caller cannot select a workspace by changing a
   request parameter alone. Public leaderboard routes remain database-free fixture
   routes.
+- The private workspace cost summary repeats membership authorization inside a
+  read-only transaction, then aggregates only immutable ledger amounts. It keeps
+  currencies separate, uses exact micro-unit strings, bounds the period, and
+  never returns source/run identifiers or database errors.
 - Workspace member emails and role mutations are owner-only. Role changes and
   removals are authorized in the same RLS transaction, guarded in PostgreSQL by
   a serialized last-owner check, and recorded as identifier-only audit/outbox

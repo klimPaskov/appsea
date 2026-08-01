@@ -76,6 +76,22 @@ conflict.
 The local fixture worker is intentionally not a production deployment.
 Production still requires a TLS-protected Temporal endpoint, durable log/metric
 retention, alert routing, secret redaction verification, and a documented
-worker replacement drill. A production scheduler, durable maintenance
-checkpoint/ledger if cross-run accounting is required, and alert ownership are
-still deployment responsibilities.
+worker replacement drill. The private workspace cost summary provides bounded
+cross-run ledger accounting, but a production scheduler, alert ownership,
+provider billing controls, and any stronger maintenance checkpoint/fencing
+boundary remain deployment responsibilities.
+
+Private workspace members can inspect bounded cross-run cost accounting at:
+
+```text
+GET /api/workspaces/:workspaceId/costs
+```
+
+The endpoint reads the immutable `cost_ledger_entries` table through an
+authenticated read-only transaction and returns exact micro-unit totals by
+currency and cost type. Optional `from` and `to` ISO timestamps are limited to
+365 days; the default window is the previous 30 days. The response is
+`private, no-store` and contains no source content, run identifiers, or raw
+errors. This is operational accounting, not billing or payment processing;
+deployment still owns alert routing, provider pricing, and retention/backup
+controls.

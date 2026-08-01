@@ -2631,6 +2631,63 @@ export const authAccountDeletionResultSchema = z
   })
   .strict()
 
+const costMicrosTextSchema = z.string().regex(/^(?:0|[1-9][0-9]{0,17})$/)
+const costSummaryCountSchema = z.number().int().nonnegative().max(1_000_000)
+const costTypeSchema = z
+  .string()
+  .min(1)
+  .max(80)
+  .regex(/^[a-z][a-z0-9_:-]*$/)
+const currencyCodeSchema = z.string().regex(/^[A-Z]{3}$/)
+
+export const workspaceCostSummaryQuerySchema = z
+  .object({
+    from: z.string().datetime().optional(),
+    to: z.string().datetime().optional()
+  })
+  .strict()
+  .superRefine((query, context) => {
+    if (query.from && query.to && new Date(query.from).getTime() >= new Date(query.to).getTime()) {
+      context.addIssue({
+        code: 'custom',
+        path: ['from'],
+        message: 'from must be before to'
+      })
+    }
+  })
+
+export const workspaceCostTypeSummarySchema = z
+  .object({
+    costType: costTypeSchema,
+    entryCount: costSummaryCountSchema,
+    totalCostMicros: costMicrosTextSchema,
+    estimatedCostMicros: costMicrosTextSchema,
+    actualCostMicros: costMicrosTextSchema
+  })
+  .strict()
+
+export const workspaceCurrencyCostSummarySchema = z
+  .object({
+    currency: currencyCodeSchema,
+    entryCount: costSummaryCountSchema,
+    totalCostMicros: costMicrosTextSchema,
+    estimatedCostMicros: costMicrosTextSchema,
+    actualCostMicros: costMicrosTextSchema,
+    byCostType: z.array(workspaceCostTypeSummarySchema).max(64)
+  })
+  .strict()
+
+export const workspaceCostSummaryReadModelSchema = z
+  .object({
+    workspaceId: appseaIdentifierSchema,
+    periodStart: z.string().datetime(),
+    periodEnd: z.string().datetime(),
+    asOf: z.string().datetime(),
+    entryCount: costSummaryCountSchema,
+    currencies: z.array(workspaceCurrencyCostSummarySchema).max(16)
+  })
+  .strict()
+
 export const authSignInResultSchema = z
   .object({
     token: authSessionTokenSchema,
@@ -2976,6 +3033,10 @@ export type AuthSessionReadModel = z.infer<typeof authSessionReadModelSchema>
 export type AuthSessionSummaryReadModel = z.infer<typeof authSessionSummaryReadModelSchema>
 export type AuthSessionListReadModel = z.infer<typeof authSessionListReadModelSchema>
 export type AuthAccountDeletionResult = z.infer<typeof authAccountDeletionResultSchema>
+export type WorkspaceCostSummaryQuery = z.infer<typeof workspaceCostSummaryQuerySchema>
+export type WorkspaceCostTypeSummary = z.infer<typeof workspaceCostTypeSummarySchema>
+export type WorkspaceCurrencyCostSummary = z.infer<typeof workspaceCurrencyCostSummarySchema>
+export type WorkspaceCostSummaryReadModel = z.infer<typeof workspaceCostSummaryReadModelSchema>
 export type AuthSignInResult = z.infer<typeof authSignInResultSchema>
 export type AuthUserReadModel = z.infer<typeof authUserReadModelSchema>
 export type WorkspaceRole = z.infer<typeof workspaceRoleSchema>

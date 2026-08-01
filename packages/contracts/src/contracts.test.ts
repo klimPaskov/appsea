@@ -16,6 +16,8 @@ import {
   authSessionListReadModelSchema,
   authSessionReadModelSchema,
   authSessionSummaryReadModelSchema,
+  workspaceCostSummaryQuerySchema,
+  workspaceCostSummaryReadModelSchema,
   complaintSchema,
   fixturePersistenceInputSchema,
   fixtureResearchWorkflowInputSchema,
@@ -1321,5 +1323,57 @@ describe('contracts', () => {
     { currency: 'USD', maxSourceItems: 10, maxCostMicros: 1, maxActivityAttempts: 11 }
   ])('rejects an unsafe workflow budget %#', (budget) => {
     expect(researchJobBudgetSchema.safeParse(budget).success).toBe(false)
+  })
+
+  it('bounds workspace cost summaries without exposing decimal ambiguity', () => {
+    const summary = {
+      workspaceId: 'workspace:one',
+      periodStart: now,
+      periodEnd: '2026-07-11T00:00:00.000Z',
+      asOf: '2026-07-11T00:00:00.000Z',
+      entryCount: 2,
+      currencies: [
+        {
+          currency: 'USD',
+          entryCount: 2,
+          totalCostMicros: '1250000',
+          estimatedCostMicros: '250000',
+          actualCostMicros: '1000000',
+          byCostType: [
+            {
+              costType: 'source_request',
+              entryCount: 2,
+              totalCostMicros: '1250000',
+              estimatedCostMicros: '250000',
+              actualCostMicros: '1000000'
+            }
+          ]
+        }
+      ]
+    }
+    expect(workspaceCostSummaryReadModelSchema.safeParse(summary).success).toBe(true)
+    expect(
+      workspaceCostSummaryQuerySchema.safeParse({
+        from: now,
+        to: '2026-07-11T00:00:00.000Z'
+      }).success
+    ).toBe(true)
+    expect(
+      workspaceCostSummaryQuerySchema.safeParse({
+        from: '2026-07-11T00:00:00.000Z',
+        to: now
+      }).success
+    ).toBe(false)
+    expect(
+      workspaceCostSummaryReadModelSchema.safeParse({
+        ...summary,
+        currencies: [
+          {
+            ...summary.currencies[0],
+            totalCostMicros: '1.25'
+          }
+        ]
+      }).success
+    ).toBe(false)
   })
 })

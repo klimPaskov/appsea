@@ -94,9 +94,12 @@ validation. Migration `0047` now persists each acquired, contended, or failed
 maintenance invocation through maintenance-role-only record/list/purge
 functions, with generated run IDs, fixed states/codes, bounded durations, and
 numeric counters; it purges rows on the configured retention window and never
-stores lease tokens or raw errors. Deployment still lacks a scheduler, database
-fencing inside long-running mutations, alert ownership, cross-run cost/accounting
-aggregation, per-scheduler maintenance credentials, and a fresh Docker-backed
+stores lease tokens or raw errors. Migration `0048` and the private
+`GET /api/workspaces/:workspaceId/costs` route now provide bounded,
+membership-authorized cross-run ledger aggregation by currency and cost type
+using exact micro-unit strings. Deployment still lacks a scheduler, database
+fencing inside long-running mutations, alert ownership, provider pricing/billing
+controls, per-scheduler maintenance credentials, and a fresh Docker-backed
 recovery proof. The current `appsea_maintenance` coordinator is trusted across
 the four allowlisted names; production data-work role separation and optional
 per-scheduler isolation remain release gates.

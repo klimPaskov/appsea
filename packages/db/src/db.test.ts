@@ -60,7 +60,8 @@ describe('database foundation', () => {
       '0044',
       '0045',
       '0046',
-      '0047'
+      '0047',
+      '0048'
     ])
     expect(migrations[0]?.checksum).toMatch(/^[a-f0-9]{64}$/)
     expect(migrations[0]?.sql).toContain('CREATE TABLE appsea.evidence_records')
@@ -137,6 +138,7 @@ describe('database foundation', () => {
     const maintenanceSchedulerRunMigration = migrations.find(
       (migration) => migration.version === '0047'
     )
+    const costSummaryIndexMigration = migrations.find((migration) => migration.version === '0048')
     expect(authMigration?.sql).toContain('CREATE TABLE appsea.users')
     expect(authMigration?.sql).toContain('CREATE TABLE appsea.auth_sessions')
     expect(authMigration?.sql).toContain('FORCE ROW LEVEL SECURITY')
@@ -431,6 +433,7 @@ describe('database foundation', () => {
     expect(maintenanceSchedulerRunMigration?.sql).toContain(
       'REVOKE ALL ON appsea.maintenance_scheduler_runs'
     )
+    expect(costSummaryIndexMigration?.sql).toContain('cost_ledger_entries_workspace_recorded_idx')
   })
 
   it('requires verified TLS for production database connections', () => {

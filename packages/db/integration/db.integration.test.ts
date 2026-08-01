@@ -35,6 +35,7 @@ import {
   PostgresProductionWorkflowAdmissionRepository,
   PostgresMaintenanceSchedulerLeaseRepository,
   PostgresMaintenanceSchedulerRunRepository,
+  PostgresWorkspaceCostRepository,
   PostgresSourceCollectionLeaseRepository,
   PostgresSourceSnapshotReconciliationRepository,
   ProductionWorkflowConcurrencyLimitError,
@@ -462,7 +463,9 @@ describe.sequential('PostgreSQL fixture persistence lifecycle', () => {
       '0043',
       '0044',
       '0045',
-      '0046'
+      '0046',
+      '0047',
+      '0048'
     ])
     expect(secondMigrationResult.applied).toEqual([])
     expect(secondMigrationResult.alreadyApplied).toEqual([
@@ -511,7 +514,9 @@ describe.sequential('PostgreSQL fixture persistence lifecycle', () => {
       '0043',
       '0044',
       '0045',
-      '0046'
+      '0046',
+      '0047',
+      '0048'
     ])
   })
 
@@ -758,6 +763,76 @@ describe.sequential('PostgreSQL fixture persistence lifecycle', () => {
     await expect(
       maintenancePool.query('SELECT * FROM appsea.maintenance_scheduler_runs')
     ).rejects.toMatchObject({ code: '42501' })
+  })
+
+  it('aggregates the immutable cost ledger inside authenticated workspace RLS', async () => {
+    const workspaceId = 'workspace-cost-summary'
+    const userId = 'user-cost-summary'
+    await withOwnerClient(async (client) => {
+      await client.query(
+        `INSERT INTO appsea.users
+           (user_id, email, display_name, password_hash, created_at, updated_at)
+         VALUES ($1, 'cost-summary@example.test', 'Cost Summary', repeat('x', 64), $2, $2)`,
+        [userId, fixedAt]
+      )
+      await client.query(
+        `INSERT INTO appsea.workspaces
+           (workspace_id, slug, display_name, visibility, fixture_only, status, created_at, updated_at)
+         VALUES ($1, 'cost-summary-workspace', 'Cost Summary', 'private', true, 'active', $2, $2)`,
+        [workspaceId, fixedAt]
+      )
+      await client.query(
+        `INSERT INTO appsea.workspace_memberships
+           (workspace_id, user_id, role, created_at, updated_at)
+         VALUES ($1, $2, 'viewer', $3, $3)`,
+        [workspaceId, userId, fixedAt]
+      )
+      await client.query(
+        `INSERT INTO appsea.cost_ledger_entries
+           (workspace_id, cost_entry_id, cost_type, quantity, unit, amount, currency, estimate, recorded_at)
+         VALUES
+           ($1, 'cost:integration:actual', 'source_request', 1, 'request', 0.500000, 'USD', false, $2),
+           ($1, 'cost:integration:estimate', 'source_request', 1, 'request', 0.250000, 'USD', true, $2),
+           ($1, 'cost:integration:eur', 'licensed_feed', 1, 'request', 0.125000, 'EUR', false, $2)`,
+        [workspaceId, fixedAt]
+      )
+    })
+
+    try {
+      const costRepository = new PostgresWorkspaceCostRepository(servicePool)
+      await expect(
+        costRepository.readForUser(userId, workspaceId, {
+          from: fixedAt,
+          to: laterAt
+        })
+      ).resolves.toMatchObject({
+        workspaceId,
+        entryCount: 3,
+        currencies: [
+          expect.objectContaining({ currency: 'EUR', totalCostMicros: '125000' }),
+          expect.objectContaining({ currency: 'USD', totalCostMicros: '750000' })
+        ]
+      })
+      const indexes = await servicePool.query<{ indexname: string }>(
+        `SELECT indexname
+           FROM pg_indexes
+          WHERE schemaname = 'appsea' AND tablename = 'cost_ledger_entries'`
+      )
+      expect(indexes.rows.map((row) => row.indexname)).toContain(
+        'cost_ledger_entries_workspace_recorded_idx'
+      )
+    } finally {
+      await withOwnerClient(async (client) => {
+        await client.query('DELETE FROM appsea.cost_ledger_entries WHERE workspace_id = $1', [
+          workspaceId
+        ])
+        await client.query('DELETE FROM appsea.workspace_memberships WHERE workspace_id = $1', [
+          workspaceId
+        ])
+        await client.query('DELETE FROM appsea.workspaces WHERE workspace_id = $1', [workspaceId])
+        await client.query('DELETE FROM appsea.users WHERE user_id = $1', [userId])
+      })
+    }
   })
 
   it('serializes production workflow admission and preserves replay semantics', async () => {
