@@ -48,10 +48,12 @@ export {
   PostgresProductionCollectionRepository,
   ProductionCollectionLeaseAssertionError,
   ProductionCollectionAnalysisUnavailableError,
+  ProductionCollectionRecollectionUnavailableError,
   ProductionComplaintReviewConflictError,
   ProductionComplaintReviewNotFoundError,
   ProductionComplaintReviewPermissionError,
-  type ProductionCollectionPersistenceLease
+  type ProductionCollectionPersistenceLease,
+  type ProductionCollectionRecollectionTarget
 } from './production-collection-repository'
 export {
   OpportunitySeedReviewConflictError,

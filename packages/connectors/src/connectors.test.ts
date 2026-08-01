@@ -130,6 +130,33 @@ describe('connector policy gate', () => {
     expect(complaint.text).not.toContain('complaint_id')
   })
 
+  it('uses the exact complaint route for an explicit tombstone re-collection', async () => {
+    let requestedUrl: URL | undefined
+    const connector = new CfpbConnector({
+      policy: approvedCfpbPolicy,
+      fetchImpl: async (url) => {
+        requestedUrl = new URL(String(url))
+        return new Response(JSON.stringify(cfpbRecord), { status: 200 })
+      },
+      now: () => '2026-07-24T00:00:00.000Z'
+    })
+    const result = await connector.collect({
+      query: 'card',
+      limit: 1,
+      purpose: 'testing',
+      requestedDisplayMode: 'excerpt',
+      sourceRecordId: '123456',
+      runId: 'run-cfpb-recollection'
+    })
+    expect(requestedUrl?.pathname).toMatch(/\/123456$/)
+    expect(requestedUrl?.search).toBe('')
+    expect(result.complaints).toHaveLength(1)
+    expect(result.complaints[0]?.sourceRecordId).toBe('123456')
+    expect(result.warnings).toContain(
+      'This exact source-record re-collection used the official complaint-by-ID route and emitted no deletion tombstones.'
+    )
+  })
+
   it('enforces request and per-run quotas before making a request', async () => {
     let requestCount = 0
     const connector = new CfpbConnector({

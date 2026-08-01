@@ -27,6 +27,7 @@ import {
   fixtureResearchWorkflowStartRequestSchema,
   opportunitySchema,
   productionAnalysisHandoffReadModelSchema,
+  productionCollectionRequestSchema,
   productionCollectionPersistenceInputSchema,
   productionCollectionResultSchema,
   productionCollectionWorkflowStartRequestSchema,
@@ -1226,6 +1227,51 @@ describe('contracts', () => {
         replayed: false
       }).success
     ).toBe(true)
+  })
+
+  it('bounds explicit tombstone re-collection to one source record', () => {
+    const request = {
+      workspaceId: 'workspace-production',
+      campaignId: 'campaign-production',
+      runId: 'run-production-recollect',
+      idempotencyKey: 'production-recollection-key',
+      sourceId: 'cfpb-consumer-complaints',
+      policyVersion: 'cfpb-v1',
+      query: 'credit card',
+      limit: 1,
+      purpose: 'opportunity-research',
+      requestedDisplayMode: 'excerpt' as const,
+      budget: {
+        currency: 'USD' as const,
+        maxSourceItems: 1,
+        maxCostMicros: 0,
+        maxActivityAttempts: 3
+      },
+      requestedAt: now,
+      recollectionTombstoneId: 'tombstone:source:record'
+    }
+    expect(productionCollectionRequestSchema.safeParse(request).success).toBe(true)
+    expect(productionCollectionRequestSchema.safeParse({ ...request, limit: 2 }).success).toBe(
+      false
+    )
+    const result = productionCollectionResultSchema.parse({
+      workspaceId: request.workspaceId,
+      campaignId: request.campaignId,
+      runId: request.runId,
+      artifactId: 'production-collection:recollection',
+      sourceId: request.sourceId,
+      policyVersion: request.policyVersion,
+      sourceItemCount: 1,
+      evidenceCount: 1,
+      complaintCount: 1,
+      deletionCount: 0,
+      coverageGaps: [],
+      warnings: [],
+      state: 'completed',
+      completedAt: now,
+      replayed: false
+    })
+    expect(result.recollectionTombstoneId).toBeNull()
   })
 
   it('rejects synthetic or mismatched production complaints', () => {

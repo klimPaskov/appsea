@@ -62,7 +62,8 @@ describe('database foundation', () => {
       '0046',
       '0047',
       '0048',
-      '0049'
+      '0049',
+      '0050'
     ])
     expect(migrations[0]?.checksum).toMatch(/^[a-f0-9]{64}$/)
     expect(migrations[0]?.sql).toContain('CREATE TABLE appsea.evidence_records')
@@ -142,6 +143,9 @@ describe('database foundation', () => {
     const costSummaryIndexMigration = migrations.find((migration) => migration.version === '0048')
     const quotaReconciliationMigration = migrations.find(
       (migration) => migration.version === '0049'
+    )
+    const explicitRecollectionMigration = migrations.find(
+      (migration) => migration.version === '0050'
     )
     expect(authMigration?.sql).toContain('CREATE TABLE appsea.users')
     expect(authMigration?.sql).toContain('CREATE TABLE appsea.auth_sessions')
@@ -447,6 +451,11 @@ describe('database foundation', () => {
     expect(quotaReconciliationMigration?.sql).toContain("session_user <> 'appsea_maintenance'")
     expect(quotaReconciliationMigration?.sql).toContain(
       'source_snapshot_reconciliation_jobs snapshot'
+    )
+    expect(explicitRecollectionMigration?.sql).toContain('source_items_active_native_idx')
+    expect(explicitRecollectionMigration?.sql).toContain('guard_source_recollection_lineage')
+    expect(explicitRecollectionMigration?.sql).toContain(
+      'DROP CONSTRAINT source_items_workspace_id_source_id_source_record_id_key'
     )
   })
 

@@ -33,6 +33,11 @@ workaround is used. The connector sends `search_term`, `field`, `frm`, `size`,
 and `format=json` parameters only. Filtered collection may send `search_term`;
 identifier-only reconciliation deliberately omits it and sends only the
 bounded offset/size traversal parameters.
+After a completed deletion tombstone, the reviewed re-collection path uses the
+same API origin with the complaint identifier as the exact path segment. It
+fetches one record, retains no raw response, and emits no deletion tombstone;
+the path is private, explicit, and disabled until this source policy is
+approved.
 
 ## Policy metadata
 

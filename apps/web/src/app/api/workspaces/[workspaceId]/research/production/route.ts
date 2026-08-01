@@ -8,6 +8,7 @@ import {
   ProductionWorkflowConcurrencyLimitError,
   ProductionWorkflowRateLimitError
 } from '@appsea/db/production-workflow-admission'
+import { PostgresProductionCollectionRepository } from '@appsea/db'
 import { PostgresOpportunitySeedReviewRepository } from '@appsea/db/opportunity-seed-review'
 import {
   prepareProductionCollectionWorkflowStart,
@@ -101,6 +102,32 @@ export async function POST(
     if (!approvedSeed) {
       return Response.json(
         { error: 'An approved opportunity seed review is required for automatic analysis' },
+        { status: 422, headers: privateResponseHeaders }
+      )
+    }
+  }
+  if (strict.data.recollectionTombstoneId) {
+    let recollectionTarget: Awaited<
+      ReturnType<PostgresProductionCollectionRepository['readRecollectionTargetForUser']>
+    >
+    try {
+      recollectionTarget = await new PostgresProductionCollectionRepository(
+        getDatabasePool()
+      ).readRecollectionTargetForUser(
+        session.user.userId,
+        parsedWorkspaceId.data,
+        strict.data.recollectionTombstoneId,
+        strict.data.sourceId
+      )
+    } catch {
+      return Response.json(
+        { error: 'Unable to verify the source deletion tombstone' },
+        { status: 503, headers: privateResponseHeaders }
+      )
+    }
+    if (!recollectionTarget) {
+      return Response.json(
+        { error: 'A completed matching deletion tombstone is required for re-collection' },
         { status: 422, headers: privateResponseHeaders }
       )
     }

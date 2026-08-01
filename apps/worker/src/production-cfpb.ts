@@ -34,6 +34,9 @@ function requestFromEnv(policyVersion: string): ProductionCollectionRequest {
     limit,
     purpose: process.env.APPSEA_PRODUCTION_CFPB_PURPOSE ?? 'opportunity-research',
     requestedDisplayMode: 'excerpt',
+    ...(process.env.APPSEA_PRODUCTION_RECOLLECTION_TOMBSTONE_ID?.trim()
+      ? { recollectionTombstoneId: process.env.APPSEA_PRODUCTION_RECOLLECTION_TOMBSTONE_ID.trim() }
+      : {}),
     budget: {
       currency: 'USD',
       maxSourceItems,

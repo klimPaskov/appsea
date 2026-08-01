@@ -13,6 +13,7 @@ import {
   ImmutableRecordConflictError,
   PostgresProductionCollectionRepository,
   PostgresProductionCollectionWorkflowRepository,
+  ProductionCollectionRecollectionUnavailableError as DbProductionCollectionRecollectionUnavailableError,
   WorkflowCheckpointConflictError,
   WorkflowJobConflictError,
   WorkflowJobStateError
@@ -26,6 +27,7 @@ import {
   ProductionCollectionPolicyDeniedError,
   ProductionCollectionCostBudgetExceededError,
   ProductionCollectionReconciliationError,
+  ProductionCollectionRecollectionUnavailableError,
   runProductionCfpbCollection
 } from './production-cfpb-runner'
 import { emitWorkerEvent } from './observability'
@@ -68,7 +70,13 @@ function sanitizedProductionActivityFailure(error: unknown): ApplicationFailure 
       'APPSEA_IDEMPOTENCY_CONFLICT'
     )
   }
-  if (error instanceof ImmutableRecordConflictError || error instanceof WorkflowJobStateError) {
+  if (
+    error instanceof ImmutableRecordConflictError ||
+    error instanceof WorkflowJobStateError ||
+    error instanceof ProductionCollectionRecollectionUnavailableError ||
+    error instanceof DbProductionCollectionRecollectionUnavailableError ||
+    errorName(error) === 'ProductionCollectionRecollectionUnavailableError'
+  ) {
     return ApplicationFailure.nonRetryable(
       'Production collection state or immutable content is invalid.',
       'APPSEA_IMMUTABLE_CONFLICT'
@@ -154,7 +162,10 @@ export function createProductionCollectionActivities(pool: Pool): ProductionColl
             purpose: parsed.input.purpose,
             requestedDisplayMode: parsed.input.requestedDisplayMode,
             budget: parsed.input.budget,
-            requestedAt: parsed.input.requestedAt
+            requestedAt: parsed.input.requestedAt,
+            ...(parsed.input.recollectionTombstoneId
+              ? { recollectionTombstoneId: parsed.input.recollectionTombstoneId }
+              : {})
           },
           { observedAt: parsed.occurredAt }
         )

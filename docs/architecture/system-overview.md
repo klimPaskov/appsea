@@ -87,6 +87,11 @@ run, exposes only bounded identifiers/counters through authenticated workspace
 inspection, and permits `appsea_maintenance` to record an exact linked-result
 or explicit no-result resolution. It never refunds quota or authorizes a
 re-fetch.
+Migration `0050` adds explicit, one-record tombstone-bound re-collection
+lineage across workflow projections, research runs, and source items. Completed
+deletion state is required by database triggers; deleted history is preserved
+and active native-record uniqueness remains enforced. Re-collection is a
+private, reviewed action and is not an automatic retry or source activation.
 The post-collection production analysis workflow is versioned as `v2`: only
 workspace/collection/analysis/seed identifiers and immutable digests cross
 Temporal, while the worker rebuilds the evidence-backed artifact inside its

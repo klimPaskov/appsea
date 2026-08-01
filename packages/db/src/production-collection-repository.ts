@@ -71,6 +71,15 @@ export class ProductionCollectionAnalysisUnavailableError extends Error {
   }
 }
 
+export class ProductionCollectionRecollectionUnavailableError extends Error {
+  constructor() {
+    super(
+      'The requested source re-collection tombstone is not completed or does not match the source'
+    )
+    this.name = 'ProductionCollectionRecollectionUnavailableError'
+  }
+}
+
 interface ExistingRunRow extends QueryResultRow {
   run_id: string
   campaign_id: string
@@ -81,6 +90,7 @@ interface ExistingRunRow extends QueryResultRow {
   artifact_snapshot: unknown
   completed_at: Date | string | null
   requested_at: Date | string
+  recollection_tombstone_id: string | null
 }
 
 interface CampaignRow extends QueryResultRow {
@@ -130,6 +140,14 @@ export interface ProductionCollectionCompletedIdentity {
   limit: number
   purpose: string
   requestedDisplayMode: 'excerpt' | 'metadata-only' | 'aggregate-only'
+  recollectionTombstoneId: string | null
+}
+
+export interface ProductionCollectionRecollectionTarget {
+  tombstoneId: string
+  sourceId: string
+  sourceRecordId: string
+  completedAt: string
 }
 
 function normalizeText(value: string): string {
@@ -247,6 +265,7 @@ function buildSnapshot(
     limit: input.request.limit,
     purpose: input.request.purpose,
     requestedDisplayMode: input.request.requestedDisplayMode,
+    recollectionTombstoneId: input.request.recollectionTombstoneId ?? null,
     sourceItemCount,
     evidenceCount,
     complaintCount,
@@ -277,6 +296,7 @@ async function resultFromRun(
     complaintCount: snapshot.complaintCount,
     deletionCount: snapshot.deletionCount,
     costMicros: snapshot.costMicros,
+    recollectionTombstoneId: snapshot.recollectionTombstoneId,
     coverageGaps: snapshot.coverageGaps,
     warnings: snapshot.warnings,
     state: 'completed',
@@ -292,7 +312,7 @@ async function readRun(
 ): Promise<ExistingRunRow | undefined> {
   const result = await client.query<ExistingRunRow>(
     `SELECT run_id, campaign_id, idempotency_key, input_hash, state, artifact_id,
-            artifact_snapshot, completed_at
+            artifact_snapshot, completed_at, recollection_tombstone_id
        FROM appsea.research_runs
       WHERE workspace_id = $1 AND idempotency_key = $2
       FOR UPDATE`,
@@ -303,6 +323,69 @@ async function readRun(
 
 export class PostgresProductionCollectionRepository {
   constructor(private readonly pool: Pool) {}
+
+  async readRecollectionTargetForUser(
+    userId: string,
+    workspaceId: string,
+    tombstoneId: string,
+    sourceId: string
+  ): Promise<ProductionCollectionRecollectionTarget | null> {
+    return withAuthenticatedWorkspaceTransaction(
+      this.pool,
+      userId,
+      workspaceId,
+      (client) =>
+        this.readRecollectionTargetInTransaction(client, workspaceId, tombstoneId, sourceId),
+      { readOnly: true }
+    )
+  }
+
+  async readRecollectionTarget(
+    workspaceId: string,
+    tombstoneId: string,
+    sourceId: string
+  ): Promise<ProductionCollectionRecollectionTarget | null> {
+    return withWorkspaceTransaction(
+      this.pool,
+      workspaceId,
+      (client) =>
+        this.readRecollectionTargetInTransaction(client, workspaceId, tombstoneId, sourceId),
+      { readOnly: true }
+    )
+  }
+
+  private async readRecollectionTargetInTransaction(
+    client: PoolClient,
+    workspaceId: string,
+    tombstoneId: string,
+    sourceId: string
+  ): Promise<ProductionCollectionRecollectionTarget | null> {
+    const result = await client.query<
+      QueryResultRow & {
+        tombstone_id: string
+        source_id: string
+        source_record_id: string
+        completed_at: Date | string
+      }
+    >(
+      `SELECT tombstone_id, source_id, source_record_id, completed_at
+         FROM appsea.deletion_tombstones
+        WHERE workspace_id = $1
+          AND tombstone_id = $2
+          AND source_id = $3
+          AND state = 'completed'
+          AND completed_at IS NOT NULL`,
+      [workspaceId, tombstoneId, sourceId]
+    )
+    const row = result.rows[0]
+    if (!row) return null
+    return {
+      tombstoneId: appseaIdentifierSchema.parse(row.tombstone_id),
+      sourceId: appseaIdentifierSchema.parse(row.source_id),
+      sourceRecordId: row.source_record_id,
+      completedAt: asIso(row.completed_at)
+    }
+  }
 
   async readCompletedIdentity(
     workspaceId: string,
@@ -315,7 +398,7 @@ export class PostgresProductionCollectionRepository {
         if (!(await isProductionWorkspace(client, workspaceId))) return null
         const result = await client.query<ExistingRunRow>(
           `SELECT run_id, campaign_id, idempotency_key, input_hash, state, artifact_id,
-                  artifact_snapshot, completed_at
+                  artifact_snapshot, completed_at, recollection_tombstone_id
              FROM appsea.research_runs
             WHERE workspace_id = $1 AND run_id = $2
               AND mode = 'production' AND state = 'completed'`,
@@ -334,7 +417,8 @@ export class PostgresProductionCollectionRepository {
           query: snapshot.query,
           limit: snapshot.limit,
           purpose: snapshot.purpose,
-          requestedDisplayMode: snapshot.requestedDisplayMode
+          requestedDisplayMode: snapshot.requestedDisplayMode,
+          recollectionTombstoneId: snapshot.recollectionTombstoneId
         }
       },
       { readOnly: true }
@@ -381,7 +465,7 @@ export class PostgresProductionCollectionRepository {
     if (!(await isProductionWorkspace(client, workspaceId))) return null
     const runResult = await client.query<ExistingRunRow>(
       `SELECT run_id, campaign_id, idempotency_key, input_hash, state, artifact_id,
-                  artifact_snapshot, completed_at, requested_at
+                  artifact_snapshot, completed_at, requested_at, recollection_tombstone_id
              FROM appsea.research_runs
             WHERE workspace_id = $1 AND run_id = $2
               AND mode = 'production' AND state = 'completed'`,
@@ -412,7 +496,10 @@ export class PostgresProductionCollectionRepository {
       purpose: campaign.purpose,
       requestedDisplayMode: snapshot.requestedDisplayMode,
       budget: researchJobBudgetSchema.parse(campaign.budget),
-      requestedAt: asIso(run.requested_at)
+      requestedAt: asIso(run.requested_at),
+      ...(snapshot.recollectionTombstoneId
+        ? { recollectionTombstoneId: snapshot.recollectionTombstoneId }
+        : {})
     })
     if (contentHash(request) !== snapshot.requestHash) {
       throw new ProductionCollectionAnalysisUnavailableError()
@@ -760,6 +847,29 @@ export class PostgresProductionCollectionRepository {
             throw new Error('Collection policy does not match the approved database snapshot')
           }
 
+          let recollectionTarget: ProductionCollectionRecollectionTarget | null = null
+          if (parsed.request.recollectionTombstoneId) {
+            recollectionTarget = await this.readRecollectionTargetInTransaction(
+              client,
+              parsed.request.workspaceId,
+              parsed.request.recollectionTombstoneId,
+              parsed.request.sourceId
+            )
+            if (!recollectionTarget) {
+              throw new ProductionCollectionRecollectionUnavailableError()
+            }
+            if (
+              parsed.complaints.some(
+                (complaint) => complaint.sourceRecordId !== recollectionTarget?.sourceRecordId
+              )
+            ) {
+              throw new ImmutableRecordConflictError(
+                'source recollection record',
+                parsed.request.recollectionTombstoneId
+              )
+            }
+          }
+
           await client.query(
             `INSERT INTO appsea.research_campaigns
              (workspace_id, campaign_id, name, purpose, state, configuration, budget,
@@ -783,7 +893,10 @@ export class PostgresProductionCollectionRepository {
                 sourceId: parsed.request.sourceId,
                 policyVersion: parsed.request.policyVersion,
                 query: parsed.request.query,
-                requestedDisplayMode: parsed.request.requestedDisplayMode
+                requestedDisplayMode: parsed.request.requestedDisplayMode,
+                ...(parsed.request.recollectionTombstoneId
+                  ? { recollectionTombstoneId: parsed.request.recollectionTombstoneId }
+                  : {})
               }),
               JSON.stringify(parsed.request.budget),
               parsed.observedAt
@@ -794,10 +907,10 @@ export class PostgresProductionCollectionRepository {
           await client.query(
             `INSERT INTO appsea.research_runs
              (workspace_id, run_id, campaign_id, idempotency_key, mode, state,
-              artifact_id, input_hash, artifact_snapshot, coverage_gaps, warnings,
-              requested_at, started_at)
+              artifact_id, input_hash, artifact_snapshot, recollection_tombstone_id,
+              coverage_gaps, warnings, requested_at, started_at)
            VALUES ($1, $2, $3, $4, 'production', 'running', $5, $6, $7::jsonb,
-                   $8, $9, $10, $11)`,
+                   $8, $9, $10, $11, $12)`,
             [
               parsed.request.workspaceId,
               parsed.request.runId,
@@ -806,6 +919,7 @@ export class PostgresProductionCollectionRepository {
               artifactId,
               inputHash,
               JSON.stringify(snapshotBeforeCounts),
+              parsed.request.recollectionTombstoneId ?? null,
               snapshotBeforeCounts.coverageGaps,
               snapshotBeforeCounts.warnings,
               parsed.request.requestedAt,
@@ -828,9 +942,10 @@ export class PostgresProductionCollectionRepository {
 
           for (const complaint of parsed.complaints) {
             const text = normalizeText(complaint.text)
-            const sourceItemId = hashIdentifier('source-item', {
+            const candidateSourceItemId = hashIdentifier('source-item', {
               sourceId: complaint.sourceId,
-              sourceRecordId: complaint.sourceRecordId
+              sourceRecordId: complaint.sourceRecordId,
+              recollectionTombstoneId: parsed.request.recollectionTombstoneId ?? null
             })
             const sourceItemHash = contentHash({
               sourceId: complaint.sourceId,
@@ -849,12 +964,14 @@ export class PostgresProductionCollectionRepository {
               `INSERT INTO appsea.source_items
                (workspace_id, source_item_id, source_id, source_policy_version,
                 source_record_id, query_route, content_hash, captured_at, published_at,
-                synthetic, created_at, collection_purpose, requested_display_mode)
-             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, false, $8, $10, $11)
-             ON CONFLICT (workspace_id, source_id, source_record_id) DO NOTHING`,
+                synthetic, created_at, collection_purpose, requested_display_mode,
+                recollection_tombstone_id)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, false, $8, $10, $11, $12)
+             ON CONFLICT (workspace_id, source_id, source_record_id)
+               WHERE deletion_state = 'active' DO NOTHING`,
               [
                 parsed.request.workspaceId,
-                sourceItemId,
+                candidateSourceItemId,
                 complaint.sourceId,
                 parsed.request.policyVersion,
                 complaint.sourceRecordId,
@@ -863,34 +980,42 @@ export class PostgresProductionCollectionRepository {
                 complaint.capturedAt,
                 complaint.publishedAt,
                 parsed.request.purpose,
-                parsed.request.requestedDisplayMode
+                parsed.request.requestedDisplayMode,
+                parsed.request.recollectionTombstoneId ?? null
               ]
             )
             const storedSourceItem = await client.query<
               QueryResultRow & {
+                source_item_id: string
                 content_hash: string
                 source_policy_version: string
                 collection_purpose: string
                 requested_display_mode: string
                 deletion_state: string
+                recollection_tombstone_id: string | null
               }
             >(
-              `SELECT content_hash, source_policy_version, collection_purpose,
-                      requested_display_mode, deletion_state
+              `SELECT source_item_id, content_hash, source_policy_version,
+                      collection_purpose, requested_display_mode, deletion_state,
+                      recollection_tombstone_id
                  FROM appsea.source_items
-                WHERE workspace_id = $1 AND source_id = $2 AND source_record_id = $3`,
+                WHERE workspace_id = $1 AND source_id = $2 AND source_record_id = $3
+                  AND deletion_state = 'active'`,
               [parsed.request.workspaceId, complaint.sourceId, complaint.sourceRecordId]
             )
             const storedSourceItemRow = storedSourceItem.rows[0]
+            const sourceItemId = storedSourceItemRow?.source_item_id ?? candidateSourceItemId
             if (
               !storedSourceItemRow ||
               storedSourceItemRow.content_hash !== sourceItemHash ||
               storedSourceItemRow.source_policy_version !== parsed.request.policyVersion ||
               storedSourceItemRow.collection_purpose !== parsed.request.purpose ||
               storedSourceItemRow.requested_display_mode !== parsed.request.requestedDisplayMode ||
-              storedSourceItemRow.deletion_state !== 'active'
+              storedSourceItemRow.deletion_state !== 'active' ||
+              storedSourceItemRow.recollection_tombstone_id !==
+                (parsed.request.recollectionTombstoneId ?? null)
             ) {
-              throw new ImmutableRecordConflictError('source item', sourceItemId)
+              throw new ImmutableRecordConflictError('source item', candidateSourceItemId)
             }
             await client.query(
               `INSERT INTO appsea.research_run_source_items
@@ -1165,7 +1290,7 @@ export class PostgresProductionCollectionRepository {
 
           const completed = await client.query<ExistingRunRow>(
             `SELECT run_id, campaign_id, idempotency_key, input_hash, state, artifact_id,
-            artifact_snapshot, completed_at
+            artifact_snapshot, completed_at, recollection_tombstone_id
                FROM appsea.research_runs
               WHERE workspace_id = $1 AND run_id = $2`,
             [parsed.request.workspaceId, parsed.request.runId]
@@ -1209,7 +1334,7 @@ export class PostgresProductionCollectionRepository {
     if (!(await isProductionWorkspace(client, workspaceId))) return null
     const run = await client.query<ExistingRunRow>(
       `SELECT run_id, campaign_id, idempotency_key, input_hash, state, artifact_id,
-                    artifact_snapshot, completed_at
+                    artifact_snapshot, completed_at, recollection_tombstone_id
              FROM appsea.research_runs
             WHERE workspace_id = $1 AND run_id = $2
               AND mode = 'production' AND state = 'completed'`,

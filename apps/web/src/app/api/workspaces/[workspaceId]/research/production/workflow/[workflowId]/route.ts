@@ -72,6 +72,7 @@ export async function GET(
         consumedSourceItems: projection.consumedSourceItems,
         consumedCostMicros: projection.consumedCostMicros,
         analysisSeedReviewId: projection.analysisSeedReviewId,
+        recollectionTombstoneId: projection.recollectionTombstoneId,
         result: null
       })
       return Response.json({ data: status }, { headers: privateResponseHeaders })

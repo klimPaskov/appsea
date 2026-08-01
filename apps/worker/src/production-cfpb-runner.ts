@@ -31,6 +31,15 @@ export class ProductionCollectionReconciliationError extends Error {
   }
 }
 
+export class ProductionCollectionRecollectionUnavailableError extends Error {
+  constructor() {
+    super(
+      'The requested source re-collection tombstone is not completed or does not match the source'
+    )
+    this.name = 'ProductionCollectionRecollectionUnavailableError'
+  }
+}
+
 export class ProductionCollectionCostBudgetExceededError extends Error {
   readonly estimatedCostMicros: number
 
@@ -81,7 +90,8 @@ export async function runProductionCfpbCollection(
       completed.query === effectiveRequest.query &&
       completed.limit === effectiveRequest.limit &&
       completed.purpose === effectiveRequest.purpose &&
-      completed.requestedDisplayMode === effectiveRequest.requestedDisplayMode
+      completed.requestedDisplayMode === effectiveRequest.requestedDisplayMode &&
+      completed.recollectionTombstoneId === (effectiveRequest.recollectionTombstoneId ?? null)
     if (!matches) {
       throw new Error('Production collection run identity conflicts with a completed result')
     }
@@ -109,6 +119,16 @@ export async function runProductionCfpbCollection(
       estimatedCostMicros,
       effectiveRequest.budget.maxCostMicros
     )
+  }
+  const recollectionTarget = effectiveRequest.recollectionTombstoneId
+    ? await repository.readRecollectionTarget(
+        effectiveRequest.workspaceId,
+        effectiveRequest.recollectionTombstoneId,
+        effectiveRequest.sourceId
+      )
+    : null
+  if (effectiveRequest.recollectionTombstoneId && !recollectionTarget) {
+    throw new ProductionCollectionRecollectionUnavailableError()
   }
   const observedAt = new Date(options.observedAt ?? new Date().toISOString())
   if (!Number.isFinite(observedAt.getTime())) {
@@ -156,7 +176,8 @@ export async function runProductionCfpbCollection(
       workspaceId: effectiveRequest.workspaceId,
       runId: effectiveRequest.runId,
       policyVersion: effectiveRequest.policyVersion,
-      idempotencyKey: effectiveRequest.idempotencyKey
+      idempotencyKey: effectiveRequest.idempotencyKey,
+      ...(recollectionTarget ? { sourceRecordId: recollectionTarget.sourceRecordId } : {})
     })
     let persisted: ProductionCollectionResult
     try {

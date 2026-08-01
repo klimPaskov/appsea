@@ -167,3 +167,20 @@ authenticated owner/editor gateway:
 Both routes reject fixture workspaces and workspace mismatches. They are not a
 replacement for Temporal namespace authorization, source-policy approval, or a
 production deployment with TLS and role separation.
+
+## Explicit re-collection after source deletion
+
+After deletion propagation completes, an authenticated editor or owner may
+request one exact source-native record by adding
+`recollectionTombstoneId` to the production collection request and setting
+`limit` to `1`. The web gateway verifies the completed, source-matching
+tombstone before consuming admission or contacting Temporal. Migration `0050`
+stores immutable lineage on the workflow, run, and new active source item;
+the prior deleted row remains historical and is never restored.
+
+The CFPB connector uses its official complaint-by-ID route, applies the normal
+policy/quota/redaction checks, and emits no deletion tombstone for that exact
+request. A missing or mismatched tombstone fails closed. This is a deliberate
+private action only; quota reconciliation, source maintenance, retries, and
+analysis do not automatically re-fetch the record. See
+[`source-recollection.md`](source-recollection.md) for the operator procedure.

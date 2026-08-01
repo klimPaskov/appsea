@@ -16,6 +16,7 @@ const state = vi.hoisted(() => ({
   persistInput: undefined as unknown,
   persistenceLease: undefined as unknown,
   persistError: undefined as unknown,
+  recollectionTarget: undefined as unknown,
   asserted: false,
   released: false
 }))
@@ -71,6 +72,10 @@ vi.mock('@appsea/db', () => ({
   PostgresProductionCollectionRepository: class {
     async readCompletedIdentity() {
       return state.completed
+    }
+
+    async readRecollectionTarget() {
+      return state.recollectionTarget
     }
 
     async persistWithLease(input: unknown, lease: unknown) {
@@ -199,6 +204,55 @@ describe('production CFPB runner lease lifecycle', () => {
     })
     expect(state.asserted).toBe(true)
     expect(state.released).toBe(true)
+  })
+
+  it('binds a tombstone re-collection to the exact source record', async () => {
+    state.lease = {
+      decision: 'acquired',
+      replayed: false,
+      observedAt: '2026-07-10T00:00:00.000Z',
+      expiresAt: '2026-07-10T00:30:00.000Z'
+    }
+    state.recollectionTarget = {
+      tombstoneId: 'tombstone:source:one',
+      sourceId: 'cfpb-consumer-complaints',
+      sourceRecordId: '123456',
+      completedAt: '2026-07-10T00:00:00.000Z'
+    }
+    state.acquireInput = undefined
+    state.connectorRequest = undefined
+    state.persistInput = undefined
+    state.persistenceLease = undefined
+    state.persistError = undefined
+    state.released = false
+
+    await runProductionCfpbCollection(
+      {} as never,
+      { ...request, recollectionTombstoneId: 'tombstone:source:one' },
+      { observedAt: '2026-07-10T00:00:00.000Z' }
+    )
+
+    expect(state.connectorRequest).toMatchObject({ sourceRecordId: '123456', limit: 1 })
+    expect(state.persistInput).toMatchObject({
+      request: { recollectionTombstoneId: 'tombstone:source:one' }
+    })
+    expect(state.released).toBe(true)
+    state.recollectionTarget = undefined
+  })
+
+  it('fails before lease acquisition when the tombstone is unavailable', async () => {
+    state.recollectionTarget = undefined
+    state.acquireInput = undefined
+    state.connectorRequest = undefined
+    await expect(
+      runProductionCfpbCollection(
+        {} as never,
+        { ...request, recollectionTombstoneId: 'tombstone:missing' },
+        { observedAt: '2026-07-10T00:00:00.000Z' }
+      )
+    ).rejects.toMatchObject({ name: 'ProductionCollectionRecollectionUnavailableError' })
+    expect(state.acquireInput).toBeUndefined()
+    expect(state.connectorRequest).toBeUndefined()
   })
 
   it('uses the lease timestamp on replay instead of the new workflow hint', async () => {

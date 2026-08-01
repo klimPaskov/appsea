@@ -43,6 +43,7 @@ interface ProductionWorkflowRow extends QueryResultRow {
   source_id: string
   policy_version: string
   analysis_seed_review_id: string | null
+  recollection_tombstone_id: string | null
   idempotency_digest: string
   input_hash: string
   requested_by_actor_type: 'user' | 'service'
@@ -95,6 +96,7 @@ function mapRow(row: ProductionWorkflowRow): ProductionCollectionWorkflowStatus 
   policyVersion: string
   idempotencyDigest: string
   analysisSeedReviewId: string | null
+  recollectionTombstoneId: string | null
   requestedBy: ProductionCollectionWorkflowInput['requestedBy']
 } {
   return {
@@ -114,6 +116,7 @@ function mapRow(row: ProductionWorkflowRow): ProductionCollectionWorkflowStatus 
     policyVersion: row.policy_version,
     idempotencyDigest: row.idempotency_digest,
     analysisSeedReviewId: row.analysis_seed_review_id,
+    recollectionTombstoneId: row.recollection_tombstone_id ?? null,
     requestedBy: workflowActorSchema.parse({
       actorType: row.requested_by_actor_type,
       actorId: row.requested_by_actor_id
@@ -331,7 +334,10 @@ export class PostgresProductionCollectionWorkflowRepository {
                 sourceId: parsed.input.sourceId,
                 policyVersion: parsed.input.policyVersion,
                 query: parsed.input.query,
-                requestedDisplayMode: parsed.input.requestedDisplayMode
+                requestedDisplayMode: parsed.input.requestedDisplayMode,
+                ...(parsed.input.recollectionTombstoneId
+                  ? { recollectionTombstoneId: parsed.input.recollectionTombstoneId }
+                  : {})
               }),
               JSON.stringify(parsed.input.budget),
               parsed.occurredAt
@@ -378,6 +384,7 @@ export class PostgresProductionCollectionWorkflowRepository {
             row.source_id !== parsed.input.sourceId ||
             row.policy_version !== parsed.input.policyVersion ||
             row.analysis_seed_review_id !== (parsed.input.analysisSeedReviewId ?? null) ||
+            row.recollection_tombstone_id !== (parsed.input.recollectionTombstoneId ?? null) ||
             row.requested_by_actor_type !== requestedBy.actorType ||
             row.requested_by_actor_id !== requestedBy.actorId ||
             row.workflow_type !== parsed.execution.workflowType ||
@@ -401,12 +408,13 @@ export class PostgresProductionCollectionWorkflowRepository {
           `INSERT INTO appsea.production_collection_workflow_jobs
            (workspace_id, workflow_id, temporal_first_execution_run_id, workflow_type,
            workflow_version, task_queue, campaign_id, requested_research_run_id,
-            source_id, policy_version, analysis_seed_review_id, idempotency_digest, input_hash,
+            source_id, policy_version, analysis_seed_review_id, recollection_tombstone_id,
+            idempotency_digest, input_hash,
             requested_by_actor_type, requested_by_actor_id, state, checkpoint,
             budget_currency, max_source_items, max_cost_micros, max_activity_attempts,
             requested_at, started_at, updated_at)
-         VALUES ($1, $2, $3::uuid, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13,
-                 $14, $15, 'running', 'initialized', $16, $17, $18, $19, $20, $20, $20)`,
+         VALUES ($1, $2, $3::uuid, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14,
+                 $15, $16, 'running', 'initialized', $17, $18, $19, $20, $21, $21, $21)`,
           [
             parsed.input.workspaceId,
             parsed.execution.workflowId,
@@ -419,6 +427,7 @@ export class PostgresProductionCollectionWorkflowRepository {
             parsed.input.sourceId,
             parsed.input.policyVersion,
             parsed.input.analysisSeedReviewId ?? null,
+            parsed.input.recollectionTombstoneId ?? null,
             parsed.input.idempotencyDigest,
             parsed.input.inputHash,
             requestedBy.actorType,

@@ -968,9 +968,20 @@ export const productionCollectionRequestSchema = z
     purpose: z.string().min(1).max(120),
     requestedDisplayMode: z.enum(['excerpt', 'metadata-only', 'aggregate-only']),
     budget: researchJobBudgetSchema,
-    requestedAt: z.string().datetime()
+    requestedAt: z.string().datetime(),
+    /** Identifier-only link for an explicitly reviewed re-collection. */
+    recollectionTombstoneId: appseaIdentifierSchema.optional()
   })
   .strict()
+  .superRefine((request, context) => {
+    if (request.recollectionTombstoneId && request.limit !== 1) {
+      context.addIssue({
+        code: 'custom',
+        path: ['limit'],
+        message: 'A tombstone-bound re-collection must fetch exactly one source record'
+      })
+    }
+  })
 
 export const productionCollectionPersistenceInputSchema = z
   .object({
@@ -1471,6 +1482,7 @@ export const productionCollectionResultSchema = z
     deletionCount: z.number().int().nonnegative(),
     /** Settled source cost for this request, recorded in micro-USD. */
     costMicros: z.number().int().nonnegative().max(1_000_000_000_000).default(0),
+    recollectionTombstoneId: appseaIdentifierSchema.nullable().default(null),
     coverageGaps: z.array(z.string()),
     warnings: z.array(z.string()),
     state: z.literal('completed'),
@@ -1499,6 +1511,7 @@ export const productionCollectionSnapshotSchema = z
     deletionCount: z.number().int().nonnegative(),
     /** Settled source cost for this request, recorded in micro-USD. */
     costMicros: z.number().int().nonnegative().max(1_000_000_000_000).default(0),
+    recollectionTombstoneId: appseaIdentifierSchema.nullable().default(null),
     coverageGaps: z.array(z.string()),
     warnings: z.array(z.string()),
     capturedAt: z.string().datetime()
@@ -1624,11 +1637,22 @@ export const productionCollectionWorkflowStartRequestSchema = z
     requestedDisplayMode: z.enum(['excerpt', 'metadata-only', 'aggregate-only']),
     budget: researchJobBudgetSchema,
     requestedAt: z.string().datetime(),
+    /** Identifier-only link for an explicitly reviewed re-collection. */
+    recollectionTombstoneId: appseaIdentifierSchema.optional(),
     /** Optional reviewed seed that enables an automatic analysis handoff. */
     analysisSeedReviewId: appseaIdentifierSchema.optional(),
     requestedBy: workflowActorSchema.optional()
   })
   .strict()
+  .superRefine((request, context) => {
+    if (request.recollectionTombstoneId && request.limit !== 1) {
+      context.addIssue({
+        code: 'custom',
+        path: ['limit'],
+        message: 'A tombstone-bound re-collection must fetch exactly one source record'
+      })
+    }
+  })
 
 /** User-facing request for a bounded, policy-gated source snapshot reconciliation. */
 export const sourceSnapshotReconciliationStartRequestSchema = z
@@ -1681,7 +1705,7 @@ export const sourceCollectionLeaseResultSchema = z
   })
   .strict()
 
-export const productionCollectionWorkflowInputSchema = z
+const productionCollectionWorkflowInputBaseSchema = z
   .object({
     workspaceId: appseaIdentifierSchema,
     campaignId: appseaIdentifierSchema,
@@ -1707,13 +1731,35 @@ export const productionCollectionWorkflowInputSchema = z
     requestedDisplayMode: z.enum(['excerpt', 'metadata-only', 'aggregate-only']),
     budget: researchJobBudgetSchema,
     requestedAt: z.string().datetime(),
+    recollectionTombstoneId: appseaIdentifierSchema.optional(),
     analysisSeedReviewId: appseaIdentifierSchema.optional(),
     requestedBy: workflowActorSchema.optional()
   })
   .strict()
 
+export const productionCollectionWorkflowInputSchema =
+  productionCollectionWorkflowInputBaseSchema.superRefine((input, context) => {
+    if (input.recollectionTombstoneId && input.limit !== 1) {
+      context.addIssue({
+        code: 'custom',
+        path: ['limit'],
+        message: 'A tombstone-bound re-collection must fetch exactly one source record'
+      })
+    }
+  })
+
 export const productionCollectionWorkflowHashMaterialSchema =
-  productionCollectionWorkflowInputSchema.omit({ inputHash: true })
+  productionCollectionWorkflowInputBaseSchema
+    .omit({ inputHash: true })
+    .superRefine((input, context) => {
+      if (input.recollectionTombstoneId && input.limit !== 1) {
+        context.addIssue({
+          code: 'custom',
+          path: ['limit'],
+          message: 'A tombstone-bound re-collection must fetch exactly one source record'
+        })
+      }
+    })
 
 export const productionCollectionWorkflowExecutionMetadataSchema = z
   .object({
@@ -1768,6 +1814,7 @@ export const productionCollectionWorkflowStatusSchema = z
     consumedSourceItems: z.number().int().nonnegative().max(5_000),
     consumedCostMicros: z.number().int().nonnegative().max(1_000_000_000_000),
     analysisSeedReviewId: appseaIdentifierSchema.nullable(),
+    recollectionTombstoneId: appseaIdentifierSchema.nullable(),
     result: productionCollectionWorkflowResultSchema.nullable()
   })
   .strict()

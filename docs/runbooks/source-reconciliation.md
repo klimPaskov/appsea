@@ -86,7 +86,10 @@ pnpm --filter @appsea/worker source:maintenance
 
 It redacts source/evidence payloads and invalidates dependent report, plan, and
 opportunity projections while retaining provenance. It does not recollect a
-deleted source record.
+deleted source record. If a later reviewed action must inspect that exact
+record, use the explicit one-record path in
+[`source-recollection.md`](source-recollection.md); reconciliation and
+maintenance never invoke it automatically.
 
 ## Operations and blockers
 

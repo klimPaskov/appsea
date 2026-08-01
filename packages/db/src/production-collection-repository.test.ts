@@ -4,7 +4,8 @@ import { contentHash } from './hash'
 
 const mocks = vi.hoisted(() => ({
   handoffRows: [] as Array<Record<string, unknown>>,
-  leaseAssertions: 0
+  leaseAssertions: 0,
+  recollectionRows: [] as Array<Record<string, unknown>>
 }))
 
 vi.mock('./transaction', () => ({
@@ -106,6 +107,9 @@ async function fakeQuery(text: string): Promise<{ rows: unknown[] }> {
     mocks.leaseAssertions += 1
     return { rows: [{ active: true }] }
   }
+  if (text.includes('FROM appsea.deletion_tombstones')) {
+    return { rows: mocks.recollectionRows }
+  }
   if (text.includes('FROM appsea.research_runs')) return { rows: [run] }
   if (text.includes('FROM appsea.production_analysis_handoffs')) {
     return { rows: mocks.handoffRows }
@@ -120,6 +124,30 @@ async function fakeQuery(text: string): Promise<{ rows: unknown[] }> {
 }
 
 describe('production collection read model', () => {
+  it('reads only completed source-matching tombstone lineage', async () => {
+    mocks.recollectionRows = [
+      {
+        tombstone_id: 'tombstone:source:one',
+        source_id: 'source:cfpb',
+        source_record_id: '123456',
+        completed_at: at
+      }
+    ]
+    const { PostgresProductionCollectionRepository } =
+      await import('./production-collection-repository')
+    const target = await new PostgresProductionCollectionRepository(
+      {} as never
+    ).readRecollectionTarget('workspace:one', 'tombstone:source:one', 'source:cfpb')
+
+    expect(target).toEqual({
+      tombstoneId: 'tombstone:source:one',
+      sourceId: 'source:cfpb',
+      sourceRecordId: '123456',
+      completedAt: at
+    })
+    mocks.recollectionRows = []
+  })
+
   it('hydrates the bounded private analysis handoff status', async () => {
     mocks.handoffRows = [
       {

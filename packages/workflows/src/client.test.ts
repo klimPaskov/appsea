@@ -293,6 +293,40 @@ describe('production workflow client boundary', () => {
     expect(JSON.stringify(prepared)).not.toContain(productionRequest.idempotencyKey)
   })
 
+  it('binds tombstone re-collection into the workflow identity and semantic hash', () => {
+    const productionRequest = {
+      workspaceId: 'workspace-production-recollect',
+      campaignId: 'campaign-production-recollect',
+      runId: 'run-production-recollect',
+      idempotencyKey: 'sentinel-production-recollection-key',
+      workflowVersion: 'production-collection-v1' as const,
+      sourceId: 'cfpb-consumer-complaints',
+      policyVersion: 'cfpb-v1',
+      query: 'billing',
+      limit: 1,
+      purpose: 'opportunity-research',
+      requestedDisplayMode: 'excerpt' as const,
+      budget: {
+        currency: 'USD' as const,
+        maxSourceItems: 1,
+        maxCostMicros: 0,
+        maxActivityAttempts: 3
+      },
+      requestedAt: analysisAt,
+      recollectionTombstoneId: 'tombstone:source:recollect'
+    }
+    const prepared = prepareProductionCollectionWorkflowStart(productionRequest)
+    const ordinary = prepareProductionCollectionWorkflowStart({
+      ...productionRequest,
+      recollectionTombstoneId: undefined
+    })
+
+    expect(prepared.input.recollectionTombstoneId).toBe(productionRequest.recollectionTombstoneId)
+    expect(prepared.workflowId).toBe(ordinary.workflowId)
+    expect(prepared.input.inputHash).not.toBe(ordinary.input.inputHash)
+    expect(JSON.stringify(prepared)).not.toContain(productionRequest.idempotencyKey)
+  })
+
   it('prepares an identifier-only post-collection analysis workflow', () => {
     const prepared = prepareProductionAnalysisWorkflowStart({
       workspaceId: 'workspace-analysis-workflow',

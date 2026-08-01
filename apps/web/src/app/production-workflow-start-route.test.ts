@@ -12,7 +12,14 @@ const mocks = vi.hoisted(() => ({
   startProductionCollectionWorkflow: vi.fn(),
   prepareProductionCollectionWorkflowStart: vi.fn(),
   getTemporalWorkflowClient: vi.fn(),
-  getDatabasePool: vi.fn()
+  getDatabasePool: vi.fn(),
+  readRecollectionTargetForUser: vi.fn()
+}))
+
+vi.mock('@appsea/db', () => ({
+  PostgresProductionCollectionRepository: class {
+    readRecollectionTargetForUser = mocks.readRecollectionTargetForUser
+  }
 }))
 
 vi.mock('@appsea/db/production-workflow-admission', () => ({
@@ -122,6 +129,7 @@ describe('production workflow start route admission boundary', () => {
     mocks.prepareProductionCollectionWorkflowStart.mockReset()
     mocks.getTemporalWorkflowClient.mockReset()
     mocks.getDatabasePool.mockReset()
+    mocks.readRecollectionTargetForUser.mockReset()
     mocks.readSession.mockResolvedValue(session)
     mocks.admitForUser.mockResolvedValue({
       decision: 'admitted',
@@ -138,6 +146,12 @@ describe('production workflow start route admission boundary', () => {
       workflowId: 'workflow:production:workspace:one:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa'
     })
     mocks.getDatabasePool.mockReturnValue({})
+    mocks.readRecollectionTargetForUser.mockResolvedValue({
+      tombstoneId: 'tombstone:source:one',
+      sourceId: 'cfpb-consumer-complaints',
+      sourceRecordId: '123456',
+      completedAt: '2026-08-01T00:00:00.000Z'
+    })
   })
 
   it('admits a bounded start before calling Temporal', async () => {
@@ -187,6 +201,53 @@ describe('production workflow start route admission boundary', () => {
     })
 
     expect(response.status).toBe(409)
+    expect(mocks.startProductionCollectionWorkflow).not.toHaveBeenCalled()
+  })
+
+  it('requires a completed matching tombstone before admitting re-collection', async () => {
+    const recollectionPayload = {
+      ...payload,
+      limit: 1,
+      recollectionTombstoneId: 'tombstone:source:one'
+    }
+    const response = await POST(request(recollectionPayload), {
+      params: Promise.resolve({ workspaceId: 'workspace:one' })
+    })
+
+    expect(response.status).toBe(202)
+    expect(mocks.readRecollectionTargetForUser).toHaveBeenCalledWith(
+      'user:one',
+      'workspace:one',
+      'tombstone:source:one',
+      'cfpb-consumer-complaints'
+    )
+    expect(mocks.startProductionCollectionWorkflow).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ recollectionTombstoneId: 'tombstone:source:one' })
+    )
+  })
+
+  it('does not consume admission when a tombstone is unavailable', async () => {
+    mocks.readRecollectionTargetForUser.mockResolvedValue(null)
+    const response = await POST(
+      request({ ...payload, limit: 1, recollectionTombstoneId: 'tombstone:missing' }),
+      { params: Promise.resolve({ workspaceId: 'workspace:one' }) }
+    )
+
+    expect(response.status).toBe(422)
+    expect(mocks.admitForUser).not.toHaveBeenCalled()
+    expect(mocks.startProductionCollectionWorkflow).not.toHaveBeenCalled()
+  })
+
+  it('fails closed when tombstone verification is unavailable', async () => {
+    mocks.readRecollectionTargetForUser.mockRejectedValue(new Error('database unavailable'))
+    const response = await POST(
+      request({ ...payload, limit: 1, recollectionTombstoneId: 'tombstone:one' }),
+      { params: Promise.resolve({ workspaceId: 'workspace:one' }) }
+    )
+
+    expect(response.status).toBe(503)
+    expect(mocks.admitForUser).not.toHaveBeenCalled()
     expect(mocks.startProductionCollectionWorkflow).not.toHaveBeenCalled()
   })
 })

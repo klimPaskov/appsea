@@ -20,6 +20,11 @@
 8. A production collection checkpoint persists non-synthetic source items,
    redacted evidence, unreviewed complaint observations, coverage gaps, and
    deletion tombstone events idempotently before downstream research begins.
+   After a completed deletion, an authenticated editor or owner may explicitly
+   branch into a one-record tombstone-bound collection. The exact source-native
+   identifier travels through the workflow and persistence transaction; the
+   deleted row remains historical, and maintenance or quota recovery cannot
+   invoke this branch automatically.
 9. Workspace editors and owners review active complaint observations through
    the private collection surface. Migration `0032` permits only
    `unreviewed` -> `confirmed`/`rejected` and `confirmed` -> `rejected`

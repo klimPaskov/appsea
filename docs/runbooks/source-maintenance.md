@@ -178,8 +178,10 @@ numeric counters. The command purges rows older than the configured retention
 window. Production still needs bounded transaction times, deployment-level
 alerting, and an owner for responding to metric/heartbeat failures.
 Cloud object storage/backups,
-exports, explicit re-collection after source deletion, and production deployment
-behavior remain explicit release blockers. Operators may still start a reviewed
+exports, and production deployment behavior remain explicit release blockers.
+Explicit one-record re-collection after a completed deletion is implemented in
+[`source-recollection.md`](source-recollection.md), but remains an intentional
+private action and is not scheduled or triggered by maintenance. Operators may still start a reviewed
 analysis over the remaining active evidence; the migration guard prevents
 reactivation until that output is linked. Production Temporal, scheduler
 alerting, and crash fault-injection remain deployment work.

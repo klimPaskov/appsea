@@ -171,9 +171,12 @@ warnings, a bounded direct command, and a private resume command. Durable cross-
 bounded all-workspace maintenance through a migration-owner security-definer
 workspace enumerator, stale-claim recovery, and deletion propagation now exist.
 No source is currently enabled for market research, and production Temporal
-provisioning/cloud-storage deployment, automatic re-collection,
+provisioning/cloud-storage deployment, scheduler-triggered re-collection,
 cloud object-store/backups purge, recomputation alerting, and
-legal/privacy/security approval remain required. Collection now carries the
+legal/privacy/security approval remain required. Explicit one-record
+re-collection after a completed deletion tombstone is implemented behind a
+private reviewed route, but it is not automatic and does not activate the
+source. Collection now carries the
 settled source-request cost from the quota reservation through the immutable
 snapshot/result, workflow checkpoint, and audit/outbox metadata. CFPB currently
 records zero source cost because the reviewed policy declares zero API cost;

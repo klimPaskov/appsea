@@ -5,12 +5,14 @@
 The fixture product, PostgreSQL persistence, durable workflows, policy-gated
 CFPB collection checkpoint, authenticated private workspaces, report/plan
 approval/export, recovery, and invitations are implemented. Migrations
-`0027`-`0049` add policy evidence, collection checkpoints, deletion repair,
+`0027`-`0050` add policy evidence, collection checkpoints, deletion repair,
 leases, snapshot reconciliation, workflow admissions, source-reconciliation
 admission, retryable tombstones, maintenance-run telemetry, and a durable
-source-quota reconciliation case ledger. CFPB remains
-disabled; deployed Temporal/scheduler ownership, policy approval, role
-separation, re-collection, non-fixture outputs, and identity-provider approval
+source-quota reconciliation case ledger. Migration `0050` adds explicit,
+one-record tombstone-bound re-collection with immutable workflow/run/source-item
+lineage and an exact CFPB complaint route; it never runs automatically and the
+source remains disabled. Deployed Temporal/scheduler ownership, policy
+approval, role separation, non-fixture outputs, and identity-provider approval
 remain open. Fixture and production collection routes are Temporal gateways;
 signup workspaces remain non-fixture by design.
 
@@ -69,14 +71,17 @@ source reservations without completed production results, exposes private
 member inspection at `/api/workspaces/:workspaceId/research/quota-reconciliation`,
 and permits only the standalone maintenance role to record an exact linked
 result or explicit no-result resolution. It never refunds quota or authorizes
-a re-fetch.
+a re-fetch. The explicit re-collection path is separate and requires a
+completed matching tombstone.
 
 ## Validated commands
 
 - `pnpm verify` passed 2026-08-01 before this telemetry tranche: packages,
   samples, smoke, and repository checks.
-- Scheduler/metrics focus: contracts 64 tests, DB 84 tests, worker 58 tests,
-  lint, typecheck, and format checks passed.
+- Re-collection focus: contracts 65 tests, connectors 17 tests, DB 85 tests,
+  worker 60 tests, web 74 tests, affected typechecks, and package-level
+  formatting passed; the full workflow Temporal suite remains a separate
+  long-running check.
 - Workspace cost focus: private route tests 67 passed; exact micro-unit
   aggregation, period bounds, and membership/error boundaries are covered.
 - Quota reconciliation focus: private inspection route tests 71 passed across
@@ -94,7 +99,8 @@ a re-fetch.
 2. Provision production Temporal and add Docker-backed crash/retry proof.
 3. Provider/identity approval, verified recovery/invitation delivery, and
    deployed auth/source maintenance jobs.
-4. Explicit re-collection after deletion and general report/export workflows.
+4. Downstream report/export workflows and explicit re-collection operational
+   deployment proof.
 5. Operational monitoring, deployed scheduler ownership, provider pricing and
    billing controls, production database/Temporal provisioning, and security
    review.
@@ -107,9 +113,10 @@ a re-fetch.
   purge, and deployment validation remain.
 - Recovery and invitation delivery are disabled pending provider, identity,
   DPA/retention, key-rotation, monitoring, and failure-drill approval.
-- Deletion propagation retries and terminalizes bounded failures, but explicit
-  re-collection, workspace-closure/export purge, cloud object storage, and
-  backup purge remain open.
+- Deletion propagation retries and terminalizes bounded failures. Explicit
+  re-collection is implemented as a private one-record path, but
+  workspace-closure/export purge, cloud object storage, and backup purge
+  remain open.
 - Production collection is locally package-tested and PostgreSQL-idempotent,
   but no production Temporal deployment or integration proof exists. Cloud
   storage, recomputation alerting, deployed reconciliation scheduling, and

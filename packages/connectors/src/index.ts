@@ -50,6 +50,8 @@ export interface CollectionRequest {
   policyVersion?: string
   /** Caller-provided idempotency material; it is hashed before persistence. */
   idempotencyKey?: string
+  /** Identifier-only exact lookup used by an approved source re-collection. */
+  sourceRecordId?: string
 }
 
 export interface SourceQuotaReservationInput {
@@ -170,6 +172,15 @@ export function assertPolicyAllowsCollection(
   if (request.query.length > 500) {
     throw new Error('Collection query is too long')
   }
+  if (
+    request.sourceRecordId !== undefined &&
+    (request.sourceRecordId.length < 1 || request.sourceRecordId.length > 240)
+  ) {
+    throw new Error('Collection source record identifier is invalid')
+  }
+  if (request.sourceRecordId !== undefined && request.limit !== 1) {
+    throw new Error('Exact source record collection requires a limit of one')
+  }
   if (request.runId !== undefined && !/^[A-Za-z0-9:_-]{1,160}$/.test(request.runId)) {
     throw new Error('Collection run identifier is invalid')
   }
@@ -188,6 +199,9 @@ export class FixtureConnector implements SourceConnector {
     assertPolicyAllowsCollection(this.policy, request)
     const query = request.query.trim().toLowerCase()
     const matches = seedComplaints.filter((entry) => {
+      if (request.sourceRecordId !== undefined) {
+        return entry.sourceRecordId === request.sourceRecordId
+      }
       if (!query) return true
       return [entry.product, entry.feature, entry.category, entry.text]
         .join(' ')
@@ -325,6 +339,7 @@ function extractCfpbRecords(payload: unknown): unknown[] {
   if (Array.isArray(payload)) return payload
   const root = asRecord(payload)
   if (!root) throw new SourceRecordMalformedError()
+  if ('complaint_id' in root) return [root]
   if (Array.isArray(root.results)) return root.results
   if (Array.isArray(root.data)) return root.data
   const hits = asRecord(root.hits)
@@ -510,7 +525,8 @@ export class CfpbConnector implements SourceConnector {
             query: request.query,
             limit: request.limit,
             purpose: request.purpose,
-            requestedDisplayMode: request.requestedDisplayMode
+            requestedDisplayMode: request.requestedDisplayMode,
+            sourceRecordId: request.sourceRecordId ?? null
           }
         })
       )
@@ -586,12 +602,16 @@ export class CfpbConnector implements SourceConnector {
   async collect(request: CollectionRequest): Promise<ConnectorResult> {
     assertPolicyAllowsCollection(this.policy, request)
     const reservation = await this.reserveDurableQuota(request)
-    const url = new URL(this.baseUrl)
-    if (request.query.trim()) url.searchParams.set('search_term', request.query.trim())
-    url.searchParams.set('field', 'all')
-    url.searchParams.set('frm', '0')
-    url.searchParams.set('size', String(request.limit))
-    url.searchParams.set('format', 'json')
+    const url = request.sourceRecordId
+      ? new URL(encodeURIComponent(request.sourceRecordId), this.baseUrl)
+      : new URL(this.baseUrl)
+    if (!request.sourceRecordId) {
+      if (request.query.trim()) url.searchParams.set('search_term', request.query.trim())
+      url.searchParams.set('field', 'all')
+      url.searchParams.set('frm', '0')
+      url.searchParams.set('size', String(request.limit))
+      url.searchParams.set('format', 'json')
+    }
 
     let response: Response
     const abortController = new AbortController()
@@ -660,7 +680,9 @@ export class CfpbConnector implements SourceConnector {
       )
     }
     warnings.push(
-      'Deletion synchronization requires a full snapshot; this filtered request emitted no tombstones.'
+      request.sourceRecordId
+        ? 'This exact source-record re-collection used the official complaint-by-ID route and emitted no deletion tombstones.'
+        : 'Deletion synchronization requires a full snapshot; this filtered request emitted no tombstones.'
     )
     const costMicros = await this.commitDurableQuota(request, reservation, records.length)
     return { policy: this.policy, complaints, deletions: [], warnings, costMicros }

@@ -170,6 +170,13 @@ for that pre-context authorization lookup.
   may resolve a case; a linked resolution must match the exact completed
   production run, while a voided resolution records that no result exists.
   Neither resolution changes quota history or permits a re-fetch.
+- Migration `0050` adds an explicit source-recollection lineage boundary. A
+  request must name a completed tombstone in the same workspace and source and
+  must fetch exactly one source-native record. Workflow, run, and source-item
+  links are immutable; synthetic rows are rejected; the active-row index keeps
+  deleted history separate from the new observation. The exact CFPB route emits
+  no deletion tombstone, and no maintenance, quota-reconciliation, or retry
+  path can invoke re-collection automatically.
 - Workspace member emails and role mutations are owner-only. Role changes and
   removals are authorized in the same RLS transaction, guarded in PostgreSQL by
   a serialized last-owner check, and recorded as identifier-only audit/outbox

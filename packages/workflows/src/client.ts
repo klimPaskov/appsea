@@ -163,6 +163,9 @@ export function prepareProductionCollectionWorkflowStart(
     requestedDisplayMode: parsed.requestedDisplayMode,
     budget: parsed.budget,
     requestedAt: parsed.requestedAt,
+    ...(parsed.recollectionTombstoneId
+      ? { recollectionTombstoneId: parsed.recollectionTombstoneId }
+      : {}),
     ...(parsed.analysisSeedReviewId ? { analysisSeedReviewId: parsed.analysisSeedReviewId } : {}),
     ...(parsed.requestedBy ? { requestedBy: parsed.requestedBy } : {})
   })

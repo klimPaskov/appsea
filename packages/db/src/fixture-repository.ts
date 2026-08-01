@@ -381,7 +381,8 @@ export class PostgresFixtureResearchRepository {
                 query_route, content_hash, captured_at, published_at, synthetic, created_at,
                 collection_purpose, requested_display_mode)
              VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $8, 'testing', 'fixture')
-             ON CONFLICT (workspace_id, source_id, source_record_id) DO NOTHING`,
+             ON CONFLICT (workspace_id, source_id, source_record_id)
+               WHERE deletion_state = 'active' DO NOTHING`,
               [
                 parsed.workspaceId,
                 sourceItemId,

@@ -15,7 +15,7 @@
   approval governance, approved JSON export, a content-addressed
   object-storage seam with filesystem and signed S3-compatible adapters, and an explicit confirmed-evidence
   analysis-start route implemented
-- PostgreSQL persistence: forty-nine forward, checksummed migrations plus least-privilege repositories, durable auth controls, owner-scoped member administration and existing-account invitations with session step-up, owner-safe account closure, complaint review plus immutable seed-review and report/plan approval guards, source quota reservations, policy-derived retention tombstones, deletion lineage, monotonic source/evidence/tombstone guards, migration-owner source-policy review/activation evidence, a migration-owner maintenance enumerator, fixture and production-collection workflow checkpoints with principal attribution, deterministic analysis handoff and deletion-triggered recomputation queues, durable production-analysis lineage/object references, immutable analysis initiator attribution, source-deletion invalidation, mutable opportunity availability repair, same-run active-evidence re-analysis recovery, and database-serialized production ingress admissions through migrations `0036`-`0049`, plus policy-bound source collection leases, identifier-only snapshot page checkpoints, warning-preserving retries, atomic full-snapshot tombstone finalization, retryable deletion propagation with bounded exhausted failure, manual analysis admission/replay limits, authenticated source-reconciliation admission, retention-aware invalidated output-object purge, a server-clock maintenance scheduler lease boundary, maintenance-role-only durable scheduler run metrics, an indexed private cross-run cost summary, and a forced-RLS quota-reconciliation case ledger with maintenance-only resolution
+- PostgreSQL persistence: fifty forward, checksummed migrations plus least-privilege repositories, durable auth controls, owner-scoped member administration and existing-account invitations with session step-up, owner-safe account closure, complaint review plus immutable seed-review and report/plan approval guards, source quota reservations, policy-derived retention tombstones, deletion lineage, monotonic source/evidence/tombstone guards, migration-owner source-policy review/activation evidence, a migration-owner maintenance enumerator, fixture and production-collection workflow checkpoints with principal attribution, deterministic analysis handoff and deletion-triggered recomputation queues, durable production-analysis lineage/object references, immutable analysis initiator attribution, source-deletion invalidation, mutable opportunity availability repair, same-run active-evidence re-analysis recovery, and database-serialized production ingress admissions through migrations `0036`-`0050`, plus policy-bound source collection leases, identifier-only snapshot page checkpoints, warning-preserving retries, atomic full-snapshot tombstone finalization, retryable deletion propagation with bounded exhausted failure, manual analysis admission/replay limits, authenticated source-reconciliation admission, retention-aware invalidated output-object purge, a server-clock maintenance scheduler lease boundary, maintenance-role-only durable scheduler run metrics, an indexed private cross-run cost summary, a forced-RLS quota-reconciliation case ledger with maintenance-only resolution, and explicit one-record tombstone-bound re-collection lineage
 - Database verification: PostgreSQL 18 fresh-install and populated-upgrade lifecycle is covered by local/CI gates; this environment currently lacks Docker for a fresh rerun
 - Native Codex skills: 21 synchronized skills
 - Codex helper agents: 11 bounded agents
@@ -73,6 +73,15 @@ the raw caller key, and finalizes missing active source items atomically only
 after a warning-free short page. The source remains disabled and deployed
 scheduler ownership, alerting, and Docker-backed reconciliation proof remain
 open.
+
+Migration `0050` now supports an explicit private re-collection after a
+completed deletion tombstone. The request is limited to one source-native
+record; the gateway, Temporal input, worker, and persistence transaction carry
+the same immutable lineage; the CFPB connector uses its exact complaint route;
+and the deleted predecessor remains historical. Maintenance, quota
+reconciliation, and retries never trigger this path automatically. The source
+is still disabled pending legal/privacy/security approval, and downstream
+analysis/report/plan generation remains a separate explicit action.
 
 Migration `0048` adds the workspace/time index used by the private
 `GET /api/workspaces/:workspaceId/costs` read. The route repeats membership

@@ -492,6 +492,7 @@ function sanitizeProductionCollectionInput(
     'policyVersion',
     'purpose',
     'query',
+    'recollectionTombstoneId',
     'requestedAt',
     'requestedBy',
     'requestedDisplayMode',
@@ -501,14 +502,13 @@ function sanitizeProductionCollectionInput(
     'workspaceId'
   ]
   const requiredAllowed = allowed.filter(
-    (key) => key !== 'requestedBy' && key !== 'analysisSeedReviewId'
+    (key) =>
+      key !== 'requestedBy' && key !== 'analysisSeedReviewId' && key !== 'recollectionTombstoneId'
   )
-  const hasAllowedKeys =
-    keys.length === allowed.length && keys.every((key, index) => key === allowed[index])
-  const hasRequiredKeys =
-    keys.length === requiredAllowed.length &&
-    keys.every((key, index) => key === requiredAllowed[index])
-  if (!hasAllowedKeys && !hasRequiredKeys) {
+  const allowedKeys = new Set(allowed)
+  const hasOnlyAllowedKeys = keys.every((key) => allowedKeys.has(key))
+  const hasRequiredKeys = requiredAllowed.every((key) => keys.includes(key))
+  if (!hasOnlyAllowedKeys || !hasRequiredKeys) {
     throw ApplicationFailure.nonRetryable(
       'Production collection workflow input contains unsupported fields.',
       'APPSEA_INPUT_INVALID'
@@ -590,6 +590,7 @@ export async function productionCollectionWorkflow(
     consumedSourceItems: 0,
     consumedCostMicros: 0,
     analysisSeedReviewId: input.analysisSeedReviewId ?? null,
+    recollectionTombstoneId: input.recollectionTombstoneId ?? null,
     result: null
   }
   setHandler(productionCollectionStatusQuery, () => status)

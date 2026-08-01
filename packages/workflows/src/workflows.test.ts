@@ -97,6 +97,7 @@ const productionPersistenceResult: ProductionCollectionWorkflowPersistenceActivi
     complaintCount: 4,
     deletionCount: 0,
     costMicros: 17,
+    recollectionTombstoneId: null,
     coverageGaps: ['Not a statistical sample.'],
     warnings: [],
     state: 'completed',
@@ -443,6 +444,38 @@ describe.sequential('production collection Temporal workflow', () => {
       const status = await handle.query(productionCollectionStatusQueryName)
       expect(result).toMatchObject({ state: 'completed', sourceItemsProcessed: 4, costMicros: 17 })
       expect(status).toMatchObject({ state: 'completed', checkpoint: 'completed' })
+    })
+  })
+
+  it('accepts and exposes explicit tombstone re-collection lineage', async () => {
+    const prepared = prepareProductionCollectionWorkflowStart({
+      ...productionRequest,
+      workspaceId: 'workspace-production-recollection-test',
+      campaignId: 'campaign-production-recollection-test',
+      runId: 'run-production-recollection-test',
+      idempotencyKey: 'production-recollection-idempotency-key',
+      limit: 1,
+      recollectionTombstoneId: 'tombstone:source:one'
+    })
+    queueCounter += 1
+    const worker = await Worker.create({
+      connection: testEnvironment.nativeConnection,
+      taskQueue: fixtureResearchTaskQueue,
+      workflowsPath,
+      activities: baseProductionActivities()
+    })
+    await worker.runUntil(async () => {
+      const handle = await testEnvironment.client.workflow.start('productionCollectionWorkflow', {
+        taskQueue: fixtureResearchTaskQueue,
+        workflowId: `${prepared.workflowId}:recollection:${queueCounter}`,
+        args: [prepared.input]
+      })
+      await handle.result()
+      const status = await handle.query(productionCollectionStatusQueryName)
+      expect(status).toMatchObject({
+        state: 'completed',
+        recollectionTombstoneId: 'tombstone:source:one'
+      })
     })
   })
 

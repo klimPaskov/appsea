@@ -25,7 +25,7 @@ Status: production-shaped foundation implemented and validated locally; producti
 
 Implemented:
 
-- PostgreSQL 18 schema and forty-six forward, checksummed migrations
+- PostgreSQL 18 schema and fifty forward, checksummed migrations
 - normalized source, evidence, complaint, cluster, competitor, opportunity, score, report, plan, audit, cost, deletion, outbox, and lineage tables
 - no-login owner, separate migrator, and least-privilege runtime role contract
 - forced workspace RLS and transaction-scoped workspace context
@@ -95,6 +95,14 @@ standalone maintenance role can record only an exact linked result or an
 explicit no-result void. The boundary never refunds quota or authorizes a
 re-fetch. Deployed alert ownership and incident response remain open.
 
+Migration `0050_explicit_source_recollection.sql` adds the reviewed explicit
+re-collection boundary. A completed matching deletion tombstone is required;
+the request is limited to one source-native record; workflow/run/source-item
+lineage is immutable; and the old deleted row remains historical. The CFPB
+connector uses its exact complaint route for this request and emits no deletion
+tombstone. This is a private operator action, not an automatic retry or source
+activation; see [`source-recollection.md`](../../runbooks/source-recollection.md).
+
 ### 2. Durable workflows
 
 Status: fixture and production-collection workflow boundaries plus an
@@ -139,6 +147,9 @@ Implemented:
   supplies its immutable observed timestamp to complaint/quota provenance, and
   passes the lease into a same-transaction persistence assertion; the lease is
   released only after commit
+- explicit tombstone-bound re-collection uses completed deletion lineage,
+  exact source-native lookup, active-row uniqueness, and fail-closed mismatch
+  handling; no maintenance or quota-reconciliation path triggers it
 - the CFPB snapshot runner fetches only unfiltered identifier pages, resumes
   from durable offsets without the raw caller key, records visible coverage
   gaps for malformed/capped traversals, and emits tombstones only after a
@@ -187,6 +198,9 @@ Implemented:
   durable quota idempotency, bounded malformed-ID warnings, and no narrative
   retention; the reconciliation worker finalizes only from a warning-free
   short page
+- explicit, one-record tombstone re-collection uses the official complaint
+  route, preserves the deleted predecessor, and emits no deletion tombstone;
+  the connector remains disabled pending review
 - source-policy record at `docs/product/cfpb-source-policy.md`
 
 Remaining: assign legal/privacy/security owners, confirm intended commercial use
