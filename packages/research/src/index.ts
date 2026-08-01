@@ -298,6 +298,9 @@ export function buildProductionResearchArtifact(
     planFiles: seed.planFiles
   })
   const coverageGaps = new Set(parsed.coverageGaps)
+  coverageGaps.add(
+    'No permitted competitor or contrary-signal source evidence is attached; reviewed seed values are not market research.'
+  )
   if (parsed.testOnly) {
     coverageGaps.add(
       'This analysis was composed from a test-only offline transport and cannot support market conclusions.'

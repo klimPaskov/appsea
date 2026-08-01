@@ -95,19 +95,15 @@ completed matching tombstone.
 - PostgreSQL integration is staged but Docker-blocked because the Docker Desktop
   Linux engine pipe is unavailable.
 
-On 2026-08-01, migration `0053_complaint_analysis_snapshots.sql` added a
-validated JSONB derived-analysis checkpoint beside each complaint. Research
-artifacts require one deterministic classification/entity snapshot per
-complaint; reports and private evidence expose severity, confidence, and
-unresolved competitor/substitute types. Historical snapshots upgrade
-conservatively. This is a rule-based checkpoint, not live market research;
-aliases, unique authors, contextual resolution, field correction, and sourced
-competitor research remain open.
+On 2026-08-01, migrations `0053` and `0054` added deterministic complaint
+analysis snapshots and identity/independence-bound source approvals. The CFPB
+source remains disabled pending external review.
 
-On 2026-08-01, migration `0054_source_policy_review_integrity.sql` bound new
-source approvals to lowercase reviewer identity, independent role, and explicit
-attestation; obvious self-approval is rejected and legacy approvals require
-re-review. CFPB remains disabled pending external legal/privacy/security review.
+Private opportunity details now expose `competitiveResearch` and a separate
+competitors/contrary-signals page: fixture records are synthetic/unresolved,
+production seeds are reviewed-seed-only with provenance, and source-backed
+status requires permitted source IDs, retained evidence IDs, and an observation
+time. Per-competitor observations and feature matrices remain open.
 
 ## Next production tranche
 
@@ -117,6 +113,9 @@ re-review. CFPB remains disabled pending external legal/privacy/security review.
    recollection operations.
 4. Monitoring, scheduler ownership, pricing/billing controls, and security
    review.
+5. Connect a separately reviewed competitor/contrary-signal source and extend
+   the read model with per-record provenance before treating competitive output
+   as source-backed.
 
 ## Current blockers
 

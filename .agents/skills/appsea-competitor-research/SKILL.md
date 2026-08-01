@@ -33,3 +33,9 @@ Do not build a competitor table from homepage slogans alone. Do not list product
 ## Output
 
 A competitor matrix linked to complaint clusters, with dated evidence, confidence, and implications for the first wedge.
+
+When publishing a private read model, carry the research state separately from
+the competitor rows. Mark fixture records as synthetic/unresolved and reviewed
+seed assumptions as seed-only. Use source-backed status only when permitted
+source identifiers, retained evidence identifiers, and an observation time are
+present; missing competitor coverage is a gap, never a negative market claim.

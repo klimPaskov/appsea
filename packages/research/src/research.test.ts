@@ -264,6 +264,9 @@ describe('production analysis composition', () => {
     expect(first.coverageGaps).toContain(
       'This analysis was composed from a test-only offline transport and cannot support market conclusions.'
     )
+    expect(first.coverageGaps).toContain(
+      'No permitted competitor or contrary-signal source evidence is attached; reviewed seed values are not market research.'
+    )
   })
 
   it('does not invent score factors from complaint text', () => {

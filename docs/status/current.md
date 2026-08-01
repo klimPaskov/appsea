@@ -48,6 +48,12 @@ source approvals. Pre-0054 approvals remain audit history but do not make a
 non-fixture source collectible until re-reviewed; legal/privacy/security and
 deployment approval are still external blockers.
 
+Private opportunity detail now includes a validated competitive-research
+coverage record and a separate competitors/contrary-signals route. Fixture
+records are marked synthetic/unresolved; production reviewed seed assumptions
+are marked `reviewed-seed-only` with seed-review provenance and an explicit gap
+until a permitted competitor source supplies retained evidence.
+
 `pnpm analysis:sample` produces a visibly `testOnly` production-shaped CFPB
 artifact, report, deterministic score, and generic coding package under
 `artifacts/analysis-sample/`. It does not activate a connector, call the

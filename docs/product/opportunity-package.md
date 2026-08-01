@@ -25,6 +25,13 @@ and unresolved market dimensions. It is an inference checkpoint with explicit
 review state; it never substitutes for source provenance or separately
 reviewed competitor research.
 
+The private competitors route exposes the attached relationship records and
+contrary signals with a validated competitive-research coverage state. Fixture
+records are synthetic/unresolved, production seed values are reviewed-seed-only,
+and source-backed status requires permitted source identifiers, retained
+evidence identifiers, and an observation time. Reviewed seed values are never
+presented as market research.
+
 Fixture report versions are deterministic and keep retained observations,
 versioned score inference, contrary evidence, recommendation, coverage gaps, and
 source-policy metadata distinct. They are not market research and do not imply

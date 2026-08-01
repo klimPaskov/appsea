@@ -342,6 +342,7 @@
       "This payload is a test-only offline sample, not a statistical sample.",
       "No competitor or contrary-evidence source was included.",
       "The CFPB connector remains pending review and was not activated.",
+      "No permitted competitor or contrary-signal source evidence is attached; reviewed seed values are not market research.",
       "This analysis was composed from a test-only offline transport and cannot support market conclusions."
     ],
     "sources": [

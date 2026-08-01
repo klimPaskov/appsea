@@ -35,6 +35,9 @@ export default async function PrivateOpportunityPage({
         <Link className="tab" href={`/workspace/${workspaceId}/opportunities/${slug}/evidence`}>
           Evidence
         </Link>
+        <Link className="tab" href={`/workspace/${workspaceId}/opportunities/${slug}/competitors`}>
+          Competitors
+        </Link>
         <Link className="tab" href={`/workspace/${workspaceId}/opportunities/${slug}/report`}>
           Report
         </Link>

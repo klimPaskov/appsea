@@ -281,23 +281,17 @@ Deployment configuration and Temporal authorization remain open.
 
 ## 2026-08-01: Bind external collection to a policy lease
 
-The worker must not read an approved source policy, perform an external fetch,
-and then trust that policy after a revocation or expiry race. Migration `0039`
-stores a workspace-scoped digest-only lease requiring the active source, policy
-version, and immutable operator approval. It owns one server/workflow-observed
-capture timestamp for replay. Persistence asserts and locks the lease in the
-same transaction as collection; release follows commit. Terminal leases are
-purged by source maintenance, while uncertain quota settlement remains
-operator reconciliation rather than an automatic re-fetch.
+Migration `0039` adds a workspace-scoped digest-only lease so collection cannot
+fetch under a revoked/expired policy. Persistence asserts and locks the active
+policy/approval lease in its write transaction; terminal leases are purged and
+uncertain quota settlement remains operator reconciliation, not auto-refetch.
 
 ## 2026-08-01: Keep production analysis artifacts out of Temporal history
 
-The v1 workflow placed redacted artifacts in Temporal history. New starts use
-`production-analysis-v2`: only workspace, collection, analysis, seed-review,
-timestamp, and digest identifiers cross Temporal; the worker reconstructs the
-artifact and PostgreSQL remains commit authority. Existing v1 histories need a
-drain/retention plan. Retention uses server-observed time; repository checks
-reject future timestamps and final lineage locks current policy/use.
+New starts use `production-analysis-v2` because v1 placed redacted artifacts in
+Temporal history. Only identifiers/digests cross Temporal; the worker
+reconstructs the artifact and PostgreSQL remains commit authority. Legacy v1
+histories need a drain/retention plan; retention uses server-observed time.
 
 ## 2026-08-01: Make full-snapshot deletion inference identifier-only and durable
 
@@ -347,3 +341,10 @@ stay explicit.
 
 `0054` requires reviewer identity, independent role, and attestation; legacy
 approvals require re-review.
+
+## 2026-08-01: Keep competitive research state explicit
+
+Private opportunity reads separate competitive-research state from competitor
+rows: fixtures are synthetic/unresolved, approved seeds are reviewed-seed-only,
+and source-backed requires permitted source IDs, retained evidence IDs, and an
+observation time. This prevents missing coverage becoming a market claim.

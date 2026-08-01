@@ -49,6 +49,11 @@ for that pre-context authorization lookup.
   evidence, records its version and confidence, and emits no competitor or
   substitute relation without a reviewed source. Imported text remains data,
   and analysis output cannot write instructions, code, skills, or memory.
+- The private competitors/contrary-signals read model records competitive
+  research state and seed-review provenance separately from complaint evidence.
+  It cannot label a synthetic or reviewed-seed-only record source-backed;
+  source-backed status requires retained source and evidence identifiers plus
+  an observation time.
 - Migration `0033` makes opportunity-seed assumptions an explicit workspace
   boundary. Seed content is validated before insertion, immutable after create,
   and transitions through `unreviewed` -> `reviewed` -> `approved` only through

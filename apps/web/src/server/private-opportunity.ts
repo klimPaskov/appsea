@@ -1,5 +1,6 @@
 import {
   appseaIdentifierSchema,
+  composeCompetitiveResearchReadModel,
   opportunitySlugSchema,
   workspaceEvidenceReadModelSchema,
   workspaceOpportunityDetailReadModelSchema,
@@ -68,6 +69,17 @@ export function mapProductionAnalysisToOpportunityDetail(
     opportunity,
     summary,
     evidence,
+    competitiveResearch: composeCompetitiveResearchReadModel({
+      synthetic: false,
+      coverageGaps: artifact.coverageGaps,
+      seedReview: {
+        reviewId: artifact.opportunitySeedReview.reviewId,
+        seedVersion: artifact.opportunitySeedReview.seedVersion,
+        contentHash: artifact.opportunitySeedReview.contentHash,
+        reviewedBy: artifact.opportunitySeedReview.reviewedBy,
+        reviewedAt: artifact.opportunitySeedReview.reviewedAt
+      }
+    }),
     coverageGaps: artifact.coverageGaps,
     sourceCoverage: report.coverage.sources,
     report: workspaceReportReadModelSchema.parse({

@@ -355,6 +355,134 @@ const contentHashSchema = z
   .length(64)
   .regex(/^[a-f0-9]{64}$/)
 
+export const competitiveResearchStatusSchema = z.enum([
+  'unresolved',
+  'reviewed-seed-only',
+  'source-backed'
+])
+
+export const competitiveResearchSeedReadModelSchema = z
+  .object({
+    reviewId: appseaIdentifierSchema,
+    seedVersion: z.string().min(1).max(80),
+    contentHash: contentHashSchema,
+    reviewedBy: z.string().min(1).max(160),
+    reviewedAt: z.string().datetime()
+  })
+  .strict()
+
+/**
+ * Competitive records are useful only when their research state is visible.
+ * A reviewed seed is an auditable human assumption, not source-backed market
+ * research. Source-backed status requires both permitted source identifiers
+ * and retained evidence identifiers.
+ */
+export const competitiveResearchReadModelSchema = z
+  .object({
+    status: competitiveResearchStatusSchema,
+    observedAt: z.string().datetime().nullable(),
+    sourceIds: z.array(appseaIdentifierSchema).max(100),
+    evidenceIds: z.array(appseaIdentifierSchema).max(500),
+    coverageGaps: z.array(z.string().min(1).max(500)).max(100),
+    seedReview: competitiveResearchSeedReadModelSchema.nullable(),
+    synthetic: z.boolean()
+  })
+  .strict()
+  .superRefine((value, context) => {
+    if (value.synthetic && value.status !== 'unresolved') {
+      context.addIssue({
+        code: 'custom',
+        path: ['status'],
+        message: 'Synthetic competitive records must remain unresolved'
+      })
+    }
+    if (value.status === 'source-backed') {
+      if (value.synthetic) {
+        context.addIssue({
+          code: 'custom',
+          path: ['synthetic'],
+          message: 'Synthetic competitive records cannot be source-backed'
+        })
+      }
+      if (value.sourceIds.length === 0) {
+        context.addIssue({
+          code: 'custom',
+          path: ['sourceIds'],
+          message: 'Source-backed competitive research requires source identifiers'
+        })
+      }
+      if (value.evidenceIds.length === 0) {
+        context.addIssue({
+          code: 'custom',
+          path: ['evidenceIds'],
+          message: 'Source-backed competitive research requires evidence identifiers'
+        })
+      }
+      if (value.observedAt === null) {
+        context.addIssue({
+          code: 'custom',
+          path: ['observedAt'],
+          message: 'Source-backed competitive research requires an observation time'
+        })
+      }
+    }
+    if (value.status === 'reviewed-seed-only' && value.seedReview === null) {
+      context.addIssue({
+        code: 'custom',
+        path: ['seedReview'],
+        message: 'Reviewed seed-only research requires seed review provenance'
+      })
+    }
+  })
+
+export function composeCompetitiveResearchReadModel(input: {
+  synthetic: boolean
+  coverageGaps: string[]
+  seedReview?: {
+    reviewId: string
+    seedVersion: string
+    contentHash: string
+    reviewedBy: string
+    reviewedAt: string
+  } | null
+  observedAt?: string | null
+  sourceIds?: string[]
+  evidenceIds?: string[]
+}): CompetitiveResearchReadModel {
+  const sourceIds = input.sourceIds ?? []
+  const evidenceIds = input.evidenceIds ?? []
+  const seedReview = input.seedReview ?? null
+  const sourceBacked =
+    !input.synthetic &&
+    sourceIds.length > 0 &&
+    evidenceIds.length > 0 &&
+    (input.observedAt ?? null) !== null
+  const status = sourceBacked
+    ? 'source-backed'
+    : seedReview !== null
+      ? 'reviewed-seed-only'
+      : 'unresolved'
+  const relevantGaps = input.coverageGaps.filter((gap) =>
+    /competitor|contrary|market research|substitute|workaround/i.test(gap)
+  )
+  if (relevantGaps.length === 0 && status !== 'source-backed') {
+    relevantGaps.push(
+      input.synthetic
+        ? 'Competitor records are synthetic examples, not verified market research.'
+        : 'No permitted competitor or contrary-signal source evidence is attached; reviewed seed values are not market research.'
+    )
+  }
+  return competitiveResearchReadModelSchema.parse({
+    status,
+    observedAt: input.observedAt ?? null,
+    sourceIds,
+    evidenceIds,
+    coverageGaps: [...new Set(relevantGaps)],
+    seedReview,
+    synthetic: input.synthetic
+  })
+}
+
 const policyVersionSchema = z
   .string()
   .min(1)
@@ -3163,6 +3291,7 @@ export const workspaceOpportunityDetailReadModelSchema = z
     opportunity: opportunitySchema,
     summary: workspaceOpportunityReadModelSchema,
     evidence: z.array(workspaceEvidenceReadModelSchema),
+    competitiveResearch: competitiveResearchReadModelSchema,
     coverageGaps: z.array(z.string()),
     sourceCoverage: z.array(reportSourceCoverageSchema),
     report: workspaceReportReadModelSchema.nullable(),
@@ -3210,6 +3339,11 @@ export type ProductionAnalysisTransport = z.infer<typeof productionAnalysisTrans
 export type ProductionAnalysisComplaint = z.infer<typeof productionAnalysisComplaintSchema>
 export type ProductionPolicySnapshot = z.infer<typeof productionPolicySnapshotSchema>
 export type ProductionOpportunitySeedReview = z.infer<typeof productionOpportunitySeedReviewSchema>
+export type CompetitiveResearchStatus = z.infer<typeof competitiveResearchStatusSchema>
+export type CompetitiveResearchSeedReadModel = z.infer<
+  typeof competitiveResearchSeedReadModelSchema
+>
+export type CompetitiveResearchReadModel = z.infer<typeof competitiveResearchReadModelSchema>
 export type ProductionAnalysisPersistenceInput = z.infer<
   typeof productionAnalysisPersistenceInputSchema
 >

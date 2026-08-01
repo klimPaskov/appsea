@@ -121,8 +121,11 @@ effects and snapshot reconciliation remain outside the atomic fence.
 
 Migration `0053_complaint_analysis_snapshots.sql` persists one validated,
 versioned derived classification/entity-resolution snapshot per complaint and
-upgrades historical run snapshots without changing source evidence. Missing
-competitor and substitute research remains explicitly unresolved.
+upgrades historical run snapshots without changing source evidence. The private
+opportunity read model now makes competitive-research state explicit: fixture
+records are unresolved/synthetic, reviewed seeds are seed-only, and missing
+permitted competitor evidence remains a visible gap. Live competitor and
+substitute research remains unresolved.
 
 Migration `0054_source_policy_review_integrity.sql` binds new source-policy
 approvals to a lowercase reviewer identity, an independent review role, and an
@@ -303,6 +306,9 @@ opportunity pages do not infer stale draft defaults.
 The report contract keeps retained observations and their derived analysis,
 deterministic score inference,
 contrary evidence, recommendation, source coverage, and coverage gaps separate.
+Private opportunity reads now expose a separate competitive-research coverage
+record and competitors/contrary-signals route; it does not promote reviewed
+seed assumptions to source-backed market evidence.
 Reports are versioned in `report_versions` and linked to their plan package. Reads
 exclude inactive source rows and non-redacted non-fixture evidence.
 Approval transitions are role-checked in the private API and guarded by migration

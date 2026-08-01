@@ -40,7 +40,7 @@ The public AppSea leaderboard is a sparse, synthetic fixture surface. Private re
 
 ## Research detail
 
-Private opportunity routes expose overview, evidence/coverage, report, and coding-plan pages. Evidence is filtered to source representations allowed for display, deletion-state active rows only, and explicit synthetic/redaction labels. Fixture persistence now generates a versioned deterministic report that keeps observations, score inference, contrary evidence, recommendation, and source coverage separate; the report is linked to its coding plan. Source coverage gaps remain visible; missing access is not presented as absence of demand.
+Private opportunity routes expose overview, evidence/coverage, competitors/contrary-signals, report, and coding-plan pages. Evidence is filtered to source representations allowed for display, deletion-state active rows only, and explicit synthetic/redaction labels. The competitors page carries a validated competitive-research coverage record: fixture data is synthetic, production seed assumptions are reviewed-seed-only, and source-backed status requires permitted source and retained evidence identifiers. Fixture persistence now generates a versioned deterministic report that keeps observations, score inference, contrary evidence, recommendation, and source coverage separate; the report is linked to its coding plan. Source coverage gaps remain visible; missing access is not presented as absence of demand.
 
 Workspace members can inspect bounded cross-run operational cost accounting at
 `GET /api/workspaces/:workspaceId/costs`. The read model keeps currencies and

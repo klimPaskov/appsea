@@ -14,8 +14,13 @@ Complaint observations now carry a deterministic, versioned classification and
 entity-resolution snapshot with severity and uncertainty fields. The rules are
 not a trained classifier, do not estimate unique authors, and intentionally
 leave substitute/competitor resolution unresolved until separately reviewed
-permitted research is available. Human correction is persisted only as review
-state in this slice; richer corrected field editing remains open.
+permitted research is available. Private opportunity reads now expose a
+competitive-research status and provenance record, and a private competitors /
+contrary-signals page keeps reviewed seed values separate from source-backed
+research. No permitted competitor source is connected yet, so production
+competitive research remains `reviewed-seed-only` and its coverage gap is
+visible. Human correction is persisted only as review state in this slice;
+richer corrected field editing remains open.
 
 ## Infrastructure
 

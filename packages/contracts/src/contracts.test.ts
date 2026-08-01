@@ -54,6 +54,8 @@ import {
   maintenanceSchedulerRunPurgeInputSchema,
   workspaceOpportunityReadModelSchema,
   workspaceOpportunityDetailReadModelSchema,
+  competitiveResearchReadModelSchema,
+  composeCompetitiveResearchReadModel,
   workspaceReportApprovalInputSchema,
   workspaceReportExportReadModelSchema,
   workspacePlanApprovalInputSchema,
@@ -799,12 +801,60 @@ describe('contracts', () => {
         currentPlanPackageId: null
       },
       evidence: [],
+      competitiveResearch: {
+        status: 'unresolved',
+        observedAt: null,
+        sourceIds: [],
+        evidenceIds: [],
+        coverageGaps: ['Competitor records are synthetic examples, not verified market research.'],
+        seedReview: null,
+        synthetic: true
+      },
       coverageGaps: ['No live source is enabled.'],
       sourceCoverage: [],
       report: null,
       plan: null
     })
     expect(result.success).toBe(true)
+  })
+
+  it('keeps competitive research provenance and coverage state explicit', () => {
+    expect(
+      competitiveResearchReadModelSchema.safeParse({
+        status: 'source-backed',
+        observedAt: now,
+        sourceIds: ['source:directory'],
+        evidenceIds: ['evidence:competitor'],
+        coverageGaps: [],
+        seedReview: null,
+        synthetic: false
+      }).success
+    ).toBe(true)
+    expect(
+      competitiveResearchReadModelSchema.safeParse({
+        status: 'source-backed',
+        observedAt: null,
+        sourceIds: [],
+        evidenceIds: [],
+        coverageGaps: [],
+        seedReview: null,
+        synthetic: true
+      }).success
+    ).toBe(false)
+
+    const seedOnly = composeCompetitiveResearchReadModel({
+      synthetic: false,
+      coverageGaps: [],
+      seedReview: {
+        reviewId: 'seed-review:one',
+        seedVersion: 'seed-v1',
+        contentHash: 'a'.repeat(64),
+        reviewedBy: 'user:owner',
+        reviewedAt: now
+      }
+    })
+    expect(seedOnly.status).toBe('reviewed-seed-only')
+    expect(seedOnly.coverageGaps[0]).toContain('not market research')
   })
 
   it('keeps report approval actions strict and export hashes bounded', () => {

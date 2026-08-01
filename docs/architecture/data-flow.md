@@ -42,7 +42,10 @@
     score assumptions as immutable content-hashed records. Editors review them
     and owners approve them before analysis may reference the seed ID.
 13. Reviewed competitor and contrary-evidence seed values are attached without
-    inferring missing market coverage from complaint text.
+    inferring missing market coverage from complaint text. The private
+    opportunity read model records whether competitive research is unresolved,
+    reviewed-seed-only, or source-backed; source-backed status requires
+    permitted source IDs, retained evidence IDs, and an observation time.
 14. Scoring calculates a versioned score only from explicit reviewed factors.
 15. A distinct post-collection analysis run rechecks the completed collection,
     approved policy review/hash, and every active complaint/evidence/source-item

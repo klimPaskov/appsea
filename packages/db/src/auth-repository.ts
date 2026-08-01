@@ -11,6 +11,7 @@ import type { Pool, PoolClient, QueryResultRow } from 'pg'
 import {
   appseaIdentifierSchema,
   complaintAnalysisSchema,
+  composeCompetitiveResearchReadModel,
   objectReferenceSchema,
   authPasswordResetInputSchema,
   authPasswordResetRequestInputSchema,
@@ -2097,6 +2098,15 @@ export class PostgresAuthRepository {
           planFiles: []
         })
         const opportunity = artifact?.success ? artifact.data.opportunity : fallbackOpportunity
+        const competitiveResearch = artifact?.success
+          ? composeCompetitiveResearchReadModel({
+              synthetic: artifact.data.mode === 'fixture',
+              coverageGaps: artifact.data.coverageGaps
+            })
+          : composeCompetitiveResearchReadModel({
+              synthetic: row.synthetic,
+              coverageGaps: []
+            })
         const evidence = await this.readEvidence(client, workspaceId, row.source_run_id)
         const report = await this.readReport(client, workspaceId, row.opportunity_id)
         const plan = await this.readPlan(client, workspaceId, row.opportunity_id)
@@ -2104,6 +2114,7 @@ export class PostgresAuthRepository {
           opportunity,
           summary,
           evidence,
+          competitiveResearch,
           coverageGaps: run.rows[0]?.coverage_gaps ?? [],
           sourceCoverage: artifact?.success
             ? artifact.data.sourcePolicies.map((policy) =>
