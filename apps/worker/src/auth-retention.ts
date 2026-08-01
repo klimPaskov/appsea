@@ -1,9 +1,10 @@
-import { authRetentionInputSchema } from '@appsea/contracts'
+import { authRetentionInputSchema, type AuthRetentionResult } from '@appsea/contracts'
 import {
   createDatabasePool,
   databaseConfigFromEnv,
   PostgresAuthRepository,
-  PostgresMaintenanceSchedulerLeaseRepository
+  PostgresMaintenanceSchedulerLeaseRepository,
+  PostgresMaintenanceSchedulerRunRepository
 } from '@appsea/db'
 import { emitWorkerEvent } from './observability'
 import { runAuthRetention } from './maintenance-runner'
@@ -12,6 +13,8 @@ import {
   maintenanceSchedulerLeaseSecondsFromEnv,
   maintenanceSchedulerOwnerIdFromEnv,
   maintenanceSchedulerFailureCode,
+  maintenanceSchedulerMetricsPurgeBatchSizeFromEnv,
+  maintenanceSchedulerMetricsRetentionDaysFromEnv,
   runWithMaintenanceSchedulerLease
 } from './maintenance-scheduler'
 
@@ -36,8 +39,26 @@ try {
   const schedulerName = taskQueue
   const ownerId = maintenanceSchedulerOwnerIdFromEnv()
   const leaseSeconds = maintenanceSchedulerLeaseSecondsFromEnv()
-  const leaseRun = await runWithMaintenanceSchedulerLease(
-    { schedulerName, ownerId, leaseSeconds },
+  const metrics = new PostgresMaintenanceSchedulerRunRepository(maintenancePool)
+  const leaseRun = await runWithMaintenanceSchedulerLease<AuthRetentionResult>(
+    {
+      schedulerName,
+      ownerId,
+      leaseSeconds,
+      metrics: {
+        store: metrics,
+        retentionDays: maintenanceSchedulerMetricsRetentionDaysFromEnv(),
+        purgeBatchSize: maintenanceSchedulerMetricsPurgeBatchSizeFromEnv(),
+        failureCode: (error) =>
+          maintenanceSchedulerFailureCode(error, 'APPSEA_AUTH_RETENTION_FAILED'),
+        summarize: (result) => ({
+          sessionsDeleted: result.sessionsDeleted,
+          rateLimitsDeleted: result.rateLimitsDeleted,
+          passwordResetTokensDeleted: result.passwordResetTokensDeleted,
+          workspaceInvitationsDeleted: result.workspaceInvitationsDeleted
+        })
+      }
+    },
     new PostgresMaintenanceSchedulerLeaseRepository(maintenancePool),
     async ({ assertLease }) =>
       runAuthRetention(input, {

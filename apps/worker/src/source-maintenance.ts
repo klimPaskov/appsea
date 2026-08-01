@@ -1,4 +1,4 @@
-import { sourceMaintenanceInputSchema } from '@appsea/contracts'
+import { sourceMaintenanceInputSchema, type SourceMaintenanceResult } from '@appsea/contracts'
 import { objectStoreFromEnv } from '@appsea/object-store'
 import {
   createDatabasePool,
@@ -8,6 +8,7 @@ import {
   PostgresProductionAnalysisObjectPurgeRepository,
   PostgresProductionWorkflowAdmissionRepository,
   PostgresMaintenanceSchedulerLeaseRepository,
+  PostgresMaintenanceSchedulerRunRepository,
   PostgresSourceCollectionLeaseRepository,
   PostgresSourceQuotaRepository
 } from '@appsea/db'
@@ -18,6 +19,8 @@ import {
   maintenanceSchedulerLeaseSecondsFromEnv,
   maintenanceSchedulerOwnerIdFromEnv,
   maintenanceSchedulerFailureCode,
+  maintenanceSchedulerMetricsPurgeBatchSizeFromEnv,
+  maintenanceSchedulerMetricsRetentionDaysFromEnv,
   runWithMaintenanceSchedulerLease
 } from './maintenance-scheduler'
 import {
@@ -57,8 +60,41 @@ try {
   const schedulerName = taskQueue
   const ownerId = maintenanceSchedulerOwnerIdFromEnv()
   const leaseSeconds = maintenanceSchedulerLeaseSecondsFromEnv()
-  const leaseRun = await runWithMaintenanceSchedulerLease(
-    { schedulerName, ownerId, leaseSeconds },
+  const metrics = new PostgresMaintenanceSchedulerRunRepository(maintenancePool)
+  const leaseRun = await runWithMaintenanceSchedulerLease<SourceMaintenanceResult>(
+    {
+      schedulerName,
+      ownerId,
+      leaseSeconds,
+      metrics: {
+        store: metrics,
+        retentionDays: maintenanceSchedulerMetricsRetentionDaysFromEnv(),
+        purgeBatchSize: maintenanceSchedulerMetricsPurgeBatchSizeFromEnv(),
+        failureCode: (error) =>
+          maintenanceSchedulerFailureCode(error, 'APPSEA_SOURCE_MAINTENANCE_FAILED'),
+        summarize: (result) => ({
+          quotaWorkspacesScanned: result.quotaWorkspacesScanned,
+          deletionWorkspacesScanned: result.deletionWorkspacesScanned,
+          quotaReservationsExpired: result.quotaReservationsExpired,
+          quotaReservationsPurged: result.quotaReservationsPurged,
+          productionWorkflowAdmissionsPurged: result.productionWorkflowAdmissionsPurged,
+          productionAnalysisAdmissionsPurged: result.productionAnalysisAdmissionsPurged,
+          sourceCollectionLeasesPurged: result.sourceCollectionLeasesPurged,
+          productionAnalysisObjectsPurged: result.productionAnalysisObjectsPurged,
+          sourceSnapshotReconciliationsProcessed: result.sourceSnapshotReconciliationsProcessed,
+          sourceSnapshotReconciliationsCompleted: result.sourceSnapshotReconciliationsCompleted,
+          sourceSnapshotReconciliationsIncomplete: result.sourceSnapshotReconciliationsIncomplete,
+          sourceSnapshotReconciliationsFailed: result.sourceSnapshotReconciliationsFailed,
+          sourceSnapshotReconciliationsRetried: result.sourceSnapshotReconciliationsRetried,
+          sourceSnapshotCoverageGaps: result.sourceSnapshotCoverageGaps,
+          retentionTombstonesQueued: result.retentionTombstonesQueued,
+          deletionTombstonesProcessed: result.deletionTombstonesProcessed,
+          deletionObjectsAffected: result.deletionObjectsAffected,
+          deletionOpportunitiesInvalidated: result.deletionOpportunitiesInvalidated,
+          recomputationJobsQueued: result.recomputationJobsQueued
+        })
+      }
+    },
     new PostgresMaintenanceSchedulerLeaseRepository(maintenancePool),
     async ({ assertLease }) => {
       const quotaRepository = new PostgresSourceQuotaRepository(pool)

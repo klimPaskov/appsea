@@ -12,8 +12,12 @@ import {
   maintenanceSchedulerOwnerIdSchema,
   maintenanceSchedulerRenewResultSchema,
   maintenanceSchedulerReleaseResultSchema,
-  type MaintenanceSchedulerLeaseToken
+  maintenanceSchedulerRunIdSchema,
+  maintenanceSchedulerRunMetricSchema,
+  type MaintenanceSchedulerLeaseToken,
+  type MaintenanceSchedulerRunMetric
 } from '@appsea/contracts'
+import { emitWorkerEvent } from './observability'
 
 export interface MaintenanceSchedulerLeaseStore {
   acquire(
@@ -35,11 +39,25 @@ export interface MaintenanceSchedulerLeaseStore {
   ): Promise<{ released: boolean }>
 }
 
-export interface MaintenanceSchedulerLeaseOptions {
+export interface MaintenanceSchedulerRunMetricsStore {
+  record(input: MaintenanceSchedulerRunMetric): Promise<{ recorded: boolean }>
+  purge(input: { before: string; limit: number }): Promise<number>
+}
+
+export interface MaintenanceSchedulerRunMetricsOptions<T> {
+  store: MaintenanceSchedulerRunMetricsStore
+  summarize?: (result: T) => Record<string, number>
+  failureCode?: (error: unknown) => string
+  retentionDays?: number
+  purgeBatchSize?: number
+}
+
+export interface MaintenanceSchedulerLeaseOptions<T = unknown> {
   schedulerName: string
   ownerId: string
   leaseSeconds: number
   renewEveryMs?: number
+  metrics?: MaintenanceSchedulerRunMetricsOptions<T>
 }
 
 export interface MaintenanceSchedulerLeaseContext {
@@ -118,9 +136,48 @@ export function maintenanceSchedulerLeaseSecondsFromEnv(
   return value
 }
 
-function validatedOptions(
-  options: MaintenanceSchedulerLeaseOptions
-): MaintenanceSchedulerLeaseOptions {
+export function maintenanceSchedulerMetricsRetentionDaysFromEnv(
+  environment: NodeJS.ProcessEnv = process.env
+): number {
+  const value = Number(environment.APPSEA_MAINTENANCE_METRICS_RETENTION_DAYS ?? '30')
+  if (!Number.isSafeInteger(value) || value < 1 || value > 3_650) {
+    throw new Error(
+      'APPSEA_MAINTENANCE_METRICS_RETENTION_DAYS must be an integer between 1 and 3650'
+    )
+  }
+  return value
+}
+
+export function maintenanceSchedulerMetricsPurgeBatchSizeFromEnv(
+  environment: NodeJS.ProcessEnv = process.env
+): number {
+  const value = Number(environment.APPSEA_MAINTENANCE_METRICS_PURGE_BATCH_SIZE ?? '1000')
+  if (!Number.isSafeInteger(value) || value < 1 || value > 10_000) {
+    throw new Error(
+      'APPSEA_MAINTENANCE_METRICS_PURGE_BATCH_SIZE must be an integer between 1 and 10000'
+    )
+  }
+  return value
+}
+
+function validatedMetrics<T>(
+  metrics: MaintenanceSchedulerRunMetricsOptions<T> | undefined
+): MaintenanceSchedulerRunMetricsOptions<T> | undefined {
+  if (!metrics) return undefined
+  const retentionDays = metrics.retentionDays ?? 30
+  const purgeBatchSize = metrics.purgeBatchSize ?? 1_000
+  if (!Number.isSafeInteger(retentionDays) || retentionDays < 1 || retentionDays > 3_650) {
+    throw new Error('Maintenance scheduler metric retention must be between 1 and 3650 days')
+  }
+  if (!Number.isSafeInteger(purgeBatchSize) || purgeBatchSize < 1 || purgeBatchSize > 10_000) {
+    throw new Error('Maintenance scheduler metric purge batch must be between 1 and 10000')
+  }
+  return { ...metrics, retentionDays, purgeBatchSize }
+}
+
+function validatedOptions<T>(
+  options: MaintenanceSchedulerLeaseOptions<T>
+): MaintenanceSchedulerLeaseOptions<T> {
   const schedulerName = maintenanceSchedulerNameSchema.parse(options.schedulerName)
   const ownerId = maintenanceSchedulerOwnerIdSchema.parse(options.ownerId)
   if (
@@ -141,7 +198,61 @@ function validatedOptions(
       'renewEveryMs must be at most half the lease window and at least 1000 milliseconds'
     )
   }
-  return { schedulerName, ownerId, leaseSeconds: options.leaseSeconds, renewEveryMs }
+  const metrics = validatedMetrics(options.metrics)
+  return {
+    schedulerName,
+    ownerId,
+    leaseSeconds: options.leaseSeconds,
+    renewEveryMs,
+    ...(metrics ? { metrics } : {})
+  }
+}
+
+async function persistRunMetric<T>(
+  metrics: MaintenanceSchedulerRunMetricsOptions<T> | undefined,
+  runId: string,
+  schedulerName: string,
+  ownerId: string,
+  startedAtMs: number,
+  state: 'contended' | 'succeeded' | 'failed',
+  result: T | undefined,
+  error: unknown
+): Promise<void> {
+  if (!metrics) return
+  const parsedRunId = maintenanceSchedulerRunIdSchema.parse(runId)
+  const finishedAtMs = Date.now()
+  const failureCode =
+    state === 'failed'
+      ? (metrics.failureCode?.(error) ??
+        maintenanceSchedulerFailureCode(error, 'APPSEA_MAINTENANCE_SCHEDULER_WORK_FAILED'))
+      : null
+  try {
+    const metric = maintenanceSchedulerRunMetricSchema.parse({
+      runId: parsedRunId,
+      schedulerName,
+      ownerId,
+      state,
+      startedAt: new Date(startedAtMs).toISOString(),
+      finishedAt: new Date(finishedAtMs).toISOString(),
+      durationMs: Math.min(86_400_000, Math.max(0, finishedAtMs - startedAtMs)),
+      failureCode,
+      counters: result === undefined ? {} : (metrics.summarize?.(result) ?? {})
+    })
+    await metrics.store.record(metric)
+    const retentionBefore = new Date(
+      finishedAtMs - (metrics.retentionDays ?? 30) * 24 * 60 * 60 * 1_000
+    ).toISOString()
+    await metrics.store.purge({ before: retentionBefore, limit: metrics.purgeBatchSize ?? 1_000 })
+  } catch {
+    // Telemetry must never replace a durable job result. Emit only a fixed,
+    // secret-free signal so an operator can repair the metrics boundary.
+    emitWorkerEvent({
+      event: 'maintenance_scheduler_metrics_failed',
+      taskQueue: schedulerName,
+      schedulerName,
+      failureCode: 'APPSEA_MAINTENANCE_SCHEDULER_METRICS_FAILED'
+    })
+  }
 }
 
 function assertFutureLeaseUntil(value: string | null, schedulerName: string): void {
@@ -156,11 +267,32 @@ function assertFutureLeaseUntil(value: string | null, schedulerName: string): vo
 export type MaintenanceSchedulerLeaseRun<T> = { acquired: false } | { acquired: true; result: T }
 
 export async function runWithMaintenanceSchedulerLease<T>(
-  options: MaintenanceSchedulerLeaseOptions,
+  options: MaintenanceSchedulerLeaseOptions<T>,
   leases: MaintenanceSchedulerLeaseStore,
   work: (context: MaintenanceSchedulerLeaseContext) => Promise<T>
 ): Promise<MaintenanceSchedulerLeaseRun<T>> {
   const parsed = validatedOptions(options)
+  const metricRunId = maintenanceSchedulerRunIdSchema.parse(`maintenance:run:${randomUUID()}`)
+  const metricStartedAt = Date.now()
+  let metricRecorded = false
+  const recordMetric = async (
+    state: 'contended' | 'succeeded' | 'failed',
+    result: T | undefined,
+    error: unknown = undefined
+  ): Promise<void> => {
+    if (metricRecorded) return
+    metricRecorded = true
+    await persistRunMetric(
+      parsed.metrics,
+      metricRunId,
+      parsed.schedulerName,
+      parsed.ownerId,
+      metricStartedAt,
+      state,
+      result,
+      error
+    )
+  }
   const leaseToken: MaintenanceSchedulerLeaseToken =
     maintenanceSchedulerLeaseTokenSchema.parse(randomUUID())
   const releaseAfterAcquisitionFailure = async (): Promise<void> => {
@@ -176,11 +308,16 @@ export async function runWithMaintenanceSchedulerLease<T>(
     acquired = maintenanceSchedulerLeaseResultSchema.parse(
       await leases.acquire(parsed.schedulerName, parsed.ownerId, leaseToken, parsed.leaseSeconds)
     )
-  } catch {
+  } catch (error) {
     await releaseAfterAcquisitionFailure()
-    throw new MaintenanceSchedulerLeaseLostError(parsed.schedulerName)
+    const leaseError = new MaintenanceSchedulerLeaseLostError(parsed.schedulerName)
+    await recordMetric('failed', undefined, error ?? leaseError)
+    throw leaseError
   }
-  if (!acquired.acquired) return { acquired: false }
+  if (!acquired.acquired) {
+    await recordMetric('contended', undefined)
+    return { acquired: false }
+  }
   try {
     if (acquired.leaseToken !== leaseToken) {
       throw new MaintenanceSchedulerLeaseLostError(parsed.schedulerName)
@@ -188,6 +325,7 @@ export async function runWithMaintenanceSchedulerLease<T>(
     assertFutureLeaseUntil(acquired.leaseUntil, parsed.schedulerName)
   } catch (error) {
     await releaseAfterAcquisitionFailure()
+    await recordMetric('failed', undefined, error)
     throw error
   }
 
@@ -251,8 +389,19 @@ export async function runWithMaintenanceSchedulerLease<T>(
       releaseError = new MaintenanceSchedulerLeaseReleaseError(parsed.schedulerName)
     }
   }
-  if (workError) throw workError
-  if (leaseLost) throw new MaintenanceSchedulerLeaseLostError(parsed.schedulerName)
-  if (releaseError) throw releaseError
+  if (workError) {
+    await recordMetric('failed', undefined, workError)
+    throw workError
+  }
+  if (leaseLost) {
+    const leaseError = new MaintenanceSchedulerLeaseLostError(parsed.schedulerName)
+    await recordMetric('failed', undefined, leaseError)
+    throw leaseError
+  }
+  if (releaseError) {
+    await recordMetric('failed', undefined, releaseError)
+    throw releaseError
+  }
+  await recordMetric('succeeded', result)
   return { acquired: true, result }
 }

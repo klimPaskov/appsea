@@ -19,3 +19,7 @@ dedicated `APPSEA_MAINTENANCE_DATABASE_URL`/`appsea_maintenance` connection.
 Production requires a unique `APPSEA_SCHEDULER_OWNER_ID`; each acquisition has
 a fresh token, a contended lease must skip work, guarded mutations should call
 `assertLease`, and renewal/release failures must use fixed event codes.
+Scheduler outcome telemetry must use the migration `0047` maintenance-role
+functions through the repository; persist only generated run IDs, fixed states
+or failure codes, durations, and bounded numeric counters. Never persist lease
+tokens, source content, credentials, database URLs, or raw exception messages.

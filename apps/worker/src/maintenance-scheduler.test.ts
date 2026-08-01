@@ -4,9 +4,12 @@ import {
   MaintenanceSchedulerLeaseReleaseError,
   maintenanceDatabaseConfigFromEnv,
   maintenanceSchedulerLeaseSecondsFromEnv,
+  maintenanceSchedulerMetricsPurgeBatchSizeFromEnv,
+  maintenanceSchedulerMetricsRetentionDaysFromEnv,
   maintenanceSchedulerOwnerIdFromEnv,
   maintenanceSchedulerFailureCode,
   runWithMaintenanceSchedulerLease,
+  type MaintenanceSchedulerRunMetricsStore,
   type MaintenanceSchedulerLeaseStore
 } from './maintenance-scheduler'
 
@@ -55,6 +58,26 @@ function fakeLeases(
   }
 }
 
+function fakeMetrics(): MaintenanceSchedulerRunMetricsStore & {
+  records: Array<Record<string, unknown>>
+  purges: Array<Record<string, unknown>>
+} {
+  const records: Array<Record<string, unknown>> = []
+  const purges: Array<Record<string, unknown>> = []
+  return {
+    records,
+    purges,
+    record: async (input) => {
+      records.push(input)
+      return { recorded: true }
+    },
+    purge: async (input) => {
+      purges.push(input)
+      return 0
+    }
+  }
+}
+
 describe('maintenance scheduler lease wrapper', () => {
   it('skips contended work and releases an owned lease after success', async () => {
     const contended = fakeLeases({ acquired: false, leaseToken: null })
@@ -84,6 +107,80 @@ describe('maintenance scheduler lease wrapper', () => {
       )
     ).resolves.toEqual({ acquired: true, result: 'done' })
     expect(owned.calls).toEqual(['acquire', 'renew', 'release'])
+  })
+
+  it('records bounded success and contention metrics without lease secrets', async () => {
+    const successMetrics = fakeMetrics()
+    await expect(
+      runWithMaintenanceSchedulerLease<{ sourceItems: number }>(
+        {
+          schedulerName: 'appsea-source-maintenance-v1',
+          ownerId: 'worker:host:1',
+          leaseSeconds: 30,
+          metrics: {
+            store: successMetrics,
+            summarize: (result) => ({ sourceItems: result.sourceItems })
+          }
+        },
+        fakeLeases(),
+        async () => ({ sourceItems: 4 })
+      )
+    ).resolves.toEqual({ acquired: true, result: { sourceItems: 4 } })
+    expect(successMetrics.records[0]).toMatchObject({
+      schedulerName: 'appsea-source-maintenance-v1',
+      ownerId: 'worker:host:1',
+      state: 'succeeded',
+      failureCode: null,
+      counters: { sourceItems: 4 }
+    })
+    expect(successMetrics.records[0]).not.toHaveProperty('leaseToken')
+    expect(successMetrics.purges).toHaveLength(1)
+
+    const contendedMetrics = fakeMetrics()
+    await expect(
+      runWithMaintenanceSchedulerLease(
+        {
+          schedulerName: 'appsea-source-maintenance-v1',
+          ownerId: 'worker:host:1',
+          leaseSeconds: 30,
+          metrics: { store: contendedMetrics }
+        },
+        fakeLeases({ acquired: false, leaseToken: null }),
+        async () => 'not-run'
+      )
+    ).resolves.toEqual({ acquired: false })
+    expect(contendedMetrics.records[0]).toMatchObject({
+      state: 'contended',
+      failureCode: null,
+      counters: {}
+    })
+  })
+
+  it('persists a fixed failure code while preserving the original work failure', async () => {
+    const metrics = fakeMetrics()
+    const workError = new Error('database secret must never be persisted')
+    await expect(
+      runWithMaintenanceSchedulerLease(
+        {
+          schedulerName: 'appsea-source-maintenance-v1',
+          ownerId: 'worker:host:1',
+          leaseSeconds: 30,
+          metrics: {
+            store: metrics,
+            failureCode: () => 'APPSEA_SOURCE_MAINTENANCE_FAILED'
+          }
+        },
+        fakeLeases(),
+        async () => {
+          throw workError
+        }
+      )
+    ).rejects.toBe(workError)
+    expect(metrics.records[0]).toMatchObject({
+      state: 'failed',
+      failureCode: 'APPSEA_SOURCE_MAINTENANCE_FAILED',
+      counters: {}
+    })
   })
 
   it('fails closed when renewal is lost and still releases by token', async () => {
@@ -155,6 +252,16 @@ describe('maintenance scheduler lease wrapper', () => {
     expect(
       maintenanceSchedulerLeaseSecondsFromEnv({ APPSEA_MAINTENANCE_LEASE_SECONDS: '60' })
     ).toBe(60)
+    expect(
+      maintenanceSchedulerMetricsRetentionDaysFromEnv({
+        APPSEA_MAINTENANCE_METRICS_RETENTION_DAYS: '45'
+      })
+    ).toBe(45)
+    expect(
+      maintenanceSchedulerMetricsPurgeBatchSizeFromEnv({
+        APPSEA_MAINTENANCE_METRICS_PURGE_BATCH_SIZE: '250'
+      })
+    ).toBe(250)
     expect(() =>
       maintenanceSchedulerLeaseSecondsFromEnv({ APPSEA_MAINTENANCE_LEASE_SECONDS: '29' })
     ).toThrow(/between 30 and 3600/)

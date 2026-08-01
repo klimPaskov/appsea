@@ -59,7 +59,8 @@ describe('database foundation', () => {
       '0043',
       '0044',
       '0045',
-      '0046'
+      '0046',
+      '0047'
     ])
     expect(migrations[0]?.checksum).toMatch(/^[a-f0-9]{64}$/)
     expect(migrations[0]?.sql).toContain('CREATE TABLE appsea.evidence_records')
@@ -132,6 +133,9 @@ describe('database foundation', () => {
     )
     const maintenanceSchedulerLeaseMigration = migrations.find(
       (migration) => migration.version === '0046'
+    )
+    const maintenanceSchedulerRunMigration = migrations.find(
+      (migration) => migration.version === '0047'
     )
     expect(authMigration?.sql).toContain('CREATE TABLE appsea.users')
     expect(authMigration?.sql).toContain('CREATE TABLE appsea.auth_sessions')
@@ -411,6 +415,21 @@ describe('database foundation', () => {
     expect(maintenanceSchedulerLeaseMigration?.sql).toContain('pg_advisory_xact_lock')
     expect(maintenanceSchedulerLeaseMigration?.sql).toContain(
       'REVOKE ALL ON appsea.maintenance_scheduler_leases'
+    )
+    expect(maintenanceSchedulerRunMigration?.sql).toContain(
+      'CREATE TABLE appsea.maintenance_scheduler_runs'
+    )
+    expect(maintenanceSchedulerRunMigration?.sql).toContain(
+      'CREATE OR REPLACE FUNCTION appsea.record_maintenance_scheduler_run'
+    )
+    expect(maintenanceSchedulerRunMigration?.sql).toContain(
+      'CREATE OR REPLACE FUNCTION appsea.purge_maintenance_scheduler_runs'
+    )
+    expect(maintenanceSchedulerRunMigration?.sql).toContain(
+      'CREATE OR REPLACE FUNCTION appsea.list_maintenance_scheduler_runs'
+    )
+    expect(maintenanceSchedulerRunMigration?.sql).toContain(
+      'REVOKE ALL ON appsea.maintenance_scheduler_runs'
     )
   })
 

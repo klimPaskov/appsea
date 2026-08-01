@@ -90,12 +90,16 @@ operations are idempotent for safe reruns. The long-lived worker now emits a
 bounded `worker_heartbeat` event every 30 seconds, and the web service exposes
 no-store liveness/readiness probes that fail closed on PostgreSQL, authenticated
 Temporal, or object-store dependency checks. These signals improve deployment
-validation but do not provide a deployed scheduler, database fencing inside
-long-running mutations, durable metric retention, alert ownership, cross-run
-operational accounting, per-scheduler maintenance credentials, or a fresh
-Docker-backed recovery proof. The current `appsea_maintenance` coordinator is
-trusted across the four allowlisted names; production data-work role separation
-and optional per-scheduler isolation remain release gates.
+validation. Migration `0047` now persists each acquired, contended, or failed
+maintenance invocation through maintenance-role-only record/list/purge
+functions, with generated run IDs, fixed states/codes, bounded durations, and
+numeric counters; it purges rows on the configured retention window and never
+stores lease tokens or raw errors. Deployment still lacks a scheduler, database
+fencing inside long-running mutations, alert ownership, cross-run cost/accounting
+aggregation, per-scheduler maintenance credentials, and a fresh Docker-backed
+recovery proof. The current `appsea_maintenance` coordinator is trusted across
+the four allowlisted names; production data-work role separation and optional
+per-scheduler isolation remain release gates.
 
 The production workflow start route caps both declared and chunked JSON bodies
 and now calls the migration `0038` admission function before Temporal. The

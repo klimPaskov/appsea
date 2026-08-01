@@ -3,15 +3,21 @@ import {
   createDatabasePool,
   databaseConfigFromEnv,
   PostgresAuthRepository,
-  PostgresMaintenanceSchedulerLeaseRepository
+  PostgresMaintenanceSchedulerLeaseRepository,
+  PostgresMaintenanceSchedulerRunRepository
 } from '@appsea/db'
 import { emitWorkerEvent } from './observability'
 import { createWorkspaceInvitationDeliveryClient } from './workspace-invitation-delivery'
-import { runWorkspaceInvitationBatch } from './workspace-invitation-runner'
+import {
+  runWorkspaceInvitationBatch,
+  type WorkspaceInvitationBatchResult
+} from './workspace-invitation-runner'
 import {
   maintenanceSchedulerLeaseSecondsFromEnv,
   maintenanceSchedulerOwnerIdFromEnv,
   maintenanceSchedulerFailureCode,
+  maintenanceSchedulerMetricsPurgeBatchSizeFromEnv,
+  maintenanceSchedulerMetricsRetentionDaysFromEnv,
   maintenanceDatabaseConfigFromEnv,
   runWithMaintenanceSchedulerLease
 } from './maintenance-scheduler'
@@ -41,8 +47,25 @@ if (!enabled) {
     const schedulerName = taskQueue
     const ownerId = maintenanceSchedulerOwnerIdFromEnv()
     const leaseSeconds = maintenanceSchedulerLeaseSecondsFromEnv()
-    const leaseRun = await runWithMaintenanceSchedulerLease(
-      { schedulerName, ownerId, leaseSeconds },
+    const metrics = new PostgresMaintenanceSchedulerRunRepository(maintenancePool)
+    const leaseRun = await runWithMaintenanceSchedulerLease<WorkspaceInvitationBatchResult>(
+      {
+        schedulerName,
+        ownerId,
+        leaseSeconds,
+        metrics: {
+          store: metrics,
+          retentionDays: maintenanceSchedulerMetricsRetentionDaysFromEnv(),
+          purgeBatchSize: maintenanceSchedulerMetricsPurgeBatchSizeFromEnv(),
+          failureCode: (error) =>
+            maintenanceSchedulerFailureCode(error, 'APPSEA_WORKSPACE_INVITATION_DELIVERY_FAILED'),
+          summarize: (result) => ({
+            workspaceInvitationDeliveriesClaimed: result.claimed,
+            workspaceInvitationDeliveriesSent: result.sent,
+            workspaceInvitationDeliveriesFailed: result.failed
+          })
+        }
+      },
       new PostgresMaintenanceSchedulerLeaseRepository(maintenancePool),
       async ({ assertLease }) => {
         return runWorkspaceInvitationBatch(input.data.batchSize, {

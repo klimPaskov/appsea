@@ -219,10 +219,14 @@ for that pre-context authorization lookup.
 - The lease is a duplicate-run guard for bounded maintenance and delivery. It
   is not a fencing token for a long-running database transaction or external
   delivery; production still needs bounded transaction/runtime work and does
-  not prove a deployed scheduler, durable metrics, alert ownership, or incident
-  response. The current coordinator role is trusted across the four allowlisted
-  scheduler names; production may isolate scheduler credentials further if a
-  compromise of one maintenance process must not starve another.
+  not prove a deployed scheduler, alert ownership, or incident response. The
+  `0047` run-metrics table is reachable only through maintenance-role
+  security-definer record/list/purge functions. It stores a generated run ID,
+  owner, fixed state/failure code, bounded duration, and validated numeric
+  counters; it cannot store lease tokens, source text, credentials, or raw
+  exception messages. The current coordinator role is trusted across the four
+  allowlisted scheduler names; production may isolate scheduler credentials
+  further if a compromise of one maintenance process must not starve another.
 
 ## Temporal boundary
 

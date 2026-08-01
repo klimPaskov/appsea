@@ -41,6 +41,8 @@ import {
   maintenanceSchedulerLeaseResultSchema,
   maintenanceSchedulerRenewResultSchema,
   maintenanceSchedulerReleaseResultSchema,
+  maintenanceSchedulerRunMetricSchema,
+  maintenanceSchedulerRunPurgeInputSchema,
   workspaceOpportunityReadModelSchema,
   workspaceOpportunityDetailReadModelSchema,
   workspaceReportApprovalInputSchema,
@@ -409,6 +411,77 @@ describe('contracts', () => {
     expect(
       maintenanceSchedulerRenewResultSchema.safeParse({ renewed: true, leaseUntil: null }).success
     ).toBe(false)
+
+    expect(
+      maintenanceSchedulerRunMetricSchema.safeParse({
+        runId: 'maintenance:run:one',
+        schedulerName: 'appsea-source-maintenance-v1',
+        ownerId: 'worker:host:1',
+        state: 'succeeded',
+        startedAt: now,
+        finishedAt: now,
+        durationMs: 12,
+        failureCode: null,
+        counters: { sourceItems: 4, deletionTombstones: 1 }
+      }).success
+    ).toBe(true)
+    expect(
+      maintenanceSchedulerRunMetricSchema.safeParse({
+        runId: 'maintenance:run:failed',
+        schedulerName: 'appsea-source-maintenance-v1',
+        ownerId: 'worker:host:1',
+        state: 'failed',
+        startedAt: now,
+        finishedAt: now,
+        durationMs: 12,
+        failureCode: 'APPSEA_SOURCE_MAINTENANCE_FAILED',
+        counters: {}
+      }).success
+    ).toBe(true)
+    expect(
+      maintenanceSchedulerRunMetricSchema.safeParse({
+        runId: 'maintenance:run:raw',
+        schedulerName: 'appsea-source-maintenance-v1',
+        ownerId: 'worker:host:1',
+        state: 'failed',
+        startedAt: now,
+        finishedAt: now,
+        durationMs: 12,
+        failureCode: 'database password leaked',
+        counters: {}
+      }).success
+    ).toBe(false)
+    expect(
+      maintenanceSchedulerRunMetricSchema.safeParse({
+        runId: 'maintenance:run:bad-state',
+        schedulerName: 'appsea-source-maintenance-v1',
+        ownerId: 'worker:host:1',
+        state: 'succeeded',
+        startedAt: now,
+        finishedAt: now,
+        durationMs: 12,
+        failureCode: 'APPSEA_SOURCE_MAINTENANCE_FAILED',
+        counters: {}
+      }).success
+    ).toBe(false)
+    expect(
+      maintenanceSchedulerRunMetricSchema.safeParse({
+        runId: 'maintenance:run:too-many',
+        schedulerName: 'appsea-source-maintenance-v1',
+        ownerId: 'worker:host:1',
+        state: 'succeeded',
+        startedAt: now,
+        finishedAt: now,
+        durationMs: 12,
+        failureCode: null,
+        counters: Object.fromEntries(
+          Array.from({ length: 65 }, (_, index) => [`counter${index}`, 1])
+        )
+      }).success
+    ).toBe(false)
+    expect(
+      maintenanceSchedulerRunPurgeInputSchema.safeParse({ before: now, limit: 100 }).success
+    ).toBe(true)
 
     const sourceInput = {
       jobId: 'maintenance:source:123',

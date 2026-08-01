@@ -19,6 +19,9 @@ log sink and alert on:
 - `maintenance_scheduler_lease_contended` events, plus fixed
   `APPSEA_MAINTENANCE_SCHEDULER_LEASE_LOST` or
   `APPSEA_MAINTENANCE_SCHEDULER_LEASE_RELEASE_FAILED` failures;
+- `APPSEA_MAINTENANCE_SCHEDULER_METRICS_FAILED` events, which indicate that
+  durable scheduler telemetry needs operator repair without implying that the
+  underlying job failed;
 - missing `worker_started`/`worker_stopped` heartbeats for the task queue;
 - database connection or migration failures from the process supervisor.
 
@@ -51,7 +54,16 @@ during a pass, rejects concurrent owners (including same-owner retries),
 permits takeover after expiry, and releases only when owner and token match.
 This is a repository-level duplicate-run guard, not a fencing token for a
 long-running database mutation or external delivery; deployment still owns
-scheduler availability, durable metric retention, and alert routing.
+scheduler availability and alert routing. Migration `0047` adds durable,
+secret-free outcomes through the same maintenance connection. Each acquired,
+contended, or failed invocation records a generated run ID, owner, fixed state
+and failure code, bounded duration, and numeric counters; lease tokens and raw
+errors are never persisted. The record/list/purge functions are callable only
+by `appsea_maintenance`. Each command purges rows older than
+`APPSEA_MAINTENANCE_METRICS_RETENTION_DAYS` (default 30) up to
+`APPSEA_MAINTENANCE_METRICS_PURGE_BATCH_SIZE` (default 1,000). A metrics write
+failure emits the fixed `APPSEA_MAINTENANCE_SCHEDULER_METRICS_FAILED` event but
+does not replace the underlying job result.
 
 Temporal remains the source of truth for retry and replay. The worker uses
 bounded activity retries and the PostgreSQL workflow checkpoint tables use

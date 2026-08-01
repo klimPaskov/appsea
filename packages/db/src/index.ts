@@ -84,6 +84,7 @@ export {
   PostgresMaintenanceSchedulerLeaseRepository,
   maintenanceSchedulerLeaseLimits
 } from './maintenance-scheduler-lease-repository'
+export { PostgresMaintenanceSchedulerRunRepository } from './maintenance-scheduler-run-repository'
 export {
   PostgresSourceSnapshotReconciliationRepository,
   SourceSnapshotReconciliationAdmissionDeniedError,

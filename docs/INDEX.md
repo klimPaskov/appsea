@@ -105,3 +105,4 @@
 - [`status/operational-health-completion-report-2026-08-01.md`](status/operational-health-completion-report-2026-08-01.md)
 - [`status/temporal-worker-configuration-completion-report-2026-08-01.md`](status/temporal-worker-configuration-completion-report-2026-08-01.md)
 - [`status/maintenance-scheduler-lease-completion-report-2026-08-01.md`](status/maintenance-scheduler-lease-completion-report-2026-08-01.md)
+- [`status/maintenance-scheduler-metrics-completion-report-2026-08-01.md`](status/maintenance-scheduler-metrics-completion-report-2026-08-01.md)

@@ -149,7 +149,8 @@ Implemented:
 
 Remaining production work: legacy v1 history drain/retention for the analysis
 workflow, deployed Temporal topology and namespace/task-queue authorization,
-HA, provider object-store/backups retention and purge, deployment, metrics, alerts, deployed
+HA, provider object-store/backups retention and purge, deployment, metric
+aggregation/alerts, deployed
 snapshot scheduler ownership, and worker crash fault-injection proof. Migration `0037` now queues deletion-triggered
 active-evidence repairs and the dispatcher reclaims stale dispatch claims with
 bounded terminal failure; deployed scheduling, alerting, and production
@@ -272,9 +273,11 @@ workflow checkpoint, and audit/outbox metadata; known policy-cost overages are
 rejected before source lease acquisition;
 scheduled commands now share migration `0046`'s server-clock owner/token lease
 with renewal, stale takeover, guarded mutations, and fixed lease-loss failures;
+`0047` persists maintenance-role-only run outcomes with bounded
+numeric counters, fixed failure codes, and retention purge;
 the long-lived worker emits a bounded 30-second heartbeat and the web service
 exposes fail-closed liveness/readiness probes; deployed scheduler ownership,
-durable metric retention/alerting, traces, role separation, incident drills,
+alert ownership, traces, role separation, incident drills,
 and production security review remain.
 
 ### 7. Desktop release

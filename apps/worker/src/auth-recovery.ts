@@ -3,15 +3,18 @@ import {
   createDatabasePool,
   databaseConfigFromEnv,
   PostgresAuthRepository,
-  PostgresMaintenanceSchedulerLeaseRepository
+  PostgresMaintenanceSchedulerLeaseRepository,
+  PostgresMaintenanceSchedulerRunRepository
 } from '@appsea/db'
 import { emitWorkerEvent } from './observability'
 import { createPasswordResetDeliveryClient } from './auth-recovery-delivery'
-import { runAuthRecoveryBatch } from './auth-recovery-runner'
+import { runAuthRecoveryBatch, type AuthRecoveryBatchResult } from './auth-recovery-runner'
 import {
   maintenanceSchedulerLeaseSecondsFromEnv,
   maintenanceSchedulerOwnerIdFromEnv,
   maintenanceSchedulerFailureCode,
+  maintenanceSchedulerMetricsPurgeBatchSizeFromEnv,
+  maintenanceSchedulerMetricsRetentionDaysFromEnv,
   maintenanceDatabaseConfigFromEnv,
   runWithMaintenanceSchedulerLease
 } from './maintenance-scheduler'
@@ -41,8 +44,25 @@ if (!enabled) {
     const schedulerName = taskQueue
     const ownerId = maintenanceSchedulerOwnerIdFromEnv()
     const leaseSeconds = maintenanceSchedulerLeaseSecondsFromEnv()
-    const leaseRun = await runWithMaintenanceSchedulerLease(
-      { schedulerName, ownerId, leaseSeconds },
+    const metrics = new PostgresMaintenanceSchedulerRunRepository(maintenancePool)
+    const leaseRun = await runWithMaintenanceSchedulerLease<AuthRecoveryBatchResult>(
+      {
+        schedulerName,
+        ownerId,
+        leaseSeconds,
+        metrics: {
+          store: metrics,
+          retentionDays: maintenanceSchedulerMetricsRetentionDaysFromEnv(),
+          purgeBatchSize: maintenanceSchedulerMetricsPurgeBatchSizeFromEnv(),
+          failureCode: (error) =>
+            maintenanceSchedulerFailureCode(error, 'APPSEA_AUTH_RECOVERY_FAILED'),
+          summarize: (result) => ({
+            passwordResetDeliveriesClaimed: result.claimed,
+            passwordResetDeliveriesSent: result.sent,
+            passwordResetDeliveriesFailed: result.failed
+          })
+        }
+      },
       new PostgresMaintenanceSchedulerLeaseRepository(maintenancePool),
       async ({ assertLease }) => {
         return runAuthRecoveryBatch(input.data.batchSize, {

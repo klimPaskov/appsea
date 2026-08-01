@@ -151,6 +151,8 @@ Configuration is bounded by the command:
 - `APPSEA_SCHEDULER_OWNER_ID` (required stable process identity in production;
   development/test commands generate an ephemeral identity)
 - `APPSEA_MAINTENANCE_LEASE_SECONDS` (30-3,600, default 900)
+- `APPSEA_MAINTENANCE_METRICS_RETENTION_DAYS` (1-3,650, default 30)
+- `APPSEA_MAINTENANCE_METRICS_PURGE_BATCH_SIZE` (1-10,000, default 1,000)
 
 The worker emits secret-free quota expiry/purge, production collection and
 analysis admission purge, source-collection-lease purge, snapshot
@@ -167,8 +169,12 @@ Workspace enumeration is sorted and deduplicated, and a retry may reuse
 from a reviewed scheduler with retry and alerting. The database lease prevents
 concurrent scheduler instances from duplicating a bounded pass, but is not a
 fencing token for a long-running mutation or external delivery. It does not
-replace deployment ownership, durable metric retention, or incident response;
-production still needs bounded transaction times and deployment-level alerting.
+replace deployment ownership or incident response. Migration `0047` persists a
+bounded outcome row for every acquired, contended, or failed invocation through
+the maintenance role; it contains only fixed state/failure codes, duration, and
+numeric counters. The command purges rows older than the configured retention
+window. Production still needs bounded transaction times, deployment-level
+alerting, and an owner for responding to metric/heartbeat failures.
 Cloud object storage/backups,
 exports, explicit re-collection after source deletion, and production deployment
 behavior remain explicit release blockers. Operators may still start a reviewed

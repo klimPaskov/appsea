@@ -74,7 +74,11 @@ select/mutate the lease table directly. The per-acquisition token prevents
 same-owner overwrites and stale release. The lease prevents duplicate passes
 across scheduler instances but is not a fencing token for a long-running
 mutation and does not replace deployed scheduler ownership, alert routing, or
-metric retention.
+metric alert ownership. Migration `0047` adds a maintenance-role-only
+record/list/purge boundary for bounded run outcomes: generated run IDs, owner,
+fixed state/failure code, duration, and numeric counters. Rows are purged by a
+configured retention window; lease tokens, source content, and raw errors are
+not stored.
 The post-collection production analysis workflow is versioned as `v2`: only
 workspace/collection/analysis/seed identifiers and immutable digests cross
 Temporal, while the worker rebuilds the evidence-backed artifact inside its

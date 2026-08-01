@@ -34,6 +34,7 @@ import {
   PostgresOpportunitySeedReviewRepository,
   PostgresProductionWorkflowAdmissionRepository,
   PostgresMaintenanceSchedulerLeaseRepository,
+  PostgresMaintenanceSchedulerRunRepository,
   PostgresSourceCollectionLeaseRepository,
   PostgresSourceSnapshotReconciliationRepository,
   ProductionWorkflowConcurrencyLimitError,
@@ -708,6 +709,54 @@ describe.sequential('PostgreSQL fixture persistence lifecycle', () => {
     ).resolves.toEqual({ released: true })
     await expect(
       maintenancePool.query('SELECT * FROM appsea.maintenance_scheduler_leases')
+    ).rejects.toMatchObject({ code: '42501' })
+  })
+
+  it('persists bounded scheduler outcomes through the maintenance role only', async () => {
+    await expect(
+      servicePool.query(
+        `SELECT * FROM appsea.record_maintenance_scheduler_run(
+           $1, $2, $3, $4, $5, $6, $7, $8, $9::jsonb
+         )`,
+        [
+          'maintenance:run:service',
+          'appsea-source-maintenance-v1',
+          'worker:service:blocked',
+          'succeeded',
+          fixedAt,
+          fixedAt,
+          0,
+          null,
+          '{}'
+        ]
+      )
+    ).rejects.toMatchObject({ code: '42501' })
+    const repository = new PostgresMaintenanceSchedulerRunRepository(maintenancePool)
+    const metric = {
+      runId: 'maintenance:run:integration',
+      schedulerName: 'appsea-source-maintenance-v1' as const,
+      ownerId: 'worker:integration:metrics',
+      state: 'succeeded' as const,
+      startedAt: fixedAt,
+      finishedAt: fixedAt,
+      durationMs: 0,
+      failureCode: null,
+      counters: { sourceItems: 2, deletionTombstones: 1 }
+    }
+    await expect(repository.record(metric)).resolves.toEqual({ recorded: true })
+    await expect(repository.record(metric)).resolves.toEqual({ recorded: false })
+    await expect(repository.listRecent('appsea-source-maintenance-v1', 10)).resolves.toEqual([
+      metric
+    ])
+    await expect(repository.purge({ before: '2026-07-11T00:00:00.000Z', limit: 10 })).resolves.toBe(
+      1
+    )
+    await expect(repository.listRecent('appsea-source-maintenance-v1', 10)).resolves.toEqual([])
+    await expect(
+      servicePool.query('SELECT * FROM appsea.maintenance_scheduler_runs')
+    ).rejects.toMatchObject({ code: '42501' })
+    await expect(
+      maintenancePool.query('SELECT * FROM appsea.maintenance_scheduler_runs')
     ).rejects.toMatchObject({ code: '42501' })
   })
 

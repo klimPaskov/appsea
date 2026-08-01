@@ -2188,6 +2188,83 @@ export const maintenanceSchedulerRenewResultSchema = z
 
 export const maintenanceSchedulerReleaseResultSchema = z.object({ released: z.boolean() }).strict()
 
+export const maintenanceSchedulerRunIdSchema = z
+  .string()
+  .min(3)
+  .max(160)
+  .regex(/^maintenance:[a-z0-9_:-]+$/)
+
+export const maintenanceSchedulerRunStateSchema = z.enum(['contended', 'succeeded', 'failed'])
+
+const maintenanceSchedulerCounterKeySchema = z
+  .string()
+  .min(1)
+  .max(64)
+  .regex(/^[a-z][a-zA-Z0-9_]*$/)
+
+export const maintenanceSchedulerCountersSchema = z
+  .record(maintenanceSchedulerCounterKeySchema, z.number().int().nonnegative().max(10_000_000))
+  .superRefine((counters, context) => {
+    if (Object.keys(counters).length > 64) {
+      context.addIssue({
+        code: 'custom',
+        message: 'Maintenance scheduler metrics may contain at most 64 counters'
+      })
+    }
+  })
+
+export const maintenanceSchedulerFailureCodeSchema = z
+  .string()
+  .min(3)
+  .max(80)
+  .regex(/^[A-Z][A-Z0-9_:-]+$/)
+
+export const maintenanceSchedulerRunMetricSchema = z
+  .object({
+    runId: maintenanceSchedulerRunIdSchema,
+    schedulerName: maintenanceSchedulerNameSchema,
+    ownerId: maintenanceSchedulerOwnerIdSchema,
+    state: maintenanceSchedulerRunStateSchema,
+    startedAt: z.string().datetime(),
+    finishedAt: z.string().datetime(),
+    durationMs: z.number().int().nonnegative().max(86_400_000),
+    failureCode: maintenanceSchedulerFailureCodeSchema.nullable(),
+    counters: maintenanceSchedulerCountersSchema
+  })
+  .superRefine((metric, context) => {
+    if (Date.parse(metric.finishedAt) < Date.parse(metric.startedAt)) {
+      context.addIssue({
+        code: 'custom',
+        path: ['finishedAt'],
+        message: 'Maintenance scheduler run cannot finish before it starts'
+      })
+    }
+    if (metric.state === 'failed' && metric.failureCode === null) {
+      context.addIssue({
+        code: 'custom',
+        path: ['failureCode'],
+        message: 'Failed maintenance scheduler runs require a fixed failure code'
+      })
+    }
+    if (metric.state !== 'failed' && metric.failureCode !== null) {
+      context.addIssue({
+        code: 'custom',
+        path: ['failureCode'],
+        message: 'Only failed maintenance scheduler runs may carry a failure code'
+      })
+    }
+  })
+  .strict()
+
+export const maintenanceSchedulerRunPurgeInputSchema = z
+  .object({
+    before: z.string().datetime(),
+    limit: z.number().int().min(1).max(10_000)
+  })
+  .strict()
+
+export const maintenanceSchedulerRunReadModelSchema = maintenanceSchedulerRunMetricSchema
+
 export const sourceMaintenanceInputSchema = z
   .object({
     jobId: maintenanceJobIdSchema,
@@ -2865,6 +2942,17 @@ export type MaintenanceSchedulerLeaseResult = z.infer<typeof maintenanceSchedule
 export type MaintenanceSchedulerRenewResult = z.infer<typeof maintenanceSchedulerRenewResultSchema>
 export type MaintenanceSchedulerReleaseResult = z.infer<
   typeof maintenanceSchedulerReleaseResultSchema
+>
+export type MaintenanceSchedulerRunId = z.infer<typeof maintenanceSchedulerRunIdSchema>
+export type MaintenanceSchedulerRunState = z.infer<typeof maintenanceSchedulerRunStateSchema>
+export type MaintenanceSchedulerCounters = z.infer<typeof maintenanceSchedulerCountersSchema>
+export type MaintenanceSchedulerFailureCode = z.infer<typeof maintenanceSchedulerFailureCodeSchema>
+export type MaintenanceSchedulerRunMetric = z.infer<typeof maintenanceSchedulerRunMetricSchema>
+export type MaintenanceSchedulerRunPurgeInput = z.infer<
+  typeof maintenanceSchedulerRunPurgeInputSchema
+>
+export type MaintenanceSchedulerRunReadModel = z.infer<
+  typeof maintenanceSchedulerRunReadModelSchema
 >
 export type SourceMaintenanceInput = z.infer<typeof sourceMaintenanceInputSchema>
 export type SourceMaintenanceResult = z.infer<typeof sourceMaintenanceResultSchema>
