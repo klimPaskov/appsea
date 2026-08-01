@@ -37,6 +37,7 @@ Open `http://localhost:3000` after the web server starts.
   Temporal histories
 - private workspace authentication with hashed/revocable sessions, authenticated active-session inventory and reauthenticated per-session revocation, password step-up for owner mutations, and membership-checked research reads
 - private workspace cost summaries over the immutable ledger, grouped by currency and cost type with exact micro-unit totals and bounded periods
+- private visibility for settled source-quota requests that lack a completed production result, with maintenance-role-only resolution and no automatic re-fetch
 - owner-scoped invitations for existing AppSea accounts with hash-only tokens, encrypted outbox delivery, acceptance/revocation, and a production kill switch
 - provider-neutral password recovery mechanics with hash-only reset tokens,
   encrypted outbox delivery, fragment links, and a production kill switch
@@ -58,5 +59,6 @@ Open `http://localhost:3000` after the web server starts.
 - autonomous production deployment
 - desktop release packaging
 - automatic activation of generated skills or connectors
+- deployed ownership and alerting for quota-reconciliation cases
 
 Read `GOAL_PROMPT.md` to start the next implementation goal.

@@ -2688,6 +2688,127 @@ export const workspaceCostSummaryReadModelSchema = z
   })
   .strict()
 
+const sourceQuotaReservationIdSchema = z
+  .string()
+  .min(3)
+  .max(240)
+  .regex(/^[a-z][a-z0-9_:-]*$/)
+const sourceQuotaReconciliationStateSchema = z.enum(['open', 'resolved'])
+const sourceQuotaReconciliationResolutionCodeSchema = z.enum(['linked_result', 'voided_no_result'])
+const sourceQuotaReconciliationActorIdSchema = z
+  .string()
+  .min(3)
+  .max(160)
+  .regex(/^[a-zA-Z0-9][a-zA-Z0-9._:-]*$/)
+
+export const sourceQuotaReconciliationListQuerySchema = z
+  .object({
+    limit: z.number().int().min(1).max(100).default(50)
+  })
+  .strict()
+
+export const sourceQuotaReconciliationCaseSchema = z
+  .object({
+    workspaceId: appseaIdentifierSchema,
+    reservationId: sourceQuotaReservationIdSchema,
+    sourceId: appseaIdentifierSchema,
+    policyVersion: z
+      .string()
+      .min(1)
+      .max(80)
+      .regex(/^[a-zA-Z0-9._:-]+$/),
+    runId: appseaIdentifierSchema,
+    requestedRecords: z.number().int().min(1).max(5_000),
+    requestedCostMicros: z.number().int().nonnegative().max(1_000_000_000_000),
+    actualRecords: z.number().int().nonnegative().max(5_000).nullable(),
+    actualCostMicros: z.number().int().nonnegative().max(1_000_000_000_000).nullable(),
+    state: sourceQuotaReconciliationStateSchema,
+    firstSeenAt: z.string().datetime(),
+    lastSeenAt: z.string().datetime(),
+    resolutionCode: sourceQuotaReconciliationResolutionCodeSchema.nullable(),
+    linkedRunId: appseaIdentifierSchema.nullable(),
+    resolutionActorId: sourceQuotaReconciliationActorIdSchema.nullable(),
+    resolvedAt: z.string().datetime().nullable()
+  })
+  .superRefine((value, context) => {
+    if (value.state === 'open') {
+      if (value.resolutionCode !== null) {
+        context.addIssue({
+          code: 'custom',
+          path: ['resolutionCode'],
+          message: 'Open cases are unresolved'
+        })
+      }
+      if (value.linkedRunId !== null) {
+        context.addIssue({
+          code: 'custom',
+          path: ['linkedRunId'],
+          message: 'Open cases cannot link a result'
+        })
+      }
+      if (value.resolutionActorId !== null || value.resolvedAt !== null) {
+        context.addIssue({
+          code: 'custom',
+          path: ['resolvedAt'],
+          message: 'Open cases cannot have resolution metadata'
+        })
+      }
+    } else {
+      if (
+        value.resolutionCode === null ||
+        value.resolutionActorId === null ||
+        value.resolvedAt === null
+      ) {
+        context.addIssue({
+          code: 'custom',
+          path: ['resolutionCode'],
+          message: 'Resolved cases require resolution metadata'
+        })
+      }
+      if (value.resolutionCode === 'linked_result' && value.linkedRunId === null) {
+        context.addIssue({
+          code: 'custom',
+          path: ['linkedRunId'],
+          message: 'Linked cases require a completed run'
+        })
+      }
+      if (value.resolutionCode === 'voided_no_result' && value.linkedRunId !== null) {
+        context.addIssue({
+          code: 'custom',
+          path: ['linkedRunId'],
+          message: 'Voided cases cannot link a run'
+        })
+      }
+    }
+  })
+  .strict()
+
+export const sourceQuotaReconciliationResolveInputSchema = z
+  .object({
+    workspaceId: appseaIdentifierSchema,
+    reservationId: sourceQuotaReservationIdSchema,
+    resolutionCode: sourceQuotaReconciliationResolutionCodeSchema,
+    linkedRunId: appseaIdentifierSchema.nullable(),
+    actorId: sourceQuotaReconciliationActorIdSchema
+  })
+  .superRefine((value, context) => {
+    if (value.resolutionCode === 'linked_result' && value.linkedRunId === null) {
+      context.addIssue({
+        code: 'custom',
+        path: ['linkedRunId'],
+        message: 'A linked result is required'
+      })
+    }
+    if (value.resolutionCode === 'voided_no_result' && value.linkedRunId !== null) {
+      context.addIssue({
+        code: 'custom',
+        path: ['linkedRunId'],
+        message: 'A voided case cannot link a result'
+      })
+    }
+  })
+  .strict()
+
 export const authSignInResultSchema = z
   .object({
     token: authSessionTokenSchema,
@@ -3037,6 +3158,13 @@ export type WorkspaceCostSummaryQuery = z.infer<typeof workspaceCostSummaryQuery
 export type WorkspaceCostTypeSummary = z.infer<typeof workspaceCostTypeSummarySchema>
 export type WorkspaceCurrencyCostSummary = z.infer<typeof workspaceCurrencyCostSummarySchema>
 export type WorkspaceCostSummaryReadModel = z.infer<typeof workspaceCostSummaryReadModelSchema>
+export type SourceQuotaReconciliationListQuery = z.infer<
+  typeof sourceQuotaReconciliationListQuerySchema
+>
+export type SourceQuotaReconciliationCase = z.infer<typeof sourceQuotaReconciliationCaseSchema>
+export type SourceQuotaReconciliationResolveInput = z.infer<
+  typeof sourceQuotaReconciliationResolveInputSchema
+>
 export type AuthSignInResult = z.infer<typeof authSignInResultSchema>
 export type AuthUserReadModel = z.infer<typeof authUserReadModelSchema>
 export type WorkspaceRole = z.infer<typeof workspaceRoleSchema>

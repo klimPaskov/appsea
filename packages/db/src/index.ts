@@ -33,7 +33,10 @@ export {
   type SourceQuotaReservation,
   type SourceQuotaReservationInput,
   type SourceQuotaSettlementInput,
-  type SourceQuotaWorkspaceId
+  type SourceQuotaWorkspaceId,
+  type SourceQuotaReconciliationCase,
+  type SourceQuotaReconciliationListQuery,
+  type SourceQuotaReconciliationResolveInput
 } from './source-quota-repository'
 export {
   PostgresSourcePolicyRepository,

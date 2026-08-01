@@ -16,6 +16,7 @@
     "auth:recovery": "tsx src/auth-recovery.ts",
     "workspace:invitations": "tsx src/workspace-invitations.ts",
     "source:maintenance": "tsx src/source-maintenance.ts",
+    "source:quota:reconcile": "tsx src/source-quota-reconciliation-cli.ts",
     "workflow:fixture": "tsx src/workflow-fixture.ts",
     "source:cfpb": "tsx src/production-cfpb.ts",
     "source:cfpb:reconcile": "tsx src/production-cfpb-reconciliation-cli.ts",

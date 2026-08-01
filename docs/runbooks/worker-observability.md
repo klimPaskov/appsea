@@ -22,6 +22,9 @@ log sink and alert on:
 - `APPSEA_MAINTENANCE_SCHEDULER_METRICS_FAILED` events, which indicate that
   durable scheduler telemetry needs operator repair without implying that the
   underlying job failed;
+- `source_quota_reconciliation_failed` events and open-case age from the
+  private reconciliation read model; these require an explicit maintenance-role
+  decision and never justify an automatic re-fetch;
 - missing `worker_started`/`worker_stopped` heartbeats for the task queue;
 - database connection or migration failures from the process supervisor.
 
@@ -79,7 +82,17 @@ retention, alert routing, secret redaction verification, and a documented
 worker replacement drill. The private workspace cost summary provides bounded
 cross-run ledger accounting, but a production scheduler, alert ownership,
 provider billing controls, and any stronger maintenance checkpoint/fencing
-boundary remain deployment responsibilities.
+boundary remain deployment responsibilities. Settled source-quota cases are
+inspectable at:
+
+```text
+GET /api/workspaces/:workspaceId/research/quota-reconciliation?limit=50
+```
+
+The worker command `pnpm worker:source:quota:reconcile` uses the standalone
+`appsea_maintenance` role for bounded inspection or an explicit linked/voided
+resolution. It records no source payload or caller key; deployment owns case
+alert routing and operator identity provisioning.
 
 Private workspace members can inspect bounded cross-run cost accounting at:
 

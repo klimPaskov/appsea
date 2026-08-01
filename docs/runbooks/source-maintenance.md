@@ -76,7 +76,9 @@ persistence and releases it only after commit. The same bounded maintenance
 pass purges released, expired, or revoked lease rows older than the retention
 cutoff; it never deletes source evidence or policy history. An inactive lease
 or quota settlement without a completed result remains an operator-
-reconciliation case.
+reconciliation case. Inspect and resolve quota cases through
+[`source-quota-reconciliation.md`](source-quota-reconciliation.md); the
+maintenance pass never refunds quota or re-fetches optimistically.
 
 The maintenance pass now resumes at most one due full-snapshot job per sorted
 workspace, up to `APPSEA_SOURCE_SNAPSHOT_RECONCILIATION_BATCH_SIZE`. The

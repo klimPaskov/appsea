@@ -56,14 +56,15 @@
     The worker dispatches that job only after the seed is approved, while
     migration `0036` permits reactivation only after the new active output is
     linked.
-19. Checkpoints, budget counters, and fixed failure records make progress inspectable and retry-safe.
-20. An outbox event records accepted run completion without making delivery part of the database transaction.
-21. The durable report package path converts a validated persisted artifact into
+19. Checkpoints, budget counters, and fixed failure records make progress inspectable and retry-safe. If a source quota reservation settles before a production result, migration `0049` creates a bounded reconciliation case instead of permitting a blind retry.
+20. Workspace members can inspect open quota-reconciliation cases privately; only the standalone maintenance role can resolve one after verifying the exact completed run or recording an explicit no-result decision. Resolution never refunds quota or starts a new source request.
+21. An outbox event records accepted run completion without making delivery part of the database transaction.
+22. The durable report package path converts a validated persisted artifact into
     a strict evidence-backed report and schema-checked coding-agent files;
     PostgreSQL versions the report, links it to the plan, and records the
     content-addressed object references.
-22. Private workspace reviewers move report and plan versions through separate guarded review lifecycles; only approved, schema-validated object-backed read models can cross their export boundaries, and plan approval requires a ready package plus an approved linked report.
-23. The website reads the accepted opportunity projection, evidence/source
+23. Private workspace reviewers move report and plan versions through separate guarded review lifecycles; only approved, schema-validated object-backed read models can cross their export boundaries, and plan approval requires a ready package plus an approved linked report.
+24. The website reads the accepted opportunity projection, evidence/source
     coverage, report, and plan through shared contracts; production analyses
     have an authenticated run read route and active-output mapping for private
     opportunity pages. The public leaderboard remains fixture-only.

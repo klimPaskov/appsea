@@ -162,6 +162,14 @@ for that pre-context authorization lookup.
   read-only transaction, then aggregates only immutable ledger amounts. It keeps
   currencies separate, uses exact micro-unit strings, bounds the period, and
   never returns source/run identifiers or database errors.
+- Migration `0049` makes a settled source-quota reservation without a completed
+  production result an explicit forced-RLS reconciliation case. Workspace
+  inspection repeats membership authorization and exposes only bounded source,
+  policy, run, reservation, record/cost, and timestamp fields. The backing table
+  has no direct runtime grants. Only the standalone `appsea_maintenance` role
+  may resolve a case; a linked resolution must match the exact completed
+  production run, while a voided resolution records that no result exists.
+  Neither resolution changes quota history or permits a re-fetch.
 - Workspace member emails and role mutations are owner-only. Role changes and
   removals are authorized in the same RLS transaction, guarded in PostgreSQL by
   a serialized last-owner check, and recorded as identifier-only audit/outbox

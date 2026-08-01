@@ -1,6 +1,24 @@
-import type { Pool, QueryResultRow } from 'pg'
-import { appseaIdentifierSchema } from '@appsea/contracts'
-import { withDatabaseTransaction, withWorkspaceTransaction } from './transaction'
+import type { Pool, PoolClient, QueryResultRow } from 'pg'
+import {
+  appseaIdentifierSchema,
+  sourceQuotaReconciliationCaseSchema,
+  sourceQuotaReconciliationListQuerySchema,
+  sourceQuotaReconciliationResolveInputSchema,
+  type SourceQuotaReconciliationCase,
+  type SourceQuotaReconciliationListQuery,
+  type SourceQuotaReconciliationResolveInput
+} from '@appsea/contracts'
+import {
+  withAuthenticatedWorkspaceTransaction,
+  withDatabaseTransaction,
+  withWorkspaceTransaction
+} from './transaction'
+
+export type {
+  SourceQuotaReconciliationCase,
+  SourceQuotaReconciliationListQuery,
+  SourceQuotaReconciliationResolveInput
+} from '@appsea/contracts'
 
 export interface SourceQuotaReservationInput {
   workspaceId: string
@@ -49,6 +67,25 @@ interface ReservationRow extends QueryResultRow {
   requested_cost_micros: string | number
 }
 
+interface ReconciliationCaseRow extends QueryResultRow {
+  workspace_id: string
+  reservation_id: string
+  source_id: string
+  policy_version: string
+  run_id: string
+  requested_records: number | string
+  requested_cost_micros: number | string
+  actual_records: number | string | null
+  actual_cost_micros: number | string | null
+  state: string
+  first_seen_at: Date | string
+  last_seen_at: Date | string
+  resolution_code: string | null
+  linked_run_id: string | null
+  resolution_actor_id: string | null
+  resolved_at: Date | string | null
+}
+
 function validateIdentifier(value: string, label: string): string {
   try {
     return appseaIdentifierSchema.parse(value)
@@ -91,6 +128,47 @@ function asReservation(row: ReservationRow): SourceQuotaReservation {
     requestedRecords: row.requested_records,
     requestedCostMicros: Number(row.requested_cost_micros)
   }
+}
+
+function asIso(value: Date | string): string {
+  return value instanceof Date ? value.toISOString() : new Date(value).toISOString()
+}
+
+function asReconciliationCase(row: ReconciliationCaseRow): SourceQuotaReconciliationCase {
+  return sourceQuotaReconciliationCaseSchema.parse({
+    workspaceId: row.workspace_id,
+    reservationId: row.reservation_id,
+    sourceId: row.source_id,
+    policyVersion: row.policy_version,
+    runId: row.run_id,
+    requestedRecords: Number(row.requested_records),
+    requestedCostMicros: Number(row.requested_cost_micros),
+    actualRecords: row.actual_records === null ? null : Number(row.actual_records),
+    actualCostMicros: row.actual_cost_micros === null ? null : Number(row.actual_cost_micros),
+    state: row.state,
+    firstSeenAt: asIso(row.first_seen_at),
+    lastSeenAt: asIso(row.last_seen_at),
+    resolutionCode: row.resolution_code,
+    linkedRunId: row.linked_run_id,
+    resolutionActorId: row.resolution_actor_id,
+    resolvedAt: row.resolved_at === null ? null : asIso(row.resolved_at)
+  })
+}
+
+async function readReconciliationCases(
+  client: PoolClient,
+  workspaceId: string,
+  limit: number
+): Promise<SourceQuotaReconciliationCase[]> {
+  const result = await client.query<ReconciliationCaseRow>(
+    `SELECT workspace_id, reservation_id, source_id, policy_version, run_id,
+            requested_records, requested_cost_micros, actual_records,
+            actual_cost_micros, state, first_seen_at, last_seen_at,
+            resolution_code, linked_run_id, resolution_actor_id, resolved_at
+       FROM appsea.list_source_quota_reconciliation_cases($1, $2)`,
+    [workspaceId, limit]
+  )
+  return result.rows.map(asReconciliationCase)
 }
 
 export class PostgresSourceQuotaRepository {
@@ -226,5 +304,71 @@ export class PostgresSourceQuotaRepository {
       )
       return Number(result.rows[0]?.purged_count ?? 0)
     })
+  }
+
+  /**
+   * Discover committed source quota reservations that have no completed
+   * production result.  Discovery writes only the bounded reconciliation case
+   * projection; it never refunds quota or authorizes another source request.
+   */
+  async listReconciliationCasesForUser(
+    userId: string,
+    workspaceId: string,
+    query: SourceQuotaReconciliationListQuery = { limit: 50 }
+  ): Promise<SourceQuotaReconciliationCase[]> {
+    const validatedWorkspaceId = validateIdentifier(workspaceId, 'workspaceId')
+    const parsedQuery = sourceQuotaReconciliationListQuerySchema.parse(query)
+    return withAuthenticatedWorkspaceTransaction(
+      this.pool,
+      userId,
+      validatedWorkspaceId,
+      (client) => readReconciliationCases(client, validatedWorkspaceId, parsedQuery.limit)
+    )
+  }
+
+  /** List cases from the dedicated maintenance role without user membership. */
+  async listReconciliationCases(
+    workspaceId: string,
+    query: SourceQuotaReconciliationListQuery = { limit: 50 }
+  ): Promise<SourceQuotaReconciliationCase[]> {
+    const validatedWorkspaceId = validateIdentifier(workspaceId, 'workspaceId')
+    const parsedQuery = sourceQuotaReconciliationListQuerySchema.parse(query)
+    return withWorkspaceTransaction(this.pool, validatedWorkspaceId, (client) =>
+      readReconciliationCases(client, validatedWorkspaceId, parsedQuery.limit)
+    )
+  }
+
+  /**
+   * Resolve a case only through the dedicated maintenance database role.  A
+   * linked result must be the exact completed production run recorded on the
+   * case; voiding records that no result exists without changing quota state.
+   */
+  async resolveReconciliationCase(
+    input: SourceQuotaReconciliationResolveInput
+  ): Promise<SourceQuotaReconciliationCase> {
+    const parsed = sourceQuotaReconciliationResolveInputSchema.parse(input)
+    return withDatabaseTransaction(
+      this.pool,
+      async (client) => {
+        const result = await client.query<ReconciliationCaseRow>(
+          `SELECT workspace_id, reservation_id, source_id, policy_version, run_id,
+                  requested_records, requested_cost_micros, actual_records,
+                  actual_cost_micros, state, first_seen_at, last_seen_at,
+                  resolution_code, linked_run_id, resolution_actor_id, resolved_at
+             FROM appsea.resolve_source_quota_reconciliation_case($1, $2, $3, $4, $5)`,
+          [
+            parsed.workspaceId,
+            parsed.reservationId,
+            parsed.resolutionCode,
+            parsed.linkedRunId,
+            parsed.actorId
+          ]
+        )
+        const row = result.rows[0]
+        if (!row) throw new Error('Source quota reconciliation did not return a case')
+        return asReconciliationCase(row)
+      },
+      { isolationLevel: 'SERIALIZABLE' }
+    )
   }
 }

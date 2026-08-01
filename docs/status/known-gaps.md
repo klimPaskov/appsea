@@ -97,7 +97,11 @@ numeric counters; it purges rows on the configured retention window and never
 stores lease tokens or raw errors. Migration `0048` and the private
 `GET /api/workspaces/:workspaceId/costs` route now provide bounded,
 membership-authorized cross-run ledger aggregation by currency and cost type
-using exact micro-unit strings. Deployment still lacks a scheduler, database
+using exact micro-unit strings. Migration `0049` and the private
+`GET /api/workspaces/:workspaceId/research/quota-reconciliation` route now
+discover settled reservations without completed production results; the
+maintenance-only CLI records an exact linked-result or explicit no-result
+resolution without changing quota or re-fetching. Deployment still lacks a scheduler, database
 fencing inside long-running mutations, alert ownership, provider pricing/billing
 controls, per-scheduler maintenance credentials, and a fresh Docker-backed
 recovery proof. The current `appsea_maintenance` coordinator is trusted across
@@ -207,8 +211,9 @@ maintenance. This closes the repository-level policy read/fetch and
 assert-to-persist race, but production deployment still needs lease-revocation
 drills, scheduler ownership, Temporal namespace authorization, and Docker-backed
 crash/retry evidence. A quota settled without
-a persisted result intentionally remains an operator-reconciliation boundary;
-the worker does not release or re-fetch optimistically.
+a persisted result now creates a durable operator-reconciliation case; the
+worker does not release or re-fetch optimistically. Case alert ownership,
+incident response, and maintenance-role provisioning remain deployment work.
 
 ## Models
 
@@ -255,8 +260,9 @@ SQLite and deterministic fixture/production-collection/production-analysis
 activity contracts. It
 does not prove worker crash fault injection, production retention/encryption,
 or multi-worker deployment. A quota reservation that is settled before a
-collection result is persisted enters an explicit operator-reconciliation
-state; automated retry after that boundary is intentionally blocked.
+collection result is persisted enters the migration `0049` operator-
+reconciliation case ledger; automated retry after that boundary is intentionally
+blocked, and deployment still owns case alerting and operator identity.
 
 ## Naming
 

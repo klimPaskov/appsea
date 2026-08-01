@@ -37,6 +37,7 @@
     "worker:source:cfpb": "pnpm --filter @appsea/worker source:cfpb",
     "worker:source:cfpb:reconcile": "pnpm --filter @appsea/worker source:cfpb:reconcile",
     "worker:source:cfpb:reconcile:next": "pnpm --filter @appsea/worker source:cfpb:reconcile:next",
+    "worker:source:quota:reconcile": "pnpm --filter @appsea/worker source:quota:reconcile",
     "worker:source:policy:cfpb": "pnpm --filter @appsea/worker source:policy:cfpb",
     "worker:workflow:fixture": "pnpm --filter @appsea/worker workflow:fixture",
     "plan:sample": "pnpm --filter @appsea/worker plan:sample",

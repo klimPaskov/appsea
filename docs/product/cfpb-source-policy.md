@@ -115,8 +115,11 @@ idempotency domain and persist non-synthetic source items, redacted evidence,
 unreviewed complaint observations, policy lineage, deletion tombstones,
 coverage gaps, and identifier-only audit/outbox events through
 `PostgresProductionCollectionRepository`. A quota reservation that is settled
-before the collection result is committed requires operator reconciliation;
-automatic retries are blocked at that boundary. This checkpoint is not an
+before the collection result is committed creates a durable reconciliation case;
+automatic retries are blocked at that boundary. Members can inspect the case at
+`GET /api/workspaces/:workspaceId/research/quota-reconciliation`, while only
+the standalone maintenance role may record an exact linked result or explicit
+no-result resolution. This checkpoint is not an
 opportunity ranking or report and does not make the public leaderboard
 non-synthetic.
 

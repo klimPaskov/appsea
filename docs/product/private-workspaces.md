@@ -48,6 +48,14 @@ cost types separate, reports exact micro-unit strings, defaults to a 30-day
 window, and accepts at most a 365-day period. It is private operational data,
 not billing or payment functionality.
 
+Workspace members can also inspect settled source requests that lack a
+completed production result at
+`GET /api/workspaces/:workspaceId/research/quota-reconciliation`. The read is
+bounded and no-store. Resolution is deliberately outside the member API: the
+standalone `appsea_maintenance` role must verify an exact completed run or
+record an explicit no-result decision, and neither action refunds quota or
+authorizes a source re-fetch.
+
 Reviewed non-fixture analysis outputs use the same private routes after a
 completed collection: artifact, report, and plan payloads are read from
 workspace-bound object references. Reports and plans each have separate

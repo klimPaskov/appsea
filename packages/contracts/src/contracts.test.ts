@@ -18,6 +18,9 @@ import {
   authSessionSummaryReadModelSchema,
   workspaceCostSummaryQuerySchema,
   workspaceCostSummaryReadModelSchema,
+  sourceQuotaReconciliationCaseSchema,
+  sourceQuotaReconciliationListQuerySchema,
+  sourceQuotaReconciliationResolveInputSchema,
   complaintSchema,
   fixturePersistenceInputSchema,
   fixtureResearchWorkflowInputSchema,
@@ -1375,5 +1378,47 @@ describe('contracts', () => {
         ]
       }).success
     ).toBe(false)
+  })
+
+  it('keeps quota reconciliation cases explicit and resolution-bound', () => {
+    const openCase = {
+      workspaceId: 'workspace:one',
+      reservationId: 'quota:source:one',
+      sourceId: 'source:one',
+      policyVersion: 'policy-v1',
+      runId: 'run:one',
+      requestedRecords: 2,
+      requestedCostMicros: 15,
+      actualRecords: 2,
+      actualCostMicros: 15,
+      state: 'open' as const,
+      firstSeenAt: now,
+      lastSeenAt: now,
+      resolutionCode: null,
+      linkedRunId: null,
+      resolutionActorId: null,
+      resolvedAt: null
+    }
+    expect(sourceQuotaReconciliationCaseSchema.safeParse(openCase).success).toBe(true)
+    expect(
+      sourceQuotaReconciliationCaseSchema.safeParse({
+        ...openCase,
+        state: 'resolved',
+        resolutionCode: 'linked_result',
+        linkedRunId: 'run:one',
+        resolutionActorId: 'operator:alice',
+        resolvedAt: '2026-07-11T00:00:00.000Z'
+      }).success
+    ).toBe(true)
+    expect(
+      sourceQuotaReconciliationResolveInputSchema.safeParse({
+        workspaceId: 'workspace:one',
+        reservationId: 'quota:source:one',
+        resolutionCode: 'linked_result',
+        linkedRunId: null,
+        actorId: 'operator:alice'
+      }).success
+    ).toBe(false)
+    expect(sourceQuotaReconciliationListQuerySchema.parse({})).toEqual({ limit: 50 })
   })
 })

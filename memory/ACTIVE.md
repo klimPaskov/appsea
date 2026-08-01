@@ -5,9 +5,10 @@
 The fixture product, PostgreSQL persistence, durable workflows, policy-gated
 CFPB collection checkpoint, authenticated private workspaces, report/plan
 approval/export, recovery, and invitations are implemented. Migrations
-`0027`-`0048` add policy evidence, collection checkpoints, deletion repair,
+`0027`-`0049` add policy evidence, collection checkpoints, deletion repair,
 leases, snapshot reconciliation, workflow admissions, source-reconciliation
-admission, retryable tombstones, and maintenance-run telemetry. CFPB remains
+admission, retryable tombstones, maintenance-run telemetry, and a durable
+source-quota reconciliation case ledger. CFPB remains
 disabled; deployed Temporal/scheduler ownership, policy approval, role
 separation, re-collection, non-fixture outputs, and identity-provider approval
 remain open. Fixture and production collection routes are Temporal gateways;
@@ -63,16 +64,25 @@ provide fencing inside a long-running mutation, deployed scheduler ownership,
 or alert routing. Migration `0048` adds the ledger time index and a
 membership-authorized private workspace cost summary that groups exact
 micro-unit totals by currency and cost type over a bounded period; it is
-operational accounting, not billing.
+operational accounting, not billing. Migration `0049` discovers committed
+source reservations without completed production results, exposes private
+member inspection at `/api/workspaces/:workspaceId/research/quota-reconciliation`,
+and permits only the standalone maintenance role to record an exact linked
+result or explicit no-result resolution. It never refunds quota or authorizes
+a re-fetch.
 
 ## Validated commands
 
 - `pnpm verify` passed 2026-08-01 before this telemetry tranche: packages,
   samples, smoke, and repository checks.
-- Scheduler/metrics focus: contracts 63 tests, DB 82 tests, worker 58 tests,
+- Scheduler/metrics focus: contracts 64 tests, DB 84 tests, worker 58 tests,
   lint, typecheck, and format checks passed.
 - Workspace cost focus: private route tests 67 passed; exact micro-unit
   aggregation, period bounds, and membership/error boundaries are covered.
+- Quota reconciliation focus: private inspection route tests 71 passed across
+  the web suite; contract case invariants, repository role boundaries, and
+  maintenance resolution are covered. Docker-backed persistence remains
+  unavailable in this environment.
 - PostgreSQL migration/read/deletion/concurrency/role/metrics integration is
   staged but Docker-blocked by the unavailable Docker Desktop Linux engine.
 - `pnpm agents:sync` passed; memory and docs checks must pass after this file
@@ -103,5 +113,5 @@ operational accounting, not billing.
 - Production collection is locally package-tested and PostgreSQL-idempotent,
   but no production Temporal deployment or integration proof exists. Cloud
   storage, recomputation alerting, deployed reconciliation scheduling, and
-  quota/operator reconciliation remain open.
+  quota-case alert ownership remain open.
 - Windows/macOS packaging remains open.

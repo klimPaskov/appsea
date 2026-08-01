@@ -88,6 +88,13 @@ Remaining deployment work and the non-fixture object-store integration are
 tracked in `docs/status/known-gaps.md` and are not part of the completed
 repository persistence foundation.
 
+Migration `0049_source_quota_reconciliation.sql` adds a forced-RLS case
+projection for committed source reservations that lack a completed production
+result. Authenticated workspace inspection is bounded and no-store; the
+standalone maintenance role can record only an exact linked result or an
+explicit no-result void. The boundary never refunds quota or authorizes a
+re-fetch. Deployed alert ownership and incident response remain open.
+
 ### 2. Durable workflows
 
 Status: fixture and production-collection workflow boundaries plus an

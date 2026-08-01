@@ -54,7 +54,8 @@ transaction as the collection write and locks the lease row through commit. An
 expired or revoked lease is terminal and fails closed; the lease is released
 only after the collection transaction commits. If quota was settled or
 the lease became inactive without a completed result, do not start a new fetch:
-retain the digest and use operator reconciliation.
+retain the digest and use the bounded
+[`source-quota-reconciliation.md`](source-quota-reconciliation.md) runbook.
 
 Before starting downstream analysis, an authenticated workspace editor or
 owner must review each active complaint observation on the private collection

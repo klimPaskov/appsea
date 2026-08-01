@@ -64,7 +64,9 @@ Claims use `FOR UPDATE SKIP LOCKED` and expire after a bounded lease. Each page
 stores only a hash and the source identifiers in PostgreSQL. A repeated page
 checkpoint is a no-op; a settled quota reservation without a matching
 checkpoint enters explicit operator reconciliation rather than issuing an
-unbounded duplicate fetch.
+unbounded duplicate fetch. Inspect and resolve the resulting case only through
+[`source-quota-reconciliation.md`](source-quota-reconciliation.md); resolution
+does not refund quota or authorize a re-fetch.
 
 ## Deletion proof
 

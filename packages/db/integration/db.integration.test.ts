@@ -37,6 +37,7 @@ import {
   PostgresMaintenanceSchedulerRunRepository,
   PostgresWorkspaceCostRepository,
   PostgresSourceCollectionLeaseRepository,
+  PostgresSourceQuotaRepository,
   PostgresSourceSnapshotReconciliationRepository,
   ProductionWorkflowConcurrencyLimitError,
   ProductionWorkflowRateLimitError,
@@ -465,7 +466,8 @@ describe.sequential('PostgreSQL fixture persistence lifecycle', () => {
       '0045',
       '0046',
       '0047',
-      '0048'
+      '0048',
+      '0049'
     ])
     expect(secondMigrationResult.applied).toEqual([])
     expect(secondMigrationResult.alreadyApplied).toEqual([
@@ -516,7 +518,8 @@ describe.sequential('PostgreSQL fixture persistence lifecycle', () => {
       '0045',
       '0046',
       '0047',
-      '0048'
+      '0048',
+      '0049'
     ])
   })
 
@@ -829,6 +832,142 @@ describe.sequential('PostgreSQL fixture persistence lifecycle', () => {
         await client.query('DELETE FROM appsea.workspace_memberships WHERE workspace_id = $1', [
           workspaceId
         ])
+        await client.query('DELETE FROM appsea.workspaces WHERE workspace_id = $1', [workspaceId])
+        await client.query('DELETE FROM appsea.users WHERE user_id = $1', [userId])
+      })
+    }
+  })
+
+  it('surfaces and maintenance-resolves a settled quota without a production result', async () => {
+    const workspaceId = 'workspace-quota-reconcile'
+    const userId = 'user-quota-reconcile'
+    const sourceId = 'source-quota-reconcile'
+    const policyVersion = 'quota-v1'
+    const reservationId = 'quota:reconcile:one'
+    const runId = 'run:quota:missing'
+    await withOwnerClient(async (client) => {
+      await client.query(
+        `INSERT INTO appsea.users
+           (user_id, email, display_name, password_hash, created_at, updated_at)
+         VALUES ($1, 'quota-reconcile@example.test', 'Quota Reconcile', repeat('x', 64), $2, $2)`,
+        [userId, fixedAt]
+      )
+      await client.query(
+        `INSERT INTO appsea.workspaces
+           (workspace_id, slug, display_name, visibility, fixture_only, status, created_at, updated_at)
+         VALUES ($1, 'quota-reconcile-workspace', 'Quota Reconcile', 'private', false, 'active', $2, $2)`,
+        [workspaceId, fixedAt]
+      )
+      await client.query(
+        `INSERT INTO appsea.workspace_memberships
+           (workspace_id, user_id, role, created_at, updated_at)
+         VALUES ($1, $2, 'viewer', $3, $3)`,
+        [workspaceId, userId, fixedAt]
+      )
+      await client.query(
+        `INSERT INTO appsea.sources
+           (source_id, display_name, source_type, lifecycle_state, current_policy_version,
+            created_at, updated_at)
+         VALUES ($1, 'Quota Reconcile Source', 'api', 'active', $2, $3, $3)`,
+        [sourceId, policyVersion, fixedAt]
+      )
+      await client.query(
+        `INSERT INTO appsea.source_policy_versions
+           (source_id, policy_version, policy_state, permitted_purposes, commercial_use,
+            access_method, retention_days, deletion_required, attribution_required,
+            display_mode, coverage_notes, reviewed_at, policy_payload, content_hash, created_at)
+         VALUES ($1, $2, 'approved', ARRAY['opportunity-research'], 'allowed', 'test route',
+                 30, false, false, 'metadata-only', ARRAY['test-only'], $3,
+                 '{"quota":{"requestsPerMinute":10,"maxRecordsPerRun":10}}'::jsonb,
+                 $4, $3)`,
+        [sourceId, policyVersion, fixedAt, 'a'.repeat(64)]
+      )
+      await client.query(
+        `INSERT INTO appsea.source_quota_windows
+           (source_id, policy_version, window_started_at, request_count, record_count, updated_at)
+         VALUES ($1, $2, $3, 1, 2, $3)`,
+        [sourceId, policyVersion, fixedAt]
+      )
+      await client.query(
+        `INSERT INTO appsea.source_quota_reservations
+           (workspace_id, reservation_id, source_id, policy_version, run_id, idempotency_key,
+            window_started_at, requested_records, requested_cost_micros, actual_records,
+            actual_cost_micros, status, reserved_at, expires_at, settled_at)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, 2, 15, 2, 15, 'committed', $7, $8, $8)`,
+        [
+          workspaceId,
+          reservationId,
+          sourceId,
+          policyVersion,
+          runId,
+          'b'.repeat(64),
+          fixedAt,
+          laterAt
+        ]
+      )
+    })
+
+    try {
+      const quotaRepository = new PostgresSourceQuotaRepository(servicePool)
+      await expect(
+        quotaRepository.listReconciliationCasesForUser(userId, workspaceId, { limit: 10 })
+      ).resolves.toMatchObject([
+        {
+          reservationId,
+          runId,
+          state: 'open',
+          actualCostMicros: 15
+        }
+      ])
+      await expect(
+        quotaRepository.resolveReconciliationCase({
+          workspaceId,
+          reservationId,
+          resolutionCode: 'voided_no_result',
+          linkedRunId: null,
+          actorId: 'operator:integration'
+        })
+      ).rejects.toMatchObject({ code: '42501' })
+
+      const maintenanceRepository = new PostgresSourceQuotaRepository(maintenancePool)
+      await expect(
+        maintenanceRepository.resolveReconciliationCase({
+          workspaceId,
+          reservationId,
+          resolutionCode: 'voided_no_result',
+          linkedRunId: null,
+          actorId: 'operator:integration'
+        })
+      ).resolves.toMatchObject({ state: 'resolved', resolutionActorId: 'operator:integration' })
+      await expect(
+        quotaRepository.listReconciliationCasesForUser(userId, workspaceId, { limit: 10 })
+      ).resolves.toEqual([])
+      await expect(
+        servicePool.query('SELECT * FROM appsea.source_quota_reconciliation_cases')
+      ).rejects.toMatchObject({ code: '42501' })
+      await expect(
+        maintenancePool.query('SELECT * FROM appsea.source_quota_reconciliation_cases')
+      ).rejects.toMatchObject({ code: '42501' })
+    } finally {
+      await withOwnerClient(async (client) => {
+        await client.query(
+          'DELETE FROM appsea.source_quota_reconciliation_cases WHERE workspace_id = $1',
+          [workspaceId]
+        )
+        await client.query('DELETE FROM appsea.source_quota_reservations WHERE workspace_id = $1', [
+          workspaceId
+        ])
+        await client.query(
+          'DELETE FROM appsea.source_quota_windows WHERE source_id = $1 AND policy_version = $2',
+          [sourceId, policyVersion]
+        )
+        await client.query('DELETE FROM appsea.workspace_memberships WHERE workspace_id = $1', [
+          workspaceId
+        ])
+        await client.query('DELETE FROM appsea.source_policy_versions WHERE source_id = $1', [
+          sourceId
+        ])
+        await client.query('DELETE FROM appsea.sources WHERE source_id = $1', [sourceId])
         await client.query('DELETE FROM appsea.workspaces WHERE workspace_id = $1', [workspaceId])
         await client.query('DELETE FROM appsea.users WHERE user_id = $1', [userId])
       })

@@ -51,6 +51,7 @@
 - [`runbooks/source-reconciliation.md`](runbooks/source-reconciliation.md)
 - [`runbooks/production-analysis.md`](runbooks/production-analysis.md)
 - [`runbooks/source-maintenance.md`](runbooks/source-maintenance.md)
+- [`runbooks/source-quota-reconciliation.md`](runbooks/source-quota-reconciliation.md)
 - [`runbooks/ui-reference-loop.md`](runbooks/ui-reference-loop.md)
 - [`runbooks/guidance-checkpoint.md`](runbooks/guidance-checkpoint.md)
 - [`runbooks/completion-proof.md`](runbooks/completion-proof.md)
@@ -107,3 +108,4 @@
 - [`status/maintenance-scheduler-lease-completion-report-2026-08-01.md`](status/maintenance-scheduler-lease-completion-report-2026-08-01.md)
 - [`status/maintenance-scheduler-metrics-completion-report-2026-08-01.md`](status/maintenance-scheduler-metrics-completion-report-2026-08-01.md)
 - [`status/workspace-cost-observability-completion-report-2026-08-01.md`](status/workspace-cost-observability-completion-report-2026-08-01.md)
+- [`status/source-quota-reconciliation-completion-report-2026-08-01.md`](status/source-quota-reconciliation-completion-report-2026-08-01.md)

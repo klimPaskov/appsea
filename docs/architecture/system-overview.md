@@ -81,7 +81,12 @@ configured retention window; lease tokens, source content, and raw errors are
 not stored. The private workspace cost route reads the existing immutable cost
 ledger through authenticated workspace RLS and returns bounded exact micro-unit
 aggregates by currency and cost type; it does not expose raw run or source
-identifiers.
+identifiers. Migration `0049` adds a forced-RLS source-quota reconciliation
+projection. It discovers committed reservations without a completed production
+run, exposes only bounded identifiers/counters through authenticated workspace
+inspection, and permits `appsea_maintenance` to record an exact linked-result
+or explicit no-result resolution. It never refunds quota or authorizes a
+re-fetch.
 The post-collection production analysis workflow is versioned as `v2`: only
 workspace/collection/analysis/seed identifiers and immutable digests cross
 Temporal, while the worker rebuilds the evidence-backed artifact inside its

@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import type { Pool, PoolClient } from 'pg'
 import { PostgresSourceQuotaRepository } from './source-quota-repository'
 
-function fakePool(): {
+function fakePool(reconciliationRows: unknown[] = []): {
   pool: Pool
   statements: Array<{ text: string; values: unknown[] }>
 } {
@@ -26,6 +26,18 @@ function fakePool(): {
       }
       if (text.includes('expire_source_quota_reservations')) {
         return { rows: [{ expired_count: '3' }], rowCount: 1 }
+      }
+      if (text.includes('FROM appsea.list_source_quota_reconciliation_cases')) {
+        return { rows: reconciliationRows, rowCount: reconciliationRows.length }
+      }
+      if (text.includes('FROM appsea.resolve_source_quota_reconciliation_case')) {
+        return { rows: reconciliationRows, rowCount: reconciliationRows.length }
+      }
+      if (text.includes('FROM appsea.workspace_memberships')) {
+        return { rows: [{ '?column?': 1 }], rowCount: 1 }
+      }
+      if (text.includes('FROM appsea.workspaces')) {
+        return { rows: [{ '?column?': 1 }], rowCount: 1 }
       }
       return { rows: [], rowCount: 0 }
     },
@@ -103,5 +115,79 @@ describe('PostgresSourceQuotaRepository', () => {
     )
     await expect(repository.reserve({ ...common, requestedRecords: 0 })).rejects.toThrow(/positive/)
     expect(statements).toHaveLength(0)
+  })
+
+  it('lists private reconciliation cases through authenticated workspace context', async () => {
+    const { pool, statements } = fakePool([
+      {
+        workspace_id: common.workspaceId,
+        reservation_id: common.reservationId,
+        source_id: common.sourceId,
+        policy_version: common.policyVersion,
+        run_id: common.runId,
+        requested_records: 2,
+        requested_cost_micros: '15',
+        actual_records: 2,
+        actual_cost_micros: '15',
+        state: 'open',
+        first_seen_at: common.occurredAt,
+        last_seen_at: common.occurredAt,
+        resolution_code: null,
+        linked_run_id: null,
+        resolution_actor_id: null,
+        resolved_at: null
+      }
+    ])
+    const repository = new PostgresSourceQuotaRepository(pool)
+    await expect(
+      repository.listReconciliationCasesForUser('user:one', common.workspaceId, { limit: 10 })
+    ).resolves.toMatchObject([{ reservationId: common.reservationId, state: 'open' }])
+    expect(
+      statements.some((statement) =>
+        statement.text.includes('list_source_quota_reconciliation_cases')
+      )
+    ).toBe(true)
+    expect(statements.some((statement) => statement.text.includes('appsea.auth_user_id'))).toBe(
+      true
+    )
+  })
+
+  it('resolves only through the maintenance function and preserves the actor', async () => {
+    const resolvedAt = '2026-07-11T00:00:00.000Z'
+    const { pool, statements } = fakePool([
+      {
+        workspace_id: common.workspaceId,
+        reservation_id: common.reservationId,
+        source_id: common.sourceId,
+        policy_version: common.policyVersion,
+        run_id: common.runId,
+        requested_records: 2,
+        requested_cost_micros: '15',
+        actual_records: 2,
+        actual_cost_micros: '15',
+        state: 'resolved',
+        first_seen_at: common.occurredAt,
+        last_seen_at: resolvedAt,
+        resolution_code: 'voided_no_result',
+        linked_run_id: null,
+        resolution_actor_id: 'operator:alice',
+        resolved_at: resolvedAt
+      }
+    ])
+    const repository = new PostgresSourceQuotaRepository(pool)
+    await expect(
+      repository.resolveReconciliationCase({
+        workspaceId: common.workspaceId,
+        reservationId: common.reservationId,
+        resolutionCode: 'voided_no_result',
+        linkedRunId: null,
+        actorId: 'operator:alice'
+      })
+    ).resolves.toMatchObject({ state: 'resolved', resolutionActorId: 'operator:alice' })
+    expect(
+      statements.some((statement) =>
+        statement.text.includes('resolve_source_quota_reconciliation_case')
+      )
+    ).toBe(true)
   })
 })
