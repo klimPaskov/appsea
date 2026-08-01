@@ -1,6 +1,9 @@
-import { authRecoveryBatchInputSchema } from '@appsea/contracts'
+import { authRecoveryBatchInputSchema, type MaintenanceSchedulerFence } from '@appsea/contracts'
 import type { PasswordResetDeliveryRecord, PostgresAuthRepository } from '@appsea/db'
-import { MaintenanceSchedulerLeaseLostError } from './maintenance-scheduler'
+import {
+  isMaintenanceSchedulerFenceError,
+  MaintenanceSchedulerLeaseLostError
+} from './maintenance-scheduler'
 
 export interface AuthRecoveryBatchResult {
   claimed: number
@@ -10,6 +13,7 @@ export interface AuthRecoveryBatchResult {
 
 export interface AuthRecoveryBatchDependencies {
   assertLease?: () => Promise<void>
+  fence?: MaintenanceSchedulerFence
   auth: Pick<
     PostgresAuthRepository,
     'claimPasswordResetDeliveries' | 'completePasswordResetDelivery' | 'failPasswordResetDelivery'
@@ -24,7 +28,10 @@ export async function runAuthRecoveryBatch(
   const input = authRecoveryBatchInputSchema.parse({ batchSize })
   const assertLease = dependencies.assertLease ?? (async () => undefined)
   await assertLease()
-  const records = await dependencies.auth.claimPasswordResetDeliveries(input.batchSize)
+  const records = await dependencies.auth.claimPasswordResetDeliveries(
+    input.batchSize,
+    dependencies.fence
+  )
   let sent = 0
   let failed = 0
   for (const record of records) {
@@ -38,18 +45,30 @@ export async function runAuthRecoveryBatch(
       }
       await dependencies.delivery.send(record)
       await assertLease()
-      await dependencies.auth.completePasswordResetDelivery(record.deliveryId)
+      await dependencies.auth.completePasswordResetDelivery(record.deliveryId, dependencies.fence)
       sent += 1
     } catch (error) {
-      if (error instanceof MaintenanceSchedulerLeaseLostError) throw error
+      if (
+        error instanceof MaintenanceSchedulerLeaseLostError ||
+        isMaintenanceSchedulerFenceError(error)
+      ) {
+        throw error
+      }
       failed += 1
       try {
         await assertLease()
         await dependencies.auth.failPasswordResetDelivery(
           record.deliveryId,
-          'APPSEA_AUTH_RECOVERY_DELIVERY_FAILED'
+          'APPSEA_AUTH_RECOVERY_DELIVERY_FAILED',
+          dependencies.fence
         )
-      } catch {
+      } catch (error) {
+        if (
+          error instanceof MaintenanceSchedulerLeaseLostError ||
+          isMaintenanceSchedulerFenceError(error)
+        ) {
+          throw error
+        }
         // The lease remains recoverable by the database claim function. Do
         // not replace the fixed failure event with a raw database error.
       }

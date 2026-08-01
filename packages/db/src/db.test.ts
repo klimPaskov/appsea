@@ -64,7 +64,8 @@ describe('database foundation', () => {
       '0048',
       '0049',
       '0050',
-      '0051'
+      '0051',
+      '0052'
     ])
     expect(migrations[0]?.checksum).toMatch(/^[a-f0-9]{64}$/)
     expect(migrations[0]?.sql).toContain('CREATE TABLE appsea.evidence_records')
@@ -461,6 +462,20 @@ describe('database foundation', () => {
     const serviceAdmissionMigration = migrations.find((migration) => migration.version === '0051')
     expect(serviceAdmissionMigration?.sql).toContain("service_principal = 'appsea-worker'")
     expect(serviceAdmissionMigration?.sql).toContain("session_user <> 'appsea_service'")
+    const maintenanceFencingMigration = migrations.find((migration) => migration.version === '0052')
+    expect(maintenanceFencingMigration?.sql).toContain(
+      'CREATE OR REPLACE FUNCTION appsea.assert_maintenance_scheduler_lease'
+    )
+    expect(maintenanceFencingMigration?.sql).toContain('FOR UPDATE')
+    expect(maintenanceFencingMigration?.sql).toContain('pg_advisory_xact_lock')
+    expect(maintenanceFencingMigration?.sql).toContain('clock_timestamp()')
+    expect(maintenanceFencingMigration?.sql).toContain("session_user <> 'appsea_service'")
+    expect(maintenanceFencingMigration?.sql).toContain(
+      'REVOKE ALL ON FUNCTION appsea.assert_maintenance_scheduler_lease'
+    )
+    expect(maintenanceFencingMigration?.sql).toContain(
+      'GRANT EXECUTE ON FUNCTION appsea.assert_maintenance_scheduler_lease'
+    )
   })
 
   it('requires verified TLS for production database connections', () => {

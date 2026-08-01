@@ -1,16 +1,29 @@
 import type { Pool, PoolClient } from 'pg'
-import { appseaIdentifierSchema } from '@appsea/contracts'
+import {
+  appseaIdentifierSchema,
+  maintenanceSchedulerFenceSchema,
+  type MaintenanceSchedulerFence
+} from '@appsea/contracts'
 
 export interface WorkspaceTransactionOptions {
   isolationLevel?: 'READ COMMITTED' | 'REPEATABLE READ' | 'SERIALIZABLE'
   readOnly?: boolean
   maxSerializationRetries?: number
+  /** Scheduler identity asserted inside this transaction by PostgreSQL. */
+  maintenanceFence?: MaintenanceSchedulerFence | undefined
 }
 
 export class WorkspaceAuthorizationError extends Error {
   constructor() {
     super('User is not a member of the requested workspace')
     this.name = 'WorkspaceAuthorizationError'
+  }
+}
+
+export class MaintenanceSchedulerFenceError extends Error {
+  constructor(schedulerName: string) {
+    super(`Maintenance scheduler fence was rejected: ${schedulerName}`)
+    this.name = 'MaintenanceSchedulerFenceError'
   }
 }
 
@@ -24,6 +37,20 @@ function retryableTransactionError(error: unknown): boolean {
   if (typeof error !== 'object' || error === null || !('code' in error)) return false
   const code = (error as { code?: unknown }).code
   return code === '40001' || code === '40P01'
+}
+
+async function assertMaintenanceSchedulerFence(
+  client: PoolClient,
+  fence: MaintenanceSchedulerFence | undefined
+): Promise<void> {
+  if (!fence) return
+  const result = await client.query<{ asserted: boolean }>(
+    `SELECT appsea.assert_maintenance_scheduler_lease($1, $2, $3) AS asserted`,
+    [fence.schedulerName, fence.ownerId, fence.leaseToken]
+  )
+  if (result.rows[0]?.asserted !== true) {
+    throw new MaintenanceSchedulerFenceError(fence.schedulerName)
+  }
 }
 
 export async function withWorkspaceTransaction<T>(
@@ -45,6 +72,9 @@ export async function withWorkspaceTransaction<T>(
   if (!Number.isSafeInteger(maxRetries) || maxRetries < 0 || maxRetries > 5) {
     throw new Error('maxSerializationRetries must be an integer between 0 and 5')
   }
+  const maintenanceFence = options.maintenanceFence
+    ? maintenanceSchedulerFenceSchema.parse(options.maintenanceFence)
+    : undefined
 
   for (let attempt = 0; ; attempt += 1) {
     const client = await pool.connect()
@@ -55,6 +85,7 @@ export async function withWorkspaceTransaction<T>(
       await client.query("SELECT set_config('appsea.workspace_id', $1, true)", [
         validatedWorkspaceId
       ])
+      await assertMaintenanceSchedulerFence(client, maintenanceFence)
       const result = await operation(client)
       await client.query('COMMIT')
       return result
@@ -120,6 +151,9 @@ export async function withDatabaseTransaction<T>(
   if (!Number.isSafeInteger(maxRetries) || maxRetries < 0 || maxRetries > 5) {
     throw new Error('maxSerializationRetries must be an integer between 0 and 5')
   }
+  const maintenanceFence = options.maintenanceFence
+    ? maintenanceSchedulerFenceSchema.parse(options.maintenanceFence)
+    : undefined
 
   for (let attempt = 0; ; attempt += 1) {
     const client = await pool.connect()
@@ -127,6 +161,7 @@ export async function withDatabaseTransaction<T>(
       await client.query(
         `BEGIN ISOLATION LEVEL ${isolationLevel}${options.readOnly === true ? ' READ ONLY' : ''}`
       )
+      await assertMaintenanceSchedulerFence(client, maintenanceFence)
       const result = await operation(client)
       await client.query('COMMIT')
       return result

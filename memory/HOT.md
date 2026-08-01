@@ -12,4 +12,4 @@
 - Auth throttles, sessions, quotas, retention, admissions, lease purge, bounded resume, tombstones, invalidated-output purge, and scheduler metrics are durable; initialization fails closed without a reservation; workspace enumeration is forced-RLS fail-closed. Scheduler/alert ownership, cloud/backup, and closure/export deletion remain open.
 - Health probes fail closed on DB/Temporal/object-store; worker heartbeat is 30s and secret-free.
 - Re-collection is explicit only: a completed matching tombstone, `limit: 1`, exact source-native lookup, immutable lineage, and no automatic retry/refetch.
-- Web/worker share fail-closed Temporal config; production requires TLS/API-key/namespace/CA. Maintenance uses `0046` owner/token leases; direct source commands share the bounded ingress ledger through `0051`; deployment alerts, role rotation, and in-transaction fencing remain open.
+- Web/worker share fail-closed Temporal config; production requires TLS/API-key/namespace/CA. Maintenance uses `0046` leases plus `0052` fencing for selected SQL mutations; direct source commands use `0051`; deployment alerts, role rotation, external recovery, and proof remain open.

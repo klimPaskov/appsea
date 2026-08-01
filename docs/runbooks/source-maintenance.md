@@ -43,6 +43,12 @@ stale process cannot release the replacement lease. Lease loss is a fixed
 failure code and must alert the deployment operator. The lease connection is
 separate from the `appsea_service` connection used for maintenance data work;
 set `APPSEA_MAINTENANCE_DATABASE_URL` to the reviewed maintenance-role URL.
+Migration `0052` passes the private scheduler identity into each selected
+service transaction. PostgreSQL checks server time and holds the lease
+row/advisory lock through commit, so a stale process cannot commit quota,
+deletion, admission, source-lease, or object-purge state after takeover.
+Snapshot reconciliation remains a separate checkpoint flow because its source
+request and persistence work are not one atomic transaction.
 Migration `0037` also inserts one durable recomputation job per invalidated
 opportunity/tombstone when prior analysis lineage provides a seed review. The
 durable worker claims due jobs with `FOR UPDATE SKIP LOCKED`, reconstructs the
@@ -177,8 +183,9 @@ independent bounded budgets.
 Workspace enumeration is sorted and deduplicated, and a retry may reuse
 `APPSEA_SOURCE_MAINTENANCE_JOB_ID` (the default is a UTC-minute bucket). Run it
 from a reviewed scheduler with retry and alerting. The database lease prevents
-concurrent scheduler instances from duplicating a bounded pass, but is not a
-fencing token for a long-running mutation or external delivery. It does not
+concurrent scheduler instances from duplicating a bounded pass; migration
+`0052` also fences the selected SQL mutations, but is not a fencing token for
+external source/provider/object-store work. It does not
 replace deployment ownership or incident response. Migration `0047` persists a
 bounded outcome row for every acquired, contended, or failed invocation through
 the maintenance role; it contains only fixed state/failure codes, duration, and

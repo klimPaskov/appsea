@@ -67,9 +67,12 @@ description: Use when adding or changing AppSea worker commands, scheduled jobs,
     acquisition, renew during a bounded pass, call the wrapper's `assertLease`
     before bounded mutations, skip contended ownership without touching work,
     release only with matching owner and token, and map renewal/release loss to
-    fixed failure codes. An in-memory lock is never a substitute for this
-    repository boundary, and the lease is not a fencing token for a transaction
-    that can outlive its expiry.
+    fixed failure codes. For SQL-only mutations, pass the wrapper's private
+    `MaintenanceSchedulerFence` into the service transaction so migration
+    `0052` holds the advisory/lease-row locks through commit. Never log or
+    persist that token. An in-memory lock is never a substitute for this
+    repository boundary; external source/provider/object-store effects remain
+    outside the database fence and need idempotent recovery.
 
 Do not rely on an in-memory loop for production durability. Do not hide a partial result behind a successful exit code.
 

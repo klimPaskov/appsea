@@ -34,8 +34,9 @@ delivery.
   same-owner retries, worker replacement, and stale lease takeover.
 - The lease table contains no complaint, source, credential, or personal data,
   and direct runtime table access remains revoked.
-- A lease is not a fencing token for every arbitrary mutation or long-running
-  external delivery. Deployed
+- Migration `0052` adds a transaction fence for selected SQL-only maintenance
+  mutations. A lease is still not a fencing token for every arbitrary mutation
+  or long-running external delivery. Deployed
   scheduler ownership, metric retention, alert routing, replacement drills,
   production data-work role separation, optional per-scheduler credential
   isolation, and production role provisioning remain release work.

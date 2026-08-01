@@ -18,7 +18,12 @@ Scheduled maintenance and delivery entry points must acquire the migration
 dedicated `APPSEA_MAINTENANCE_DATABASE_URL`/`appsea_maintenance` connection.
 Production requires a unique `APPSEA_SCHEDULER_OWNER_ID`; each acquisition has
 a fresh token, a contended lease must skip work, guarded mutations should call
-`assertLease`, and renewal/release failures must use fixed event codes.
+`assertLease`, and selected service transactions must also carry the private
+`MaintenanceSchedulerFence` so migration `0052` can hold the lease row lock
+through commit. Never log or persist the fence token. External provider sends,
+source HTTP requests, and object-store deletion remain outside this database
+fence and require idempotency/recovery controls. Renewal/release failures must
+use fixed event codes.
 Scheduler outcome telemetry must use the migration `0047` maintenance-role
 functions through the repository; persist only generated run IDs, fixed states
 or failure codes, durations, and bounded numeric counters. Never persist lease

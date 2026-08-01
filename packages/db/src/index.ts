@@ -198,6 +198,7 @@ export {
   type DeletionTombstoneState
 } from './deletion-propagation-repository'
 export {
+  MaintenanceSchedulerFenceError,
   WorkspaceAuthorizationError,
   withAuthenticatedWorkspaceTransaction,
   withDatabaseTransaction,

@@ -64,11 +64,12 @@ if (!enabled) {
         }
       },
       new PostgresMaintenanceSchedulerLeaseRepository(maintenancePool),
-      async ({ assertLease }) => {
+      async ({ assertLease, fence }) => {
         return runAuthRecoveryBatch(input.data.batchSize, {
           auth: new PostgresAuthRepository(pool!),
           delivery,
-          assertLease
+          assertLease,
+          fence
         })
       }
     )

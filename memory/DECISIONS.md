@@ -337,6 +337,8 @@ The first propagation exception must not erase a source deletion or make a
 partial redaction look complete. Migration `0044` adds an attempt counter and
 server-clock `next_attempt_at`; claims use a 15-minute stale lease and failed
 rows retry after 60 seconds until eight attempts. Exhausted rows retain fixed
-failure metadata and cannot re-enter processing. Completion remains idempotent,
-RLS/grants stay tenant-scoped, and per-attempt fencing tokens remain future
-hardening.
+failure metadata and cannot re-enter processing; completion remains idempotent.
+
+## 2026-08-01: Fence
+
+`0052` fences SQL mutations; external effects remain outside.

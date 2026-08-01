@@ -25,7 +25,7 @@ Status: production-shaped foundation implemented and validated locally; producti
 
 Implemented:
 
-- PostgreSQL 18 schema and fifty-one forward, checksummed migrations
+- PostgreSQL 18 schema and fifty-two forward, checksummed migrations
 - normalized source, evidence, complaint, cluster, competitor, opportunity, score, report, plan, audit, cost, deletion, outbox, and lineage tables
 - no-login owner, separate migrator, and least-privilege runtime role contract
 - forced workspace RLS and transaction-scoped workspace context
@@ -111,6 +111,13 @@ private, non-fixture workspace. It shares the fixed rate/concurrency ledger
 with authenticated starts, consumes the reservation immediately before the
 external request, and cannot create a second unauthenticated source-ingress
 path.
+
+Migration `0052_maintenance_scheduler_fencing.sql` adds a service-only,
+server-clock scheduler assertion that holds the per-scheduler advisory and
+lease-row locks through selected maintenance transactions. Source quota,
+deletion, admission, lease purge, authentication retention, and delivery state
+transitions fail closed for a stale token; external source/provider/object-store
+effects and snapshot reconciliation remain outside the atomic fence.
 
 ### 2. Durable workflows
 
@@ -304,7 +311,8 @@ request cost from quota settlement through its immutable snapshot/result,
 workflow checkpoint, and audit/outbox metadata; known policy-cost overages are
 rejected before source lease acquisition;
 scheduled commands now share migration `0046`'s server-clock owner/token lease
-with renewal, stale takeover, guarded mutations, and fixed lease-loss failures;
+with renewal, stale takeover, migration `0052` transaction fencing for selected
+SQL mutations, and fixed lease-loss failures;
 `0047` persists maintenance-role-only run outcomes with bounded
 numeric counters, fixed failure codes, and retention purge;
 `0048` adds an indexed, membership-authorized private workspace cost summary
@@ -313,7 +321,9 @@ cost type;
 the long-lived worker emits a bounded 30-second heartbeat and the web service
 exposes fail-closed liveness/readiness probes; deployed scheduler ownership,
 alert ownership, traces, role separation, incident drills,
-and production security review remain.
+and production security review remain. Provider idempotency, object-store
+conditional-delete, deployed scheduler ownership, and Docker-backed lock
+recovery proof remain open.
 
 ### 7. Desktop release
 

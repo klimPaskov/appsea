@@ -13,3 +13,8 @@ and score/report/plan lineage.
 Migration and repository changes require integration tests against real
 PostgreSQL. Mocks or SQLite do not prove constraints, transactions, or row-level
 security.
+
+Scheduled mutations must carry the private `MaintenanceSchedulerFence` into
+the same service transaction as the write; migration `0052` holds the lease
+advisory/row lock through commit. Do not claim this fence covers external
+source, provider, or object-store effects.

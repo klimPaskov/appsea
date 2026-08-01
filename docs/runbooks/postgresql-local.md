@@ -7,7 +7,7 @@ This runbook covers the repository's PostgreSQL 18 development and integration-t
 - `appsea_owner` owns schema objects and cannot log in.
 - `appsea_migrator` can log in and assume `appsea_owner` only for reviewed migrations.
 - `appsea_service` is the non-owner runtime role. It cannot bypass row-level security, assume the owner role, change source policy rows directly, rewrite immutable history, or truncate tables.
-- `appsea_maintenance` is a standalone, non-inheriting login role that may execute only the migration `0046` scheduler lease functions. It cannot read or mutate lease rows directly and must not be reused by the web or research runtime.
+- `appsea_maintenance` is a standalone, non-inheriting login role that may execute only the migration `0046` scheduler lease functions and the maintenance-run metrics functions. It cannot read or mutate lease rows directly and must not be reused by the web or research runtime. Migration `0052` grants the separate `appsea_service` role only the scheduler-fence assertion; the service role never receives lease-table access.
 - Every private workspace transaction must use `withAuthenticatedWorkspaceTransaction`,
   which checks membership before setting `appsea.workspace_id`. The controlled
   fixture worker may use `withWorkspaceTransaction` only for its fixture-only path.

@@ -1,5 +1,8 @@
 import { describe, expect, it } from 'vitest'
-import type { SourceSnapshotReconciliationReadModel } from '@appsea/contracts'
+import type {
+  MaintenanceSchedulerFence,
+  SourceSnapshotReconciliationReadModel
+} from '@appsea/contracts'
 import type { DeletionPropagationResult } from '@appsea/db'
 import { runAuthRetention, runSourceMaintenance } from './maintenance-runner'
 
@@ -570,13 +573,24 @@ describe('maintenance runners', () => {
   })
 
   it('passes bounded authentication retention settings through to the repository', async () => {
-    let received: { retentionDays: number; batchSize: number } | undefined
+    const fence = {
+      schedulerName: 'appsea-auth-maintenance-v1',
+      ownerId: 'worker:host:1',
+      leaseToken: 'token:worker:host:123'
+    } as const
+    let received:
+      | { retentionDays: number; batchSize: number; fence: MaintenanceSchedulerFence | undefined }
+      | undefined
     const result = await runAuthRetention(
       { jobId: 'maintenance:auth:test', retentionDays: 14, batchSize: 20 },
       {
         auth: {
-          async purgeExpiredSessions(retentionDays, batchSize) {
-            received = { retentionDays: retentionDays ?? 0, batchSize: batchSize ?? 0 }
+          async purgeExpiredSessions(retentionDays, batchSize, receivedFence) {
+            received = {
+              retentionDays: retentionDays ?? 0,
+              batchSize: batchSize ?? 0,
+              fence: receivedFence
+            }
             return {
               sessionsDeleted: 3,
               rateLimitsDeleted: 4,
@@ -584,11 +598,12 @@ describe('maintenance runners', () => {
               workspaceInvitationsDeleted: 6
             }
           }
-        }
+        },
+        fence
       }
     )
 
-    expect(received).toEqual({ retentionDays: 14, batchSize: 20 })
+    expect(received).toEqual({ retentionDays: 14, batchSize: 20, fence })
     expect(result).toEqual({
       jobId: 'maintenance:auth:test',
       sessionsDeleted: 3,

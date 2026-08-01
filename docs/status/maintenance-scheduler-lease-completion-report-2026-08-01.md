@@ -1,5 +1,9 @@
 # Maintenance scheduler lease completion report — 2026-08-01
 
+Historical boundary report. Migration `0052` subsequently adds transaction
+fencing for selected SQL-only maintenance mutations; this report describes the
+earlier `0046` ownership slice.
+
 ## Outcome
 
 Bounded maintenance and delivery commands now share a durable PostgreSQL

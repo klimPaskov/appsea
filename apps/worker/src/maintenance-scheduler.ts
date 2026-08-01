@@ -7,6 +7,7 @@ import {
 } from '@appsea/db'
 import {
   maintenanceSchedulerLeaseResultSchema,
+  maintenanceSchedulerFenceSchema,
   maintenanceSchedulerLeaseTokenSchema,
   maintenanceSchedulerNameSchema,
   maintenanceSchedulerOwnerIdSchema,
@@ -15,6 +16,7 @@ import {
   maintenanceSchedulerRunIdSchema,
   maintenanceSchedulerRunMetricSchema,
   type MaintenanceSchedulerLeaseToken,
+  type MaintenanceSchedulerFence,
   type MaintenanceSchedulerRunMetric
 } from '@appsea/contracts'
 import { emitWorkerEvent } from './observability'
@@ -63,6 +65,8 @@ export interface MaintenanceSchedulerLeaseOptions<T = unknown> {
 export interface MaintenanceSchedulerLeaseContext {
   /** Check the server-backed lease before a privileged mutation or delivery. */
   assertLease(): Promise<void>
+  /** Private identity used to fence service transactions; never log or persist. */
+  fence: MaintenanceSchedulerFence
 }
 
 export class MaintenanceSchedulerLeaseLostError extends Error {
@@ -79,12 +83,19 @@ export class MaintenanceSchedulerLeaseReleaseError extends Error {
   }
 }
 
+export function isMaintenanceSchedulerFenceError(error: unknown): boolean {
+  return error instanceof Error && error.name === 'MaintenanceSchedulerFenceError'
+}
+
 export function maintenanceSchedulerFailureCode(error: unknown, fallback: string): string {
   if (error instanceof MaintenanceSchedulerLeaseLostError) {
     return 'APPSEA_MAINTENANCE_SCHEDULER_LEASE_LOST'
   }
   if (error instanceof MaintenanceSchedulerLeaseReleaseError) {
     return 'APPSEA_MAINTENANCE_SCHEDULER_LEASE_RELEASE_FAILED'
+  }
+  if (isMaintenanceSchedulerFenceError(error)) {
+    return 'APPSEA_MAINTENANCE_SCHEDULER_LEASE_LOST'
   }
   return fallback
 }
@@ -295,6 +306,11 @@ export async function runWithMaintenanceSchedulerLease<T>(
   }
   const leaseToken: MaintenanceSchedulerLeaseToken =
     maintenanceSchedulerLeaseTokenSchema.parse(randomUUID())
+  const fence = maintenanceSchedulerFenceSchema.parse({
+    schedulerName: parsed.schedulerName,
+    ownerId: parsed.ownerId,
+    leaseToken
+  })
   const releaseAfterAcquisitionFailure = async (): Promise<void> => {
     try {
       await leases.release(parsed.schedulerName, parsed.ownerId, leaseToken)
@@ -371,7 +387,7 @@ export async function runWithMaintenanceSchedulerLease<T>(
   try {
     await renewNow()
     if (leaseLost) throw new MaintenanceSchedulerLeaseLostError(parsed.schedulerName)
-    result = await work({ assertLease })
+    result = await work({ assertLease, fence })
     if (renewal) await renewal
   } catch (error) {
     workError = error

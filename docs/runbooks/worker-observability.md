@@ -55,9 +55,11 @@ requires a stable, unique `APPSEA_SCHEDULER_OWNER_ID`; development/test runs
 generate an ephemeral owner. Each acquisition has a unique token, renews
 during a pass, rejects concurrent owners (including same-owner retries),
 permits takeover after expiry, and releases only when owner and token match.
-This is a repository-level duplicate-run guard, not a fencing token for a
-long-running database mutation or external delivery; deployment still owns
-scheduler availability and alert routing. Migration `0047` adds durable,
+This is a repository-level duplicate-run guard. Migration `0052` adds a
+server-clock transaction fence for selected SQL-only maintenance mutations;
+external source requests, provider delivery, and object-store deletion remain
+outside that atomic boundary. Deployment still owns scheduler availability and
+alert routing. Migration `0047` adds durable,
 secret-free outcomes through the same maintenance connection. Each acquired,
 contended, or failed invocation records a generated run ID, owner, fixed state
 and failure code, bounded duration, and numeric counters; lease tokens and raw
@@ -81,8 +83,9 @@ Production still requires a TLS-protected Temporal endpoint, durable log/metric
 retention, alert routing, secret redaction verification, and a documented
 worker replacement drill. The private workspace cost summary provides bounded
 cross-run ledger accounting, but a production scheduler, alert ownership,
-provider billing controls, and any stronger maintenance checkpoint/fencing
-boundary remain deployment responsibilities. Settled source-quota cases are
+provider billing controls, external idempotency/recovery, and any stronger
+maintenance checkpoint/fencing boundary remain deployment responsibilities.
+Settled source-quota cases are
 inspectable at:
 
 ```text

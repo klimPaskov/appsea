@@ -2,6 +2,7 @@ import type { Pool, PoolClient, QueryResultRow } from 'pg'
 import {
   appseaIdentifierSchema,
   productionWorkflowAdmissionDecisionSchema,
+  type MaintenanceSchedulerFence,
   type ProductionWorkflowAdmissionDecision as ProductionWorkflowAdmissionDecisionContract
 } from '@appsea/contracts'
 import { withAuthenticatedWorkspaceTransaction, withWorkspaceTransaction } from './transaction'
@@ -253,18 +254,28 @@ export class PostgresProductionAnalysisAdmissionRepository {
     )
   }
 
-  async purge(workspaceId: string, before: string, limit: number): Promise<number> {
+  async purge(
+    workspaceId: string,
+    before: string,
+    limit: number,
+    maintenanceFence?: MaintenanceSchedulerFence
+  ): Promise<number> {
     const parsedWorkspaceId = appseaIdentifierSchema.parse(workspaceId)
     if (!Number.isSafeInteger(limit) || limit < 1 || limit > 10_000) {
       throw new Error('production analysis admission purge limit is outside the supported range')
     }
-    return withWorkspaceTransaction(this.pool, parsedWorkspaceId, async (client) => {
-      const result = await client.query<{ purged_count: number | string }>(
-        `SELECT appsea.purge_production_analysis_workflow_admissions($1, $2::timestamptz, $3)
+    return withWorkspaceTransaction(
+      this.pool,
+      parsedWorkspaceId,
+      async (client) => {
+        const result = await client.query<{ purged_count: number | string }>(
+          `SELECT appsea.purge_production_analysis_workflow_admissions($1, $2::timestamptz, $3)
              AS purged_count`,
-        [parsedWorkspaceId, before, limit]
-      )
-      return Number(result.rows[0]?.purged_count ?? 0)
-    })
+          [parsedWorkspaceId, before, limit]
+        )
+        return Number(result.rows[0]?.purged_count ?? 0)
+      },
+      { maintenanceFence }
+    )
   }
 }

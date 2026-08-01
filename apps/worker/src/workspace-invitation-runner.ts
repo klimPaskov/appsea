@@ -1,6 +1,12 @@
-import { workspaceInvitationDeliveryBatchInputSchema } from '@appsea/contracts'
+import {
+  workspaceInvitationDeliveryBatchInputSchema,
+  type MaintenanceSchedulerFence
+} from '@appsea/contracts'
 import type { PostgresAuthRepository, WorkspaceInvitationDeliveryRecord } from '@appsea/db'
-import { MaintenanceSchedulerLeaseLostError } from './maintenance-scheduler'
+import {
+  isMaintenanceSchedulerFenceError,
+  MaintenanceSchedulerLeaseLostError
+} from './maintenance-scheduler'
 
 export interface WorkspaceInvitationBatchResult {
   claimed: number
@@ -10,6 +16,7 @@ export interface WorkspaceInvitationBatchResult {
 
 export interface WorkspaceInvitationBatchDependencies {
   assertLease?: () => Promise<void>
+  fence?: MaintenanceSchedulerFence
   auth: Pick<
     PostgresAuthRepository,
     | 'claimWorkspaceInvitationDeliveries'
@@ -26,7 +33,10 @@ export async function runWorkspaceInvitationBatch(
   const input = workspaceInvitationDeliveryBatchInputSchema.parse({ batchSize })
   const assertLease = dependencies.assertLease ?? (async () => undefined)
   await assertLease()
-  const records = await dependencies.auth.claimWorkspaceInvitationDeliveries(input.batchSize)
+  const records = await dependencies.auth.claimWorkspaceInvitationDeliveries(
+    input.batchSize,
+    dependencies.fence
+  )
   let sent = 0
   let failed = 0
   for (const record of records) {
@@ -40,18 +50,33 @@ export async function runWorkspaceInvitationBatch(
       }
       await dependencies.delivery.send(record)
       await assertLease()
-      await dependencies.auth.completeWorkspaceInvitationDelivery(record.deliveryId)
+      await dependencies.auth.completeWorkspaceInvitationDelivery(
+        record.deliveryId,
+        dependencies.fence
+      )
       sent += 1
     } catch (error) {
-      if (error instanceof MaintenanceSchedulerLeaseLostError) throw error
+      if (
+        error instanceof MaintenanceSchedulerLeaseLostError ||
+        isMaintenanceSchedulerFenceError(error)
+      ) {
+        throw error
+      }
       failed += 1
       try {
         await assertLease()
         await dependencies.auth.failWorkspaceInvitationDelivery(
           record.deliveryId,
-          'APPSEA_WORKSPACE_INVITATION_DELIVERY_FAILED'
+          'APPSEA_WORKSPACE_INVITATION_DELIVERY_FAILED',
+          dependencies.fence
         )
-      } catch {
+      } catch (error) {
+        if (
+          error instanceof MaintenanceSchedulerLeaseLostError ||
+          isMaintenanceSchedulerFenceError(error)
+        ) {
+          throw error
+        }
         // The database lease remains recoverable; preserve the fixed failure
         // event instead of logging a provider or database error.
       }

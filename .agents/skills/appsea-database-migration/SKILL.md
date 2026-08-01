@@ -53,6 +53,12 @@ This skill may change `packages/db`, directly affected contracts and producers, 
    count. Recover stale processing claims, keep failed rows inspectable, and
    make exhausted failure metadata terminal through the trigger and grants;
    do not treat the first propagation exception as permanent deletion proof.
+   For scheduled SQL-only maintenance mutations, add a forward migration with
+   a security-definer server-clock fence callable only by `appsea_service`.
+   Hold the per-scheduler advisory and lease-row locks with `FOR UPDATE` until
+   the enclosing mutation transaction commits; reject stale owner/token pairs
+   before invoking the callback. Keep the fence identity private and document
+   external source/provider/object-store effects as outside the atomic claim.
 9. Add both a populated forward-upgrade test and a fresh-install test. Include negative privilege, RLS, policy, immutability, and cross-wire assertions.
 10. Update the local runbook, source-of-truth docs, and memory in the same tranche.
 

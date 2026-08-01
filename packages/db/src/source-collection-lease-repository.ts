@@ -2,6 +2,7 @@ import type { Pool, QueryResultRow } from 'pg'
 import {
   appseaIdentifierSchema,
   sourceCollectionLeaseResultSchema,
+  type MaintenanceSchedulerFence,
   type SourceCollectionLeaseDecision,
   type SourceCollectionLeaseResult as SourceCollectionLeaseContractResult
 } from '@appsea/contracts'
@@ -241,7 +242,12 @@ export class PostgresSourceCollectionLeaseRepository {
   }
 
   /** Purge terminal or expired leases in a bounded workspace batch. */
-  async purge(workspaceId: string, before: string, batchSize = 1_000): Promise<number> {
+  async purge(
+    workspaceId: string,
+    before: string,
+    batchSize = 1_000,
+    maintenanceFence?: MaintenanceSchedulerFence
+  ): Promise<number> {
     const parsedWorkspaceId = identifier(workspaceId, 'workspaceId')
     const parsedBefore = timestamp(before, 'before')
     if (
@@ -263,7 +269,7 @@ export class PostgresSourceCollectionLeaseRepository {
         )
         return Number(result.rows[0]?.purged_count ?? 0)
       },
-      { isolationLevel: 'READ COMMITTED' }
+      { isolationLevel: 'READ COMMITTED', maintenanceFence }
     )
   }
 }

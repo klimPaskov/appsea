@@ -72,8 +72,8 @@ callable only through the standalone `appsea_maintenance` role supplied by
 `APPSEA_MAINTENANCE_DATABASE_URL`; `appsea_service` cannot execute them or
 select/mutate the lease table directly. The per-acquisition token prevents
 same-owner overwrites and stale release. The lease prevents duplicate passes
-across scheduler instances but is not a fencing token for a long-running
-mutation and does not replace deployed scheduler ownership, alert routing, or
+across scheduler instances but is not by itself a fencing token for a
+long-running mutation and does not replace deployed scheduler ownership, alert routing, or
 metric alert ownership. Migration `0047` adds a maintenance-role-only
 record/list/purge boundary for bounded run outcomes: generated run IDs, owner,
 fixed state/failure code, duration, and numeric counters. Rows are purged by a
@@ -97,6 +97,12 @@ command: the command must establish the `appsea-worker` service principal on
 the runtime service role, share the same workspace rate/concurrency ledger,
 and consume the reservation before the external request. It cannot bypass
 private-workspace, fixture, or source-policy checks.
+Migration `0052` adds the service-only
+`appsea.assert_maintenance_scheduler_lease` transaction fence. It uses server
+time and holds the per-scheduler advisory and lease-row locks through selected
+source, deletion, admission, retention, and delivery-state transactions;
+external source/provider/object-store effects remain outside this atomic
+boundary.
 The post-collection production analysis workflow is versioned as `v2`: only
 workspace/collection/analysis/seed identifiers and immutable digests cross
 Temporal, while the worker rebuilds the evidence-backed artifact inside its

@@ -36,6 +36,11 @@ per-acquisition token; the data work continues through `DATABASE_URL`. Set a
 unique `APPSEA_SCHEDULER_OWNER_ID` in production and optionally bound the lease with
 `APPSEA_MAINTENANCE_LEASE_SECONDS` (30-3,600, default 900); a contended run
 emits `maintenance_scheduler_lease_contended` without touching retention rows.
+Migration `0052` carries the private lease identity into the retention
+transaction. The database checks the server clock and holds the lease row lock
+through the bounded delete, so stale workers fail closed before committing
+sessions, rate limits, reset tokens, or invitation rows. Provider sends and
+identity-provider operations remain outside this transaction fence.
 
 Source quota reservations and tombstone propagation share the source
 maintenance command:

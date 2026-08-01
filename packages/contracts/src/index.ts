@@ -2223,6 +2223,19 @@ export const maintenanceSchedulerLeaseTokenSchema = z
   .max(128)
   .regex(/^[a-zA-Z0-9][a-zA-Z0-9._:-]*$/)
 
+/**
+ * Private identity carried from a scheduler lease into a service transaction.
+ * This is deliberately not an API or telemetry payload: the lease token is
+ * only useful to the database fence and must never be rendered or persisted.
+ */
+export const maintenanceSchedulerFenceSchema = z
+  .object({
+    schedulerName: maintenanceSchedulerNameSchema,
+    ownerId: maintenanceSchedulerOwnerIdSchema,
+    leaseToken: maintenanceSchedulerLeaseTokenSchema
+  })
+  .strict()
+
 export const maintenanceSchedulerLeaseResultSchema = z
   .object({
     acquired: z.boolean(),
@@ -3178,6 +3191,7 @@ export type MaintenanceJobId = z.infer<typeof maintenanceJobIdSchema>
 export type MaintenanceSchedulerName = z.infer<typeof maintenanceSchedulerNameSchema>
 export type MaintenanceSchedulerOwnerId = z.infer<typeof maintenanceSchedulerOwnerIdSchema>
 export type MaintenanceSchedulerLeaseToken = z.infer<typeof maintenanceSchedulerLeaseTokenSchema>
+export type MaintenanceSchedulerFence = z.infer<typeof maintenanceSchedulerFenceSchema>
 export type MaintenanceSchedulerLeaseResult = z.infer<typeof maintenanceSchedulerLeaseResultSchema>
 export type MaintenanceSchedulerRenewResult = z.infer<typeof maintenanceSchedulerRenewResultSchema>
 export type MaintenanceSchedulerReleaseResult = z.infer<

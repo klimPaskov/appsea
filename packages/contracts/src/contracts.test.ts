@@ -45,6 +45,7 @@ import {
   maintenanceSchedulerNameSchema,
   maintenanceSchedulerOwnerIdSchema,
   maintenanceSchedulerLeaseTokenSchema,
+  maintenanceSchedulerFenceSchema,
   maintenanceSchedulerLeaseResultSchema,
   maintenanceSchedulerRenewResultSchema,
   maintenanceSchedulerReleaseResultSchema,
@@ -391,6 +392,21 @@ describe('contracts', () => {
     expect(maintenanceSchedulerLeaseTokenSchema.safeParse('token:worker:host-1:123').success).toBe(
       true
     )
+    expect(
+      maintenanceSchedulerFenceSchema.safeParse({
+        schedulerName: 'appsea-source-maintenance-v1',
+        ownerId: 'worker:host-1:123',
+        leaseToken: 'token:worker:host-1:123'
+      }).success
+    ).toBe(true)
+    expect(
+      maintenanceSchedulerFenceSchema.safeParse({
+        schedulerName: 'appsea-source-maintenance-v1',
+        ownerId: 'worker:host-1:123',
+        leaseToken: 'token:worker:host-1:123',
+        secret: 'must-not-be-carried'
+      }).success
+    ).toBe(false)
     expect(
       maintenanceSchedulerLeaseResultSchema.safeParse({
         acquired: true,

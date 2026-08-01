@@ -156,6 +156,33 @@ describe('maintenance scheduler lease wrapper', () => {
     })
   })
 
+  it('passes a private fence identity to work without exposing the token to metrics', async () => {
+    const metrics = fakeMetrics()
+    let receivedFence: { schedulerName: string; ownerId: string; leaseToken: string } | undefined
+    await expect(
+      runWithMaintenanceSchedulerLease(
+        {
+          schedulerName: 'appsea-source-maintenance-v1',
+          ownerId: 'worker:host:1',
+          leaseSeconds: 30,
+          metrics: { store: metrics }
+        },
+        fakeLeases(),
+        async ({ fence }) => {
+          receivedFence = fence
+          return 'done'
+        }
+      )
+    ).resolves.toEqual({ acquired: true, result: 'done' })
+    expect(receivedFence).toMatchObject({
+      schedulerName: 'appsea-source-maintenance-v1',
+      ownerId: 'worker:host:1'
+    })
+    expect(receivedFence?.leaseToken).toMatch(/^[a-zA-Z0-9][a-zA-Z0-9._:-]{15,127}$/)
+    expect(metrics.records[0]).not.toHaveProperty('fence')
+    expect(metrics.records[0]).not.toHaveProperty('leaseToken')
+  })
+
   it('persists a fixed failure code while preserving the original work failure', async () => {
     const metrics = fakeMetrics()
     const workError = new Error('database secret must never be persisted')
@@ -235,6 +262,11 @@ describe('maintenance scheduler lease wrapper', () => {
     expect(
       maintenanceSchedulerFailureCode(new MaintenanceSchedulerLeaseReleaseError('x'), 'fallback')
     ).toBe('APPSEA_MAINTENANCE_SCHEDULER_LEASE_RELEASE_FAILED')
+    const fenceError = new Error('fence rejected')
+    fenceError.name = 'MaintenanceSchedulerFenceError'
+    expect(maintenanceSchedulerFailureCode(fenceError, 'fallback')).toBe(
+      'APPSEA_MAINTENANCE_SCHEDULER_LEASE_LOST'
+    )
   })
 
   it('requires explicit production and environment identities and bounds lease configuration', () => {

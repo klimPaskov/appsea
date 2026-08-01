@@ -5,7 +5,7 @@
 The fixture product, PostgreSQL persistence, durable workflows, policy-gated
 CFPB collection checkpoint, authenticated private workspaces, report/plan
 approval/export, recovery, and invitations are implemented. Migrations
-`0027`-`0051` add policy evidence, collection checkpoints, deletion repair,
+`0027`-`0052` add policy evidence, collection checkpoints, deletion repair,
 leases, snapshot reconciliation, workflow admissions, source-reconciliation
 admission, retryable tombstones, maintenance-run telemetry, and a durable
 source-quota reconciliation case ledger. Migration `0050` adds explicit,
@@ -63,14 +63,21 @@ tokens. Source maintenance, auth retention, recovery, and invitation delivery
 renew during bounded passes, guard mutations, skip contention, and emit fixed
 lease-loss/release failures.
 
+Migration `0052_maintenance_scheduler_fencing.sql` adds a private,
+server-clock transaction fence for selected source, deletion, admission,
+retention, and delivery-state mutations. The scheduler passes its fence
+identity only in memory; PostgreSQL holds the per-scheduler advisory and
+lease-row locks through commit, and stale tokens fail closed. External
+source/provider/object-store effects and snapshot reconciliation remain outside
+the fence.
+
 Migration `0047_maintenance_scheduler_run_metrics.sql` adds
 maintenance-role-only record/list/purge functions. The wrapper records a
 generated run ID, owner/state, fixed failure code, bounded duration, and
 validated numeric counters, purges rows older than the configured retention
 window, and never persists lease tokens, source content, credentials, or raw
 exception messages. This improves durable operator telemetry but does not
-provide fencing inside a long-running mutation, deployed scheduler ownership,
-or alert routing. Migration `0048` adds the ledger time index and a
+provide deployed scheduler ownership or alert routing. Migration `0048` adds the ledger time index and a
 membership-authorized private workspace cost summary that groups exact
 micro-unit totals by currency and cost type over a bounded period; it is
 operational accounting, not billing. Migration `0049` discovers committed
@@ -83,25 +90,12 @@ completed matching tombstone.
 
 ## Validated commands
 
-- `pnpm verify` passed 2026-08-01 for this tranche: packages, samples, smoke,
-  and repository checks.
-- Re-collection focus: contracts 65 tests, connectors 17 tests, DB 85 tests,
-  worker 60 tests, web 74 tests, affected typechecks, and package-level
-  formatting passed; the full workflow Temporal suite remains a separate
-  long-running check.
-- Workspace cost focus: private route tests 67 passed; exact micro-unit
-  aggregation, period bounds, and membership/error boundaries are covered.
-- Quota reconciliation focus: private inspection route tests 71 passed across
-  the web suite; contract case invariants, repository role boundaries, and
-  maintenance resolution are covered. Docker-backed persistence remains
-  unavailable in this environment.
-- PostgreSQL migration/read/deletion/concurrency/role/metrics integration is
-  staged but Docker-blocked by the unavailable Docker Desktop Linux engine.
-- `pnpm agents:sync` passed; memory and docs checks must pass after this file
-  rewrite.
-- Direct-source admission tranche: `pnpm verify` passed on 2026-08-01; Docker
-  PostgreSQL/Temporal checks still fail because the Docker Desktop Linux engine
-  pipe is unavailable.
+- `pnpm verify` passed 2026-08-01 for the prior repository tranche; affected
+  contract/database/worker tests and typechecks pass for the current fence.
+- `pnpm agents:sync`, formatting, memory, and docs checks pass after each
+  guidance checkpoint.
+- PostgreSQL migration/read/deletion/concurrency/role integration is staged but
+  Docker-blocked because the Docker Desktop Linux engine pipe is unavailable.
 
 ## Next production tranche
 

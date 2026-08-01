@@ -101,10 +101,13 @@ using exact micro-unit strings. Migration `0049` and the private
 `GET /api/workspaces/:workspaceId/research/quota-reconciliation` route now
 discover settled reservations without completed production results; the
 maintenance-only CLI records an exact linked-result or explicit no-result
-resolution without changing quota or re-fetching. Deployment still lacks a scheduler, database
-fencing inside long-running mutations, alert ownership, provider pricing/billing
-controls, per-scheduler maintenance credentials, and a fresh Docker-backed
-recovery proof. The current `appsea_maintenance` coordinator is trusted across
+resolution without changing quota or re-fetching. Migration `0052` now fences
+selected SQL-only maintenance mutations with the server-clock lease identity;
+external source/provider/object-store effects and snapshot reconciliation remain
+outside that atomic boundary. Deployment still lacks a scheduler, alert
+ownership, provider pricing/billing controls, per-scheduler maintenance
+credentials, and a fresh Docker-backed recovery proof. The current
+`appsea_maintenance` coordinator is trusted across
 the four allowlisted names; production data-work role separation and optional
 per-scheduler isolation remain release gates.
 

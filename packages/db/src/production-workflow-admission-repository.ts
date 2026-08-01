@@ -2,6 +2,7 @@ import type { Pool, PoolClient, QueryResultRow } from 'pg'
 import {
   appseaIdentifierSchema,
   productionWorkflowAdmissionDecisionSchema,
+  type MaintenanceSchedulerFence,
   type ProductionWorkflowAdmissionDecision as ProductionWorkflowAdmissionDecisionContract
 } from '@appsea/contracts'
 import {
@@ -316,7 +317,12 @@ export class PostgresProductionWorkflowAdmissionRepository {
   }
 
   /** Remove terminal or expired admission rows in a bounded workspace batch. */
-  async purge(workspaceId: string, before: string, batchSize = 1_000): Promise<number> {
+  async purge(
+    workspaceId: string,
+    before: string,
+    batchSize = 1_000,
+    maintenanceFence?: MaintenanceSchedulerFence
+  ): Promise<number> {
     const parsedWorkspaceId = appseaIdentifierSchema.parse(workspaceId)
     if (!Number.isSafeInteger(batchSize) || batchSize < 1 || batchSize > 10_000) {
       throw new Error('batchSize must be an integer between 1 and 10000')
@@ -334,7 +340,7 @@ export class PostgresProductionWorkflowAdmissionRepository {
         )
         return Number(result.rows[0]?.purged_count ?? 0)
       },
-      { isolationLevel: 'READ COMMITTED' }
+      { isolationLevel: 'READ COMMITTED', maintenanceFence }
     )
   }
 }

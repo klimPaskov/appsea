@@ -96,7 +96,7 @@ try {
       }
     },
     new PostgresMaintenanceSchedulerLeaseRepository(maintenancePool),
-    async ({ assertLease }) => {
+    async ({ assertLease, fence }) => {
       const quotaRepository = new PostgresSourceQuotaRepository(pool)
       const deletionRepository = new PostgresDeletionPropagationRepository(pool)
       const admissionRepository = new PostgresProductionWorkflowAdmissionRepository(pool)
@@ -115,6 +115,7 @@ try {
         analysisAdmission: analysisAdmissionRepository,
         leases: leaseRepository,
         objectPurge: objectPurgeRepository,
+        fence,
         snapshotReconciliation: async (workspaceId) => {
           await assertLease()
           return runNextProductionCfpbSnapshotReconciliation(workspaceId, snapshotDependencies)

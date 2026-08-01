@@ -1,5 +1,5 @@
 import type { Pool, PoolClient, QueryResultRow } from 'pg'
-import { appseaIdentifierSchema } from '@appsea/contracts'
+import { appseaIdentifierSchema, type MaintenanceSchedulerFence } from '@appsea/contracts'
 import { withDatabaseTransaction, withWorkspaceTransaction } from './transaction'
 
 export type DeletionTombstoneState = 'pending' | 'processing' | 'completed' | 'failed'
@@ -112,7 +112,8 @@ export class PostgresDeletionPropagationRepository {
   async enqueueExpired(
     workspaceId: string,
     occurredAt: string,
-    batchSize: number
+    batchSize: number,
+    maintenanceFence?: MaintenanceSchedulerFence
   ): Promise<number> {
     const validatedWorkspaceId = appseaIdentifierSchema.parse(workspaceId)
     if (!Number.isSafeInteger(batchSize) || batchSize < 1 || batchSize > 1_000) {
@@ -128,7 +129,7 @@ export class PostgresDeletionPropagationRepository {
         )
         return Number(result.rows[0]?.enqueue_expired_source_tombstones ?? 0)
       },
-      { isolationLevel: 'SERIALIZABLE' }
+      { isolationLevel: 'SERIALIZABLE', maintenanceFence }
     )
   }
 
@@ -190,10 +191,16 @@ export class PostgresDeletionPropagationRepository {
   }
 
   /** Claim the oldest due tombstone without waiting on another worker. */
-  async claimNext(workspaceId: string): Promise<DeletionTombstoneRecord | null> {
+  async claimNext(
+    workspaceId: string,
+    maintenanceFence?: MaintenanceSchedulerFence
+  ): Promise<DeletionTombstoneRecord | null> {
     const validatedWorkspaceId = appseaIdentifierSchema.parse(workspaceId)
-    return withWorkspaceTransaction(this.pool, validatedWorkspaceId, (client) =>
-      this.claimNextInTransaction(client, validatedWorkspaceId)
+    return withWorkspaceTransaction(
+      this.pool,
+      validatedWorkspaceId,
+      (client) => this.claimNextInTransaction(client, validatedWorkspaceId),
+      { maintenanceFence }
     )
   }
 
@@ -201,27 +208,35 @@ export class PostgresDeletionPropagationRepository {
    * Claim and propagate one tombstone. The claim is committed separately so a
    * failure can be durably marked failed without rolling back the claim.
    */
-  async processNext(workspaceId: string): Promise<DeletionPropagationResult | null> {
+  async processNext(
+    workspaceId: string,
+    maintenanceFence?: MaintenanceSchedulerFence
+  ): Promise<DeletionPropagationResult | null> {
     const validatedWorkspaceId = appseaIdentifierSchema.parse(workspaceId)
-    const claimed = await this.claimNext(validatedWorkspaceId)
+    const claimed = await this.claimNext(validatedWorkspaceId, maintenanceFence)
     if (!claimed) return null
 
     try {
-      return await withWorkspaceTransaction(this.pool, validatedWorkspaceId, async (client) => {
-        const counts = await this.propagateInTransaction(client, claimed)
-        const tombstone = await this.completeInTransaction(
-          client,
-          validatedWorkspaceId,
-          claimed.tombstoneId,
-          counts.affectedObjectCount
-        )
-        return { tombstone, ...counts }
-      })
+      return await withWorkspaceTransaction(
+        this.pool,
+        validatedWorkspaceId,
+        async (client) => {
+          const counts = await this.propagateInTransaction(client, claimed)
+          const tombstone = await this.completeInTransaction(
+            client,
+            validatedWorkspaceId,
+            claimed.tombstoneId,
+            counts.affectedObjectCount
+          )
+          return { tombstone, ...counts }
+        },
+        { maintenanceFence }
+      )
     } catch (error) {
       // Persist the retry or bounded terminal failure in a separate
       // transaction. The caller still receives the original propagation error
       // for retry/alerting.
-      await this.fail(validatedWorkspaceId, claimed.tombstoneId)
+      await this.fail(validatedWorkspaceId, claimed.tombstoneId, maintenanceFence)
       throw error
     }
   }
@@ -230,30 +245,42 @@ export class PostgresDeletionPropagationRepository {
   async complete(
     workspaceId: string,
     tombstoneId: string,
-    affectedObjectCount: number
+    affectedObjectCount: number,
+    maintenanceFence?: MaintenanceSchedulerFence
   ): Promise<DeletionTombstoneRecord> {
     const validatedWorkspaceId = appseaIdentifierSchema.parse(workspaceId)
     const validatedTombstoneId = appseaIdentifierSchema.parse(tombstoneId)
     if (!Number.isSafeInteger(affectedObjectCount) || affectedObjectCount < 0) {
       throw new Error('affectedObjectCount must be a non-negative integer')
     }
-    return withWorkspaceTransaction(this.pool, validatedWorkspaceId, (client) =>
-      this.completeInTransaction(
-        client,
-        validatedWorkspaceId,
-        validatedTombstoneId,
-        affectedObjectCount
-      )
+    return withWorkspaceTransaction(
+      this.pool,
+      validatedWorkspaceId,
+      (client) =>
+        this.completeInTransaction(
+          client,
+          validatedWorkspaceId,
+          validatedTombstoneId,
+          affectedObjectCount
+        ),
+      { maintenanceFence }
     )
   }
 
   /** Mark a claimed tombstone failed and schedule a bounded retry when possible. */
-  async fail(workspaceId: string, tombstoneId: string): Promise<DeletionTombstoneRecord> {
+  async fail(
+    workspaceId: string,
+    tombstoneId: string,
+    maintenanceFence?: MaintenanceSchedulerFence
+  ): Promise<DeletionTombstoneRecord> {
     const validatedWorkspaceId = appseaIdentifierSchema.parse(workspaceId)
     const validatedTombstoneId = appseaIdentifierSchema.parse(tombstoneId)
-    return withWorkspaceTransaction(this.pool, validatedWorkspaceId, async (client) => {
-      const updated = await client.query<DeletionTombstoneRow>(
-        `UPDATE appsea.deletion_tombstones
+    return withWorkspaceTransaction(
+      this.pool,
+      validatedWorkspaceId,
+      async (client) => {
+        const updated = await client.query<DeletionTombstoneRow>(
+          `UPDATE appsea.deletion_tombstones
             SET state = 'failed',
                 processing_started_at = NULL,
                 next_attempt_at = CASE
@@ -271,24 +298,26 @@ export class PostgresDeletionPropagationRepository {
             AND tombstone_id = $2
             AND state = 'processing'
         RETURNING ${tombstoneColumns}`,
-        [
-          validatedWorkspaceId,
-          validatedTombstoneId,
-          deletionPropagationLimits.maxAttempts,
-          deletionPropagationLimits.retryDelaySeconds
-        ]
-      )
-      if (updated.rows[0]) return mapTombstone(updated.rows[0])
+          [
+            validatedWorkspaceId,
+            validatedTombstoneId,
+            deletionPropagationLimits.maxAttempts,
+            deletionPropagationLimits.retryDelaySeconds
+          ]
+        )
+        if (updated.rows[0]) return mapTombstone(updated.rows[0])
 
-      const existing = await this.readTombstoneInTransaction(
-        client,
-        validatedWorkspaceId,
-        validatedTombstoneId
-      )
-      if (!existing) throw new Error(`Deletion tombstone ${validatedTombstoneId} was not found`)
-      if (existing.state === 'failed') return existing
-      throw new DeletionTombstoneStateError(validatedTombstoneId, existing.state)
-    })
+        const existing = await this.readTombstoneInTransaction(
+          client,
+          validatedWorkspaceId,
+          validatedTombstoneId
+        )
+        if (!existing) throw new Error(`Deletion tombstone ${validatedTombstoneId} was not found`)
+        if (existing.state === 'failed') return existing
+        throw new DeletionTombstoneStateError(validatedTombstoneId, existing.state)
+      },
+      { maintenanceFence }
+    )
   }
 
   // Explicit names make worker adapters self-documenting while retaining the

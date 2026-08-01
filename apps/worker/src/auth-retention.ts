@@ -60,10 +60,11 @@ try {
       }
     },
     new PostgresMaintenanceSchedulerLeaseRepository(maintenancePool),
-    async ({ assertLease }) =>
+    async ({ assertLease, fence }) =>
       runAuthRetention(input, {
         auth: new PostgresAuthRepository(pool),
-        assertLease
+        assertLease,
+        fence
       })
   )
   if (!leaseRun.acquired) {

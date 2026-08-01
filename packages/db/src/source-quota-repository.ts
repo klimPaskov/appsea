@@ -4,6 +4,7 @@ import {
   sourceQuotaReconciliationCaseSchema,
   sourceQuotaReconciliationListQuerySchema,
   sourceQuotaReconciliationResolveInputSchema,
+  type MaintenanceSchedulerFence,
   type SourceQuotaReconciliationCase,
   type SourceQuotaReconciliationListQuery,
   type SourceQuotaReconciliationResolveInput
@@ -276,34 +277,54 @@ export class PostgresSourceQuotaRepository {
     )
   }
 
-  async expireStale(workspaceId: string, before: string, batchSize = 1000): Promise<number> {
+  async expireStale(
+    workspaceId: string,
+    before: string,
+    batchSize = 1000,
+    maintenanceFence?: MaintenanceSchedulerFence
+  ): Promise<number> {
     const validatedWorkspaceId = validateIdentifier(workspaceId, 'workspaceId')
     validateBoundedInteger(batchSize, 'batchSize', 10_000)
     if (batchSize < 1) throw new Error('batchSize must be positive')
-    return withWorkspaceTransaction(this.pool, validatedWorkspaceId, async (client) => {
-      const result = await client.query<{ expired_count: number | string }>(
-        `SELECT appsea.expire_source_quota_reservations(
+    return withWorkspaceTransaction(
+      this.pool,
+      validatedWorkspaceId,
+      async (client) => {
+        const result = await client.query<{ expired_count: number | string }>(
+          `SELECT appsea.expire_source_quota_reservations(
            $1, $2::timestamptz, $3
          ) AS expired_count`,
-        [validatedWorkspaceId, before, batchSize]
-      )
-      return Number(result.rows[0]?.expired_count ?? 0)
-    })
+          [validatedWorkspaceId, before, batchSize]
+        )
+        return Number(result.rows[0]?.expired_count ?? 0)
+      },
+      { maintenanceFence }
+    )
   }
 
-  async purgeSettled(workspaceId: string, before: string, batchSize = 1000): Promise<number> {
+  async purgeSettled(
+    workspaceId: string,
+    before: string,
+    batchSize = 1000,
+    maintenanceFence?: MaintenanceSchedulerFence
+  ): Promise<number> {
     const validatedWorkspaceId = validateIdentifier(workspaceId, 'workspaceId')
     validateBoundedInteger(batchSize, 'batchSize', 10_000)
     if (batchSize < 1) throw new Error('batchSize must be positive')
-    return withWorkspaceTransaction(this.pool, validatedWorkspaceId, async (client) => {
-      const result = await client.query<{ purged_count: number | string }>(
-        `SELECT appsea.purge_source_quota_reservations(
+    return withWorkspaceTransaction(
+      this.pool,
+      validatedWorkspaceId,
+      async (client) => {
+        const result = await client.query<{ purged_count: number | string }>(
+          `SELECT appsea.purge_source_quota_reservations(
            $1, $2::timestamptz, $3
          ) AS purged_count`,
-        [validatedWorkspaceId, before, batchSize]
-      )
-      return Number(result.rows[0]?.purged_count ?? 0)
-    })
+          [validatedWorkspaceId, before, batchSize]
+        )
+        return Number(result.rows[0]?.purged_count ?? 0)
+      },
+      { maintenanceFence }
+    )
   }
 
   /**

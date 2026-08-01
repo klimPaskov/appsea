@@ -1,5 +1,9 @@
 # Maintenance scheduler metrics completion report — 2026-08-01
 
+Historical boundary report. Migration `0052` subsequently adds transaction
+fencing for selected SQL-only maintenance mutations; this report describes the
+earlier `0047` metrics slice.
+
 ## Outcome
 
 AppSea maintenance and delivery commands now persist a bounded, secret-free

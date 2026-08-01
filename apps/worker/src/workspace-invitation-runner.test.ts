@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { WorkspaceInvitationDeliveryRecord } from '@appsea/db'
+import type { MaintenanceSchedulerFence } from '@appsea/contracts'
 import { runWorkspaceInvitationBatch } from './workspace-invitation-runner'
 
 const records: WorkspaceInvitationDeliveryRecord[] = [
@@ -31,15 +32,24 @@ describe('workspace invitation outbox runner', () => {
   it('completes successes and retries failures with a fixed code', async () => {
     const completed: string[] = []
     const failed: Array<[string, string]> = []
+    const fences: Array<MaintenanceSchedulerFence | undefined> = []
+    const fence: MaintenanceSchedulerFence = {
+      schedulerName: 'appsea-workspace-invitations-v1',
+      ownerId: 'worker:host:1',
+      leaseToken: 'token:worker:host:123'
+    }
     const result = await runWorkspaceInvitationBatch(2, {
       auth: {
-        async claimWorkspaceInvitationDeliveries() {
+        async claimWorkspaceInvitationDeliveries(_batchSize, receivedFence) {
+          fences.push(receivedFence)
           return records
         },
-        async completeWorkspaceInvitationDelivery(id) {
+        async completeWorkspaceInvitationDelivery(id, receivedFence) {
+          fences.push(receivedFence)
           completed.push(id)
         },
-        async failWorkspaceInvitationDelivery(id, code) {
+        async failWorkspaceInvitationDelivery(id, code, receivedFence) {
+          fences.push(receivedFence)
           failed.push([id, code])
         }
       },
@@ -47,11 +57,13 @@ describe('workspace invitation outbox runner', () => {
         async send(record) {
           if (record.deliveryId === 'delivery:two') throw new Error('provider body must not leak')
         }
-      }
+      },
+      fence
     })
     expect(result).toEqual({ claimed: 2, sent: 1, failed: 1 })
     expect(completed).toEqual(['delivery:one'])
     expect(failed).toEqual([['delivery:two', 'APPSEA_WORKSPACE_INVITATION_DELIVERY_FAILED']])
+    expect(fences).toEqual([fence, fence, fence])
   })
 
   it('bounds the claimed batch before touching the repository', async () => {

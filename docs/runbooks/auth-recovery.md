@@ -57,7 +57,9 @@ The lease uses the dedicated `appsea_maintenance` connection from
 Production requires a unique `APPSEA_SCHEDULER_OWNER_ID`; development/test runs
 generate an ephemeral owner. Lease contention is a no-op with a bounded
 `maintenance_scheduler_lease_contended` event, while lease loss is a fixed
-failure code.
+failure code. Migration `0052` carries the private fence identity into claim
+and sent/failed state transactions; stale workers fail closed before changing
+delivery state. The gateway/provider send remains outside the PostgreSQL fence.
 
 The gateway request carries a delivery ID/idempotency key, timestamp, nonce,
 and HMAC signature. It must reject redirects and retain no reset token beyond

@@ -42,6 +42,7 @@ import {
   workspaceReportApprovalInputSchema,
   workspaceReportExportReadModelSchema,
   workspaceReportReadModelSchema,
+  type MaintenanceSchedulerFence,
   type AuthSessionReadModel,
   type AuthSessionSummaryReadModel,
   type AuthPasswordResetInput,
@@ -877,7 +878,10 @@ export class PostgresAuthRepository {
     if (!consumed) throw new AuthPasswordResetError()
   }
 
-  async claimPasswordResetDeliveries(batchSize = 100): Promise<PasswordResetDeliveryRecord[]> {
+  async claimPasswordResetDeliveries(
+    batchSize = 100,
+    maintenanceFence?: MaintenanceSchedulerFence
+  ): Promise<PasswordResetDeliveryRecord[]> {
     if (!Number.isSafeInteger(batchSize) || batchSize < 1 || batchSize > 100) {
       throw new Error('Password reset delivery batch size is invalid')
     }
@@ -892,7 +896,7 @@ export class PostgresAuthRepository {
           token_tag: string
           expires_at: Date | string
         }>(`SELECT * FROM appsea.claim_password_reset_deliveries($1)`, [batchSize]),
-      { maxSerializationRetries: 0 }
+      { maxSerializationRetries: 0, maintenanceFence }
     )
     return result.rows.map((row) => ({
       deliveryId: row.delivery_id,
@@ -904,27 +908,42 @@ export class PostgresAuthRepository {
     }))
   }
 
-  async completePasswordResetDelivery(deliveryId: string): Promise<void> {
+  async completePasswordResetDelivery(
+    deliveryId: string,
+    maintenanceFence?: MaintenanceSchedulerFence
+  ): Promise<void> {
     const parsedDeliveryId = appseaIdentifierSchema.safeParse(deliveryId)
     if (!parsedDeliveryId.success) throw new Error('Password reset delivery id is invalid')
-    await withDatabaseTransaction(this.pool, async (client) => {
-      await client.query(`SELECT appsea.complete_password_reset_delivery($1)`, [
-        parsedDeliveryId.data
-      ])
-    })
+    await withDatabaseTransaction(
+      this.pool,
+      async (client) => {
+        await client.query(`SELECT appsea.complete_password_reset_delivery($1)`, [
+          parsedDeliveryId.data
+        ])
+      },
+      { maintenanceFence }
+    )
   }
 
-  async failPasswordResetDelivery(deliveryId: string, failureCode: string): Promise<void> {
+  async failPasswordResetDelivery(
+    deliveryId: string,
+    failureCode: string,
+    maintenanceFence?: MaintenanceSchedulerFence
+  ): Promise<void> {
     const parsedDeliveryId = appseaIdentifierSchema.safeParse(deliveryId)
     if (!parsedDeliveryId.success || !/^[A-Z0-9_:-]{1,80}$/.test(failureCode)) {
       throw new Error('Password reset delivery failure is invalid')
     }
-    await withDatabaseTransaction(this.pool, async (client) => {
-      await client.query(`SELECT appsea.fail_password_reset_delivery($1, $2)`, [
-        parsedDeliveryId.data,
-        failureCode
-      ])
-    })
+    await withDatabaseTransaction(
+      this.pool,
+      async (client) => {
+        await client.query(`SELECT appsea.fail_password_reset_delivery($1, $2)`, [
+          parsedDeliveryId.data,
+          failureCode
+        ])
+      },
+      { maintenanceFence }
+    )
   }
 
   private async insertSession(
@@ -1222,7 +1241,8 @@ export class PostgresAuthRepository {
   /** Delete expired authentication material in bounded batches. */
   async purgeExpiredSessions(
     retentionDays = 7,
-    batchSize = 1_000
+    batchSize = 1_000,
+    maintenanceFence?: MaintenanceSchedulerFence
   ): Promise<{
     sessionsDeleted: number
     rateLimitsDeleted: number
@@ -1235,9 +1255,11 @@ export class PostgresAuthRepository {
     if (!Number.isSafeInteger(batchSize) || batchSize < 1 || batchSize > 10_000) {
       throw new Error('Authentication retention batch size is invalid')
     }
-    return withDatabaseTransaction(this.pool, async (client) => {
-      const sessions = await client.query(
-        `WITH expired AS (
+    return withDatabaseTransaction(
+      this.pool,
+      async (client) => {
+        const sessions = await client.query(
+          `WITH expired AS (
            SELECT session_id
              FROM appsea.auth_sessions
             WHERE expires_at <= clock_timestamp() - ($1::bigint * interval '1 day')
@@ -1250,10 +1272,10 @@ export class PostgresAuthRepository {
           USING expired
           WHERE session.session_id = expired.session_id
          RETURNING session.session_id`,
-        [retentionDays, batchSize]
-      )
-      const rateLimits = await client.query(
-        `WITH stale AS (
+          [retentionDays, batchSize]
+        )
+        const rateLimits = await client.query(
+          `WITH stale AS (
            SELECT rate_limit_key
              FROM appsea.auth_rate_limits
             WHERE updated_at <= clock_timestamp() - interval '1 day'
@@ -1264,33 +1286,35 @@ export class PostgresAuthRepository {
           USING stale
           WHERE rate_limit.rate_limit_key = stale.rate_limit_key
          RETURNING rate_limit.rate_limit_key`,
-        [batchSize]
-      )
-      const passwordResetTokens = await client.query<{
-        password_reset_tokens_deleted: number | string
-      }>(
-        `SELECT appsea.purge_password_reset_tokens($1, $2)
-                  AS password_reset_tokens_deleted`,
-        [retentionDays, batchSize]
-      )
-      const workspaceInvitations = await client.query<{
-        workspace_invitations_deleted: number | string
-      }>(
-        `SELECT appsea.purge_workspace_invitations($1, $2)
-                  AS workspace_invitations_deleted`,
-        [retentionDays, batchSize]
-      )
-      return {
-        sessionsDeleted: sessions.rowCount ?? 0,
-        rateLimitsDeleted: rateLimits.rowCount ?? 0,
-        passwordResetTokensDeleted: Number(
-          passwordResetTokens.rows[0]?.password_reset_tokens_deleted ?? 0
-        ),
-        workspaceInvitationsDeleted: Number(
-          workspaceInvitations.rows[0]?.workspace_invitations_deleted ?? 0
+          [batchSize]
         )
-      }
-    })
+        const passwordResetTokens = await client.query<{
+          password_reset_tokens_deleted: number | string
+        }>(
+          `SELECT appsea.purge_password_reset_tokens($1, $2)
+                  AS password_reset_tokens_deleted`,
+          [retentionDays, batchSize]
+        )
+        const workspaceInvitations = await client.query<{
+          workspace_invitations_deleted: number | string
+        }>(
+          `SELECT appsea.purge_workspace_invitations($1, $2)
+                  AS workspace_invitations_deleted`,
+          [retentionDays, batchSize]
+        )
+        return {
+          sessionsDeleted: sessions.rowCount ?? 0,
+          rateLimitsDeleted: rateLimits.rowCount ?? 0,
+          passwordResetTokensDeleted: Number(
+            passwordResetTokens.rows[0]?.password_reset_tokens_deleted ?? 0
+          ),
+          workspaceInvitationsDeleted: Number(
+            workspaceInvitations.rows[0]?.workspace_invitations_deleted ?? 0
+          )
+        }
+      },
+      { maintenanceFence }
+    )
   }
 
   async listUserWorkspaces(userId: string): Promise<WorkspaceMembershipReadModel[]> {
@@ -1508,7 +1532,8 @@ export class PostgresAuthRepository {
   }
 
   async claimWorkspaceInvitationDeliveries(
-    batchSize = 100
+    batchSize = 100,
+    maintenanceFence?: MaintenanceSchedulerFence
   ): Promise<WorkspaceInvitationDeliveryRecord[]> {
     if (!Number.isSafeInteger(batchSize) || batchSize < 1 || batchSize > 100) {
       throw new Error('Workspace invitation delivery batch size is invalid')
@@ -1527,7 +1552,7 @@ export class PostgresAuthRepository {
           role: 'editor' | 'viewer'
           expires_at: Date | string
         }>(`SELECT * FROM appsea.claim_workspace_invitation_deliveries($1)`, [batchSize]),
-      { maxSerializationRetries: 0 }
+      { maxSerializationRetries: 0, maintenanceFence }
     )
     return result.rows.map((row) => ({
       deliveryId: row.delivery_id,
@@ -1542,17 +1567,28 @@ export class PostgresAuthRepository {
     }))
   }
 
-  async completeWorkspaceInvitationDelivery(deliveryId: string): Promise<void> {
+  async completeWorkspaceInvitationDelivery(
+    deliveryId: string,
+    maintenanceFence?: MaintenanceSchedulerFence
+  ): Promise<void> {
     const parsedDeliveryId = appseaIdentifierSchema.safeParse(deliveryId)
     if (!parsedDeliveryId.success) throw new Error('Workspace invitation delivery id is invalid')
-    await withDatabaseTransaction(this.pool, async (client) => {
-      await client.query(`SELECT appsea.complete_workspace_invitation_delivery($1)`, [
-        parsedDeliveryId.data
-      ])
-    })
+    await withDatabaseTransaction(
+      this.pool,
+      async (client) => {
+        await client.query(`SELECT appsea.complete_workspace_invitation_delivery($1)`, [
+          parsedDeliveryId.data
+        ])
+      },
+      { maintenanceFence }
+    )
   }
 
-  async failWorkspaceInvitationDelivery(deliveryId: string, failureCode: string): Promise<void> {
+  async failWorkspaceInvitationDelivery(
+    deliveryId: string,
+    failureCode: string,
+    maintenanceFence?: MaintenanceSchedulerFence
+  ): Promise<void> {
     const parsedDeliveryId = appseaIdentifierSchema.safeParse(deliveryId)
     if (
       !parsedDeliveryId.success ||
@@ -1560,12 +1596,16 @@ export class PostgresAuthRepository {
     ) {
       throw new Error('Workspace invitation delivery failure is invalid')
     }
-    await withDatabaseTransaction(this.pool, async (client) => {
-      await client.query(`SELECT appsea.fail_workspace_invitation_delivery($1, $2)`, [
-        parsedDeliveryId.data,
-        failureCode
-      ])
-    })
+    await withDatabaseTransaction(
+      this.pool,
+      async (client) => {
+        await client.query(`SELECT appsea.fail_workspace_invitation_delivery($1, $2)`, [
+          parsedDeliveryId.data,
+          failureCode
+        ])
+      },
+      { maintenanceFence }
+    )
   }
 
   async updateWorkspaceMemberRole(

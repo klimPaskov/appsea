@@ -725,6 +725,72 @@ describe.sequential('PostgreSQL fixture persistence lifecycle', () => {
     ).rejects.toMatchObject({ code: '42501' })
   })
 
+  it('holds a service fence through commit and rejects the stale token after takeover', async () => {
+    const leaseRepository = new PostgresMaintenanceSchedulerLeaseRepository(maintenancePool)
+    const schedulerName = 'appsea-source-maintenance-v1'
+    const firstOwner = 'worker:integration:fence-one'
+    const firstToken = 'token:integration:fence-one'
+    const secondOwner = 'worker:integration:fence-two'
+    const secondToken = 'token:integration:fence-two'
+    await expect(
+      leaseRepository.acquire(schedulerName, firstOwner, firstToken, 30)
+    ).resolves.toMatchObject({ acquired: true })
+
+    const fencedClient = await servicePool.connect()
+    let committed = false
+    let replacementAcquired = false
+    try {
+      await fencedClient.query('BEGIN')
+      await expect(
+        fencedClient.query<{ asserted: boolean }>(
+          `SELECT appsea.assert_maintenance_scheduler_lease($1, $2, $3) AS asserted`,
+          [schedulerName, firstOwner, firstToken]
+        )
+      ).resolves.toMatchObject({ rows: [{ asserted: true }] })
+
+      // A takeover-affecting owner update cannot pass the fenced row lock
+      // until the service mutation transaction commits.
+      const expireLease = withOwnerClient(async (client) => {
+        await client.query(
+          `UPDATE appsea.maintenance_scheduler_leases
+              SET lease_until = clock_timestamp() - interval '1 second'
+            WHERE scheduler_name = $1`,
+          [schedulerName]
+        )
+      })
+      await expect(
+        Promise.race([
+          expireLease.then(() => 'updated'),
+          new Promise<'blocked'>((resolve) => setTimeout(() => resolve('blocked'), 100))
+        ])
+      ).resolves.toBe('blocked')
+
+      await fencedClient.query('COMMIT')
+      committed = true
+      await expireLease
+      await expect(
+        leaseRepository.acquire(schedulerName, secondOwner, secondToken, 30)
+      ).resolves.toMatchObject({ acquired: true })
+      replacementAcquired = true
+      await expect(
+        servicePool.query<{ asserted: boolean }>(
+          `SELECT appsea.assert_maintenance_scheduler_lease($1, $2, $3) AS asserted`,
+          [schedulerName, firstOwner, firstToken]
+        )
+      ).resolves.toMatchObject({ rows: [{ asserted: false }] })
+    } finally {
+      if (!committed) {
+        await fencedClient.query('ROLLBACK').catch(() => undefined)
+      }
+      fencedClient.release()
+      if (replacementAcquired) {
+        await leaseRepository.release(schedulerName, secondOwner, secondToken)
+      } else {
+        await leaseRepository.release(schedulerName, firstOwner, firstToken)
+      }
+    }
+  })
+
   it('persists bounded scheduler outcomes through the maintenance role only', async () => {
     await expect(
       servicePool.query(

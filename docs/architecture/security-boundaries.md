@@ -242,11 +242,16 @@ for that pre-context authorization lookup.
   timestamps. Every acquisition has a unique token, and same-owner retries
   cannot overwrite an active lease. A renewal failure is a fixed failure code
   and must stop the pass before a successful completion claim.
-- The lease is a duplicate-run guard for bounded maintenance and delivery. It
-  is not a fencing token for a long-running database transaction or external
-  delivery; production still needs bounded transaction/runtime work and does
-  not prove a deployed scheduler, alert ownership, or incident response. The
-  `0047` run-metrics table is reachable only through maintenance-role
+- Migration `0052` adds `appsea.assert_maintenance_scheduler_lease`, callable
+  only by `appsea_service`. It validates the private scheduler identity with
+  server time and holds the advisory and lease-row locks through the enclosing
+  transaction. Source quota, deletion, admission, lease purge, auth retention,
+  and delivery state transitions use this fence. A stale token therefore fails
+  before a selected SQL mutation can commit. The lease remains a duplicate-run
+  guard for the rest of maintenance and for external delivery: source HTTP
+  requests, provider sends, object-store mark/purge, and snapshot reconciliation
+  are not atomic with PostgreSQL and still require bounded idempotent recovery.
+  The `0047` run-metrics table is reachable only through maintenance-role
   security-definer record/list/purge functions. It stores a generated run ID,
   owner, fixed state/failure code, bounded duration, and validated numeric
   counters; it cannot store lease tokens, source text, credentials, or raw

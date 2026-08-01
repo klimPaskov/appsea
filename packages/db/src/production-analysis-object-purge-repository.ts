@@ -2,6 +2,7 @@ import type { ObjectStore } from '@appsea/object-store'
 import {
   objectReferenceSchema,
   appseaIdentifierSchema,
+  type MaintenanceSchedulerFence,
   type ObjectReference
 } from '@appsea/contracts'
 import type { Pool, PoolClient, QueryResultRow } from 'pg'
@@ -127,16 +128,20 @@ export class PostgresProductionAnalysisObjectPurgeRepository {
   /** Claim one due object purge without waiting on another worker. */
   async claimNext(
     workspaceId: string,
-    now: string
+    now: string,
+    maintenanceFence?: MaintenanceSchedulerFence
   ): Promise<ProductionAnalysisObjectPurgeRecord | null> {
     const parsedWorkspaceId = identifier(workspaceId, 'workspaceId')
     // Validate the caller's correlation timestamp, but use PostgreSQL's clock
     // for eligibility and stale-claim decisions. Retention must not be
     // bypassable by an operator-supplied future timestamp.
     validateTimestamp(now, 'now')
-    return withWorkspaceTransaction(this.pool, parsedWorkspaceId, async (client) => {
-      const result = await client.query<ObjectPurgeRow>(
-        `WITH candidate AS (
+    return withWorkspaceTransaction(
+      this.pool,
+      parsedWorkspaceId,
+      async (client) => {
+        const result = await client.query<ObjectPurgeRow>(
+          `WITH candidate AS (
            SELECT workspace_id, purge_id
              FROM appsea.production_analysis_object_purge_jobs
             WHERE workspace_id = $1
@@ -167,28 +172,34 @@ export class PostgresProductionAnalysisObjectPurgeRepository {
           WHERE job.workspace_id = candidate.workspace_id
             AND job.purge_id = candidate.purge_id
          RETURNING ${columns}`,
-        [
-          parsedWorkspaceId,
-          productionAnalysisObjectPurgeLimits.maxAttempts,
-          productionAnalysisObjectPurgeLimits.staleClaimSeconds
-        ]
-      )
-      return result.rows[0] ? mapRow(result.rows[0]) : null
-    })
+          [
+            parsedWorkspaceId,
+            productionAnalysisObjectPurgeLimits.maxAttempts,
+            productionAnalysisObjectPurgeLimits.staleClaimSeconds
+          ]
+        )
+        return result.rows[0] ? mapRow(result.rows[0]) : null
+      },
+      { maintenanceFence }
+    )
   }
 
   /** Complete a claimed purge. Repeating completion is an idempotent no-op. */
   async complete(
     workspaceId: string,
     purgeId: string,
-    completedAt: string
+    completedAt: string,
+    maintenanceFence?: MaintenanceSchedulerFence
   ): Promise<ProductionAnalysisObjectPurgeRecord> {
     const parsedWorkspaceId = identifier(workspaceId, 'workspaceId')
     const parsedPurgeId = identifier(purgeId, 'purgeId')
     const parsedCompletedAt = validateTimestamp(completedAt, 'completedAt')
-    return withWorkspaceTransaction(this.pool, parsedWorkspaceId, async (client) => {
-      const updated = await client.query<ObjectPurgeRow>(
-        `UPDATE appsea.production_analysis_object_purge_jobs
+    return withWorkspaceTransaction(
+      this.pool,
+      parsedWorkspaceId,
+      async (client) => {
+        const updated = await client.query<ObjectPurgeRow>(
+          `UPDATE appsea.production_analysis_object_purge_jobs
             SET state = 'completed',
                 processing_started_at = NULL,
                 completed_at = COALESCE(completed_at, $3::timestamptz),
@@ -199,28 +210,34 @@ export class PostgresProductionAnalysisObjectPurgeRepository {
             AND purge_id = $2
             AND state = 'processing'
         RETURNING ${columns}`,
-        [parsedWorkspaceId, parsedPurgeId, parsedCompletedAt]
-      )
-      if (updated.rows[0]) return mapRow(updated.rows[0])
-      const existing = await this.readInTransaction(client, parsedWorkspaceId, parsedPurgeId)
-      if (!existing) throw new Error(`Object purge job ${parsedPurgeId} was not found`)
-      if (existing.state === 'completed') return existing
-      throw new Error(`Object purge job ${parsedPurgeId} is not processing`)
-    })
+          [parsedWorkspaceId, parsedPurgeId, parsedCompletedAt]
+        )
+        if (updated.rows[0]) return mapRow(updated.rows[0])
+        const existing = await this.readInTransaction(client, parsedWorkspaceId, parsedPurgeId)
+        if (!existing) throw new Error(`Object purge job ${parsedPurgeId} was not found`)
+        if (existing.state === 'completed') return existing
+        throw new Error(`Object purge job ${parsedPurgeId} is not processing`)
+      },
+      { maintenanceFence }
+    )
   }
 
   /** Persist that the object is tombstoned but its retention window is not due. */
   async markWaiting(
     workspaceId: string,
     purgeId: string,
-    nextAttemptAt: string
+    nextAttemptAt: string,
+    maintenanceFence?: MaintenanceSchedulerFence
   ): Promise<ProductionAnalysisObjectPurgeRecord> {
     const parsedWorkspaceId = identifier(workspaceId, 'workspaceId')
     const parsedPurgeId = identifier(purgeId, 'purgeId')
     const parsedNextAttemptAt = validateTimestamp(nextAttemptAt, 'nextAttemptAt')
-    return withWorkspaceTransaction(this.pool, parsedWorkspaceId, async (client) => {
-      const updated = await client.query<ObjectPurgeRow>(
-        `UPDATE appsea.production_analysis_object_purge_jobs
+    return withWorkspaceTransaction(
+      this.pool,
+      parsedWorkspaceId,
+      async (client) => {
+        const updated = await client.query<ObjectPurgeRow>(
+          `UPDATE appsea.production_analysis_object_purge_jobs
             SET state = 'marked',
                 processing_started_at = NULL,
                 next_attempt_at = $3::timestamptz,
@@ -230,28 +247,34 @@ export class PostgresProductionAnalysisObjectPurgeRepository {
             AND purge_id = $2
             AND state = 'processing'
         RETURNING ${columns}`,
-        [parsedWorkspaceId, parsedPurgeId, parsedNextAttemptAt]
-      )
-      if (updated.rows[0]) return mapRow(updated.rows[0])
-      const existing = await this.readInTransaction(client, parsedWorkspaceId, parsedPurgeId)
-      if (!existing) throw new Error(`Object purge job ${parsedPurgeId} was not found`)
-      if (existing.state === 'marked') return existing
-      throw new Error(`Object purge job ${parsedPurgeId} is not processing`)
-    })
+          [parsedWorkspaceId, parsedPurgeId, parsedNextAttemptAt]
+        )
+        if (updated.rows[0]) return mapRow(updated.rows[0])
+        const existing = await this.readInTransaction(client, parsedWorkspaceId, parsedPurgeId)
+        if (!existing) throw new Error(`Object purge job ${parsedPurgeId} was not found`)
+        if (existing.state === 'marked') return existing
+        throw new Error(`Object purge job ${parsedPurgeId} is not processing`)
+      },
+      { maintenanceFence }
+    )
   }
 
   /** Mark a failure while leaving bounded retry metadata visible. */
   async fail(
     workspaceId: string,
     purgeId: string,
-    nextAttemptAt: string
+    nextAttemptAt: string,
+    maintenanceFence?: MaintenanceSchedulerFence
   ): Promise<ProductionAnalysisObjectPurgeRecord> {
     const parsedWorkspaceId = identifier(workspaceId, 'workspaceId')
     const parsedPurgeId = identifier(purgeId, 'purgeId')
     const parsedNextAttemptAt = validateTimestamp(nextAttemptAt, 'nextAttemptAt')
-    return withWorkspaceTransaction(this.pool, parsedWorkspaceId, async (client) => {
-      const updated = await client.query<ObjectPurgeRow>(
-        `UPDATE appsea.production_analysis_object_purge_jobs
+    return withWorkspaceTransaction(
+      this.pool,
+      parsedWorkspaceId,
+      async (client) => {
+        const updated = await client.query<ObjectPurgeRow>(
+          `UPDATE appsea.production_analysis_object_purge_jobs
             SET state = 'failed',
                 processing_started_at = NULL,
                 next_attempt_at = $3::timestamptz,
@@ -261,23 +284,26 @@ export class PostgresProductionAnalysisObjectPurgeRepository {
             AND purge_id = $2
             AND state = 'processing'
         RETURNING ${columns}`,
-        [parsedWorkspaceId, parsedPurgeId, parsedNextAttemptAt]
-      )
-      if (updated.rows[0]) return mapRow(updated.rows[0])
-      const existing = await this.readInTransaction(client, parsedWorkspaceId, parsedPurgeId)
-      if (!existing) throw new Error(`Object purge job ${parsedPurgeId} was not found`)
-      if (existing.state === 'failed') return existing
-      throw new Error(`Object purge job ${parsedPurgeId} is not processing`)
-    })
+          [parsedWorkspaceId, parsedPurgeId, parsedNextAttemptAt]
+        )
+        if (updated.rows[0]) return mapRow(updated.rows[0])
+        const existing = await this.readInTransaction(client, parsedWorkspaceId, parsedPurgeId)
+        if (!existing) throw new Error(`Object purge job ${parsedPurgeId} was not found`)
+        if (existing.state === 'failed') return existing
+        throw new Error(`Object purge job ${parsedPurgeId} is not processing`)
+      },
+      { maintenanceFence }
+    )
   }
 
   /** Run one external mark/purge pass with a durable claim boundary. */
   async processNext(
     workspaceId: string,
-    now: string
+    now: string,
+    maintenanceFence?: MaintenanceSchedulerFence
   ): Promise<ProductionAnalysisObjectPurgeResult | null> {
     const parsedNow = validateTimestamp(now, 'now')
-    const claimed = await this.claimNext(workspaceId, parsedNow)
+    const claimed = await this.claimNext(workspaceId, parsedNow, maintenanceFence)
     if (!claimed) return null
     const serverObservedAt = claimed.processingStartedAt
 
@@ -306,7 +332,8 @@ export class PostgresProductionAnalysisObjectPurgeRepository {
         const waiting = await this.markWaiting(
           claimed.workspaceId,
           claimed.purgeId,
-          claimed.eligibleAt
+          claimed.eligibleAt,
+          maintenanceFence
         )
         return { record: waiting, purged: false }
       }
@@ -316,14 +343,19 @@ export class PostgresProductionAnalysisObjectPurgeRepository {
         authorization: claimed.authorization,
         now: serverObservedAt
       })
-      const completed = await this.complete(claimed.workspaceId, claimed.purgeId, serverObservedAt)
+      const completed = await this.complete(
+        claimed.workspaceId,
+        claimed.purgeId,
+        serverObservedAt,
+        maintenanceFence
+      )
       return { record: completed, purged: true }
     } catch (error) {
       const retryAt = new Date(
         Date.parse(serverObservedAt ?? claimed.requestedAt) +
           Math.min(2 ** claimed.attemptCount, 60) * 1_000
       ).toISOString()
-      await this.fail(claimed.workspaceId, claimed.purgeId, retryAt)
+      await this.fail(claimed.workspaceId, claimed.purgeId, retryAt, maintenanceFence)
       throw new Error(failureSummary(error), { cause: error })
     }
   }
