@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import type { SourceSnapshotReconciliationReadModel } from '@appsea/contracts'
 import type { DeletionPropagationResult } from '@appsea/db'
 import { runAuthRetention, runSourceMaintenance } from './maintenance-runner'
 
@@ -33,6 +34,38 @@ function deletionResult(affectedObjectCount: number): DeletionPropagationResult 
   }
 }
 
+function snapshotResult(
+  workspaceId: string,
+  state: SourceSnapshotReconciliationReadModel['state'],
+  coverageGaps: readonly string[] = []
+): SourceSnapshotReconciliationReadModel {
+  return {
+    workspaceId,
+    reconciliationId: 'reconciliation:source:0123456789abcdef0123456789abcdef',
+    sourceId: 'cfpb-consumer-complaints',
+    policyVersion: 'cfpb-2026-07-v1',
+    state,
+    attemptCount: 1,
+    pagesScanned: 1,
+    sourceRecordCount: 1,
+    deletionCount: 0,
+    coverageGaps: [...coverageGaps],
+    warnings: [],
+    failureCode: state === 'failed' ? 'reconciliation_failed' : null,
+    failureSummary: state === 'failed' ? 'retryable fixture failure' : null,
+    observedAt: occurredAt,
+    requestedAt: occurredAt,
+    finishedAt: state === 'queued' || state === 'running' ? null : occurredAt,
+    inputHash: 'a'.repeat(64),
+    idempotencyKey: 'b'.repeat(64),
+    pageSize: 1,
+    maxRecords: 1,
+    nextOffset: 1,
+    nextAttemptAt: occurredAt,
+    updatedAt: occurredAt
+  }
+}
+
 describe('maintenance runners', () => {
   it('sorts workspaces and keeps quota expiry and purge budgets independent', async () => {
     const quotaCalls: string[] = []
@@ -44,6 +77,7 @@ describe('maintenance runners', () => {
         quotaBatchSize: 2,
         deletionBatchSize: 2,
         retentionBatchSize: 2,
+        snapshotReconciliationBatchSize: 0,
         quotaRetentionDays: 7,
         workspaceId: null
       },
@@ -91,6 +125,12 @@ describe('maintenance runners', () => {
       productionAnalysisAdmissionsPurged: 0,
       sourceCollectionLeasesPurged: 0,
       productionAnalysisObjectsPurged: 0,
+      sourceSnapshotReconciliationsProcessed: 0,
+      sourceSnapshotReconciliationsCompleted: 0,
+      sourceSnapshotReconciliationsIncomplete: 0,
+      sourceSnapshotReconciliationsFailed: 0,
+      sourceSnapshotReconciliationsRetried: 0,
+      sourceSnapshotCoverageGaps: 0,
       retentionTombstonesQueued: 0,
       deletionTombstonesProcessed: 2,
       deletionObjectsAffected: 8,
@@ -113,6 +153,7 @@ describe('maintenance runners', () => {
         quotaBatchSize: 1,
         deletionBatchSize: 1,
         retentionBatchSize: 1,
+        snapshotReconciliationBatchSize: 0,
         quotaRetentionDays: 30,
         workspaceId: 'workspace:target'
       },
@@ -147,6 +188,60 @@ describe('maintenance runners', () => {
     expect(calls).toEqual(['workspace:target'])
   })
 
+  it('resumes one due snapshot per sorted workspace within its independent budget', async () => {
+    const calls: string[] = []
+    const result = await runSourceMaintenance(
+      {
+        jobId: 'maintenance:source:snapshots',
+        occurredAt,
+        quotaBatchSize: 1,
+        deletionBatchSize: 1,
+        retentionBatchSize: 1,
+        snapshotReconciliationBatchSize: 2,
+        quotaRetentionDays: 7,
+        workspaceId: null
+      },
+      {
+        quota: {
+          async listActiveWorkspaceIds() {
+            return []
+          },
+          async expireStale() {
+            return 0
+          },
+          async purgeSettled() {
+            return 0
+          }
+        },
+        deletion: {
+          async listActiveWorkspaceIds() {
+            return ['workspace:z', 'workspace:a', 'workspace:b']
+          },
+          async enqueueExpired() {
+            return 0
+          },
+          async processNext() {
+            return null
+          }
+        },
+        snapshotReconciliation: async (workspaceId) => {
+          calls.push(workspaceId)
+          return workspaceId === 'workspace:a'
+            ? snapshotResult(workspaceId, 'completed')
+            : snapshotResult(workspaceId, 'queued', ['bounded snapshot retry'])
+        }
+      }
+    )
+
+    expect(calls).toEqual(['workspace:a', 'workspace:b'])
+    expect(result.sourceSnapshotReconciliationsProcessed).toBe(2)
+    expect(result.sourceSnapshotReconciliationsCompleted).toBe(1)
+    expect(result.sourceSnapshotReconciliationsIncomplete).toBe(0)
+    expect(result.sourceSnapshotReconciliationsFailed).toBe(0)
+    expect(result.sourceSnapshotReconciliationsRetried).toBe(1)
+    expect(result.sourceSnapshotCoverageGaps).toBe(1)
+  })
+
   it('purges expired production workflow admissions with the retention budget', async () => {
     const calls: string[] = []
     const result = await runSourceMaintenance(
@@ -156,6 +251,7 @@ describe('maintenance runners', () => {
         quotaBatchSize: 1,
         deletionBatchSize: 1,
         retentionBatchSize: 2,
+        snapshotReconciliationBatchSize: 0,
         quotaRetentionDays: 7,
         workspaceId: null
       },
@@ -204,6 +300,7 @@ describe('maintenance runners', () => {
         quotaBatchSize: 1,
         deletionBatchSize: 1,
         retentionBatchSize: 2,
+        snapshotReconciliationBatchSize: 0,
         quotaRetentionDays: 7,
         workspaceId: null
       },
@@ -252,6 +349,7 @@ describe('maintenance runners', () => {
         quotaBatchSize: 1,
         deletionBatchSize: 1,
         retentionBatchSize: 2,
+        snapshotReconciliationBatchSize: 0,
         quotaRetentionDays: 7,
         workspaceId: null
       },
@@ -300,6 +398,7 @@ describe('maintenance runners', () => {
         quotaBatchSize: 1,
         deletionBatchSize: 1,
         retentionBatchSize: 2,
+        snapshotReconciliationBatchSize: 0,
         quotaRetentionDays: 7,
         workspaceId: null
       },
@@ -344,6 +443,7 @@ describe('maintenance runners', () => {
         quotaBatchSize: 1,
         deletionBatchSize: 1,
         retentionBatchSize: 2,
+        snapshotReconciliationBatchSize: 0,
         quotaRetentionDays: 7,
         workspaceId: null
       },
@@ -396,6 +496,7 @@ describe('maintenance runners', () => {
           quotaBatchSize: 2,
           deletionBatchSize: 1,
           retentionBatchSize: 1,
+          snapshotReconciliationBatchSize: 0,
           quotaRetentionDays: 7,
           workspaceId: null
         },
@@ -436,6 +537,7 @@ describe('maintenance runners', () => {
           quotaBatchSize: 1,
           deletionBatchSize: 1,
           retentionBatchSize: 1,
+          snapshotReconciliationBatchSize: 0,
           quotaRetentionDays: 7,
           workspaceId: null
         },

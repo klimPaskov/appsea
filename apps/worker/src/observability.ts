@@ -28,6 +28,12 @@ export interface WorkerEvent {
   productionAnalysisAdmissionsPurged?: number
   sourceCollectionLeasesPurged?: number
   productionAnalysisObjectsPurged?: number
+  sourceSnapshotReconciliationsProcessed?: number
+  sourceSnapshotReconciliationsCompleted?: number
+  sourceSnapshotReconciliationsIncomplete?: number
+  sourceSnapshotReconciliationsFailed?: number
+  sourceSnapshotReconciliationsRetried?: number
+  sourceSnapshotCoverageGaps?: number
   retentionTombstonesQueued?: number
   deletionTombstonesProcessed?: number
   deletionObjectsAffected?: number
@@ -145,6 +151,44 @@ export function emitWorkerEvent(event: WorkerEvent): void {
       : {}),
     ...(finiteInteger(event.productionAnalysisObjectsPurged) !== undefined
       ? { productionAnalysisObjectsPurged: finiteInteger(event.productionAnalysisObjectsPurged) }
+      : {}),
+    ...(finiteInteger(event.sourceSnapshotReconciliationsProcessed) !== undefined
+      ? {
+          sourceSnapshotReconciliationsProcessed: finiteInteger(
+            event.sourceSnapshotReconciliationsProcessed
+          )
+        }
+      : {}),
+    ...(finiteInteger(event.sourceSnapshotReconciliationsCompleted) !== undefined
+      ? {
+          sourceSnapshotReconciliationsCompleted: finiteInteger(
+            event.sourceSnapshotReconciliationsCompleted
+          )
+        }
+      : {}),
+    ...(finiteInteger(event.sourceSnapshotReconciliationsIncomplete) !== undefined
+      ? {
+          sourceSnapshotReconciliationsIncomplete: finiteInteger(
+            event.sourceSnapshotReconciliationsIncomplete
+          )
+        }
+      : {}),
+    ...(finiteInteger(event.sourceSnapshotReconciliationsFailed) !== undefined
+      ? {
+          sourceSnapshotReconciliationsFailed: finiteInteger(
+            event.sourceSnapshotReconciliationsFailed
+          )
+        }
+      : {}),
+    ...(finiteInteger(event.sourceSnapshotReconciliationsRetried) !== undefined
+      ? {
+          sourceSnapshotReconciliationsRetried: finiteInteger(
+            event.sourceSnapshotReconciliationsRetried
+          )
+        }
+      : {}),
+    ...(finiteInteger(event.sourceSnapshotCoverageGaps) !== undefined
+      ? { sourceSnapshotCoverageGaps: finiteInteger(event.sourceSnapshotCoverageGaps) }
       : {}),
     ...(finiteInteger(event.retentionTombstonesQueued) !== undefined
       ? { retentionTombstonesQueued: finiteInteger(event.retentionTombstonesQueued) }

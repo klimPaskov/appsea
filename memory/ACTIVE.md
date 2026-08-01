@@ -45,6 +45,14 @@ command uses `withServiceWorkspaceTransaction`, establishes the explicit
 workspaces. The private route is covered by web tests; the PostgreSQL
 membership/RLS integration proof is present but Docker remains unavailable.
 
+The source-maintenance runner now resumes at most one due snapshot per sorted
+active workspace under the independent `snapshotReconciliationBatchSize`
+budget. The production command defaults that budget to one and emits bounded
+completed, incomplete, failed, retried, and coverage-gap counters; the
+targeted `source:cfpb:reconcile:next` command remains available for recovery.
+This closes repository-level scheduler ownership while deployed scheduler
+provisioning, alerting, and service-role separation remain open.
+
 The recomputation repository reclaims server-clock-stale `dispatching` claims
 after 15 minutes and terminalizes stale claims at the 24-attempt limit. The
 deterministic Temporal identity makes a late worker start idempotent.
@@ -74,8 +82,11 @@ transaction; these and production deployment remain readiness blockers.
   recomputation-reclaim focused suites passed; real PostgreSQL fixtures remain
   Docker-blocked.
 - 2026-08-01 tombstone-retry focus: db lint, db typecheck, db 73-test suite,
-  worker typecheck, worker 46-test suite passed; migration and integration
+  worker typecheck, worker 47-test suite passed; migration and integration
   assertions are present.
+- 2026-08-01 source-maintenance scheduler focus: contracts 62-test suite and
+  worker 47-test suite passed; the real PostgreSQL scheduler path remains
+  Docker-blocked.
 - `pnpm verify:persistence` and `pnpm verify:workflows` attempted on
   2026-07-25 and 2026-08-01; both are blocked by the unavailable Docker
   Desktop Linux engine pipe (`//./pipe/dockerDesktopLinuxEngine`).
@@ -107,5 +118,6 @@ transaction; these and production deployment remain readiness blockers.
 - Production collection is locally package-tested and PostgreSQL-idempotent,
   but no production Temporal deployment or integration proof exists. Cloud
   object storage, recomputation alerting, deployed reconciliation scheduling,
-  and quota/operator reconciliation remain open.
+  and quota/operator reconciliation remain open; repository-level snapshot
+  resume is now part of source maintenance.
 - Windows/macOS packaging remains open.

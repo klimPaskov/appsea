@@ -6,6 +6,7 @@ import {
   authRetentionInputSchema,
   type AuthRetentionInput,
   type AuthRetentionResult,
+  type SourceSnapshotReconciliationReadModel,
   type SourceMaintenanceInput,
   type SourceMaintenanceResult
 } from '@appsea/contracts'
@@ -38,6 +39,13 @@ export interface SourceMaintenanceDependencies {
   leases?: Pick<PostgresSourceCollectionLeaseRepository, 'purge'>
   /** Production entry points provide this; legacy fixture test doubles may omit it. */
   objectPurge?: Pick<PostgresProductionAnalysisObjectPurgeRepository, 'processNext'>
+  /**
+   * Resume one due identifier-only source snapshot for a workspace. The
+   * callback owns policy, lease, quota, checkpoint, and retry semantics.
+   */
+  snapshotReconciliation?: (
+    workspaceId: string
+  ) => Promise<SourceSnapshotReconciliationReadModel | null>
 }
 
 export interface AuthRetentionDependencies {
@@ -115,6 +123,12 @@ export async function runSourceMaintenance(
   let productionAnalysisAdmissionsPurged = 0
   let sourceCollectionLeasesPurged = 0
   let productionAnalysisObjectsPurged = 0
+  let sourceSnapshotReconciliationsProcessed = 0
+  let sourceSnapshotReconciliationsCompleted = 0
+  let sourceSnapshotReconciliationsIncomplete = 0
+  let sourceSnapshotReconciliationsFailed = 0
+  let sourceSnapshotReconciliationsRetried = 0
+  let sourceSnapshotCoverageGaps = 0
   let retentionTombstonesQueued = 0
   if (dependencies.admission) {
     for (const workspaceId of deletionWorkspaceIds) {
@@ -150,6 +164,26 @@ export async function runSourceMaintenance(
         remaining
       )
       sourceCollectionLeasesPurged += purged
+    }
+  }
+  if (dependencies.snapshotReconciliation) {
+    for (const workspaceId of deletionWorkspaceIds) {
+      if (sourceSnapshotReconciliationsProcessed >= parsed.snapshotReconciliationBatchSize) break
+      const result = await dependencies.snapshotReconciliation(workspaceId)
+      if (!result) continue
+      sourceSnapshotReconciliationsProcessed += 1
+      const coverageGaps = countWithin(
+        result.coverageGaps.length,
+        'sourceSnapshotCoverageGaps',
+        5_000 - sourceSnapshotCoverageGaps
+      )
+      sourceSnapshotCoverageGaps += coverageGaps
+      if (result.state === 'completed') sourceSnapshotReconciliationsCompleted += 1
+      if (result.state === 'incomplete') sourceSnapshotReconciliationsIncomplete += 1
+      if (result.state === 'failed') sourceSnapshotReconciliationsFailed += 1
+      if (result.state === 'queued' || result.state === 'running') {
+        sourceSnapshotReconciliationsRetried += 1
+      }
     }
   }
   for (const workspaceId of deletionWorkspaceIds) {
@@ -209,6 +243,12 @@ export async function runSourceMaintenance(
     productionAnalysisAdmissionsPurged,
     sourceCollectionLeasesPurged,
     productionAnalysisObjectsPurged,
+    sourceSnapshotReconciliationsProcessed,
+    sourceSnapshotReconciliationsCompleted,
+    sourceSnapshotReconciliationsIncomplete,
+    sourceSnapshotReconciliationsFailed,
+    sourceSnapshotReconciliationsRetried,
+    sourceSnapshotCoverageGaps,
     retentionTombstonesQueued,
     deletionTombstonesProcessed,
     deletionObjectsAffected,

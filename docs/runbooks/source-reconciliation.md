@@ -44,7 +44,16 @@ lease's server-observed timestamp for every page.
 ## Resume due work
 
 A scheduler can resume the oldest queued or stale-running job without access to
-the original caller key:
+the original caller key. The ordinary source-maintenance pass performs one
+bounded resume per sorted workspace; configure its batch with
+`APPSEA_SOURCE_SNAPSHOT_RECONCILIATION_BATCH_SIZE`:
+
+```powershell
+$env:APPSEA_SOURCE_SNAPSHOT_RECONCILIATION_BATCH_SIZE = '10'
+pnpm --filter @appsea/worker source:maintenance
+```
+
+For targeted operator recovery, the dedicated command still resumes one job:
 
 ```powershell
 $env:APPSEA_SOURCE_RECONCILIATION_WORKSPACE_ID = 'workspace:research'

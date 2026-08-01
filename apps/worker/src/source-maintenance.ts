@@ -12,11 +12,18 @@ import {
 } from '@appsea/db'
 import { emitWorkerEvent } from './observability'
 import { runSourceMaintenance } from './maintenance-runner'
+import {
+  defaultSourceSnapshotReconciliationDependencies,
+  runNextProductionCfpbSnapshotReconciliation
+} from './production-cfpb-reconciliation'
 
 const taskQueue = 'appsea-source-maintenance-v1'
 const quotaBatchSize = Number(process.env.APPSEA_SOURCE_QUOTA_EXPIRY_BATCH_SIZE ?? '1000')
 const deletionBatchSize = Number(process.env.APPSEA_DELETION_BATCH_SIZE ?? '100')
 const retentionBatchSize = Number(process.env.APPSEA_RETENTION_BATCH_SIZE ?? '100')
+const snapshotReconciliationBatchSize = Number(
+  process.env.APPSEA_SOURCE_SNAPSHOT_RECONCILIATION_BATCH_SIZE ?? '1'
+)
 const quotaRetentionDays = Number(process.env.APPSEA_SOURCE_QUOTA_RETENTION_DAYS ?? '30')
 const input = {
   jobId:
@@ -26,6 +33,7 @@ const input = {
   quotaBatchSize,
   deletionBatchSize,
   retentionBatchSize,
+  snapshotReconciliationBatchSize,
   quotaRetentionDays,
   workspaceId: process.env.APPSEA_DELETION_WORKSPACE_ID ?? null
 }
@@ -49,13 +57,16 @@ try {
     objectStore
   )
   const leaseRepository = new PostgresSourceCollectionLeaseRepository(pool)
+  const snapshotDependencies = defaultSourceSnapshotReconciliationDependencies(pool)
   const result = await runSourceMaintenance(input, {
     quota: quotaRepository,
     deletion: deletionRepository,
     admission: admissionRepository,
     analysisAdmission: analysisAdmissionRepository,
     leases: leaseRepository,
-    objectPurge: objectPurgeRepository
+    objectPurge: objectPurgeRepository,
+    snapshotReconciliation: (workspaceId) =>
+      runNextProductionCfpbSnapshotReconciliation(workspaceId, snapshotDependencies)
   })
   emitWorkerEvent({
     event: 'source_quota_expiry_finished',
@@ -67,6 +78,19 @@ try {
     productionAnalysisAdmissionsPurged: result.productionAnalysisAdmissionsPurged,
     sourceCollectionLeasesPurged: result.sourceCollectionLeasesPurged
   })
+  if (result.sourceSnapshotReconciliationsProcessed > 0) {
+    emitWorkerEvent({
+      event: 'source_snapshot_reconciliation_batch_finished',
+      taskQueue,
+      jobId: result.jobId,
+      sourceSnapshotReconciliationsProcessed: result.sourceSnapshotReconciliationsProcessed,
+      sourceSnapshotReconciliationsCompleted: result.sourceSnapshotReconciliationsCompleted,
+      sourceSnapshotReconciliationsIncomplete: result.sourceSnapshotReconciliationsIncomplete,
+      sourceSnapshotReconciliationsFailed: result.sourceSnapshotReconciliationsFailed,
+      sourceSnapshotReconciliationsRetried: result.sourceSnapshotReconciliationsRetried,
+      sourceSnapshotCoverageGaps: result.sourceSnapshotCoverageGaps
+    })
+  }
   if (result.retentionTombstonesQueued > 0) {
     emitWorkerEvent({
       event: 'source_retention_tombstones_queued',
@@ -105,6 +129,12 @@ try {
     productionAnalysisAdmissionsPurged: result.productionAnalysisAdmissionsPurged,
     sourceCollectionLeasesPurged: result.sourceCollectionLeasesPurged,
     productionAnalysisObjectsPurged: result.productionAnalysisObjectsPurged,
+    sourceSnapshotReconciliationsProcessed: result.sourceSnapshotReconciliationsProcessed,
+    sourceSnapshotReconciliationsCompleted: result.sourceSnapshotReconciliationsCompleted,
+    sourceSnapshotReconciliationsIncomplete: result.sourceSnapshotReconciliationsIncomplete,
+    sourceSnapshotReconciliationsFailed: result.sourceSnapshotReconciliationsFailed,
+    sourceSnapshotReconciliationsRetried: result.sourceSnapshotReconciliationsRetried,
+    sourceSnapshotCoverageGaps: result.sourceSnapshotCoverageGaps,
     retentionTombstonesQueued: result.retentionTombstonesQueued,
     deletionTombstonesProcessed: result.deletionTombstonesProcessed,
     deletionObjectsAffected: result.deletionObjectsAffected,

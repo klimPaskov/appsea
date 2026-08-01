@@ -2145,6 +2145,8 @@ export const sourceMaintenanceInputSchema = z
     quotaBatchSize: z.number().int().min(1).max(10_000),
     deletionBatchSize: z.number().int().min(1).max(1_000),
     retentionBatchSize: z.number().int().min(1).max(1_000),
+    /** Maximum number of due snapshot jobs to resume across this pass. */
+    snapshotReconciliationBatchSize: z.number().int().min(0).max(100),
     quotaRetentionDays: z.number().int().min(1).max(3_650),
     workspaceId: appseaIdentifierSchema.nullable()
   })
@@ -2161,6 +2163,12 @@ export const sourceMaintenanceResultSchema = z
     productionAnalysisAdmissionsPurged: z.number().int().nonnegative().max(10_000),
     sourceCollectionLeasesPurged: z.number().int().nonnegative().max(10_000),
     productionAnalysisObjectsPurged: z.number().int().nonnegative().max(10_000),
+    sourceSnapshotReconciliationsProcessed: z.number().int().nonnegative().max(100),
+    sourceSnapshotReconciliationsCompleted: z.number().int().nonnegative().max(100),
+    sourceSnapshotReconciliationsIncomplete: z.number().int().nonnegative().max(100),
+    sourceSnapshotReconciliationsFailed: z.number().int().nonnegative().max(100),
+    sourceSnapshotReconciliationsRetried: z.number().int().nonnegative().max(100),
+    sourceSnapshotCoverageGaps: z.number().int().nonnegative().max(5_000),
     retentionTombstonesQueued: z.number().int().nonnegative().max(1_000),
     deletionTombstonesProcessed: z.number().int().nonnegative().max(1_000),
     deletionObjectsAffected: z.number().int().nonnegative().max(10_000_000),

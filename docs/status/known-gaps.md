@@ -76,7 +76,10 @@ remain open.
 
 Source and authentication maintenance entry points now use schema-validated,
 bounded pure runners with stable scheduler job IDs and secret-free structured
-result events. The existing repository operations are idempotent for safe
+result events. The source-maintenance pass resumes at most one due snapshot per
+sorted workspace under an independent batch budget and reports terminal,
+retry, and coverage-gap counters; the targeted resume command remains for
+operator recovery. The existing repository operations are idempotent for safe
 reruns, but production still needs a deployed scheduler, alert ownership,
 cross-run operational accounting, and a fresh Docker-backed recovery proof.
 

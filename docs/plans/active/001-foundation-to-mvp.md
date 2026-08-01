@@ -254,16 +254,17 @@ Approval transitions are role-checked in the private API and guarded by migratio
 ### 6. Operations
 
 Status: bounded worker events, workflow budgets, schema-validated/idempotent
-auth and source maintenance runners with stable job IDs, independent quota and
-retention budgets, source-policy warnings, centralized source-quota
+auth and source maintenance runners with stable job IDs, independent quota,
+snapshot-resume, and retention budgets, source-policy warnings, centralized source-quota
 reservations, owner-scoped all-workspace maintenance, policy-derived retention
 tombstones, terminal/expired source-lease purge, server-clock stale-claim
-recovery, bounded retryable deletion propagation, and retryable password-recovery/workspace-invitation
+recovery, bounded identifier-only snapshot resume with terminal/retry/coverage
+counters, bounded retryable deletion propagation, and retryable password-recovery/workspace-invitation
 delivery are implemented. Deletion propagation durably queues source-scoped
 active-evidence recomputation jobs with bounded retries, blocked-seed recovery,
 and Temporal-start idempotency;
-deployment metrics, traces, role
-separation, incident drills, and production security review remain.
+deployment scheduler ownership/alerting, metrics, traces, role separation,
+incident drills, and production security review remain.
 
 ### 7. Desktop release
 

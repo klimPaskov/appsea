@@ -47,6 +47,11 @@ description: Use when adding or changing AppSea worker commands, scheduled jobs,
     workspace to be active, private, and non-fixture. User-triggered requests
     need a separate authenticated owner/editor admission function with fixed
     rate/concurrency limits; do not let a CLI bypass that source-policy gate.
+15. When a maintenance pass also resumes source snapshots, enumerate the same
+    bounded active-workspace set in stable order, process at most one due job
+    per workspace, and apply an independent batch budget. Report terminal,
+    retry, and coverage-gap counters without logging source content or caller
+    idempotency keys; keep a targeted resume command for operator recovery.
 
 Do not rely on an in-memory loop for production durability. Do not hide a partial result behind a successful exit code.
 
