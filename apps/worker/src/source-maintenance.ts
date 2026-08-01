@@ -4,6 +4,7 @@ import {
   databaseConfigFromEnv,
   PostgresDeletionPropagationRepository,
   PostgresProductionWorkflowAdmissionRepository,
+  PostgresSourceCollectionLeaseRepository,
   PostgresSourceQuotaRepository
 } from '@appsea/db'
 import { emitWorkerEvent } from './observability'
@@ -34,10 +35,12 @@ try {
   const quotaRepository = new PostgresSourceQuotaRepository(pool)
   const deletionRepository = new PostgresDeletionPropagationRepository(pool)
   const admissionRepository = new PostgresProductionWorkflowAdmissionRepository(pool)
+  const leaseRepository = new PostgresSourceCollectionLeaseRepository(pool)
   const result = await runSourceMaintenance(input, {
     quota: quotaRepository,
     deletion: deletionRepository,
-    admission: admissionRepository
+    admission: admissionRepository,
+    leases: leaseRepository
   })
   emitWorkerEvent({
     event: 'source_quota_expiry_finished',
@@ -45,7 +48,8 @@ try {
     jobId: result.jobId,
     quotaReservationsExpired: result.quotaReservationsExpired,
     quotaReservationsPurged: result.quotaReservationsPurged,
-    productionWorkflowAdmissionsPurged: result.productionWorkflowAdmissionsPurged
+    productionWorkflowAdmissionsPurged: result.productionWorkflowAdmissionsPurged,
+    sourceCollectionLeasesPurged: result.sourceCollectionLeasesPurged
   })
   if (result.retentionTombstonesQueued > 0) {
     emitWorkerEvent({
@@ -74,6 +78,7 @@ try {
     quotaReservationsExpired: result.quotaReservationsExpired,
     quotaReservationsPurged: result.quotaReservationsPurged,
     productionWorkflowAdmissionsPurged: result.productionWorkflowAdmissionsPurged,
+    sourceCollectionLeasesPurged: result.sourceCollectionLeasesPurged,
     retentionTombstonesQueued: result.retentionTombstonesQueued,
     deletionTombstonesProcessed: result.deletionTombstonesProcessed,
     deletionObjectsAffected: result.deletionObjectsAffected,

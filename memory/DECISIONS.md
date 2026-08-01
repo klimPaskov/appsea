@@ -1,28 +1,7 @@
 # Decision memory
 
-## 2026-07-10: Repository-native Codex structure
-
-Use root and scoped `AGENTS.md`, `.agents/skills`, `.codex/agents`, and `.codex/config.toml`. Do not maintain a second custom hook or instruction system.
-
-## 2026-07-10: Bounded guidance and memory
-
-Keep the root `AGENTS.md` below 32 KiB. Put task state in `memory/ACTIVE.md`, reusable workflows in skills, and deep explanations in docs.
-
-## 2026-07-10: Web first, desktop later
-
-Treat the website contract as the source of truth. Stage a Tauri shell after the web experience and API contracts stabilize.
-
-## 2026-07-10: Source policy before connector activation
-
-Every source connector remains disabled until purpose, access, commercial use, quotas, retention, deletion, attribution, and display rules are reviewed.
-
-## 2026-07-10: Sparse interface
-
-The leaderboard page shows the ranked list only. Research, complaints, competitors, and coding plans use separate routes.
-
-## 2026-07-10: Fixture-first implementation
-
-Prove the complete product loop with labeled synthetic data before integrating live sources. Fixture mode is useful for deterministic tests and must never be presented as market evidence.
+The six foundation decisions from 2026-07-10 are archived in
+[`archive/DECISIONS-foundation-2026-07-10.md`](archive/DECISIONS-foundation-2026-07-10.md).
 
 ## 2026-07-11: PostgreSQL persistence and role separation
 
@@ -331,3 +310,17 @@ purges terminal or expired admission rows. A reservation is not released on an
 ambiguous Temporal error, so a late-starting workflow cannot bypass the
 concurrency gate. The public leaderboard and source-policy boundary remain
 unchanged; deployment configuration and Temporal authorization remain open.
+
+## 2026-08-01: Bind external collection to a policy lease
+
+The worker must not read an approved source policy, perform an external fetch,
+and then trust that policy snapshot after a revocation or expiry race. Migration
+`0039` therefore stores a workspace-scoped, digest-only lease whose acquisition
+requires the active source, current policy version, and a matching immutable
+operator approval review. The lease owns one server/workflow-observed capture
+timestamp, which retries replay rather than re-stamping complaint provenance.
+The worker asserts the lease and policy immediately before persistence and
+releases it only after the collection transaction commits. Terminal leases are
+purged through the existing bounded source-maintenance job. An uncertain quota
+settlement remains explicit operator reconciliation; automatic re-fetch would
+risk duplicate external collection.

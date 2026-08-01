@@ -59,6 +59,7 @@ describe('worker observability', () => {
       passwordResetDeliveriesFailed: 1,
       workspaceInvitationsDeleted: 5,
       productionWorkflowAdmissionsPurged: 6,
+      sourceCollectionLeasesPurged: 7,
       workspaceInvitationDeliveriesClaimed: 4,
       workspaceInvitationDeliveriesSent: 3,
       workspaceInvitationDeliveriesFailed: 1
@@ -76,6 +77,7 @@ describe('worker observability', () => {
       passwordResetDeliveriesFailed: 1,
       workspaceInvitationsDeleted: 5,
       productionWorkflowAdmissionsPurged: 6,
+      sourceCollectionLeasesPurged: 7,
       workspaceInvitationDeliveriesClaimed: 4,
       workspaceInvitationDeliveriesSent: 3,
       workspaceInvitationDeliveriesFailed: 1

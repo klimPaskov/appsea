@@ -29,6 +29,7 @@ Open `http://localhost:3000` after the web server starts.
 - PostgreSQL migrations, normalized fixture persistence, RLS, lineage, and replay verification
 - durable fixture workflow with PostgreSQL checkpoints, bounded retries, budgets, cancellation, and Temporal restart/replay proof
 - authenticated production workflow ingress with durable per-workspace rate/concurrency admission, idempotent replay, and bounded admission retention
+- policy-bound production source collection leases with stable server-observed capture timestamps, post-fetch policy rechecks, and bounded lease retention
 - private workspace authentication with hashed/revocable sessions, authenticated active-session inventory and reauthenticated per-session revocation, password step-up for owner mutations, and membership-checked research reads
 - owner-scoped invitations for existing AppSea accounts with hash-only tokens, encrypted outbox delivery, acceptance/revocation, and a production kill switch
 - provider-neutral password recovery mechanics with hash-only reset tokens,

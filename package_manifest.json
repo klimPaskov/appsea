@@ -1,10 +1,10 @@
 {
   "name": "AppSea Codex Starter",
   "version": "0.3.0",
-  "generatedAt": "2026-08-01T06:38:23+00:00",
-  "fileCount": 591,
-  "byteCount": 24206518,
-  "packageDigest": "6357736329abd4aa7e17ac2542b7a292c68b3783f797b87afd62803d77fb0f75",
+  "generatedAt": "2026-08-01T07:23:30+00:00",
+  "fileCount": 597,
+  "byteCount": 24263356,
+  "packageDigest": "3ecc1f3c3f6edd66fcc87a80b78c6703a085f9aca07d30d3ab71de9771875570",
   "files": [
     {
       "path": ".agents/skills/AGENTS.md",
@@ -1005,8 +1005,8 @@
     {
       "path": "apps/web/tsconfig.tsbuildinfo",
       "category": "application code",
-      "bytes": 246284,
-      "sha256": "3e9160f58c02d7159af2d4af90457e8e2ab95d009b9c0cb0f7aa7e2a503305f9"
+      "bytes": 246245,
+      "sha256": "bf82cfe9618c8596760c23616dc2d483aee0c4ef8c30a0f29a4e828ea2be85d4"
     },
     {
       "path": "apps/worker/AGENTS.md",
@@ -1089,26 +1089,26 @@
     {
       "path": "apps/worker/src/maintenance-runner.test.ts",
       "category": "application code",
-      "bytes": 9943,
-      "sha256": "f7a15c2c7ddacbb2bf1099db18276637d0404463af5aad9018fdf63835eacf8f"
+      "bytes": 11236,
+      "sha256": "ad2041baf4880fd39baee67b493131095c0b2c8801e8557e9c269b935c0ef570"
     },
     {
       "path": "apps/worker/src/maintenance-runner.ts",
       "category": "application code",
-      "bytes": 7122,
-      "sha256": "77b3a9edb7a2f76ce2d732cdecadadb4ea6537447d85a7d053cd4c7df79d5184"
+      "bytes": 7859,
+      "sha256": "e8fb46d55def4f1a52b98c31475f56e06deaed5b33d480c8ff1c15ab7dfbd3e2"
     },
     {
       "path": "apps/worker/src/observability.test.ts",
       "category": "application code",
-      "bytes": 3239,
-      "sha256": "db1a9c2d38cf62a458ef7cd0b003316006d29c468d5655be339be1ee4ab72089"
+      "bytes": 3317,
+      "sha256": "1c0853a4721bda2caf49874ce3d6ec67f4751d872cb95a23c6abb1589a766f7b"
     },
     {
       "path": "apps/worker/src/observability.ts",
       "category": "application code",
-      "bytes": 5685,
-      "sha256": "502bb89975fbdd9a2f03d9f943f3ceae4e3e23282709af00bc90bff1e875d365"
+      "bytes": 5902,
+      "sha256": "544ccd86b27e7171a854b70bf88c5ca538d21968565cffc42aeb8c3e6f7d1e50"
     },
     {
       "path": "apps/worker/src/plan-sample.ts",
@@ -1147,10 +1147,16 @@
       "sha256": "39f8cdd8b582cbcf7ad78898fe9d2bb84348288fd9860c81ba8c78a9a269c7b8"
     },
     {
+      "path": "apps/worker/src/production-cfpb-runner.test.ts",
+      "category": "application code",
+      "bytes": 5852,
+      "sha256": "a263779868f8494ecc4840a16123782403c2c28a801749ad2d0bec4b07b84e23"
+    },
+    {
       "path": "apps/worker/src/production-cfpb-runner.ts",
       "category": "application code",
-      "bytes": 4488,
-      "sha256": "6a866893fe483febf494759210c2044c064863e0b46105a72fbbb084b6a4ca04"
+      "bytes": 7286,
+      "sha256": "68cbf25d8bef8c86465831353bdd4133e36ad7f5f88c61f72d6d77328a3bb60c"
     },
     {
       "path": "apps/worker/src/production-cfpb.ts",
@@ -1161,8 +1167,8 @@
     {
       "path": "apps/worker/src/production-workflow-activities.ts",
       "category": "application code",
-      "bytes": 8492,
-      "sha256": "b308ebff4494c3ed4e8e1a49836f3bc5d36dcceb0e9a7b257747312c64d2532a"
+      "bytes": 8597,
+      "sha256": "d39b664a517dee8a3e4040b77b520c33971a7b134c00bfba46dbab180a185a43"
     },
     {
       "path": "apps/worker/src/signed-delivery.ts",
@@ -1185,8 +1191,8 @@
     {
       "path": "apps/worker/src/source-maintenance.ts",
       "category": "application code",
-      "bytes": 3689,
-      "sha256": "790966b823af279a52f25332d66384f46d820651b6c88aab9e0bf67fae90da39"
+      "bytes": 3979,
+      "sha256": "ba6f589656a7a200b04bbc2592b64b2c707ecb620ef637647852fd8c0c51c7eb"
     },
     {
       "path": "apps/worker/src/source-policy-cfpb-review.ts",
@@ -1336,7 +1342,7 @@
       "path": "artifacts/plans/inbox-relay/01-product-brief.md",
       "category": "generated sample artifact",
       "bytes": 3694,
-      "sha256": "759fbf1f2808bf0b9575cef69ae14c0fa721eef9b376d8410e2022d0a9ad1074"
+      "sha256": "43da616f07c0257a138c1c843bf8db77fd84eb47c81c82d62ef0a8e9d83c8c4d"
     },
     {
       "path": "artifacts/plans/inbox-relay/02-mvp-scope.md",
@@ -1354,7 +1360,7 @@
       "path": "artifacts/plans/inbox-relay/04-task-graph.json",
       "category": "generated sample artifact",
       "bytes": 4730,
-      "sha256": "19fc05493409227b0402462090b459259ca5ccfabd8ecd4d89d86558fd6d8685"
+      "sha256": "636f31215f38bdc2cc15ba52a1617db13de9f967906cf9bcf9013dc7ff4bc1b4"
     },
     {
       "path": "artifacts/plans/inbox-relay/05-validation.md",
@@ -1378,7 +1384,7 @@
       "path": "artifacts/research/seed-research-artifact.json",
       "category": "generated sample artifact",
       "bytes": 8625,
-      "sha256": "c32c951144bcf00accaaf6d41dd6a169c00e3a5458ec3a901374198a83bc623c"
+      "sha256": "ae795a165f184c3f51721b8c1ea3fbad7e899430c3f56e5ff0263bfa201083ea"
     },
     {
       "path": "CHANGELOG.md",
@@ -1755,8 +1761,8 @@
     {
       "path": "docs/architecture/data-flow.md",
       "category": "documentation",
-      "bytes": 5203,
-      "sha256": "3a2449b17a98a15e26ff683bd586e183fa6f1a7bb404d9932bbb849532aa3fca"
+      "bytes": 5586,
+      "sha256": "28289faca22cace470c4cf2d02248be7e63e856a81d0f1ea6bc7514c256e60aa"
     },
     {
       "path": "docs/architecture/repository-map.md",
@@ -1767,14 +1773,14 @@
     {
       "path": "docs/architecture/security-boundaries.md",
       "category": "documentation",
-      "bytes": 12903,
-      "sha256": "27b8842f9af1a72b681b9cfad3f83aaa80308757ddf34dad2e5576aa75de71c2"
+      "bytes": 13408,
+      "sha256": "b3924017c85b306446075ebfbbfdc630d78ef04b9d10ae0759af71e7836970a4"
     },
     {
       "path": "docs/architecture/system-overview.md",
       "category": "documentation",
-      "bytes": 3810,
-      "sha256": "5f4d8294779b5cc53f56952ce644a9a1f7f77150d28a4c918e4036e9b25761c7"
+      "bytes": 4109,
+      "sha256": "1cfea3777719e2037348c2748b08f3ed56d917ab92788259d44292537e6f0127"
     },
     {
       "path": "docs/generated/repository-map.md",
@@ -1797,14 +1803,14 @@
     {
       "path": "docs/INDEX.md",
       "category": "documentation",
-      "bytes": 5221,
-      "sha256": "6c72b571e1a201e1c23e6a37aa3fd6fcb3449a2ff727c6eef407f8130ef02a8a"
+      "bytes": 5354,
+      "sha256": "94a96f3647fc452ac02fff6852840688da714c9b8dea3550af5f3246dd4afbf3"
     },
     {
       "path": "docs/plans/active/001-foundation-to-mvp.md",
       "category": "documentation",
-      "bytes": 12571,
-      "sha256": "9101e9d3bf277201e999b0252b2419c068afd1b1670156bf426d96bcec6c3832"
+      "bytes": 13330,
+      "sha256": "32f7dfd7394c271aab3164defe2e7ccd683f2280bafa76ee7536b8974a84a431"
     },
     {
       "path": "docs/product/account-closure.md",
@@ -1815,8 +1821,8 @@
     {
       "path": "docs/product/cfpb-source-policy.md",
       "category": "documentation",
-      "bytes": 7034,
-      "sha256": "3e27715ab21b43a16c7c9b9f65c010e8776a38383d17f6db5865240bb555aa1a"
+      "bytes": 7373,
+      "sha256": "5c88969e2f85351f27acaf5fb657f460e07ac2b5d7d183404aef9741fb37ff6d"
     },
     {
       "path": "docs/product/leaderboard.md",
@@ -1923,14 +1929,14 @@
     {
       "path": "docs/runbooks/production-source-collection.md",
       "category": "documentation",
-      "bytes": 7185,
-      "sha256": "a8cbe58c7ac99b4f49c7a09915b679a25c8556f9a4b49a6e8bd195d95a6d0b70"
+      "bytes": 8152,
+      "sha256": "d8b1aa0ededef1053b916fa93ec9ce135a5ed63c28bd27a7673773d4a8367c16"
     },
     {
       "path": "docs/runbooks/source-maintenance.md",
       "category": "documentation",
-      "bytes": 4039,
-      "sha256": "3128a7bbeb83f2a754c33585bcae09cd0aa4c08f1e93a70116264763c8eb9e55"
+      "bytes": 4648,
+      "sha256": "37129a91784342862edacf2a45d8cf08ab4a767c3b4dc6e901c941635ea24149"
     },
     {
       "path": "docs/runbooks/source-policy-review.md",
@@ -1953,8 +1959,8 @@
     {
       "path": "docs/runbooks/worker-observability.md",
       "category": "documentation",
-      "bytes": 2633,
-      "sha256": "dbb2aee780d8fd6d6ce2c9bbe39ef0874e99a281cc11a3f665eb410dfc4f9254"
+      "bytes": 2670,
+      "sha256": "09414635d70ca9bd4f31e6b33da9e2ba9652f051823ea5cf77e45017f639cfe1"
     },
     {
       "path": "docs/runbooks/workspace-invitations.md",
@@ -2151,8 +2157,8 @@
     {
       "path": "docs/status/current.md",
       "category": "documentation",
-      "bytes": 6833,
-      "sha256": "8aa7cdeea990ccc71cec0b7ac6e957af79afb36e97db5038a1345729db2c22f8"
+      "bytes": 6936,
+      "sha256": "6be188ed8d9aec0f5effffdb71df277d4ff917b2de54814916b3d3b84e7223e5"
     },
     {
       "path": "docs/status/durable-workflow-completion-report.md",
@@ -2169,8 +2175,8 @@
     {
       "path": "docs/status/known-gaps.md",
       "category": "documentation",
-      "bytes": 11671,
-      "sha256": "e1f52c23cbe4afea1ea03a1cb401e9135bd9217d45b28fd676859dfcc6465869"
+      "bytes": 11806,
+      "sha256": "81f673da9bba453fe1c1be35e5f720ba571f6715a7c45f3e63e2e70e605e232f"
     },
     {
       "path": "docs/status/opportunity-availability-repair-completion-report-2026-07-29.md",
@@ -2207,6 +2213,12 @@
       "category": "documentation",
       "bytes": 6309,
       "sha256": "1b9f50c7b6e2588d4cad5953a83c7c09bf4bb5405aab59fdfea852adcfc23f3c"
+    },
+    {
+      "path": "docs/status/source-collection-lease-completion-report-2026-08-01.md",
+      "category": "documentation",
+      "bytes": 3633,
+      "sha256": "9d4a8d75ff116e6edff99192e12d5215d80c09c7c8af8fea3f6757054c303fde"
     },
     {
       "path": "docs/status/starter-completion-report.md",
@@ -2421,8 +2433,8 @@
     {
       "path": "memory/ACTIVE.md",
       "category": "project memory",
-      "bytes": 6385,
-      "sha256": "289718861b1d36bc545afc1bb2a13e3de94418b69bae2af5d6823fc23cdfa0f4"
+      "bytes": 6828,
+      "sha256": "27d26b9fecbb2282bf51a4b42eabe45863b85dc1f20b5131945af7280a761a5b"
     },
     {
       "path": "memory/AGENTS.md",
@@ -2431,16 +2443,22 @@
       "sha256": "4ac39e6496a294be34007de9b04e5def5d4112176b4d8744700f7f63452db89a"
     },
     {
+      "path": "memory/archive/DECISIONS-foundation-2026-07-10.md",
+      "category": "project memory",
+      "bytes": 1223,
+      "sha256": "8d70ea0edd6c3d768617e51e22f8a7dbfe4396954c8afc51c17b613e14866b3d"
+    },
+    {
       "path": "memory/DECISIONS.md",
       "category": "project memory",
-      "bytes": 19993,
-      "sha256": "042eafa5075936ee4515ff535f13e7e18765f7cf35f8e52849cb8d0cc1e4c56b"
+      "bytes": 19869,
+      "sha256": "12103bb3e506f98182a4ac189fee404279c9f14d9431b1b8b0ee43d2a70a4a85"
     },
     {
       "path": "memory/HOT.md",
       "category": "project memory",
-      "bytes": 2490,
-      "sha256": "8e86c7b009a762c26180a4db25ec03eb5cfb8237846d5ea6b760fa1998815f28"
+      "bytes": 2433,
+      "sha256": "09a03e1715c75e62165f26a329a93fdf541208437fd95eb52cbbaff3145e7bf3"
     },
     {
       "path": "memory/LESSONS.md",
@@ -2451,8 +2469,8 @@
     {
       "path": "memory/PROJECT.md",
       "category": "project memory",
-      "bytes": 4780,
-      "sha256": "503160b608827891bb8056addf99fb3c9782db0d8c462f7becabf890cdbd35eb"
+      "bytes": 4827,
+      "sha256": "1e44c26d8cef8ba081500ef1a791a93df22bd23bceb1301680e3e630ea84b73b"
     },
     {
       "path": "memory/README.md",
@@ -2667,14 +2685,14 @@
     {
       "path": "packages/contracts/src/contracts.test.ts",
       "category": "shared package",
-      "bytes": 36046,
-      "sha256": "d32ef4f645abdfd97ce57c4cdf5156315e05bab85124e9e83950b9e509087ea0"
+      "bytes": 36954,
+      "sha256": "ef270e3620830991366a15e8fc122769e410ce6aea2d731db29a90052345bbbc"
     },
     {
       "path": "packages/contracts/src/index.ts",
       "category": "shared package",
-      "bytes": 95521,
-      "sha256": "159809a9c3e72537d0faefce19021b5b83a108206856b90e690b3a6e9e578d12"
+      "bytes": 96325,
+      "sha256": "e4eaccf4f1a025f041f7c8155c794b68d299cc7ee1b6cd6620ecefbe2162d8f3"
     },
     {
       "path": "packages/contracts/src/object-storage-contracts.test.ts",
@@ -2697,8 +2715,8 @@
     {
       "path": "packages/db/integration/db.integration.test.ts",
       "category": "shared package",
-      "bytes": 93541,
-      "sha256": "6cd6f291f73bfcaa449b4600e495eb445547d8362da63cf0e2addcb85efd2b5c"
+      "bytes": 98518,
+      "sha256": "d18249c4df118acb8e9292284b35a5a13e0e78fb42260f6b0d69c18087103ca6"
     },
     {
       "path": "packages/db/migrations/0001_production_persistence.sql",
@@ -2929,10 +2947,16 @@
       "sha256": "3ec69b46a0aaf7d173c62b170ce9c1b8f2299d7cc3b13007c7755c241e4a019c"
     },
     {
+      "path": "packages/db/migrations/0039_source_collection_leases.sql",
+      "category": "shared package",
+      "bytes": 13357,
+      "sha256": "f606cd7d09a4240c645c4659faeafbfe2dcd6207ee13b49b6b3942e732293968"
+    },
+    {
       "path": "packages/db/package.json",
       "category": "shared package",
-      "bytes": 1375,
-      "sha256": "6cb88ffb5d63e8e42fb0c6a726e900125b4d25333ca286a6eb662552770ae2dc"
+      "bytes": 1455,
+      "sha256": "1b6e752c99ffbe88ee84dc911e1e33073f514e5edb881bdcca3f2b223853b639"
     },
     {
       "path": "packages/db/src/auth-repository.test.ts",
@@ -2967,8 +2991,8 @@
     {
       "path": "packages/db/src/db.test.ts",
       "category": "shared package",
-      "bytes": 16742,
-      "sha256": "e323445cf5bcae30ad58c0136506237258518fbb64e1e35b9794a2442ce63056"
+      "bytes": 17436,
+      "sha256": "9c101b28b5371aaf8f180ea2a0dee4984d2f014daab75987ba6b43b29b42b546"
     },
     {
       "path": "packages/db/src/deletion-propagation-repository.test.ts",
@@ -2997,8 +3021,8 @@
     {
       "path": "packages/db/src/index.ts",
       "category": "shared package",
-      "bytes": 4579,
-      "sha256": "f1652bcabe529bf08d7b4e8df6fe47e74a2dfaf382c8f60bb48a42a02332d255"
+      "bytes": 4896,
+      "sha256": "e0b951213f244c77117aac7106ae23f596580589b7cf12eedf84f13c385ac5be"
     },
     {
       "path": "packages/db/src/migrations.ts",
@@ -3069,8 +3093,8 @@
     {
       "path": "packages/db/src/production-collection-repository.ts",
       "category": "shared package",
-      "bytes": 58411,
-      "sha256": "97e32653c97f1ddfc1491da9cc1d90d19ea4428bab4477aeadab47cdabfc2dd1"
+      "bytes": 58751,
+      "sha256": "f1bf6ea33a127b537ef07d5a0be3a1b0c8bc569ec58f662285a892ad06641749"
     },
     {
       "path": "packages/db/src/production-collection-workflow-repository.ts",
@@ -3101,6 +3125,18 @@
       "category": "shared package",
       "bytes": 8615,
       "sha256": "c56009bc7bb117779f2b39aa4a6a257f8275fdd04ef177c72d0c93dd3f6a8568"
+    },
+    {
+      "path": "packages/db/src/source-collection-lease-repository.test.ts",
+      "category": "shared package",
+      "bytes": 5284,
+      "sha256": "211ce01fea6538ea84dd1f2e54bb6c4af4c225b1d9efde15a75eb7a84a288dec"
+    },
+    {
+      "path": "packages/db/src/source-collection-lease-repository.ts",
+      "category": "shared package",
+      "bytes": 9157,
+      "sha256": "e83568545b03c1119d6cfc49fbd2d65f29dc173748a6b4be94bd4933c4a5050a"
     },
     {
       "path": "packages/db/src/source-policy-repository.test.ts",
@@ -3537,8 +3573,8 @@
     {
       "path": "START_HERE.md",
       "category": "repository control",
-      "bytes": 2642,
-      "sha256": "ce768ddebc5e1070a60a1018c34ec17cc93cdf7ebf49c39f7f1b7d5498326786"
+      "bytes": 2797,
+      "sha256": "1a50ce2ec0b6aec39ce913c3ba08ea01d3215fa1db103b4907245c8907a406d9"
     },
     {
       "path": "tsconfig.base.json",

@@ -107,10 +107,14 @@ The private inspection route is
 `/api/workspaces/:workspaceId/research/production/:runId`). It displays only
 the source-policy-allowed representation and the recorded gaps.
 
-The worker rechecks the active approved policy before persistence. A deployment
-must add a short-lived policy revocation lease across the external request
-before activation; until then, a revoke/expiry can race with an already-started
-fetch and the run will fail closed at persistence.
+The worker acquires migration `0039`'s short-lived source collection lease before
+the external request. The lease binds the source, policy version, and request
+digest, records one server-observed capture timestamp, and is rechecked against
+policy approval and expiry immediately before persistence. A retry reuses the
+stored timestamp; an expired or revoked lease becomes terminal and requires
+operator reconciliation. This repository-level boundary is not a deployment
+approval: the CFPB connector remains disabled until legal/privacy/security
+owners approve the policy and the production scheduler/Temporal infrastructure.
 
 ## Coverage gaps and review triggers
 

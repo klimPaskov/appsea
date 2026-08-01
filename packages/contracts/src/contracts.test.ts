@@ -26,6 +26,7 @@ import {
   productionCollectionResultSchema,
   productionCollectionWorkflowStartRequestSchema,
   productionWorkflowAdmissionDecisionSchema,
+  sourceCollectionLeaseResultSchema,
   researchJobBudgetSchema,
   sourcePolicySchema,
   sourceMaintenanceInputSchema,
@@ -303,6 +304,7 @@ describe('contracts', () => {
         quotaReservationsExpired: 3,
         quotaReservationsPurged: 4,
         productionWorkflowAdmissionsPurged: 2,
+        sourceCollectionLeasesPurged: 1,
         retentionTombstonesQueued: 5,
         deletionTombstonesProcessed: 6,
         deletionObjectsAffected: 7,
@@ -321,6 +323,7 @@ describe('contracts', () => {
         quotaReservationsExpired: 3,
         quotaReservationsPurged: 4,
         productionWorkflowAdmissionsPurged: 2,
+        sourceCollectionLeasesPurged: 1,
         retentionTombstonesQueued: 5,
         deletionTombstonesProcessed: 5,
         deletionObjectsAffected: 10_000_001,
@@ -864,6 +867,24 @@ describe('contracts', () => {
     ).toBe(false)
   })
 
+  it('keeps source collection lease decisions bounded and timestamped', () => {
+    expect(
+      sourceCollectionLeaseResultSchema.safeParse({
+        decision: 'acquired',
+        observedAt: now,
+        expiresAt: '2026-07-10T00:30:00.000Z'
+      }).success
+    ).toBe(true)
+    expect(
+      sourceCollectionLeaseResultSchema.safeParse({
+        decision: 'replayed',
+        observedAt: now,
+        expiresAt: '2026-07-10T00:30:00.000Z',
+        inputHash: 'raw-source-text-must-not-cross-the-lease-boundary'
+      }).success
+    ).toBe(false)
+  })
+
   it('keeps the private analysis handoff status identifier-only and bounded', () => {
     const parsed = productionAnalysisHandoffReadModelSchema.safeParse({
       handoffId: 'handoff:analysis:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
@@ -929,6 +950,7 @@ describe('contracts', () => {
         },
         requestedAt: now
       },
+      observedAt: now,
       policy,
       complaints: [
         {
@@ -953,6 +975,12 @@ describe('contracts', () => {
       warnings: []
     })
     expect(result.success).toBe(true)
+    expect(
+      productionCollectionPersistenceInputSchema.safeParse({
+        ...(result.success ? result.data : {}),
+        observedAt: undefined
+      }).success
+    ).toBe(false)
     expect(
       productionCollectionResultSchema.safeParse({
         workspaceId: 'workspace-production',
@@ -995,6 +1023,7 @@ describe('contracts', () => {
         },
         requestedAt: now
       },
+      observedAt: now,
       policy: sourcePolicySchema.parse({
         sourceId: 'cfpb-consumer-complaints',
         displayName: 'CFPB',

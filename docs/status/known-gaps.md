@@ -128,16 +128,17 @@ stored content hash and version.
 In this tranche, `redact` and
 `tombstone` intentionally share the same source-deletion propagation path;
 field-level redaction that preserves derived payloads is not implemented.
-Collection timestamps remain
-caller-provided so idempotent retries can reproduce the same request; a
-server-issued timestamp/freshness policy is still needed for a multi-tenant
-deployment. The collection snapshot currently records that requested timestamp
-while source items use the connector's observed capture time; the two need an
-explicit server-observed timestamp contract. The worker revalidates the approved policy before persistence, but
-the external fetch is not yet covered by a revocation lease; deployment must
-close that policy read/fetch race before enabling a live source. Direct Temporal
-starts also rely on namespace/gateway authorization to make the persisted actor
-claim trustworthy.
+Migration `0039` adds a workspace-scoped, digest-only source collection lease.
+The lease binds acquisition to the current active policy and matching operator
+approval review, stores one observed collection timestamp for retry replay, and
+is asserted again immediately before persistence. The persistence snapshot now
+uses that observed timestamp while `requestedAt` remains caller/idempotency
+metadata. Terminal or expired leases are bounded by source maintenance. This
+closes the repository-level policy read/fetch race, but production deployment
+still needs lease-revocation drills, scheduler ownership, Temporal namespace
+authorization, and Docker-backed crash/retry evidence. A quota settled without
+a persisted result intentionally remains an operator-reconciliation boundary;
+the worker does not release or re-fetch optimistically.
 
 ## Models
 

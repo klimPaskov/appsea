@@ -130,22 +130,26 @@ export function createProductionCollectionActivities(pool: Pool): ProductionColl
           consumedCostMicros: 0,
           occurredAt: parsed.occurredAt
         })
-        const persistence = await runProductionCfpbCollection(pool, {
-          workspaceId: parsed.input.workspaceId,
-          campaignId: parsed.input.campaignId,
-          runId: parsed.input.runId,
-          // The caller-owned key is intentionally not placed in Temporal
-          // history; the stable digest is the persistence idempotency key.
-          idempotencyKey: parsed.input.idempotencyDigest,
-          sourceId: parsed.input.sourceId,
-          policyVersion: parsed.input.policyVersion,
-          query: parsed.input.query,
-          limit: parsed.input.limit,
-          purpose: parsed.input.purpose,
-          requestedDisplayMode: parsed.input.requestedDisplayMode,
-          budget: parsed.input.budget,
-          requestedAt: parsed.input.requestedAt
-        })
+        const persistence = await runProductionCfpbCollection(
+          pool,
+          {
+            workspaceId: parsed.input.workspaceId,
+            campaignId: parsed.input.campaignId,
+            runId: parsed.input.runId,
+            // The caller-owned key is intentionally not placed in Temporal
+            // history; the stable digest is the persistence idempotency key.
+            idempotencyKey: parsed.input.idempotencyDigest,
+            sourceId: parsed.input.sourceId,
+            policyVersion: parsed.input.policyVersion,
+            query: parsed.input.query,
+            limit: parsed.input.limit,
+            purpose: parsed.input.purpose,
+            requestedDisplayMode: parsed.input.requestedDisplayMode,
+            budget: parsed.input.budget,
+            requestedAt: parsed.input.requestedAt
+          },
+          { observedAt: parsed.occurredAt }
+        )
         const result = productionCollectionWorkflowPersistenceActivityResultSchema.parse({
           persistence,
           sourceItemsProcessed: persistence.sourceItemCount,

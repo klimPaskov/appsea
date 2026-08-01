@@ -68,6 +68,15 @@ export {
   type ProductionWorkflowAdmissionResult
 } from './production-workflow-admission-repository'
 export {
+  PostgresSourceCollectionLeaseRepository,
+  SourceCollectionLeaseConflictError,
+  SourceCollectionLeasePolicyDeniedError,
+  SourceCollectionLeaseTerminalError,
+  sourceCollectionLeaseLimits,
+  type SourceCollectionLeaseInput,
+  type SourceCollectionLeaseResult
+} from './source-collection-lease-repository'
+export {
   PostgresProductionAnalysisHandoffRepository,
   ProductionAnalysisHandoffConflictError,
   ProductionAnalysisHandoffStateError,

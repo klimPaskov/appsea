@@ -10,6 +10,7 @@
     "./production-collection": "./src/production-collection.ts",
     "./production-collection-workflow": "./src/production-collection-workflow.ts",
     "./production-workflow-admission": "./src/production-workflow-admission-repository.ts",
+    "./source-collection-lease": "./src/source-collection-lease-repository.ts",
     "./production-analysis": "./src/production-analysis.ts",
     "./production-analysis-recompute": "./src/production-analysis-recompute-repository.ts",
     "./opportunity-seed-review": "./src/opportunity-seed-review.ts",

@@ -52,6 +52,10 @@ workflow only from active evidence and an approved immutable seed.
 Migration `0038` adds a pre-Temporal, workspace-serialized production start
 admission with fixed rate/concurrency limits, digest-only replay identity, and
 bounded terminal/expired-row purge.
+Migration `0039` adds a forced-RLS, digest-only source collection lease. It
+requires a matching operator-approved policy review, preserves one observed
+collection timestamp across retries, rechecks policy immediately before
+persistence, and exposes only bounded terminal-lease purge to maintenance.
 
 Production evolution still requires authenticated/TLS-protected Temporal,
 production identity/recovery policy and scheduled/distributed validation of the

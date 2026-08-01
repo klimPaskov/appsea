@@ -25,7 +25,7 @@ Status: production-shaped foundation implemented and validated locally; producti
 
 Implemented:
 
-- PostgreSQL 18 schema and thirty-eight forward, checksummed migrations
+- PostgreSQL 18 schema and thirty-nine forward, checksummed migrations
 - normalized source, evidence, complaint, cluster, competitor, opportunity, score, report, plan, audit, cost, deletion, outbox, and lineage tables
 - no-login owner, separate migrator, and least-privilege runtime role contract
 - forced workspace RLS and transaction-scoped workspace context
@@ -51,6 +51,10 @@ Implemented:
 - migration `0032_complaint_review_governance.sql` adds an editor/owner review
   boundary for production complaint observations, with active-evidence checks
   and identifier-only audit/outbox receipts
+- migration `0039_source_collection_leases.sql` binds an external collection
+  attempt to an approved policy review, preserves one server-observed capture
+  timestamp across retries, rechecks policy/expiry immediately before
+  persistence, and bounds terminal-lease retention through source maintenance
 - skip-locked deletion tombstone propagation that redacts source/evidence rows
   and marks dependent report/plan versions unavailable
 - global-auth password-reset tokens with latest-only semantics, encrypted
@@ -94,6 +98,9 @@ Implemented:
   replayed digests do not consume another slot, workflow initialization
   consumes reservations, and bounded source maintenance purges terminal or
   expired admission rows
+- the production runner acquires a digest-only source lease before the fetch,
+  supplies its immutable observed timestamp to complaint/quota provenance,
+  asserts the lease before persistence, and releases it only after commit
 - migration `0034_production_analysis_handoffs.sql` adds an approved-seed-bound,
   skip-locked handoff queue written in the collection completion transaction;
   the durable worker reconstructs active policy/evidence lineage and starts the
@@ -122,6 +129,9 @@ Implemented:
   narrative consent/scrubbing gate, malformed-record warnings, and full-snapshot
   deletion events; the connector requires the durable quota capability outside
   tests
+- the production runner binds the request to the approved policy review and
+  does not fetch without a durable lease; the CFPB source remains disabled
+  pending legal/privacy/security approval
 - deterministic synthetic HTTP fixtures covering disabled/pending/expired
   policy, quota, malformed, partial, and deletion paths
 - source-policy record at `docs/product/cfpb-source-policy.md`
@@ -206,7 +216,7 @@ Status: bounded worker events, workflow budgets, schema-validated/idempotent
 auth and source maintenance runners with stable job IDs, independent quota and
 retention budgets, source-policy warnings, centralized source-quota
 reservations, owner-scoped all-workspace maintenance, policy-derived retention
-tombstones, stale-claim recovery, and bounded deletion propagation, and retryable password-recovery/workspace-invitation
+tombstones, terminal/expired source-lease purge, stale-claim recovery, and bounded deletion propagation, and retryable password-recovery/workspace-invitation
 delivery are implemented. Deletion propagation durably queues source-scoped
 active-evidence recomputation jobs with bounded retries, blocked-seed recovery,
 and Temporal-start idempotency;

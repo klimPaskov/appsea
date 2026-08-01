@@ -76,6 +76,13 @@ for that pre-context authorization lookup.
   consume another slot; workflow initialization consumes the reservation, and
   bounded maintenance purges terminal or expired rows. The limits are fixed in
   the reviewed migration rather than accepted from request input.
+- Migration `0039` places the external fetch itself behind a forced-RLS,
+  digest-only collection lease. Acquisition requires the current active source,
+  policy version, and matching operator approval review; retries replay the
+  stored observed timestamp. The worker asserts the lease and policy immediately
+  before persistence, releases it only after commit, and leaves uncertain quota
+  settlement or inactive leases for explicit reconciliation. Runtime code has
+  no direct lease-table write grant.
 - Source-item acquisition policy and evidence display representation are relationally enforced.
 - Fixture report generation keeps retained observations, deterministic score
   inference, contrary evidence, recommendation, and source coverage in separate

@@ -213,7 +213,7 @@ function buildSnapshot(
     deletionCount,
     coverageGaps: coverageGaps(input),
     warnings: input.warnings,
-    capturedAt: input.request.requestedAt
+    capturedAt: input.observedAt
   })
 }
 
@@ -646,6 +646,14 @@ export class PostgresProductionCollectionRepository {
                  ON policy.source_id = source.source_id
                 AND policy.policy_version = $2
               WHERE source.source_id = $1
+                AND EXISTS (
+                  SELECT 1
+                    FROM appsea.source_policy_reviews review
+                   WHERE review.source_id = policy.source_id
+                     AND review.policy_version = policy.policy_version
+                     AND review.decision = 'approved'
+                     AND review.content_hash = policy.content_hash
+                )
               FOR SHARE`,
             [parsed.request.sourceId, parsed.request.policyVersion]
           )
@@ -709,7 +717,7 @@ export class PostgresProductionCollectionRepository {
                 requestedDisplayMode: parsed.request.requestedDisplayMode
               }),
               JSON.stringify(parsed.request.budget),
-              parsed.request.requestedAt
+              parsed.observedAt
             ]
           )
 
@@ -720,7 +728,7 @@ export class PostgresProductionCollectionRepository {
               artifact_id, input_hash, artifact_snapshot, coverage_gaps, warnings,
               requested_at, started_at)
            VALUES ($1, $2, $3, $4, 'production', 'running', $5, $6, $7::jsonb,
-                   $8, $9, $10, $10)`,
+                   $8, $9, $10, $11)`,
             [
               parsed.request.workspaceId,
               parsed.request.runId,
@@ -731,7 +739,8 @@ export class PostgresProductionCollectionRepository {
               JSON.stringify(snapshotBeforeCounts),
               snapshotBeforeCounts.coverageGaps,
               snapshotBeforeCounts.warnings,
-              parsed.request.requestedAt
+              parsed.request.requestedAt,
+              parsed.observedAt
             ]
           )
           await client.query(
@@ -744,7 +753,7 @@ export class PostgresProductionCollectionRepository {
               parsed.request.runId,
               parsed.request.sourceId,
               parsed.request.policyVersion,
-              parsed.request.requestedAt
+              parsed.observedAt
             ]
           )
 
@@ -868,7 +877,7 @@ export class PostgresProductionCollectionRepository {
                 complaint.feature,
                 complaint.category,
                 JSON.stringify({ sourcePolicyVersion: parsed.request.policyVersion }),
-                parsed.request.requestedAt
+                parsed.observedAt
               ]
             )
             await assertHash(
@@ -917,7 +926,7 @@ export class PostgresProductionCollectionRepository {
                 complaint.feature,
                 productionExtractionVersion,
                 complaintHash,
-                parsed.request.requestedAt
+                parsed.observedAt
               ]
             )
             await assertHash(
@@ -1023,14 +1032,14 @@ export class PostgresProductionCollectionRepository {
               JSON.stringify(snapshot),
               snapshot.coverageGaps,
               snapshot.warnings,
-              parsed.request.requestedAt
+              parsed.observedAt
             ]
           )
           await client.query(
             `UPDATE appsea.research_campaigns
                 SET state = 'completed', updated_at = GREATEST(updated_at, $3)
               WHERE workspace_id = $1 AND campaign_id = $2`,
-            [parsed.request.workspaceId, parsed.request.campaignId, parsed.request.requestedAt]
+            [parsed.request.workspaceId, parsed.request.campaignId, parsed.observedAt]
           )
           await client.query(
             `INSERT INTO appsea.audit_events
@@ -1054,7 +1063,7 @@ export class PostgresProductionCollectionRepository {
                 deletionCount: parsed.deletions.length,
                 synthetic: false
               }),
-              parsed.request.requestedAt
+              parsed.observedAt
             ]
           )
           await client.query(
@@ -1079,7 +1088,7 @@ export class PostgresProductionCollectionRepository {
                 complaintCount,
                 synthetic: false
               }),
-              parsed.request.requestedAt
+              parsed.observedAt
             ]
           )
 

@@ -1,7 +1,8 @@
 # Source maintenance
 
 `@appsea/worker` owns the bounded maintenance command for source quota
-reservations, policy-derived retention tombstones, and deletion propagation:
+reservations, policy-bound collection leases, policy-derived retention
+tombstones, and deletion propagation:
 
 ```text
 pnpm --filter @appsea/worker source:maintenance
@@ -40,6 +41,15 @@ reservation. The bounded maintenance pass also purges consumed, released, or
 expired admissions older than the retention cutoff; it never deletes workflow
 jobs or research evidence.
 
+Migration `0039` adds digest-only source collection leases. Acquisition is
+bound to the active source-policy review and stores one observed timestamp for
+retry replay. The worker asserts the lease immediately before collection
+persistence and releases it only after commit. The same bounded maintenance
+pass purges released, expired, or revoked lease rows older than the retention
+cutoff; it never deletes source evidence or policy history. An inactive lease
+or quota settlement without a completed result remains an operator-
+reconciliation case.
+
 Retention policies using `redact` or `tombstone` reuse this path. Policy drafts
 using `purge` are rejected until a separately reviewed object-store/database
 purge implementation is available.
@@ -52,7 +62,8 @@ Configuration is bounded by the command:
 - `APPSEA_SOURCE_QUOTA_RETENTION_DAYS` (1-3,650, default 30)
 - `APPSEA_DELETION_WORKSPACE_ID` (optional persistence-safe workspace ID)
 
-The worker emits secret-free quota expiry/purge, production admission purge,
+The worker emits secret-free quota expiry/purge, production admission and
+source-collection-lease purge,
 retention enqueue, deletion propagation, and failure events.
 `sourceMaintenanceInputSchema` validates the configuration
 before repository work, and `runSourceMaintenance` returns bounded counters

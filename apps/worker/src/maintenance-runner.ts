@@ -13,6 +13,7 @@ import type {
   PostgresAuthRepository,
   PostgresDeletionPropagationRepository,
   PostgresProductionWorkflowAdmissionRepository,
+  PostgresSourceCollectionLeaseRepository,
   PostgresSourceQuotaRepository
 } from '@appsea/db'
 
@@ -29,6 +30,8 @@ export interface SourceMaintenanceDependencies {
     Pick<PostgresDeletionPropagationRepository, 'enqueueExpired'>
   /** Production entry points provide this; legacy fixture test doubles may omit it. */
   admission?: Pick<PostgresProductionWorkflowAdmissionRepository, 'purge'>
+  /** Production entry points provide this; legacy fixture test doubles may omit it. */
+  leases?: Pick<PostgresSourceCollectionLeaseRepository, 'purge'>
 }
 
 export interface AuthRetentionDependencies {
@@ -103,6 +106,7 @@ export async function runSourceMaintenance(
   let deletionOpportunitiesInvalidated = 0
   let recomputationJobsQueued = 0
   let productionWorkflowAdmissionsPurged = 0
+  let sourceCollectionLeasesPurged = 0
   let retentionTombstonesQueued = 0
   if (dependencies.admission) {
     for (const workspaceId of deletionWorkspaceIds) {
@@ -114,6 +118,18 @@ export async function runSourceMaintenance(
         remaining
       )
       productionWorkflowAdmissionsPurged += purged
+    }
+  }
+  if (dependencies.leases) {
+    for (const workspaceId of deletionWorkspaceIds) {
+      if (sourceCollectionLeasesPurged >= parsed.retentionBatchSize) break
+      const remaining = parsed.retentionBatchSize - sourceCollectionLeasesPurged
+      const purged = countWithin(
+        await dependencies.leases.purge(workspaceId, before, remaining),
+        'sourceCollectionLeasesPurged',
+        remaining
+      )
+      sourceCollectionLeasesPurged += purged
     }
   }
   for (const workspaceId of deletionWorkspaceIds) {
@@ -160,6 +176,7 @@ export async function runSourceMaintenance(
     quotaReservationsExpired,
     quotaReservationsPurged,
     productionWorkflowAdmissionsPurged,
+    sourceCollectionLeasesPurged,
     retentionTombstonesQueued,
     deletionTombstonesProcessed,
     deletionObjectsAffected,

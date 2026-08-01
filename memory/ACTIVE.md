@@ -13,8 +13,9 @@ Migrations `0028_production_collection_workflow_projection.sql`,
 `0029_source_retention_enforcement.sql`, `0034_production_analysis_handoffs.sql`,
 `0035_opportunity_availability_repair.sql`,
 `0036_same_run_analysis_recovery.sql`, and
-`0037_production_analysis_recompute_jobs.sql`
-and `0038_production_workflow_ingress_admission.sql` now add the production collection
+`0037_production_analysis_recompute_jobs.sql`,
+`0038_production_workflow_ingress_admission.sql`, and
+`0039_source_collection_leases.sql` now add the production collection
 job/checkpoint projection, policy trigger, bounded policy-derived retention
 tombstone enqueue, hashed idempotency, terminal reconciliation, and user/service
 actor attribution, and deletion-triggered recomputation dispatch state;
@@ -22,8 +23,11 @@ the workflow/client/activity boundary is package-tested but not deployed.
 Migration `0038_production_workflow_ingress_admission.sql` adds a fixed,
 database-serialized per-workspace production start rate/concurrency gate before
 Temporal, consumes short-lived reservations during workflow initialization, and
-purges terminal or expired admissions through source maintenance. Next is
-infrastructure hardening: Temporal provisioning, role separation, automatic
+purges terminal or expired admissions through source maintenance. Migration
+`0039` also binds each external fetch to an approved policy review, replays one
+immutable server-observed capture timestamp, rechecks policy/expiry before
+persistence, releases after commit, and purges terminal leases through source
+maintenance. Next is infrastructure hardening: Temporal provisioning, role separation, automatic
 re-collection, non-fixture outputs, and identity-provider approval. Fixture and
 production collection routes are Temporal gateways; signup workspaces remain
 non-fixture by design.
@@ -56,6 +60,8 @@ approved or live.
 - 2026-08-01 ingress-admission focus: 198 contract/db/worker/web suite tests passed;
   the integration suite now contains PostgreSQL admission serialization,
   replay, rate, concurrency, and purge coverage but remains Docker-blocked
+- 2026-08-01 source-lease focus: contracts, db, and worker suites passed; the
+  PostgreSQL lease replay/policy fixture is present but Docker-blocked
 - Direct TypeScript, ESLint, Prettier, memory, and focused recomputation checks pass; the handoff
   focus passed 62, the private status focus 59, and contracts/db/worker/web suites passed 165. Seed SVG
   generated; raster awaits `cairosvg`; Temporal suites remain blocked by missing

@@ -51,7 +51,8 @@ describe('database foundation', () => {
       '0035',
       '0036',
       '0037',
-      '0038'
+      '0038',
+      '0039'
     ])
     expect(migrations[0]?.checksum).toMatch(/^[a-f0-9]{64}$/)
     expect(migrations[0]?.sql).toContain('CREATE TABLE appsea.evidence_records')
@@ -102,6 +103,9 @@ describe('database foundation', () => {
     const recomputationMigration = migrations.find((migration) => migration.version === '0037')
     const productionAdmissionMigration = migrations.find(
       (migration) => migration.version === '0038'
+    )
+    const sourceCollectionLeaseMigration = migrations.find(
+      (migration) => migration.version === '0039'
     )
     expect(authMigration?.sql).toContain('CREATE TABLE appsea.users')
     expect(authMigration?.sql).toContain('CREATE TABLE appsea.auth_sessions')
@@ -291,6 +295,17 @@ describe('database foundation', () => {
       'CREATE OR REPLACE FUNCTION appsea.purge_production_collection_workflow_admissions'
     )
     expect(productionAdmissionMigration?.sql).toContain('FORCE ROW LEVEL SECURITY')
+    expect(sourceCollectionLeaseMigration?.sql).toContain(
+      'CREATE TABLE appsea.source_collection_leases'
+    )
+    expect(sourceCollectionLeaseMigration?.sql).toContain(
+      'CREATE OR REPLACE FUNCTION appsea.acquire_source_collection_lease'
+    )
+    expect(sourceCollectionLeaseMigration?.sql).toContain(
+      'CREATE OR REPLACE FUNCTION appsea.assert_source_collection_lease'
+    )
+    expect(sourceCollectionLeaseMigration?.sql).toContain('source_policy_reviews')
+    expect(sourceCollectionLeaseMigration?.sql).toContain('FORCE ROW LEVEL SECURITY')
   })
 
   it('requires verified TLS for production database connections', () => {

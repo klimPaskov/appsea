@@ -31,6 +31,7 @@ import {
   PostgresDeletionPropagationRepository,
   PostgresOpportunitySeedReviewRepository,
   PostgresProductionWorkflowAdmissionRepository,
+  PostgresSourceCollectionLeaseRepository,
   ProductionWorkflowConcurrencyLimitError,
   ProductionWorkflowRateLimitError,
   PostgresWorkflowJobRepository,
@@ -438,7 +439,8 @@ describe.sequential('PostgreSQL fixture persistence lifecycle', () => {
       '0035',
       '0036',
       '0037',
-      '0038'
+      '0038',
+      '0039'
     ])
     expect(secondMigrationResult.applied).toEqual([])
     expect(secondMigrationResult.alreadyApplied).toEqual([
@@ -479,7 +481,8 @@ describe.sequential('PostgreSQL fixture persistence lifecycle', () => {
       '0035',
       '0036',
       '0037',
-      '0038'
+      '0038',
+      '0039'
     ])
   })
 
@@ -538,6 +541,19 @@ describe.sequential('PostgreSQL fixture persistence lifecycle', () => {
     await expect(
       servicePool.query(
         "UPDATE appsea.evidence_records SET normalized_text = 'changed' WHERE false"
+      )
+    ).rejects.toMatchObject({ code: '42501' })
+    await expect(
+      servicePool.query('DELETE FROM appsea.source_collection_leases WHERE false')
+    ).rejects.toMatchObject({ code: '42501' })
+    await expect(
+      servicePool.query(
+        `INSERT INTO appsea.source_collection_leases
+           (workspace_id, lease_id, source_id, policy_version, input_hash,
+            observed_at, state, acquired_at, expires_at, updated_at)
+         VALUES ('workspace-forbidden', 'lease:forbidden', 'source:forbidden', 'v1', $1,
+                 $2, 'active', $2, $3, $2)`,
+        ['a'.repeat(64), fixedAt, latestAt]
       )
     ).rejects.toMatchObject({ code: '42501' })
   })
@@ -615,6 +631,106 @@ describe.sequential('PostgreSQL fixture persistence lifecycle', () => {
         ])
         await client.query('DELETE FROM appsea.workspaces WHERE workspace_id = $1', [workspaceId])
         await client.query('DELETE FROM appsea.users WHERE user_id = $1', [userId])
+      })
+    }
+  })
+
+  it('binds source collection leases to policy review and preserves replay timestamps', async () => {
+    const workspaceId = 'workspace-lease'
+    const sourceId = 'source-lease-test'
+    const policyVersion = 'lease-v1'
+    const policyHash = 'a'.repeat(64)
+    const observedAt = '2026-07-10T00:00:00.000Z'
+    const expiresAt = new Date(Date.now() + 10 * 60_000).toISOString()
+    await withOwnerClient(async (client) => {
+      await client.query(
+        `INSERT INTO appsea.workspaces
+           (workspace_id, slug, display_name, visibility, fixture_only, status, created_at, updated_at)
+         VALUES ($1, 'lease-workspace', 'Lease Workspace', 'private', false, 'active', $2, $2)`,
+        [workspaceId, fixedAt]
+      )
+      await client.query(
+        `INSERT INTO appsea.sources
+           (source_id, display_name, source_type, lifecycle_state, current_policy_version,
+            created_at, updated_at)
+         VALUES ($1, 'Lease Source', 'api', 'disabled_pending_review', NULL, $2, $2)`,
+        [sourceId, fixedAt]
+      )
+      await client.query(
+        `INSERT INTO appsea.source_policy_versions
+           (source_id, policy_version, policy_state, permitted_purposes, commercial_use,
+            access_method, retention_days, deletion_required, attribution_required,
+            display_mode, coverage_notes, policy_document_ref, reviewed_at, expires_at,
+            policy_payload, content_hash, created_at)
+         VALUES ($1, $2, 'approved', ARRAY['opportunity-research'], 'allowed', 'test route',
+                 30, true, true, 'excerpt', ARRAY['fixture-backed policy'],
+                 'https://example.com/lease-policy', $3, NULL, '{}'::jsonb, $4, $3)`,
+        [sourceId, policyVersion, fixedAt, policyHash]
+      )
+      await client.query(
+        `INSERT INTO appsea.source_policy_reviews
+           (review_id, source_id, policy_version, decision, reviewer,
+            approval_reference, notes, content_hash, reviewed_at, recorded_at)
+         VALUES ('review:lease:test', $1, $2, 'approved', 'integration-test',
+                 'approval:lease:test', ARRAY['test-only'], $3, $4, $4)`,
+        [sourceId, policyVersion, policyHash, fixedAt]
+      )
+      await client.query(
+        `UPDATE appsea.sources
+            SET lifecycle_state = 'active', current_policy_version = $2, updated_at = $3
+          WHERE source_id = $1`,
+        [sourceId, policyVersion, fixedAt]
+      )
+    })
+    const leaseRepository = new PostgresSourceCollectionLeaseRepository(servicePool)
+    const input = {
+      workspaceId,
+      leaseId: 'lease:source-collection:test',
+      sourceId,
+      policyVersion,
+      inputHash: 'b'.repeat(64),
+      observedAt,
+      expiresAt
+    }
+    try {
+      await expect(leaseRepository.acquire(input)).resolves.toMatchObject({
+        decision: 'acquired',
+        replayed: false,
+        observedAt
+      })
+      await expect(leaseRepository.acquire(input)).resolves.toMatchObject({
+        decision: 'replayed',
+        replayed: true,
+        observedAt
+      })
+      await expect(
+        leaseRepository.assertActive(workspaceId, input.leaseId, input.inputHash)
+      ).resolves.toBe(true)
+      await expect(
+        leaseRepository.release(workspaceId, input.leaseId, input.inputHash)
+      ).resolves.toBe(true)
+      await expect(
+        leaseRepository.assertActive(workspaceId, input.leaseId, input.inputHash)
+      ).resolves.toBe(false)
+    } finally {
+      await withOwnerClient(async (client) => {
+        await client.query('DELETE FROM appsea.source_collection_leases WHERE workspace_id = $1', [
+          workspaceId
+        ])
+        await client.query('DELETE FROM appsea.source_policy_reviews WHERE source_id = $1', [
+          sourceId
+        ])
+        await client.query(
+          `UPDATE appsea.sources
+              SET current_policy_version = NULL, lifecycle_state = 'retired'
+            WHERE source_id = $1`,
+          [sourceId]
+        )
+        await client.query('DELETE FROM appsea.source_policy_versions WHERE source_id = $1', [
+          sourceId
+        ])
+        await client.query('DELETE FROM appsea.sources WHERE source_id = $1', [sourceId])
+        await client.query('DELETE FROM appsea.workspaces WHERE workspace_id = $1', [workspaceId])
       })
     }
   })

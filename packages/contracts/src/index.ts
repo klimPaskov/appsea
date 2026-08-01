@@ -960,6 +960,8 @@ export const productionCollectionRequestSchema = z
 export const productionCollectionPersistenceInputSchema = z
   .object({
     request: productionCollectionRequestSchema,
+    /** Server-observed collection time; requestedAt remains caller metadata. */
+    observedAt: z.string().datetime(),
     policy: sourcePolicySchema,
     complaints: z.array(complaintSchema).max(5_000),
     deletions: z.array(sourceDeletionEventSchema).max(5_000),
@@ -1615,6 +1617,23 @@ export const productionWorkflowAdmissionDecisionSchema = z
   })
   .strict()
 
+/** Internal decision returned by the policy-bound source collection lease. */
+export const sourceCollectionLeaseDecisionSchema = z.enum([
+  'acquired',
+  'replayed',
+  'expired',
+  'released',
+  'revoked'
+])
+
+export const sourceCollectionLeaseResultSchema = z
+  .object({
+    decision: sourceCollectionLeaseDecisionSchema,
+    observedAt: z.string().datetime(),
+    expiresAt: z.string().datetime()
+  })
+  .strict()
+
 export const productionCollectionWorkflowInputSchema = z
   .object({
     workspaceId: appseaIdentifierSchema,
@@ -2113,6 +2132,7 @@ export const sourceMaintenanceResultSchema = z
     quotaReservationsExpired: z.number().int().nonnegative().max(10_000),
     quotaReservationsPurged: z.number().int().nonnegative().max(10_000),
     productionWorkflowAdmissionsPurged: z.number().int().nonnegative().max(10_000),
+    sourceCollectionLeasesPurged: z.number().int().nonnegative().max(10_000),
     retentionTombstonesQueued: z.number().int().nonnegative().max(1_000),
     deletionTombstonesProcessed: z.number().int().nonnegative().max(1_000),
     deletionObjectsAffected: z.number().int().nonnegative().max(10_000_000),
@@ -2540,6 +2560,8 @@ export type ProductionCollectionWorkflowStartRequest = z.infer<
 export type ProductionWorkflowAdmissionDecision = z.infer<
   typeof productionWorkflowAdmissionDecisionSchema
 >
+export type SourceCollectionLeaseDecision = z.infer<typeof sourceCollectionLeaseDecisionSchema>
+export type SourceCollectionLeaseResult = z.infer<typeof sourceCollectionLeaseResultSchema>
 export type ProductionCollectionWorkflowInput = z.infer<
   typeof productionCollectionWorkflowInputSchema
 >

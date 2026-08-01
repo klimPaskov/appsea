@@ -86,6 +86,7 @@ describe('maintenance runners', () => {
       quotaReservationsExpired: 2,
       quotaReservationsPurged: 2,
       productionWorkflowAdmissionsPurged: 0,
+      sourceCollectionLeasesPurged: 0,
       retentionTombstonesQueued: 0,
       deletionTombstonesProcessed: 2,
       deletionObjectsAffected: 8,
@@ -187,6 +188,54 @@ describe('maintenance runners', () => {
     )
 
     expect(result.productionWorkflowAdmissionsPurged).toBe(2)
+    expect(calls).toEqual(['workspace:a:2026-07-03T00:00:00.000Z:2'])
+  })
+
+  it('purges terminal source collection leases with the retention budget', async () => {
+    const calls: string[] = []
+    const result = await runSourceMaintenance(
+      {
+        jobId: 'maintenance:source:leases',
+        occurredAt,
+        quotaBatchSize: 1,
+        deletionBatchSize: 1,
+        retentionBatchSize: 2,
+        quotaRetentionDays: 7,
+        workspaceId: null
+      },
+      {
+        quota: {
+          async listActiveWorkspaceIds() {
+            return []
+          },
+          async expireStale() {
+            return 0
+          },
+          async purgeSettled() {
+            return 0
+          }
+        },
+        deletion: {
+          async listActiveWorkspaceIds() {
+            return ['workspace:b', 'workspace:a']
+          },
+          async enqueueExpired() {
+            return 0
+          },
+          async processNext() {
+            return null
+          }
+        },
+        leases: {
+          async purge(workspaceId, before, batchSize) {
+            calls.push(`${workspaceId}:${before}:${batchSize}`)
+            return batchSize ?? 0
+          }
+        }
+      }
+    )
+
+    expect(result.sourceCollectionLeasesPurged).toBe(2)
     expect(calls).toEqual(['workspace:a:2026-07-03T00:00:00.000Z:2'])
   })
 

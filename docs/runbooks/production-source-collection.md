@@ -30,12 +30,24 @@ pnpm worker:source:cfpb
 ```
 
 The command refuses missing approval, exceeds no more than the approved quota,
-stores no raw response payload, and emits bounded JSON counters. PostgreSQL
+stores no raw response payload, and emits bounded JSON counters. Before the
+external request, the worker acquires a digest-only lease through migration
+`0039`. Acquisition requires the active non-fixture source, the requested
+policy version, and a matching operator approval review. The lease records one
+server-observed collection timestamp; Temporal retries replay that timestamp so
+complaint `capturedAt`, quota occurrence, and the collection snapshot remain
+stable. PostgreSQL
 persists the source-native record identity, policy version, capture/published
 times, redacted evidence, unreviewed complaint observation, coverage gaps, and
 an outbox/audit receipt. A filtered collection does not emit deletion events;
 full-snapshot deletion reconciliation is a separate maintenance operation. A
 repeated request with a different input is an idempotency conflict.
+
+Immediately before persistence, the worker asserts the lease and current policy
+again. An expired or revoked lease is terminal and fails closed; the lease is
+released only after the collection transaction commits. If quota was settled or
+the lease became inactive without a completed result, do not start a new fetch:
+retain the digest and use operator reconciliation.
 
 Before starting downstream analysis, an authenticated workspace editor or
 owner must review each active complaint observation on the private collection
@@ -124,6 +136,9 @@ authenticated owner/editor gateway:
   reservation, and source maintenance purges terminal or expired admission
   rows. These limits are fixed in reviewed migration `0038`; request payloads
   cannot raise them.
+  The workflow activity then acquires the migration `0039` source lease before
+  contacting the connector; admission and collection leases are separate
+  boundaries and both replay by digest.
 - `GET /api/workspaces/:workspaceId/research/production/workflow/:workflowId`
   queries Temporal and falls back to the RLS-protected PostgreSQL workflow
   projection during worker/service interruption. The degraded projection
