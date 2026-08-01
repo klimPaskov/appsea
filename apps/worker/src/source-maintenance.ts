@@ -1,5 +1,5 @@
 import { sourceMaintenanceInputSchema } from '@appsea/contracts'
-import { FileObjectStore } from '@appsea/object-store'
+import { objectStoreFromEnv } from '@appsea/object-store'
 import {
   createDatabasePool,
   databaseConfigFromEnv,
@@ -40,11 +40,7 @@ const input = {
 const validatedJobId = sourceMaintenanceInputSchema.safeParse(input).success
   ? sourceMaintenanceInputSchema.parse(input).jobId
   : undefined
-const objectStoreRoot = process.env.APPSEA_OBJECT_STORE_ROOT
-if (!objectStoreRoot) {
-  throw new Error('APPSEA_OBJECT_STORE_ROOT is required by source maintenance')
-}
-const objectStore = new FileObjectStore(objectStoreRoot)
+const objectStore = objectStoreFromEnv(process.env)
 const pool = createDatabasePool(databaseConfigFromEnv())
 
 try {

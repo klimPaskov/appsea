@@ -124,12 +124,12 @@ crash/failure proof for that boundary.
 
 Non-fixture report, plan, and production-analysis artifact payloads require
 object storage; inline JSONB is deliberately restricted to compact metadata
-and synthetic fixture packages. `@appsea/object-store` now provides a bounded
-content-addressed in-memory/filesystem seam wired to migration `0030`, private
-analysis reads, and deletion invalidation. Migration `0043` adds the durable
-invalidated-output purge queue. Encrypted S3-compatible deployment, lifecycle
-and versioning rules, backup purge, workspace-closure purge, and fresh
-Docker-backed proof remain open.
+and synthetic fixture packages. `@appsea/object-store` now provides bounded
+in-memory/filesystem adapters plus a signed S3-compatible adapter wired through
+the shared environment factory. Migration `0043` adds the durable
+invalidated-output purge queue. Provider encryption, lifecycle/versioning,
+least-privilege credential deployment, backup purge, workspace-closure purge,
+and fresh Docker-backed proof remain open.
 
 ## Sources
 

@@ -38,12 +38,12 @@ Implemented:
   idempotent commit/release and bounded expiry
 - policy-derived, bounded retention tombstone enqueue reusing the deletion
   propagation path
-- content-addressed object-reference contract with deterministic in-memory and
-  local filesystem adapters for production analysis artifact/report/plan blobs;
-  migration `0043` now queues complete invalidated output references and the
-  local adapter performs retention-aware mark/purge retries; encrypted cloud
-  storage, lifecycle/versioning, workspace closure, exports, and backup purge
-  remain open
+- content-addressed object-reference contract with deterministic in-memory,
+  local filesystem, and signed S3-compatible adapters for production analysis
+  artifact/report/plan blobs; migration `0043` now queues complete invalidated
+  output references and the adapters perform retention-aware mark/purge retries;
+  provider encryption, lifecycle/versioning, workspace closure, exports, and
+  backup purge remain open
 - durable production-analysis run, policy/evidence/output lineage, report
   object-reference, RLS, terminal-transition, and source-deletion invalidation
   migration; idempotent repository stores redacted artifact/report/plan objects
@@ -145,7 +145,7 @@ Implemented:
 
 Remaining production work: legacy v1 history drain/retention for the analysis
 workflow, authenticated/TLS-protected Temporal, HA,
-cloud object-store/backups retention and purge, deployment, metrics, alerts, deployed
+provider object-store/backups retention and purge, deployment, metrics, alerts, deployed
 snapshot scheduler ownership, and worker crash fault-injection proof. Migration `0037` now queues deletion-triggered
 active-evidence repairs and the dispatcher reclaims stale dispatch claims with
 bounded terminal failure; deployed scheduling, alerting, and production

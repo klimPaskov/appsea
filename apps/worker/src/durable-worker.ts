@@ -2,7 +2,7 @@ import { fileURLToPath } from 'node:url'
 import { Connection, WorkflowClient } from '@temporalio/client'
 import { NativeConnection, Worker } from '@temporalio/worker'
 import { createDatabasePool, databaseConfigFromEnv } from '@appsea/db'
-import { FileObjectStore } from '@appsea/object-store'
+import { objectStoreFromEnv } from '@appsea/object-store'
 import { fixtureResearchTaskQueue } from '@appsea/workflows'
 import { localTemporalAddressFromEnv } from './temporal-local'
 import { createFixtureResearchActivities } from './workflow-activities'
@@ -13,11 +13,7 @@ import { createProductionAnalysisRecomputeDispatcher } from './production-analys
 import { emitWorkerEvent } from './observability'
 
 const pool = createDatabasePool(databaseConfigFromEnv())
-const objectStoreRoot = process.env.APPSEA_OBJECT_STORE_ROOT
-if (!objectStoreRoot) {
-  throw new Error('APPSEA_OBJECT_STORE_ROOT is required by the durable production worker')
-}
-const objectStore = new FileObjectStore(objectStoreRoot)
+const objectStore = objectStoreFromEnv(process.env)
 const temporalAddress = localTemporalAddressFromEnv()
 const workerConnection = await NativeConnection.connect({ address: temporalAddress })
 const clientConnection = await Connection.connect({ address: temporalAddress })

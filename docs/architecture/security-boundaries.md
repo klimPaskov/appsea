@@ -135,8 +135,10 @@ for that pre-context authorization lookup.
   immutable after insert/transition. Migration `0043` queues complete
   artifact/report/plan references for invalidated production analyses; the
   object worker marks them deleted, waits for immutable retention, and purges
-  with bounded stale-claim recovery. Cloud object storage, backups, workspace
-  closure, and export deletion require separate reviewed deployment workers;
+  with bounded stale-claim recovery. The signed S3-compatible adapter rejects
+  redirects, validates content hashes, and uses conditional sidecar writes;
+  provider encryption, backups, workspace closure, and export deletion require
+  separate reviewed deployment workers;
   stale-claim ownership processing rows require a non-null lease start, while
   migration `0044` keeps retryable failures inspectable and blocks re-entry
   after the attempt budget is exhausted. Stale-claim ownership races outside

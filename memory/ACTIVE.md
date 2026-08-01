@@ -13,49 +13,12 @@ policy approval, role separation, re-collection, non-fixture outputs, and
 identity-provider approval remain open. Fixture and production collection
 routes are Temporal gateways; signup workspaces remain non-fixture by design.
 
-Migration `0042_production_analysis_ingress_admission.sql` adds the reviewed
-manual-analysis boundary. The private route binds an authenticated owner/editor,
-reserves only an idempotency digest and workflow input hash before Temporal, and
-the worker consumes/releases the reservation with analysis-run persistence.
-Analysis runs store an immutable user/service actor; consumed or released
-digests replay without another slot, while expired reservations may be
-reclaimed. The database-backed integration proof is present but remains
-Docker-blocked in this environment.
-
-Migration `0043_production_analysis_object_purge.sql` queues complete
-artifact/report/plan refs on invalidation. The repository marks, waits for
-retention, and purges with stale recovery/bounded retries; local orphan bodies
-are cleaned after sidecar loss. Cloud encryption/versioning, backups, closure,
-exports, and Docker integration proof remain open.
-
-Migration `0044_retryable_deletion_propagation.sql` adds a server-clock due
-schedule, attempt counter, stale processing recovery, fixed retry metadata, and
-terminal exhausted failure for deletion tombstones. `claimNext` increments the
-attempt atomically; `fail` schedules a 60-second retry until eight attempts;
-completion remains idempotent. Unit and migration-contract tests pass, while the
-real PostgreSQL retry/RLS fixture is present but Docker remains unavailable.
-
-Migration `0045_source_snapshot_reconciliation_admission.sql` closes the
-repository-level direct source admission gap. Authenticated owner/editor
-requests use a security-definer admission function with five-start/15-minute
-and one-active-job workspace limits; the job is inserted in the same
-transaction and carries immutable user actor attribution. The direct worker
-command uses `withServiceWorkspaceTransaction`, establishes the explicit
-`appsea-worker` principal, and is restricted to active private non-fixture
-workspaces. The private route is covered by web tests; the PostgreSQL
-membership/RLS integration proof is present but Docker remains unavailable.
-
-The source-maintenance runner now resumes at most one due snapshot per sorted
-active workspace under the independent `snapshotReconciliationBatchSize`
-budget. The production command defaults that budget to one and emits bounded
-completed, incomplete, failed, retried, and coverage-gap counters; the
-targeted `source:cfpb:reconcile:next` command remains available for recovery.
-This closes repository-level scheduler ownership while deployed scheduler
-provisioning, alerting, and service-role separation remain open.
-
-The recomputation repository reclaims server-clock-stale `dispatching` claims
-after 15 minutes and terminalizes stale claims at the 24-attempt limit. The
-deterministic Temporal identity makes a late worker start idempotent.
+Migrations `0042`–`0045` add manual-analysis/source-reconciliation
+admission, immutable actor attribution, object purge, retryable tombstones, and
+worker-principal snapshot scheduling. The maintenance runner resumes one due
+snapshot per workspace with bounded counters; recomputation claims are
+server-clock recoverable with deterministic Temporal identity. Focused tests
+pass, while PostgreSQL/RLS integration remains Docker-blocked.
 
 On 2026-08-01, the production analysis Temporal envelope was versioned to
 `production-analysis-v2`. New starts carry only workspace, collection, analysis,
@@ -83,6 +46,15 @@ cost; non-zero billing adapters and deployment-level cost monitoring remain
 open. The runner rejects a known source-cost overage before lease acquisition,
 and the workflow records a bounded `cost_budget_exceeded` result. Existing
 snapshots parse with a zero default for backward compatibility.
+
+The object-store boundary now includes a signed S3-compatible adapter and one
+environment factory used by web, durable worker, and source maintenance. It
+uses conditional content-addressed body/sidecar writes, ETag-guarded deletion,
+bounded hash-checked reads, and the existing retention purge queue. Provider
+encryption/versioning, backup deletion, credential rotation, and deployed
+cloud proof remain open; local filesystem fallback is not a production claim.
+Web typecheck now runs Next route type generation itself, avoiding a concurrent
+`.next` build race during repository verification.
 
 ## Validated commands
 

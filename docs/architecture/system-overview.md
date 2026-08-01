@@ -29,14 +29,16 @@ loopback local environments and CI, with separate database roles plus forced
 workspace RLS.
 
 Non-fixture report, plan, and production-analysis artifact blobs cross the
-`packages/object-store` content-addressed reference seam. Its in-memory and
-local filesystem adapters prove workspace isolation, immutable replay, tombstone
-reads, and retention-aware purge. Report and plan serializers validate their
-payloads before storage, and production analysis persists policy-review and
-evidence/source-item lineage in migration `0030`; migration `0031` keeps report
-and plan approval/export governance separate; migration `0032` adds an
+`packages/object-store` content-addressed reference seam. Its in-memory, local
+filesystem, and signed S3-compatible adapters prove workspace isolation,
+immutable replay, tombstone reads, corruption detection, and retention-aware
+purge. Report and plan serializers validate their payloads before storage, and
+production analysis persists policy-review and evidence/source-item lineage in
+migration `0030`; migration `0031` keeps report and plan
+approval/export governance separate; migration `0032` adds an
 editor/owner complaint-review boundary before downstream analysis. Complaint
-IDs are never used as evidence IDs.
+IDs are never used as evidence IDs. Provider encryption, versioning, backup
+deletion, and deployment credentials remain separate operational approval gates.
 Migration `0033` adds an immutable workspace seed-review registry with
 editor/owner approval transitions; analysis start and persistence both resolve
 and verify approved seed content by ID, version, and hash.
