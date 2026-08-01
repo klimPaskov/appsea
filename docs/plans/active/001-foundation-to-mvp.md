@@ -25,7 +25,7 @@ Status: production-shaped foundation implemented and validated locally; producti
 
 Implemented:
 
-- PostgreSQL 18 schema and forty-four forward, checksummed migrations
+- PostgreSQL 18 schema and forty-five forward, checksummed migrations
 - normalized source, evidence, complaint, cluster, competitor, opportunity, score, report, plan, audit, cost, deletion, outbox, and lineage tables
 - no-login owner, separate migrator, and least-privilege runtime role contract
 - forced workspace RLS and transaction-scoped workspace context
@@ -67,6 +67,10 @@ Implemented:
 - migration `0044_retryable_deletion_propagation.sql` adds server-clock stale
   claim recovery, bounded retry scheduling, and terminal exhausted tombstones
   without weakening the immutable deletion identity boundary
+- migration `0045_source_snapshot_reconciliation_admission.sql` adds an
+  authenticated editor admission route, workspace-scoped source-reconciliation
+  rate/concurrency limits, immutable user/service actor attribution, and an
+  explicit `appsea-worker` service-principal guard for the direct command
 - global-auth password-reset tokens with latest-only semantics, encrypted
   delivery outbox, security events, narrow security-definer functions, bounded
   purge, and a retryable signed provider worker; delivery remains kill-switched
@@ -128,6 +132,9 @@ Implemented:
   from durable offsets without the raw caller key, records visible coverage
   gaps for malformed/capped traversals, and emits tombstones only after a
   warning-free short page
+- the private source-reconciliation route admits only active owner/editor
+  requests; the direct worker command uses a separate explicit service
+  principal, and both paths share the same policy-gated durable job projection
 - migration `0034_production_analysis_handoffs.sql` adds an approved-seed-bound,
   skip-locked handoff queue written in the collection completion transaction;
   the durable worker reconstructs active policy/evidence lineage and starts the
@@ -143,8 +150,9 @@ snapshot scheduler ownership, and worker crash fault-injection proof. Migration 
 active-evidence repairs and the dispatcher reclaims stale dispatch claims with
 bounded terminal failure; deployed scheduling, alerting, and production
 Temporal remain open. The repository-level collection and manual-analysis
-ingress gates are now implemented; deployed scheduler ownership and
-infrastructure authorization remain separate release work.
+ingress gates are now implemented; deployed scheduler ownership,
+service-role/secret separation, and infrastructure authorization remain
+separate release work.
 
 ### 3. First real connector
 

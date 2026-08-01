@@ -740,6 +740,7 @@ describe.sequential('PostgreSQL fixture persistence lifecycle', () => {
 
   it('finalizes a complete identifier snapshot and enqueues only missing active source items', async () => {
     const workspaceId = 'workspace-snapshot'
+    const userId = 'user-snapshot-editor'
     const sourceId = 'source-snapshot-test'
     const policyVersion = 'snapshot-v1'
     const policyHash = 'c'.repeat(64)
@@ -806,6 +807,18 @@ describe.sequential('PostgreSQL fixture persistence lifecycle', () => {
                  $4, false, 'deletion-reconciliation', 'excerpt', $4)`,
         [workspaceId, sourceId, policyVersion, fixedAt]
       )
+      await client.query(
+        `INSERT INTO appsea.users
+           (user_id, email, display_name, password_hash, created_at, updated_at)
+         VALUES ($1, 'snapshot-editor@example.test', 'Snapshot Editor', repeat('x', 64), $2, $2)`,
+        [userId, fixedAt]
+      )
+      await client.query(
+        `INSERT INTO appsea.workspace_memberships
+           (workspace_id, user_id, role, created_at, updated_at)
+         VALUES ($1, $2, 'editor', $3, $3)`,
+        [workspaceId, userId, fixedAt]
+      )
     })
 
     const repository = new PostgresSourceSnapshotReconciliationRepository(servicePool)
@@ -844,6 +857,18 @@ describe.sequential('PostgreSQL fixture persistence lifecycle', () => {
         lease: { leaseId, inputHash: claim.inputHash }
       })
       expect(finished).toMatchObject({ state: 'completed', deletionCount: 1 })
+
+      const userInput = {
+        ...input,
+        reconciliationId: 'reconciliation:source:fedcba9876543210fedcba9876543210',
+        idempotencyKey: 'e'.repeat(64)
+      }
+      await expect(repository.enqueueForUser(userInput, userId)).resolves.toMatchObject({
+        state: 'queued'
+      })
+      await expect(repository.enqueueForUser(userInput, userId)).resolves.toMatchObject({
+        state: 'queued'
+      })
       const tombstone = await withWorkspaceTransaction(
         servicePool,
         workspaceId,
@@ -870,6 +895,10 @@ describe.sequential('PostgreSQL fixture persistence lifecycle', () => {
           workspaceId
         ])
         await client.query('DELETE FROM appsea.source_items WHERE workspace_id = $1', [workspaceId])
+        await client.query('DELETE FROM appsea.workspace_memberships WHERE workspace_id = $1', [
+          workspaceId
+        ])
+        await client.query('DELETE FROM appsea.users WHERE user_id = $1', [userId])
         await client.query('DELETE FROM appsea.source_policy_reviews WHERE source_id = $1', [
           sourceId
         ])

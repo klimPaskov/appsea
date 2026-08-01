@@ -30,6 +30,7 @@ import {
   sourceSnapshotReconciliationInputSchema,
   sourceSnapshotReconciliationPageSchema,
   sourceSnapshotReconciliationReadModelSchema,
+  sourceSnapshotReconciliationStartRequestSchema,
   researchJobBudgetSchema,
   sourcePolicySchema,
   sourceMaintenanceInputSchema,
@@ -226,6 +227,26 @@ describe('contracts', () => {
         shortPage: true,
         completeSnapshot: true,
         warnings: []
+      }).success
+    ).toBe(false)
+    expect(
+      sourceSnapshotReconciliationStartRequestSchema.safeParse({
+        sourceId: 'cfpb-consumer-complaints',
+        policyVersion: 'cfpb-policy-v1',
+        idempotencyKey: 'caller-key-that-is-never-persisted',
+        pageSize: 100,
+        maxRecords: 1_000,
+        requestedAt: now
+      }).success
+    ).toBe(true)
+    expect(
+      sourceSnapshotReconciliationStartRequestSchema.safeParse({
+        sourceId: 'cfpb-consumer-complaints',
+        policyVersion: 'cfpb-policy-v1',
+        idempotencyKey: 'caller-key-that-is-never-persisted',
+        pageSize: 101,
+        maxRecords: 100,
+        requestedAt: now
       }).success
     ).toBe(false)
   })

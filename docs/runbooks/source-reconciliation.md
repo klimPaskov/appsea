@@ -8,6 +8,22 @@ will enqueue a job.
 
 ## Request a bounded reconciliation
 
+Private workspace editors may request a job through the authenticated web
+boundary:
+
+```text
+POST /api/workspaces/:workspaceId/research/source-reconciliation
+```
+
+The request is accepted only for an owner/editor in an active private
+non-fixture workspace. Migration `0045` applies fixed five-start/15-minute and
+one-active-job limits and inserts the durable job in the same transaction as
+the decision. The source policy and collection-lease gates still apply.
+
+The operator command below is reserved for the worker service principal.
+Migration `0045` rejects a direct insert unless the transaction establishes
+`appsea-worker` and targets an active private non-fixture workspace.
+
 The command hashes the caller key before persistence. The raw key is never
 stored, logged, or sent to a workflow history:
 
@@ -21,9 +37,9 @@ pnpm worker:source:cfpb:reconcile
 ```
 
 The job ID is deterministic for the workspace/source/key tuple. Identical
-input replays the existing row; a conflicting input is rejected. The worker
-acquires a digest-only source lease before the first page and uses the lease's
-server-observed timestamp for every page.
+service input replays the existing row; a conflicting input is rejected. The
+worker acquires a digest-only source lease before the first page and uses the
+lease's server-observed timestamp for every page.
 
 ## Resume due work
 

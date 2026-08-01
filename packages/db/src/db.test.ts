@@ -57,7 +57,8 @@ describe('database foundation', () => {
       '0041',
       '0042',
       '0043',
-      '0044'
+      '0044',
+      '0045'
     ])
     expect(migrations[0]?.checksum).toMatch(/^[a-f0-9]{64}$/)
     expect(migrations[0]?.sql).toContain('CREATE TABLE appsea.evidence_records')
@@ -125,6 +126,9 @@ describe('database foundation', () => {
       (migration) => migration.version === '0043'
     )
     const retryableDeletionMigration = migrations.find((migration) => migration.version === '0044')
+    const sourceSnapshotAdmissionMigration = migrations.find(
+      (migration) => migration.version === '0045'
+    )
     expect(authMigration?.sql).toContain('CREATE TABLE appsea.users')
     expect(authMigration?.sql).toContain('CREATE TABLE appsea.auth_sessions')
     expect(authMigration?.sql).toContain('FORCE ROW LEVEL SECURITY')
@@ -374,6 +378,16 @@ describe('database foundation', () => {
     expect(retryableDeletionMigration?.sql).toContain('deletion_tombstones_due_idx')
     expect(retryableDeletionMigration?.sql).toContain('deletion_tombstone_failure_code_fixed_check')
     expect(retryableDeletionMigration?.sql).toContain('deletion_tombstone_retry_migration_repair')
+    expect(sourceSnapshotAdmissionMigration?.sql).toContain(
+      'CREATE TABLE appsea.source_snapshot_reconciliation_start_buckets'
+    )
+    expect(sourceSnapshotAdmissionMigration?.sql).toContain(
+      'CREATE OR REPLACE FUNCTION appsea.admit_source_snapshot_reconciliation'
+    )
+    expect(sourceSnapshotAdmissionMigration?.sql).toContain(
+      'source_snapshot_reconciliation_actor_guard'
+    )
+    expect(sourceSnapshotAdmissionMigration?.sql).toContain('FORCE ROW LEVEL SECURITY')
   })
 
   it('requires verified TLS for production database connections', () => {

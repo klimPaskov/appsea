@@ -47,7 +47,7 @@ function jobRow() {
   }
 }
 
-function fakePool(options: { deny?: boolean } = {}): {
+function fakePool(options: { deny?: boolean; admission?: 'admitted' | 'replayed' } = {}): {
   pool: Pool
   statements: string[]
 } {
@@ -60,6 +60,18 @@ function fakePool(options: { deny?: boolean } = {}): {
         return { rows: [], rowCount: 0 }
       }
       if (text.includes('set_config')) return { rows: [], rowCount: 1 }
+      if (text.includes('FROM appsea.workspace_memberships')) {
+        return { rows: [{ user_id: 'user:one' }], rowCount: 1 }
+      }
+      if (text.includes('FROM appsea.workspaces')) {
+        return { rows: [{ workspace_id: input.workspaceId }], rowCount: 1 }
+      }
+      if (text.includes('FROM appsea.admit_source_snapshot_reconciliation')) {
+        return {
+          rows: [{ decision: options.admission ?? 'admitted', retry_after_seconds: 0 }],
+          rowCount: 1
+        }
+      }
       if (text.includes('INSERT INTO appsea.source_snapshot_reconciliation_jobs')) {
         if (options.deny) {
           throw Object.assign(
@@ -209,6 +221,18 @@ describe('source snapshot reconciliation repository', () => {
       repository.enqueue({ ...input, reconciliationId: 'not-a-reconciliation' })
     ).rejects.toThrow(/deterministic source reconciliation/)
     expect(statements).toHaveLength(0)
+  })
+
+  it('admits an authenticated editor request without exposing a raw caller key', async () => {
+    const { pool, statements } = fakePool({ admission: 'admitted' })
+    const repository = new PostgresSourceSnapshotReconciliationRepository(pool)
+    const admitted = await repository.enqueueForUser(input, 'user:one')
+
+    expect(admitted).toMatchObject({ state: 'queued', idempotencyKey: input.idempotencyKey })
+    expect(
+      statements.some((statement) => statement.includes('admit_source_snapshot_reconciliation'))
+    ).toBe(true)
+    expect(statements.some((statement) => statement.includes('set_config'))).toBe(true)
   })
 
   it('does not finalize a full snapshot when persisted page warnings exist', async () => {

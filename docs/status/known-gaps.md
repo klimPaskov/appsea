@@ -104,8 +104,11 @@ leakage, but v1 histories need a controlled drain/retention plan. The activity
 still persists object-backed outputs before finalization; migration `0043` and
 the maintenance worker now cover invalidated output-object marking, retention,
 bounded retry, and local orphan cleanup. Cloud object-store/backup deletion and
-external conditional-delete verification remain deployment work; authentication
-for the direct source CLI remains open. The recomputation dispatcher now
+external conditional-delete verification remain deployment work. Migration
+`0045` adds an authenticated editor admission route and explicit
+`appsea-worker` service-principal guard for source snapshot reconciliation; the
+deployed service-role split, secret rotation, and scheduler ownership remain
+open. The recomputation dispatcher now
 reclaims stale `dispatching` rows from
 the server clock and terminalizes exhausted claims, so a worker crash cannot
 strand that queue indefinitely. Retention is anchored to

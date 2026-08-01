@@ -103,6 +103,13 @@ for that pre-context authorization lookup.
   short page was observed. Final identifier comparison, lease assertion, and
   tombstone insertion share one transaction; scheduler claims do not require a
   raw caller idempotency key.
+- Migration `0045` adds a separate source-reconciliation admission boundary.
+  Authenticated owner/editor requests are checked inside the same transaction
+  as the durable job insert, with workspace-scoped five-start/15-minute and
+  one-active-job limits. The job stores an immutable user or `appsea-worker`
+  actor; the direct worker command must establish the service principal and an
+  active private non-fixture workspace. The source-policy trigger remains a
+  separate gate, so admission cannot activate a connector or bypass review.
 - Source-item acquisition policy and evidence display representation are relationally enforced.
 - Fixture report generation keeps retained observations, deterministic score
   inference, contrary evidence, recommendation, and source coverage in separate

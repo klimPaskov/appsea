@@ -82,11 +82,15 @@ export {
 } from './source-collection-lease-repository'
 export {
   PostgresSourceSnapshotReconciliationRepository,
+  SourceSnapshotReconciliationAdmissionDeniedError,
   SourceSnapshotReconciliationClaimError,
+  SourceSnapshotReconciliationConcurrencyLimitError,
   SourceSnapshotReconciliationConflictError,
   SourceSnapshotReconciliationIncompleteError,
   SourceSnapshotReconciliationPolicyDeniedError,
+  SourceSnapshotReconciliationRateLimitError,
   SourceSnapshotReconciliationStateError,
+  sourceSnapshotReconciliationAdmissionLimits,
   type SourceSnapshotReconciliationClaim,
   type SourceSnapshotReconciliationFinishInput,
   type SourceSnapshotReconciliationLease,
@@ -182,6 +186,7 @@ export {
   WorkspaceAuthorizationError,
   withAuthenticatedWorkspaceTransaction,
   withDatabaseTransaction,
+  withServiceWorkspaceTransaction,
   withWorkspaceTransaction,
   type WorkspaceTransactionOptions
 } from './transaction'

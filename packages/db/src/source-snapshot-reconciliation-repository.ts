@@ -10,13 +10,24 @@ import {
   type SourceSnapshotReconciliationState
 } from '@appsea/contracts'
 import { contentHash, sha256 } from './hash'
-import { withDatabaseTransaction, withWorkspaceTransaction } from './transaction'
+import {
+  withAuthenticatedWorkspaceTransaction,
+  withDatabaseTransaction,
+  withServiceWorkspaceTransaction,
+  withWorkspaceTransaction
+} from './transaction'
 
 const claimTtlSeconds = 20 * 60
 const maximumAttempts = 10
 const maximumPageSize = 1_000
 const maximumCoverageEntries = 50
 const maximumTextLength = 500
+
+export const sourceSnapshotReconciliationAdmissionLimits = {
+  maxStarts: 5,
+  windowSeconds: 15 * 60,
+  maxConcurrent: 1
+} as const
 
 export interface SourceSnapshotReconciliationLease {
   leaseId: string
@@ -67,6 +78,33 @@ export class SourceSnapshotReconciliationPolicyDeniedError extends Error {
   }
 }
 
+export class SourceSnapshotReconciliationAdmissionDeniedError extends Error {
+  constructor() {
+    super('Source snapshot reconciliation admission requires an active editor workspace')
+    this.name = 'SourceSnapshotReconciliationAdmissionDeniedError'
+  }
+}
+
+export class SourceSnapshotReconciliationRateLimitError extends Error {
+  readonly retryAfterSeconds: number
+
+  constructor(retryAfterSeconds: number) {
+    super('Source snapshot reconciliation start rate limit exceeded')
+    this.name = 'SourceSnapshotReconciliationRateLimitError'
+    this.retryAfterSeconds = retryAfterSeconds
+  }
+}
+
+export class SourceSnapshotReconciliationConcurrencyLimitError extends Error {
+  readonly retryAfterSeconds: number
+
+  constructor(retryAfterSeconds: number) {
+    super('Source snapshot reconciliation concurrency limit exceeded')
+    this.name = 'SourceSnapshotReconciliationConcurrencyLimitError'
+    this.retryAfterSeconds = retryAfterSeconds
+  }
+}
+
 export class SourceSnapshotReconciliationStateError extends Error {
   constructor(reconciliationId: string, state: string) {
     super(`Source snapshot reconciliation ${reconciliationId} is not processable (${state})`)
@@ -88,6 +126,8 @@ interface SnapshotJobRow extends QueryResultRow {
   policy_version: string
   idempotency_key: string
   input_hash: string
+  requested_by_actor_type: 'user' | 'service'
+  requested_by_actor_id: string
   page_size: number | string
   max_records: number | string
   requested_at: Date | string
@@ -117,7 +157,8 @@ interface SnapshotPageRow extends QueryResultRow {
 
 const snapshotJobColumns = `
   workspace_id, reconciliation_id, source_id, policy_version, idempotency_key,
-  input_hash, page_size, max_records, requested_at, state, attempt_count,
+  input_hash, requested_by_actor_type, requested_by_actor_id, page_size, max_records,
+  requested_at, state, attempt_count,
   claim_token_hash, claim_expires_at, observed_at, next_offset, pages_scanned,
   source_record_count, deletion_count, coverage_gaps, warnings, failure_code,
   failure_summary, finished_at, next_attempt_at, updated_at`
@@ -245,6 +286,42 @@ function policyDeniedError(error: unknown): boolean {
   )
 }
 
+function admissionDeniedError(error: unknown): boolean {
+  if (!databaseError(error, '42501')) return false
+  return (
+    'message' in (error as object) &&
+    String((error as { message?: unknown }).message).includes(
+      'source snapshot reconciliation admission'
+    )
+  )
+}
+
+interface AdmissionDecisionRow extends QueryResultRow {
+  decision: 'admitted' | 'replayed' | 'rate_limited' | 'concurrency_limited'
+  retry_after_seconds: number | string
+}
+
+function assertAdmissionDecision(row: AdmissionDecisionRow | undefined): AdmissionDecisionRow {
+  if (!row) throw new Error('Source snapshot reconciliation admission returned no decision')
+  const retryAfterSeconds = Number(row.retry_after_seconds)
+  if (
+    !Number.isSafeInteger(retryAfterSeconds) ||
+    retryAfterSeconds < 0 ||
+    retryAfterSeconds > 86_400
+  ) {
+    throw new Error('Source snapshot reconciliation admission returned an invalid retry delay')
+  }
+  if (
+    row.decision !== 'admitted' &&
+    row.decision !== 'replayed' &&
+    row.decision !== 'rate_limited' &&
+    row.decision !== 'concurrency_limited'
+  ) {
+    throw new Error('Source snapshot reconciliation admission returned an invalid decision')
+  }
+  return row
+}
+
 function validateInput(
   input: SourceSnapshotReconciliationInput
 ): SourceSnapshotReconciliationInput {
@@ -266,7 +343,7 @@ export class PostgresSourceSnapshotReconciliationRepository {
     const parsed = validateInput(input)
     const inputHash = contentHash(parsed)
     try {
-      return await withWorkspaceTransaction(
+      return await withServiceWorkspaceTransaction(
         this.pool,
         parsed.workspaceId,
         async (client) => {
@@ -304,7 +381,9 @@ export class PostgresSourceSnapshotReconciliationRepository {
             row.input_hash !== inputHash ||
             row.reconciliation_id !== parsed.reconciliationId ||
             row.source_id !== parsed.sourceId ||
-            row.policy_version !== parsed.policyVersion
+            row.policy_version !== parsed.policyVersion ||
+            row.requested_by_actor_type !== 'service' ||
+            row.requested_by_actor_id !== 'appsea-worker'
           ) {
             throw new SourceSnapshotReconciliationConflictError()
           }
@@ -313,6 +392,75 @@ export class PostgresSourceSnapshotReconciliationRepository {
         { isolationLevel: 'SERIALIZABLE' }
       )
     } catch (error) {
+      if (policyDeniedError(error)) {
+        throw new SourceSnapshotReconciliationPolicyDeniedError()
+      }
+      if (databaseError(error, '23505')) {
+        throw new SourceSnapshotReconciliationConflictError()
+      }
+      throw error
+    }
+  }
+
+  /**
+   * Admit a private-workspace editor request. The security-definer function
+   * performs membership, workspace, rate, concurrency, and policy checks and
+   * inserts the durable job in the same transaction as the decision.
+   */
+  async enqueueForUser(
+    input: SourceSnapshotReconciliationInput,
+    userId: string
+  ): Promise<SourceSnapshotReconciliationReadModel> {
+    const parsed = validateInput(input)
+    const inputHash = contentHash(parsed)
+    try {
+      return await withAuthenticatedWorkspaceTransaction(
+        this.pool,
+        userId,
+        parsed.workspaceId,
+        async (client) => {
+          const decisionResult = await client.query<AdmissionDecisionRow>(
+            `SELECT decision, retry_after_seconds
+               FROM appsea.admit_source_snapshot_reconciliation(
+                 $1, $2, $3, $4, $5, $6, $7, $8, $9::timestamptz
+               )`,
+            [
+              parsed.workspaceId,
+              parsed.reconciliationId,
+              parsed.sourceId,
+              parsed.policyVersion,
+              parsed.idempotencyKey,
+              inputHash,
+              parsed.pageSize,
+              parsed.maxRecords,
+              parsed.requestedAt
+            ]
+          )
+          const decision = assertAdmissionDecision(decisionResult.rows[0])
+          if (decision.decision === 'rate_limited') {
+            throw new SourceSnapshotReconciliationRateLimitError(
+              Number(decision.retry_after_seconds)
+            )
+          }
+          if (decision.decision === 'concurrency_limited') {
+            throw new SourceSnapshotReconciliationConcurrencyLimitError(
+              Number(decision.retry_after_seconds)
+            )
+          }
+          const row = await this.readInTransaction(
+            client,
+            parsed.workspaceId,
+            parsed.reconciliationId
+          )
+          if (!row) throw new Error('Admitted source snapshot reconciliation was not persisted')
+          return row
+        },
+        { isolationLevel: 'SERIALIZABLE' }
+      )
+    } catch (error) {
+      if (admissionDeniedError(error)) {
+        throw new SourceSnapshotReconciliationAdmissionDeniedError()
+      }
       if (policyDeniedError(error)) {
         throw new SourceSnapshotReconciliationPolicyDeniedError()
       }

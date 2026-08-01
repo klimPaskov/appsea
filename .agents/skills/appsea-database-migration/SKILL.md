@@ -32,7 +32,10 @@ This skill may change `packages/db`, directly affected contracts and producers, 
 8. Make idempotency safe under concurrent identical and conflicting starts. Preserve one run, one audit event, and one outbox event.
    For full-snapshot deletion reconciliation, keep staged data identifier-only,
    make page checkpoints immutable, and assert the source lease in the same
-   transaction that compares active source items and enqueues tombstones.
+   transaction that compares active source items and enqueues tombstones. Put
+   user requests behind a workspace-scoped owner/editor admission function;
+   keep the direct worker path on an explicit `appsea-worker` service-principal
+   transaction and reject inactive, public, or fixture workspaces.
    For authenticated downstream workflow starts, keep the admission ledger
    separate from source collection, store only digest/input-hash metadata,
    consume/release it in the same transaction as run persistence, and make the

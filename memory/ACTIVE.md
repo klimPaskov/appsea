@@ -5,9 +5,10 @@
 The fixture product, PostgreSQL persistence, durable workflows, policy-gated
 CFPB collection checkpoint, authenticated private workspaces, report/plan
 approval/export, recovery, and invitations are implemented. Migrations
-`0027`–`0044` add policy evidence, collection checkpoints, deletion repair,
-leases, snapshot reconciliation, workflow admissions, and retryable tombstone
-propagation. CFPB remains disabled; deployed Temporal/scheduler ownership,
+`0027`–`0045` add policy evidence, collection checkpoints, deletion repair,
+leases, snapshot reconciliation, workflow admissions, authenticated
+source-reconciliation admission, and retryable tombstone propagation. CFPB
+remains disabled; deployed Temporal/scheduler ownership,
 policy approval, role separation, re-collection, non-fixture outputs, and
 identity-provider approval remain open. Fixture and production collection
 routes are Temporal gateways; signup workspaces remain non-fixture by design.
@@ -34,6 +35,16 @@ attempt atomically; `fail` schedules a 60-second retry until eight attempts;
 completion remains idempotent. Unit and migration-contract tests pass, while the
 real PostgreSQL retry/RLS fixture is present but Docker remains unavailable.
 
+Migration `0045_source_snapshot_reconciliation_admission.sql` closes the
+repository-level direct source admission gap. Authenticated owner/editor
+requests use a security-definer admission function with five-start/15-minute
+and one-active-job workspace limits; the job is inserted in the same
+transaction and carries immutable user actor attribution. The direct worker
+command uses `withServiceWorkspaceTransaction`, establishes the explicit
+`appsea-worker` principal, and is restricted to active private non-fixture
+workspaces. The private route is covered by web tests; the PostgreSQL
+membership/RLS integration proof is present but Docker remains unavailable.
+
 The recomputation repository reclaims server-clock-stale `dispatching` claims
 after 15 minutes and terminalizes stale claims at the 24-attempt limit. The
 deterministic Temporal identity makes a late worker start idempotent.
@@ -51,15 +62,15 @@ the active, current, unexpired policy, requires allowed/restricted commercial
 use, and rechecks confirmed redacted evidence before linking outputs. Collection
 initialization fails closed without one.
 
-Open security follow-ups are cloud object/backup deletion verification and
-authenticated source-CLI admission. Collection persistence now locks and
-rechecks the lease in its write transaction; these and production deployment
-remain readiness blockers.
+Open security follow-ups are cloud object/backup deletion verification,
+deployment-level service-role/secret rotation, and scheduler ownership.
+Collection persistence now locks and rechecks the lease in its write
+transaction; these and production deployment remain readiness blockers.
 
 ## Validated commands
 
 - `pnpm verify` passed 2026-08-01: packages, samples, smoke, and repo checks.
-- Ingress, source-lease, snapshot-reconciliation, object-purge, and
+- Ingress, source-lease, snapshot-reconciliation admission, object-purge, and
   recomputation-reclaim focused suites passed; real PostgreSQL fixtures remain
   Docker-blocked.
 - 2026-08-01 tombstone-retry focus: db lint, db typecheck, db 73-test suite,

@@ -42,6 +42,11 @@ description: Use when adding or changing AppSea worker commands, scheduled jobs,
     Recover stale processing claims, preserve fixed failure metadata, and
     terminalize only exhausted rows; never turn a transient propagation error
     into an uninspectable or silently dropped deletion.
+14. For direct source-reconciliation commands, establish an explicit worker
+    service principal inside the workspace transaction and require the target
+    workspace to be active, private, and non-fixture. User-triggered requests
+    need a separate authenticated owner/editor admission function with fixed
+    rate/concurrency limits; do not let a CLI bypass that source-policy gate.
 
 Do not rely on an in-memory loop for production durability. Do not hide a partial result behind a successful exit code.
 

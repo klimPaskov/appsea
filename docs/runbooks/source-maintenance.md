@@ -72,15 +72,27 @@ pnpm --filter @appsea/worker source:cfpb:reconcile
 pnpm --filter @appsea/worker source:cfpb:reconcile:next
 ```
 
-The direct command hashes the caller idempotency key before enqueueing. The
-resume command claims only due CFPB jobs and needs only the workspace ID. Page
-checkpoints store source identifiers, hashes, and bounded warnings; tombstones
-are inserted only after the worker observes a warning-free short page and the
-database locks/asserts the source lease in the same transaction. A capped or
-malformed traversal records a coverage gap and emits no deletion absence claim.
-Run the resume command from a reviewed scheduler with bounded retries and
-alerting; deployed scheduler ownership and legal/privacy/security activation
-remain release gates.
+Authenticated editors may request a CFPB reconciliation through the private
+route below. The route hashes the caller key, checks workspace membership, and
+applies the five-start/15-minute and one-active-job admission limits before the
+durable job is inserted:
+
+```text
+POST /api/workspaces/:workspaceId/research/source-reconciliation
+```
+
+The direct command is reserved for a worker process. Its transaction sets the
+explicit `appsea-worker` service principal, and migration `0045` rejects the
+insert unless the workspace is active, private, and non-fixture. The command
+hashes the caller idempotency key before enqueueing. The resume command claims
+only due CFPB jobs and needs only the workspace ID. Page checkpoints store
+source identifiers, hashes, and bounded warnings; tombstones are inserted
+only after the worker observes a warning-free short page and the database
+locks/asserts the source lease in the same transaction. A capped or malformed
+traversal records a coverage gap and emits no deletion absence claim. Run the
+resume command from a reviewed scheduler with bounded retries and alerting;
+deployed scheduler ownership, service-role separation/secret rotation, and
+legal/privacy/security activation remain release gates.
 
 Retention policies using `redact` or `tombstone` reuse this path. Policy drafts
 using `purge` remain rejected until the source/object/backups scope is reviewed;

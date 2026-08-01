@@ -72,6 +72,36 @@ export async function withWorkspaceTransaction<T>(
   }
 }
 
+/**
+ * Run a worker-owned workspace transaction with an explicit service principal.
+ *
+ * This is intentionally separate from user authentication: the database
+ * credential authenticates the worker process, while the transaction-local
+ * principal lets security-definer source gates reject direct or anonymous
+ * inserts that do not come through the worker boundary.
+ */
+export async function withServiceWorkspaceTransaction<T>(
+  pool: Pool,
+  workspaceId: string,
+  operation: (client: PoolClient) => Promise<T>,
+  options: WorkspaceTransactionOptions = {}
+): Promise<T> {
+  const validatedWorkspaceId = appseaIdentifierSchema.parse(workspaceId)
+  return withDatabaseTransaction(
+    pool,
+    async (client) => {
+      await client.query("SELECT set_config('appsea.service_principal', $1, true)", [
+        'appsea-worker'
+      ])
+      await client.query("SELECT set_config('appsea.workspace_id', $1, true)", [
+        validatedWorkspaceId
+      ])
+      return operation(client)
+    },
+    options
+  )
+}
+
 /** Run a transaction without a workspace GUC for global/authentication rows. */
 export async function withDatabaseTransaction<T>(
   pool: Pool,

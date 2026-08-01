@@ -1624,6 +1624,31 @@ export const productionCollectionWorkflowStartRequestSchema = z
   })
   .strict()
 
+/** User-facing request for a bounded, policy-gated source snapshot reconciliation. */
+export const sourceSnapshotReconciliationStartRequestSchema = z
+  .object({
+    sourceId: appseaIdentifierSchema,
+    policyVersion: z
+      .string()
+      .min(1)
+      .max(80)
+      .regex(/^[a-zA-Z0-9._:-]+$/),
+    idempotencyKey: z.string().min(16).max(200),
+    pageSize: z.number().int().min(1).max(1_000),
+    maxRecords: z.number().int().min(1).max(1_000),
+    requestedAt: z.string().datetime()
+  })
+  .strict()
+  .superRefine((input, context) => {
+    if (input.maxRecords < input.pageSize) {
+      context.addIssue({
+        code: 'custom',
+        path: ['maxRecords'],
+        message: 'maxRecords must be at least pageSize'
+      })
+    }
+  })
+
 /** Internal, identifier-only decision from the authenticated production ingress gate. */
 export const productionWorkflowAdmissionDecisionSchema = z
   .object({
@@ -2680,6 +2705,9 @@ export type FixtureResearchWorkflowHashMaterial = z.infer<
 >
 export type ProductionCollectionWorkflowStartRequest = z.infer<
   typeof productionCollectionWorkflowStartRequestSchema
+>
+export type SourceSnapshotReconciliationStartRequest = z.infer<
+  typeof sourceSnapshotReconciliationStartRequestSchema
 >
 export type ProductionWorkflowAdmissionDecision = z.infer<
   typeof productionWorkflowAdmissionDecisionSchema
