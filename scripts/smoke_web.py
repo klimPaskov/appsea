@@ -112,6 +112,13 @@ def main() -> int:
                 raise AssertionError('API fixture response is not labeled synthetic')
             if len(payload.get('data', [])) != 6:
                 raise AssertionError('API fixture response should contain six opportunities')
+
+            status, health_body = fetch('/api/health/live')
+            if status != 200:
+                raise AssertionError(f'/api/health/live returned {status}')
+            health = json.loads(health_body)
+            if health.get('service') != 'appsea-web' or health.get('status') != 'ok':
+                raise AssertionError('liveness probe did not return the bounded ok payload')
         finally:
             process.terminate()
             try:

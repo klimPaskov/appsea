@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
-import { emitWorkerEvent } from './observability'
+import { emitWorkerEvent, startWorkerHeartbeat, workerHeartbeatIntervalMs } from './observability'
 
 describe('worker observability', () => {
   it('emits bounded, secret-free JSON events', () => {
@@ -108,5 +108,31 @@ describe('worker observability', () => {
     })
     expect(JSON.stringify(payload)).not.toContain('source text')
     log.mockRestore()
+  })
+
+  it('emits periodic heartbeats and stops cleanly', () => {
+    vi.useFakeTimers()
+    try {
+      const emit = vi.fn()
+      const stop = startWorkerHeartbeat('appsea-research-v1', { intervalMs: 1_000, emit })
+      expect(emit).not.toHaveBeenCalled()
+      vi.advanceTimersByTime(1_000)
+      expect(emit).toHaveBeenCalledWith({
+        event: 'worker_heartbeat',
+        taskQueue: 'appsea-research-v1'
+      })
+      expect(emit).toHaveBeenCalledTimes(1)
+      stop()
+      vi.advanceTimersByTime(workerHeartbeatIntervalMs)
+      expect(emit).toHaveBeenCalledTimes(1)
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it('rejects unsafe heartbeat intervals', () => {
+    expect(() => startWorkerHeartbeat('appsea-research-v1', { intervalMs: 999 })).toThrow(
+      /between 1000 and 3600000/
+    )
   })
 })

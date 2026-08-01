@@ -138,12 +138,15 @@ declare global {
 }
 
 export async function getTemporalWorkflowClient(): Promise<WorkflowClient> {
+  return (await getConnectedTemporalClient()).client
+}
+
+async function getConnectedTemporalClient(): Promise<ConnectedTemporalClient> {
   if (!globalThis.appseaTemporalClientPromise) {
     const promise = connectTemporalWorkflowClient()
     globalThis.appseaTemporalClientPromise = promise
     try {
-      const connected = await promise
-      return connected.client
+      return await promise
     } catch (error) {
       if (globalThis.appseaTemporalClientPromise === promise) {
         globalThis.appseaTemporalClientPromise = undefined
@@ -151,8 +154,17 @@ export async function getTemporalWorkflowClient(): Promise<WorkflowClient> {
       throw error
     }
   }
-  const connected = await globalThis.appseaTemporalClientPromise
-  return connected.client
+  return globalThis.appseaTemporalClientPromise
+}
+
+/**
+ * Verify the cached Temporal connection is reachable. Readiness probes call
+ * this instead of starting a workflow, so health checks cannot create jobs or
+ * reveal workflow input.
+ */
+export async function checkTemporalWorkflowClient(): Promise<void> {
+  const connected = await getConnectedTemporalClient()
+  await connected.connection.ensureConnected()
 }
 
 /**

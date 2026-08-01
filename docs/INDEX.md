@@ -47,6 +47,7 @@
 - [`runbooks/source-policy-review.md`](runbooks/source-policy-review.md)
 - [`runbooks/production-source-collection.md`](runbooks/production-source-collection.md)
 - [`runbooks/production-object-storage.md`](runbooks/production-object-storage.md)
+- [`runbooks/web-health.md`](runbooks/web-health.md)
 - [`runbooks/source-reconciliation.md`](runbooks/source-reconciliation.md)
 - [`runbooks/production-analysis.md`](runbooks/production-analysis.md)
 - [`runbooks/source-maintenance.md`](runbooks/source-maintenance.md)
@@ -100,3 +101,4 @@
 - [`status/source-maintenance-snapshot-scheduler-completion-report-2026-08-01.md`](status/source-maintenance-snapshot-scheduler-completion-report-2026-08-01.md)
 - [`status/production-collection-cost-completion-report-2026-08-01.md`](status/production-collection-cost-completion-report-2026-08-01.md)
 - [`status/production-object-storage-completion-report-2026-08-01.md`](status/production-object-storage-completion-report-2026-08-01.md)
+- [`status/operational-health-completion-report-2026-08-01.md`](status/operational-health-completion-report-2026-08-01.md)

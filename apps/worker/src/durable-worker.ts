@@ -10,7 +10,7 @@ import { createProductionCollectionActivities } from './production-workflow-acti
 import { createProductionAnalysisActivities } from './production-analysis-activities'
 import { createProductionAnalysisHandoffDispatcher } from './production-analysis-handoff'
 import { createProductionAnalysisRecomputeDispatcher } from './production-analysis-recompute'
-import { emitWorkerEvent } from './observability'
+import { emitWorkerEvent, startWorkerHeartbeat } from './observability'
 
 const pool = createDatabasePool(databaseConfigFromEnv())
 const objectStore = objectStoreFromEnv(process.env)
@@ -25,6 +25,7 @@ const handoffDispatcher = createProductionAnalysisHandoffDispatcher(pool, workfl
 const recomputeDispatcher = createProductionAnalysisRecomputeDispatcher(pool, workflowClient)
 
 let stopping = false
+let stopHeartbeat = (): void => undefined
 const wait = (milliseconds: number): Promise<void> =>
   new Promise((resolve) => setTimeout(resolve, milliseconds))
 const handoffLoop = (async (): Promise<void> => {
@@ -52,7 +53,6 @@ const handoffLoop = (async (): Promise<void> => {
 })()
 
 try {
-  emitWorkerEvent({ event: 'worker_started', taskQueue: fixtureResearchTaskQueue })
   const worker = await Worker.create({
     connection: workerConnection,
     taskQueue: fixtureResearchTaskQueue,
@@ -65,9 +65,12 @@ try {
     maxConcurrentActivityTaskExecutions: 4,
     maxConcurrentWorkflowTaskExecutions: 8
   })
+  emitWorkerEvent({ event: 'worker_started', taskQueue: fixtureResearchTaskQueue })
+  stopHeartbeat = startWorkerHeartbeat(fixtureResearchTaskQueue)
   await worker.run()
 } finally {
   stopping = true
+  stopHeartbeat()
   await handoffLoop
   emitWorkerEvent({ event: 'worker_stopped', taskQueue: fixtureResearchTaskQueue })
   await Promise.all([pool.end(), clientConnection.close(), workerConnection.close()])

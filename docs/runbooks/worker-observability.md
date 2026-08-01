@@ -19,6 +19,12 @@ log sink and alert on:
 - missing `worker_started`/`worker_stopped` heartbeats for the task queue;
 - database connection or migration failures from the process supervisor.
 
+After `worker_started`, the long-lived worker emits a `worker_heartbeat` event
+every 30 seconds until shutdown. The event contains only the task queue and
+the bounded event envelope. Alert when the expected heartbeat window is
+missed; a heartbeat is a liveness signal, not proof that a particular workflow
+or source job is making progress.
+
 The source and authentication maintenance commands parse bounded contracts
 before opening repository work. Their default job IDs use a UTC-minute bucket;
 set `APPSEA_SOURCE_MAINTENANCE_JOB_ID` or `APPSEA_AUTH_MAINTENANCE_JOB_ID` to

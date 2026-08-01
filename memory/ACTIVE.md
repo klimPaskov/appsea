@@ -56,6 +56,13 @@ cloud proof remain open; local filesystem fallback is not a production claim.
 Web typecheck now runs Next route type generation itself, avoiding a concurrent
 `.next` build race during repository verification.
 
+The operational monitoring slice now adds `/api/health/live` and
+`/api/health/ready`. Readiness checks PostgreSQL, authenticated Temporal, and
+object-store configuration with fixed two-second deadlines and no dependency
+error details. The long-lived worker emits a secret-free `worker_heartbeat`
+every 30 seconds. These are deployment probes/signals, not scheduler,
+durable-metrics, alert-routing, or cloud deployment proof.
+
 ## Validated commands
 
 - `pnpm verify` passed 2026-08-01: packages, samples, smoke, and repo checks.

@@ -266,8 +266,10 @@ and Temporal-start idempotency. Production collection now carries settled source
 request cost from quota settlement through its immutable snapshot/result,
 workflow checkpoint, and audit/outbox metadata; known policy-cost overages are
 rejected before source lease acquisition;
-deployment scheduler ownership/alerting, metrics, traces, role separation,
-incident drills, and production security review remain.
+the long-lived worker emits a bounded 30-second heartbeat and the web service
+exposes fail-closed liveness/readiness probes; deployed scheduler ownership,
+durable metric retention/alerting, traces, role separation, incident drills,
+and production security review remain.
 
 ### 7. Desktop release
 

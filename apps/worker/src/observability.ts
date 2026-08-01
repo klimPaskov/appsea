@@ -42,6 +42,8 @@ export interface WorkerEvent {
   failureCode?: string
 }
 
+export const workerHeartbeatIntervalMs = 30_000
+
 function finiteInteger(value: number | undefined): number | undefined {
   return value === undefined || !Number.isSafeInteger(value) || value < 0 ? undefined : value
 }
@@ -210,4 +212,30 @@ export function emitWorkerEvent(event: WorkerEvent): void {
     ...(event.failureCode ? { failureCode: event.failureCode } : {})
   }
   console.log(JSON.stringify(payload))
+}
+
+export interface WorkerHeartbeatOptions {
+  intervalMs?: number
+  emit?: (event: WorkerEvent) => void
+}
+
+/**
+ * Emit a bounded liveness signal while the long-lived worker is running.
+ * Deployment log/metric collection can alert when this signal stops without
+ * requiring a database write or exposing workflow/source content.
+ */
+export function startWorkerHeartbeat(
+  taskQueue: string,
+  options: WorkerHeartbeatOptions = {}
+): () => void {
+  const intervalMs = options.intervalMs ?? workerHeartbeatIntervalMs
+  if (!Number.isSafeInteger(intervalMs) || intervalMs < 1_000 || intervalMs > 3_600_000) {
+    throw new Error('Worker heartbeat interval must be between 1000 and 3600000 milliseconds')
+  }
+  const emit = options.emit ?? emitWorkerEvent
+  const timer = setInterval(() => {
+    emit({ event: 'worker_heartbeat', taskQueue })
+  }, intervalMs)
+  timer.unref?.()
+  return () => clearInterval(timer)
 }

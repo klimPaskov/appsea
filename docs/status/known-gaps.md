@@ -80,8 +80,12 @@ result events. The source-maintenance pass resumes at most one due snapshot per
 sorted workspace under an independent batch budget and reports terminal,
 retry, and coverage-gap counters; the targeted resume command remains for
 operator recovery. The existing repository operations are idempotent for safe
-reruns, but production still needs a deployed scheduler, alert ownership,
-cross-run operational accounting, and a fresh Docker-backed recovery proof.
+reruns. The long-lived worker now emits a bounded `worker_heartbeat` event
+every 30 seconds, and the web service exposes no-store liveness/readiness
+probes that fail closed on PostgreSQL, authenticated Temporal, or object-store
+dependency checks. These signals improve deployment validation but do not
+provide a deployed scheduler, durable metric retention, alert ownership,
+cross-run operational accounting, or a fresh Docker-backed recovery proof.
 
 The production workflow start route caps both declared and chunked JSON bodies
 and now calls the migration `0038` admission function before Temporal. The
