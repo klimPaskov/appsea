@@ -17,6 +17,8 @@ const state = vi.hoisted(() => ({
   persistenceLease: undefined as unknown,
   persistError: undefined as unknown,
   recollectionTarget: undefined as unknown,
+  serviceAdmissionInput: undefined as unknown,
+  serviceAdmissionConsumed: true,
   asserted: false,
   released: false
 }))
@@ -145,6 +147,27 @@ vi.mock('@appsea/db', () => ({
       state.released = true
       return true
     }
+  },
+  PostgresProductionWorkflowAdmissionRepository: class {
+    async admitForService(input: unknown) {
+      state.serviceAdmissionInput = input
+      return {
+        decision: 'admitted',
+        replayed: false,
+        retryAfterSeconds: 0,
+        reservationExpiresAt: '2026-07-10T00:05:00.000Z'
+      }
+    }
+
+    async consumeForService() {
+      return state.serviceAdmissionConsumed
+    }
+  },
+  ProductionWorkflowAdmissionRequiredError: class extends Error {
+    constructor() {
+      super('Production workflow admission is required')
+      this.name = 'ProductionWorkflowAdmissionRequiredError'
+    }
   }
 }))
 
@@ -204,6 +227,49 @@ describe('production CFPB runner lease lifecycle', () => {
     })
     expect(state.asserted).toBe(true)
     expect(state.released).toBe(true)
+  })
+
+  it('reserves and consumes a service admission before a direct source request', async () => {
+    state.serviceAdmissionInput = undefined
+    state.serviceAdmissionConsumed = true
+    state.connectorRequest = undefined
+    state.released = false
+
+    await runProductionCfpbCollection({} as never, request, {
+      observedAt: '2026-07-10T00:00:00.000Z',
+      serviceAdmission: {
+        idempotencyDigest: request.idempotencyKey,
+        inputHash: 'b'.repeat(64)
+      }
+    })
+
+    expect(state.serviceAdmissionInput).toEqual({
+      workspaceId: request.workspaceId,
+      idempotencyDigest: request.idempotencyKey,
+      inputHash: 'b'.repeat(64)
+    })
+    expect(state.connectorRequest).toBeDefined()
+    expect(state.released).toBe(true)
+  })
+
+  it('fails closed before the connector when a direct admission is expired', async () => {
+    state.serviceAdmissionInput = undefined
+    state.serviceAdmissionConsumed = false
+    state.connectorRequest = undefined
+    state.released = false
+
+    await expect(
+      runProductionCfpbCollection({} as never, request, {
+        observedAt: '2026-07-10T00:00:00.000Z',
+        serviceAdmission: {
+          idempotencyDigest: request.idempotencyKey,
+          inputHash: 'b'.repeat(64)
+        }
+      })
+    ).rejects.toMatchObject({ name: 'ProductionWorkflowAdmissionRequiredError' })
+    expect(state.connectorRequest).toBeUndefined()
+    expect(state.released).toBe(true)
+    state.serviceAdmissionConsumed = true
   })
 
   it('binds a tombstone re-collection to the exact source record', async () => {

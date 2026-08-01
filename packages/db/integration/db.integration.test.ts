@@ -44,6 +44,7 @@ import {
   PostgresWorkflowJobRepository,
   WorkflowCheckpointConflictError,
   WorkflowJobConflictError,
+  ProductionWorkflowAdmissionConflictError,
   withAuthenticatedWorkspaceTransaction,
   withWorkspaceTransaction
 } from '../src/index'
@@ -468,7 +469,8 @@ describe.sequential('PostgreSQL fixture persistence lifecycle', () => {
       '0047',
       '0048',
       '0049',
-      '0050'
+      '0050',
+      '0051'
     ])
     expect(secondMigrationResult.applied).toEqual([])
     expect(secondMigrationResult.alreadyApplied).toEqual([
@@ -521,7 +523,8 @@ describe.sequential('PostgreSQL fixture persistence lifecycle', () => {
       '0047',
       '0048',
       '0049',
-      '0050'
+      '0050',
+      '0051'
     ])
   })
 
@@ -1049,6 +1052,50 @@ describe.sequential('PostgreSQL fixture persistence lifecycle', () => {
         ])
         await client.query('DELETE FROM appsea.workspaces WHERE workspace_id = $1', [workspaceId])
         await client.query('DELETE FROM appsea.users WHERE user_id = $1', [userId])
+      })
+    }
+  })
+
+  it('requires the worker service principal for direct production admission', async () => {
+    const workspaceId = 'workspace-service-admission'
+    await withOwnerClient(async (client) => {
+      await client.query(
+        `INSERT INTO appsea.workspaces
+           (workspace_id, slug, display_name, visibility, fixture_only, status, created_at, updated_at)
+         VALUES ($1, 'service-admission-workspace', 'Service Admission Workspace', 'private', false, 'active', $2, $2)`,
+        [workspaceId, fixedAt]
+      )
+    })
+    const admissionRepository = new PostgresProductionWorkflowAdmissionRepository(servicePool)
+    try {
+      await expect(
+        admissionRepository.admitForService({
+          workspaceId,
+          idempotencyDigest: 'a'.repeat(64),
+          inputHash: 'b'.repeat(64)
+        })
+      ).resolves.toMatchObject({ decision: 'admitted', replayed: false })
+      await expect(
+        admissionRepository.consumeForService(workspaceId, 'a'.repeat(64), 'b'.repeat(64))
+      ).resolves.toBe(true)
+      await expect(
+        admissionRepository.admitForService({
+          workspaceId,
+          idempotencyDigest: 'a'.repeat(64),
+          inputHash: 'c'.repeat(64)
+        })
+      ).rejects.toBeInstanceOf(ProductionWorkflowAdmissionConflictError)
+    } finally {
+      await withOwnerClient(async (client) => {
+        await client.query(
+          'DELETE FROM appsea.production_collection_workflow_admissions WHERE workspace_id = $1',
+          [workspaceId]
+        )
+        await client.query(
+          'DELETE FROM appsea.production_collection_workflow_start_buckets WHERE workspace_id = $1',
+          [workspaceId]
+        )
+        await client.query('DELETE FROM appsea.workspaces WHERE workspace_id = $1', [workspaceId])
       })
     }
   })

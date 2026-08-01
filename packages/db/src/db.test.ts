@@ -63,7 +63,8 @@ describe('database foundation', () => {
       '0047',
       '0048',
       '0049',
-      '0050'
+      '0050',
+      '0051'
     ])
     expect(migrations[0]?.checksum).toMatch(/^[a-f0-9]{64}$/)
     expect(migrations[0]?.sql).toContain('CREATE TABLE appsea.evidence_records')
@@ -457,6 +458,9 @@ describe('database foundation', () => {
     expect(explicitRecollectionMigration?.sql).toContain(
       'DROP CONSTRAINT source_items_workspace_id_source_id_source_record_id_key'
     )
+    const serviceAdmissionMigration = migrations.find((migration) => migration.version === '0051')
+    expect(serviceAdmissionMigration?.sql).toContain("service_principal = 'appsea-worker'")
+    expect(serviceAdmissionMigration?.sql).toContain("session_user <> 'appsea_service'")
   })
 
   it('requires verified TLS for production database connections', () => {

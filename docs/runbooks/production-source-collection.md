@@ -30,7 +30,13 @@ pnpm worker:source:cfpb
 ```
 
 The command refuses missing approval, exceeds no more than the approved quota,
-stores no raw response payload, and emits bounded JSON counters. Before the
+stores no raw response payload, and emits bounded JSON counters. It derives the
+same digest-only `production-collection-v1` admission identity as the web
+gateway, reserves and consumes that admission through the explicit
+`appsea-worker` service principal, and refuses to contact CFPB if the workspace
+is fixture-only, public, inactive, rate-limited, or at the concurrency limit.
+The direct command never accepts a user actor or raw idempotency key in the
+database. Before the
 external request, the worker acquires a digest-only lease through migration
 `0039`. Acquisition requires the active non-fixture source, the requested
 policy version, and a matching operator approval review. The lease records one
@@ -164,7 +170,10 @@ authenticated owner/editor gateway:
   response is checkpoint-only (`result` is null) until Temporal is available;
   use the collection run route for persisted evidence details.
 
-Both routes reject fixture workspaces and workspace mismatches. They are not a
+Both routes reject fixture workspaces and workspace mismatches. The direct
+`pnpm worker:source:cfpb` command uses the separate worker-principal admission
+branch in migration `0051`; it shares the same fixed rate/concurrency counters
+and cannot be used as an unauthenticated bypass. These boundaries are not a
 replacement for Temporal namespace authorization, source-policy approval, or a
 production deployment with TLS and role separation.
 

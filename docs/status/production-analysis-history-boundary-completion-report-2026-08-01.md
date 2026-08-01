@@ -65,10 +65,11 @@ through an approved retention plan. Object-store purge and crash-race
 handling, atomic lease assert-to-persist ownership, stale recompute claim
 recovery, retryable tombstone propagation, source-policy reviewer
 independence, and production
-Temporal TLS/namespace authorization remain open. The direct source CLI still
-bypasses the authenticated web admission boundary; the collection workflow
-itself now requires a consumed database reservation. Docker-backed database
-and worker integration proof is also still unavailable in this environment.
+Temporal TLS/namespace authorization remain open. The direct source CLI now
+uses the migration `0051` worker-principal admission branch and shares the
+bounded production ledger; deployment-level service-role rotation and
+namespace authorization remain open. Docker-backed database and worker
+integration proof is also still unavailable in this environment.
 
 This report is evidence for the history boundary only, not a claim that AppSea
 is production-ready or that a real source has been activated.

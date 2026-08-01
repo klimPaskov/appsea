@@ -29,6 +29,9 @@ function fakePool(
       if (text.includes("set_config('appsea.auth_user_id'")) {
         return { rows: [], rowCount: 1 }
       }
+      if (text.includes("set_config('appsea.service_principal'")) {
+        return { rows: [], rowCount: 1 }
+      }
       if (text.includes("set_config('appsea.workspace_id'")) {
         return { rows: [], rowCount: 1 }
       }
@@ -96,6 +99,37 @@ describe('production workflow admission repository', () => {
       decision: 'replayed',
       replayed: true
     })
+  })
+
+  it('admits and consumes a direct worker command through the service principal boundary', async () => {
+    const { pool, statements } = fakePool()
+    const repository = new PostgresProductionWorkflowAdmissionRepository(pool)
+    const serviceInput = {
+      workspaceId: common.workspaceId,
+      idempotencyDigest: common.idempotencyDigest,
+      inputHash: common.inputHash
+    }
+
+    await expect(repository.admitForService(serviceInput)).resolves.toMatchObject({
+      decision: 'admitted',
+      replayed: false
+    })
+    await expect(
+      repository.consumeForService(
+        serviceInput.workspaceId,
+        serviceInput.idempotencyDigest,
+        serviceInput.inputHash
+      )
+    ).resolves.toBe(true)
+    expect(statements.some((text) => text.includes("set_config('appsea.service_principal'"))).toBe(
+      true
+    )
+    expect(
+      statements.filter((text) => text.includes('admit_production_collection_workflow'))
+    ).toHaveLength(1)
+    expect(
+      statements.some((text) => text.includes('consume_production_collection_workflow_admission'))
+    ).toBe(true)
   })
 
   it('returns bounded, typed failures for rate and concurrency limits', async () => {

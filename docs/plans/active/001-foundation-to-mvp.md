@@ -25,7 +25,7 @@ Status: production-shaped foundation implemented and validated locally; producti
 
 Implemented:
 
-- PostgreSQL 18 schema and fifty forward, checksummed migrations
+- PostgreSQL 18 schema and fifty-one forward, checksummed migrations
 - normalized source, evidence, complaint, cluster, competitor, opportunity, score, report, plan, audit, cost, deletion, outbox, and lineage tables
 - no-login owner, separate migrator, and least-privilege runtime role contract
 - forced workspace RLS and transaction-scoped workspace context
@@ -102,6 +102,15 @@ lineage is immutable; and the old deleted row remains historical. The CFPB
 connector uses its exact complaint route for this request and emits no deletion
 tombstone. This is a private operator action, not an automatic retry or source
 activation; see [`source-recollection.md`](../../runbooks/source-recollection.md).
+
+Migration `0051_service_production_workflow_admission.sql` extends the existing
+production collection admission function for the direct CFPB command. The
+command must run inside the explicit `appsea-worker` service-principal
+transaction on the runtime service role and the target must be an active,
+private, non-fixture workspace. It shares the fixed rate/concurrency ledger
+with authenticated starts, consumes the reservation immediately before the
+external request, and cannot create a second unauthenticated source-ingress
+path.
 
 ### 2. Durable workflows
 

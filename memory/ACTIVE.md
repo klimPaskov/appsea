@@ -5,13 +5,15 @@
 The fixture product, PostgreSQL persistence, durable workflows, policy-gated
 CFPB collection checkpoint, authenticated private workspaces, report/plan
 approval/export, recovery, and invitations are implemented. Migrations
-`0027`-`0050` add policy evidence, collection checkpoints, deletion repair,
+`0027`-`0051` add policy evidence, collection checkpoints, deletion repair,
 leases, snapshot reconciliation, workflow admissions, source-reconciliation
 admission, retryable tombstones, maintenance-run telemetry, and a durable
 source-quota reconciliation case ledger. Migration `0050` adds explicit,
 one-record tombstone-bound re-collection with immutable workflow/run/source-item
 lineage and an exact CFPB complaint route; it never runs automatically and the
-source remains disabled. Deployed Temporal/scheduler ownership, policy
+source remains disabled. Migration `0051` requires the direct CFPB command to
+reserve and consume the shared production admission ledger through the
+`appsea-worker` service principal. Deployed Temporal/scheduler ownership, policy
 approval, role separation, non-fixture outputs, and identity-provider approval
 remain open. Fixture and production collection routes are Temporal gateways;
 signup workspaces remain non-fixture by design.
@@ -76,8 +78,8 @@ completed matching tombstone.
 
 ## Validated commands
 
-- `pnpm verify` passed 2026-08-01 before this telemetry tranche: packages,
-  samples, smoke, and repository checks.
+- `pnpm verify` passed 2026-08-01 for this tranche: packages, samples, smoke,
+  and repository checks.
 - Re-collection focus: contracts 65 tests, connectors 17 tests, DB 85 tests,
   worker 60 tests, web 74 tests, affected typechecks, and package-level
   formatting passed; the full workflow Temporal suite remains a separate
@@ -92,6 +94,9 @@ completed matching tombstone.
   staged but Docker-blocked by the unavailable Docker Desktop Linux engine.
 - `pnpm agents:sync` passed; memory and docs checks must pass after this file
   rewrite.
+- Direct-source admission tranche: `pnpm verify` passed on 2026-08-01; Docker
+  PostgreSQL/Temporal checks still fail because the Docker Desktop Linux engine
+  pipe is unavailable.
 
 ## Next production tranche
 

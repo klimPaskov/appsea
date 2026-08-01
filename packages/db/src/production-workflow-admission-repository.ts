@@ -4,7 +4,11 @@ import {
   productionWorkflowAdmissionDecisionSchema,
   type ProductionWorkflowAdmissionDecision as ProductionWorkflowAdmissionDecisionContract
 } from '@appsea/contracts'
-import { withAuthenticatedWorkspaceTransaction, withWorkspaceTransaction } from './transaction'
+import {
+  withAuthenticatedWorkspaceTransaction,
+  withServiceWorkspaceTransaction,
+  withWorkspaceTransaction
+} from './transaction'
 
 /**
  * Conservative defaults for the authenticated production collection ingress.
@@ -25,6 +29,12 @@ export type ProductionWorkflowAdmissionDecision =
 export interface ProductionWorkflowAdmissionInput {
   workspaceId: string
   userId: string
+  idempotencyDigest: string
+  inputHash: string
+}
+
+export interface ProductionWorkflowServiceAdmissionInput {
+  workspaceId: string
   idempotencyDigest: string
   inputHash: string
 }
@@ -134,6 +144,16 @@ function validatedInput(input: ProductionWorkflowAdmissionInput): ProductionWork
   }
 }
 
+function validatedServiceInput(
+  input: ProductionWorkflowServiceAdmissionInput
+): ProductionWorkflowServiceAdmissionInput {
+  return {
+    workspaceId: appseaIdentifierSchema.parse(input.workspaceId),
+    idempotencyDigest: validateDigest(input.idempotencyDigest, 'idempotencyDigest'),
+    inputHash: validateDigest(input.inputHash, 'inputHash')
+  }
+}
+
 /** Consume an admission inside the workflow initialization transaction. */
 export async function consumeProductionWorkflowAdmissionInTransaction(
   client: PoolClient,
@@ -198,6 +218,42 @@ export class PostgresProductionWorkflowAdmissionRepository {
     }
   }
 
+  /**
+   * Reserve a production start for an explicit worker-owned CLI command.
+   * `withServiceWorkspaceTransaction` sets the transaction-local
+   * `appsea-worker` principal; the database function rejects the same call
+   * without that principal or from a fixture/public/inactive workspace.
+   */
+  async admitForService(
+    input: ProductionWorkflowServiceAdmissionInput
+  ): Promise<ProductionWorkflowAdmissionResult> {
+    const parsed = validatedServiceInput(input)
+    try {
+      return await withServiceWorkspaceTransaction(
+        this.pool,
+        parsed.workspaceId,
+        async (client) => {
+          const result = await client.query<AdmissionRow>(
+            `SELECT decision, retry_after_seconds, reservation_expires_at
+               FROM appsea.admit_production_collection_workflow(
+                 $1, $2, $3
+               )`,
+            [parsed.workspaceId, parsed.idempotencyDigest, parsed.inputHash]
+          )
+          const row = result.rows[0]
+          if (!row) throw new Error('Production workflow service admission returned no decision')
+          return mapAdmission(row)
+        },
+        { isolationLevel: 'SERIALIZABLE' }
+      )
+    } catch (error) {
+      if (isDatabaseError(error, '23505', 'production workflow')) {
+        throw new ProductionWorkflowAdmissionConflictError()
+      }
+      throw error
+    }
+  }
+
   /** Mark the short-lived admission as consumed when the workflow projection initializes. */
   async consume(
     workspaceId: string,
@@ -219,6 +275,36 @@ export class PostgresProductionWorkflowAdmissionRepository {
             parsedInputHash
           )
         },
+        { isolationLevel: 'SERIALIZABLE' }
+      )
+    } catch (error) {
+      if (isDatabaseError(error, '23505', 'production workflow admission')) {
+        throw new ProductionWorkflowAdmissionConflictError()
+      }
+      throw error
+    }
+  }
+
+  /** Consume a direct-command reservation while preserving the worker principal. */
+  async consumeForService(
+    workspaceId: string,
+    idempotencyDigest: string,
+    inputHash: string
+  ): Promise<boolean> {
+    const parsedWorkspaceId = appseaIdentifierSchema.parse(workspaceId)
+    const parsedDigest = validateDigest(idempotencyDigest, 'idempotencyDigest')
+    const parsedInputHash = validateDigest(inputHash, 'inputHash')
+    try {
+      return await withServiceWorkspaceTransaction(
+        this.pool,
+        parsedWorkspaceId,
+        (client) =>
+          consumeProductionWorkflowAdmissionInTransaction(
+            client,
+            parsedWorkspaceId,
+            parsedDigest,
+            parsedInputHash
+          ),
         { isolationLevel: 'SERIALIZABLE' }
       )
     } catch (error) {

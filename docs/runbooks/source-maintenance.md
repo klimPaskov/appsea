@@ -116,6 +116,14 @@ alerting; the direct resume command remains useful for targeted recovery.
 Deployed scheduler ownership, service-role separation/secret rotation, and
 legal/privacy/security activation remain release gates.
 
+The direct filtered collection command uses the same service-principal
+boundary. Migration `0051` makes `pnpm worker:source:cfpb` reserve and consume
+the shared production workflow admission ledger immediately before the CFPB
+request. It shares the five-start/15-minute and two-active limits and refuses
+to proceed for an existing workflow identity, a fixture/public/inactive
+workspace, or an expired reservation. It does not authorize source activation;
+the source-policy review and collection lease remain separate gates.
+
 Retention policies using `redact` or `tombstone` reuse this path. Policy drafts
 using `purge` remain rejected until the source/object/backups scope is reviewed;
 the output-object queue below is intentionally narrower than a general source

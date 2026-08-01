@@ -11,6 +11,8 @@ import {
   PostgresSourcePolicyRepository,
   PostgresSourceQuotaRepository,
   PostgresSourceCollectionLeaseRepository,
+  PostgresProductionWorkflowAdmissionRepository,
+  ProductionWorkflowAdmissionRequiredError,
   SourceCollectionLeasePolicyDeniedError,
   SourceCollectionLeaseTerminalError,
   type SourceCollectionLeaseResult
@@ -55,6 +57,14 @@ export class ProductionCollectionCostBudgetExceededError extends Error {
 export interface ProductionCfpbCollectionOptions {
   /** Workflow/server-observed timestamp used to make capture provenance stable across retries. */
   observedAt?: string
+  /**
+   * Direct commands must reserve and consume the same production admission
+   * ledger used by the authenticated gateway before an external request.
+   */
+  serviceAdmission?: {
+    idempotencyDigest: string
+    inputHash: string
+  }
 }
 
 /**
@@ -75,6 +85,12 @@ export async function runProductionCfpbCollection(
     )
   }
   const effectiveRequest = parsedRequest
+  if (
+    options.serviceAdmission &&
+    options.serviceAdmission.idempotencyDigest !== effectiveRequest.idempotencyKey
+  ) {
+    throw new Error('Direct production collection admission does not match the request digest')
+  }
   const repository = new PostgresProductionCollectionRepository(pool)
   const completed = await repository.readCompletedIdentity(
     effectiveRequest.workspaceId,
@@ -136,6 +152,16 @@ export async function runProductionCfpbCollection(
   }
   const leaseId = `lease:source-collection:${effectiveRequest.idempotencyKey}`
   const requestHash = contentHash(effectiveRequest)
+  const serviceAdmissionRepository = options.serviceAdmission
+    ? new PostgresProductionWorkflowAdmissionRepository(pool)
+    : null
+  if (serviceAdmissionRepository && options.serviceAdmission) {
+    await serviceAdmissionRepository.admitForService({
+      workspaceId: effectiveRequest.workspaceId,
+      idempotencyDigest: options.serviceAdmission.idempotencyDigest,
+      inputHash: options.serviceAdmission.inputHash
+    })
+  }
   const leaseRepository = new PostgresSourceCollectionLeaseRepository(pool)
   let lease: SourceCollectionLeaseResult
   try {
@@ -162,12 +188,27 @@ export async function runProductionCfpbCollection(
     throw error
   }
   const stableObservedAt = lease.observedAt
-  const connector = new CfpbConnector({
-    policy: collectible.policy,
-    quotaLedger: new PostgresSourceQuotaRepository(pool),
-    now: () => stableObservedAt
-  })
   try {
+    if (options.serviceAdmission) {
+      const consumed = await serviceAdmissionRepository!.consumeForService(
+        effectiveRequest.workspaceId,
+        options.serviceAdmission.idempotencyDigest,
+        options.serviceAdmission.inputHash
+      )
+      if (!consumed) {
+        if (!(await leaseRepository.release(effectiveRequest.workspaceId, leaseId, requestHash))) {
+          throw new ProductionCollectionReconciliationError(
+            'Direct production admission expired and its source lease could not be released; operator reconciliation is required'
+          )
+        }
+        throw new ProductionWorkflowAdmissionRequiredError()
+      }
+    }
+    const connector = new CfpbConnector({
+      policy: collectible.policy,
+      quotaLedger: new PostgresSourceQuotaRepository(pool),
+      now: () => stableObservedAt
+    })
     const collected = await connector.collect({
       query: parsedRequest.query,
       limit: effectiveRequest.limit,
@@ -221,6 +262,7 @@ export async function runProductionCfpbCollection(
       )
     }
     if (error instanceof ProductionCollectionReconciliationError) throw error
+    if (error instanceof ProductionWorkflowAdmissionRequiredError) throw error
     try {
       await leaseRepository.release(effectiveRequest.workspaceId, leaseId, requestHash)
     } catch (releaseError) {

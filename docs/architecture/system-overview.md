@@ -92,6 +92,11 @@ lineage across workflow projections, research runs, and source items. Completed
 deletion state is required by database triggers; deleted history is preserved
 and active native-record uniqueness remains enforced. Re-collection is a
 private, reviewed action and is not an automatic retry or source activation.
+Migration `0051` extends the production start admission for the direct CFPB
+command: the command must establish the `appsea-worker` service principal on
+the runtime service role, share the same workspace rate/concurrency ledger,
+and consume the reservation before the external request. It cannot bypass
+private-workspace, fixture, or source-policy checks.
 The post-collection production analysis workflow is versioned as `v2`: only
 workspace/collection/analysis/seed identifiers and immutable digests cross
 Temporal, while the worker rebuilds the evidence-backed artifact inside its

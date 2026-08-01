@@ -74,7 +74,8 @@ export {
   assertProductionWorkflowAdmissionConsumed,
   type ProductionWorkflowAdmissionDecision,
   type ProductionWorkflowAdmissionInput,
-  type ProductionWorkflowAdmissionResult
+  type ProductionWorkflowAdmissionResult,
+  type ProductionWorkflowServiceAdmissionInput
 } from './production-workflow-admission-repository'
 export {
   PostgresSourceCollectionLeaseRepository,

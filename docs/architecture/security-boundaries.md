@@ -80,6 +80,13 @@ for that pre-context authorization lookup.
   closed and rolls back if the reservation cannot be consumed on either the
   existing-job or insert path. The limits are fixed in the reviewed migration
   rather than accepted from request input.
+- Migration `0051` extends that same function for the direct CFPB command. The
+  command must establish the transaction-local `appsea-worker` principal on
+  the `appsea_service` runtime role and target an active private non-fixture
+  workspace. It shares the rate/concurrency counters, reserves and consumes a
+  digest/input admission immediately before the external request, and fails
+  closed without a service principal; it is not an unauthenticated second
+  ingress path.
 - Migration `0042` applies the same fail-closed boundary to the manual
   production-analysis route. The route binds the authenticated owner/editor
   to a digest-only reservation before contacting Temporal; the worker consumes

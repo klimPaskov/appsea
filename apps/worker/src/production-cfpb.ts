@@ -3,7 +3,10 @@ import {
   productionCollectionRequestSchema,
   type ProductionCollectionRequest
 } from '@appsea/contracts'
-import { productionCollectionIdempotencyDigest } from '@appsea/workflows'
+import {
+  prepareProductionCollectionWorkflowStart,
+  productionCollectionIdempotencyDigest
+} from '@appsea/workflows'
 import { runProductionCfpbCollection } from './production-cfpb-runner'
 
 function requiredEnv(name: string): string {
@@ -12,9 +15,11 @@ function requiredEnv(name: string): string {
   return value
 }
 
-function requestFromEnv(policyVersion: string): ProductionCollectionRequest {
+function requestFromEnv(
+  policyVersion: string,
+  rawIdempotencyKey: string
+): ProductionCollectionRequest {
   const workspaceId = requiredEnv('APPSEA_PRODUCTION_WORKSPACE_ID')
-  const rawIdempotencyKey = requiredEnv('APPSEA_PRODUCTION_IDEMPOTENCY_KEY')
   const limit = Number(process.env.APPSEA_PRODUCTION_CFPB_LIMIT ?? '100')
   const maxSourceItems = Number(
     process.env.APPSEA_PRODUCTION_CFPB_MAX_SOURCE_ITEMS ?? String(limit)
@@ -52,13 +57,26 @@ function requestFromEnv(policyVersion: string): ProductionCollectionRequest {
 const pool = createDatabasePool(databaseConfigFromEnv())
 try {
   const policyVersion = process.env.APPSEA_PRODUCTION_CFPB_POLICY_VERSION?.trim()
+  const rawIdempotencyKey = requiredEnv('APPSEA_PRODUCTION_IDEMPOTENCY_KEY')
   const request = requestFromEnv(
-    policyVersion || requiredEnv('APPSEA_PRODUCTION_CFPB_POLICY_VERSION')
+    policyVersion || requiredEnv('APPSEA_PRODUCTION_CFPB_POLICY_VERSION'),
+    rawIdempotencyKey
   )
   if (request.limit > request.budget.maxSourceItems) {
     throw new Error('Requested CFPB limit exceeds the configured source-item budget')
   }
-  const result = await runProductionCfpbCollection(pool, request)
+  const preparedAdmission = prepareProductionCollectionWorkflowStart({
+    ...request,
+    idempotencyKey: rawIdempotencyKey,
+    workflowVersion: 'production-collection-v1',
+    requestedBy: { actorType: 'service', actorId: 'appsea-worker' }
+  })
+  const result = await runProductionCfpbCollection(pool, request, {
+    serviceAdmission: {
+      idempotencyDigest: preparedAdmission.input.idempotencyDigest,
+      inputHash: preparedAdmission.input.inputHash
+    }
+  })
   console.log(
     JSON.stringify({
       state: result.state,
