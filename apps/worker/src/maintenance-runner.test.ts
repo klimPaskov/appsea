@@ -88,6 +88,7 @@ describe('maintenance runners', () => {
       productionWorkflowAdmissionsPurged: 0,
       productionAnalysisAdmissionsPurged: 0,
       sourceCollectionLeasesPurged: 0,
+      productionAnalysisObjectsPurged: 0,
       retentionTombstonesQueued: 0,
       deletionTombstonesProcessed: 2,
       deletionObjectsAffected: 8,
@@ -329,6 +330,59 @@ describe('maintenance runners', () => {
 
     expect(result.retentionTombstonesQueued).toBe(2)
     expect(retentionCalls).toEqual(['workspace:a:2'])
+  })
+
+  it('processes due object purges with the retention budget after deletion propagation', async () => {
+    const purgeCalls: string[] = []
+    let processed = 0
+    const result = await runSourceMaintenance(
+      {
+        jobId: 'maintenance:source:objects',
+        occurredAt,
+        quotaBatchSize: 1,
+        deletionBatchSize: 1,
+        retentionBatchSize: 2,
+        quotaRetentionDays: 7,
+        workspaceId: null
+      },
+      {
+        quota: {
+          async listActiveWorkspaceIds() {
+            return []
+          },
+          async expireStale() {
+            return 0
+          },
+          async purgeSettled() {
+            return 0
+          }
+        },
+        deletion: {
+          async listActiveWorkspaceIds() {
+            return ['workspace:b', 'workspace:a']
+          },
+          async enqueueExpired() {
+            return 0
+          },
+          async processNext() {
+            return null
+          }
+        },
+        objectPurge: {
+          async processNext(workspaceId) {
+            purgeCalls.push(workspaceId)
+            processed += 1
+            return {
+              purged: processed !== 2,
+              record: {} as never
+            }
+          }
+        }
+      }
+    )
+
+    expect(result.productionAnalysisObjectsPurged).toBe(2)
+    expect(purgeCalls).toEqual(['workspace:a', 'workspace:a', 'workspace:a'])
   })
 
   it('rejects repository counters that exceed the requested maintenance budget', async () => {

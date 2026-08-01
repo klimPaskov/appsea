@@ -93,9 +93,10 @@ in one lease-asserted transaction. The event carries the source record ID,
 observation time, and reason. The source-maintenance worker turns those events
 into `deletion_tombstones`, redacts
 source-item raw references and normalized evidence, and marks dependent
-reports/plans unavailable while retaining provenance. Complaint/cluster
-recomputation, export/object-store purge, and backup expiry verification remain
-release blockers before activation.
+reports/plans unavailable while retaining provenance. Invalidated production
+analysis outputs now enter the retention-aware object purge queue, but
+complaint/cluster recomputation, cloud/export object purge, and backup expiry
+verification remain release blockers before activation.
 
 ## Production collection checkpoint
 

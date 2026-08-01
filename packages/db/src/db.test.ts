@@ -55,7 +55,8 @@ describe('database foundation', () => {
       '0039',
       '0040',
       '0041',
-      '0042'
+      '0042',
+      '0043'
     ])
     expect(migrations[0]?.checksum).toMatch(/^[a-f0-9]{64}$/)
     expect(migrations[0]?.sql).toContain('CREATE TABLE appsea.evidence_records')
@@ -118,6 +119,9 @@ describe('database foundation', () => {
     )
     const productionAnalysisAdmissionMigration = migrations.find(
       (migration) => migration.version === '0042'
+    )
+    const productionAnalysisObjectPurgeMigration = migrations.find(
+      (migration) => migration.version === '0043'
     )
     expect(authMigration?.sql).toContain('CREATE TABLE appsea.users')
     expect(authMigration?.sql).toContain('CREATE TABLE appsea.auth_sessions')
@@ -354,6 +358,13 @@ describe('database foundation', () => {
     )
     expect(productionAnalysisAdmissionMigration?.sql).toContain('production_analysis_actor_guard')
     expect(productionAnalysisAdmissionMigration?.sql).toContain('FORCE ROW LEVEL SECURITY')
+    expect(productionAnalysisObjectPurgeMigration?.sql).toContain(
+      'CREATE TABLE appsea.production_analysis_object_purge_jobs'
+    )
+    expect(productionAnalysisObjectPurgeMigration?.sql).toContain(
+      'enqueue_invalidated_production_analysis_objects'
+    )
+    expect(productionAnalysisObjectPurgeMigration?.sql).toContain('FORCE ROW LEVEL SECURITY')
   })
 
   it('requires verified TLS for production database connections', () => {

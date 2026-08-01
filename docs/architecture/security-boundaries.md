@@ -122,10 +122,14 @@ for that pre-context authorization lookup.
   redacts normalized evidence, replaces stored report/plan payloads with
   deletion markers, and marks reports/plans unavailable. Active
   source/evidence/report/plan payloads and terminal tombstone fields are
-  immutable after insert/transition. External object storage, backups, and
-  export deletion require separate reviewed workers; stale-claim ownership
-  processing rows require a non-null lease start, but stale-claim ownership
-  races still need a claim-token design.
+  immutable after insert/transition. Migration `0043` queues complete
+  artifact/report/plan references for invalidated production analyses; the
+  object worker marks them deleted, waits for immutable retention, and purges
+  with bounded stale-claim recovery. Cloud object storage, backups, workspace
+  closure, and export deletion require separate reviewed deployment workers;
+  stale-claim ownership processing rows require a non-null lease start, but
+  stale-claim ownership races outside this queue still need a claim-token
+  design.
 - `appsea.users`, `appsea.auth_sessions`, and `appsea.workspace_memberships` store only
   scrypt password hashes and SHA-256 session-token hashes. The web boundary uses an
   `HttpOnly`, `SameSite=Lax` cookie and revokes sessions durably. Production uses

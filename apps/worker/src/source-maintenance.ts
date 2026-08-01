@@ -1,9 +1,11 @@
 import { sourceMaintenanceInputSchema } from '@appsea/contracts'
+import { FileObjectStore } from '@appsea/object-store'
 import {
   createDatabasePool,
   databaseConfigFromEnv,
   PostgresDeletionPropagationRepository,
   PostgresProductionAnalysisAdmissionRepository,
+  PostgresProductionAnalysisObjectPurgeRepository,
   PostgresProductionWorkflowAdmissionRepository,
   PostgresSourceCollectionLeaseRepository,
   PostgresSourceQuotaRepository
@@ -30,6 +32,11 @@ const input = {
 const validatedJobId = sourceMaintenanceInputSchema.safeParse(input).success
   ? sourceMaintenanceInputSchema.parse(input).jobId
   : undefined
+const objectStoreRoot = process.env.APPSEA_OBJECT_STORE_ROOT
+if (!objectStoreRoot) {
+  throw new Error('APPSEA_OBJECT_STORE_ROOT is required by source maintenance')
+}
+const objectStore = new FileObjectStore(objectStoreRoot)
 const pool = createDatabasePool(databaseConfigFromEnv())
 
 try {
@@ -37,13 +44,18 @@ try {
   const deletionRepository = new PostgresDeletionPropagationRepository(pool)
   const admissionRepository = new PostgresProductionWorkflowAdmissionRepository(pool)
   const analysisAdmissionRepository = new PostgresProductionAnalysisAdmissionRepository(pool)
+  const objectPurgeRepository = new PostgresProductionAnalysisObjectPurgeRepository(
+    pool,
+    objectStore
+  )
   const leaseRepository = new PostgresSourceCollectionLeaseRepository(pool)
   const result = await runSourceMaintenance(input, {
     quota: quotaRepository,
     deletion: deletionRepository,
     admission: admissionRepository,
     analysisAdmission: analysisAdmissionRepository,
-    leases: leaseRepository
+    leases: leaseRepository,
+    objectPurge: objectPurgeRepository
   })
   emitWorkerEvent({
     event: 'source_quota_expiry_finished',
@@ -61,6 +73,14 @@ try {
       taskQueue,
       jobId: result.jobId,
       retentionTombstonesQueued: result.retentionTombstonesQueued
+    })
+  }
+  if (result.productionAnalysisObjectsPurged > 0) {
+    emitWorkerEvent({
+      event: 'production_analysis_object_purge_finished',
+      taskQueue,
+      jobId: result.jobId,
+      productionAnalysisObjectsPurged: result.productionAnalysisObjectsPurged
     })
   }
   if (result.deletionTombstonesProcessed > 0) {
@@ -84,6 +104,7 @@ try {
     productionWorkflowAdmissionsPurged: result.productionWorkflowAdmissionsPurged,
     productionAnalysisAdmissionsPurged: result.productionAnalysisAdmissionsPurged,
     sourceCollectionLeasesPurged: result.sourceCollectionLeasesPurged,
+    productionAnalysisObjectsPurged: result.productionAnalysisObjectsPurged,
     retentionTombstonesQueued: result.retentionTombstonesQueued,
     deletionTombstonesProcessed: result.deletionTombstonesProcessed,
     deletionObjectsAffected: result.deletionObjectsAffected,

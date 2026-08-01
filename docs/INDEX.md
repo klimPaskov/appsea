@@ -92,3 +92,4 @@
 - [`status/source-collection-lease-completion-report-2026-08-01.md`](status/source-collection-lease-completion-report-2026-08-01.md)
 - [`status/production-analysis-history-boundary-completion-report-2026-08-01.md`](status/production-analysis-history-boundary-completion-report-2026-08-01.md)
 - [`status/production-analysis-admission-completion-report-2026-08-01.md`](status/production-analysis-admission-completion-report-2026-08-01.md)
+- [`status/production-analysis-object-purge-completion-report-2026-08-01.md`](status/production-analysis-object-purge-completion-report-2026-08-01.md)

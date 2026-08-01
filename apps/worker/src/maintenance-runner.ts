@@ -13,6 +13,7 @@ import type {
   PostgresAuthRepository,
   PostgresDeletionPropagationRepository,
   PostgresProductionAnalysisAdmissionRepository,
+  PostgresProductionAnalysisObjectPurgeRepository,
   PostgresProductionWorkflowAdmissionRepository,
   PostgresSourceCollectionLeaseRepository,
   PostgresSourceQuotaRepository
@@ -35,6 +36,8 @@ export interface SourceMaintenanceDependencies {
   analysisAdmission?: Pick<PostgresProductionAnalysisAdmissionRepository, 'purge'>
   /** Production entry points provide this; legacy fixture test doubles may omit it. */
   leases?: Pick<PostgresSourceCollectionLeaseRepository, 'purge'>
+  /** Production entry points provide this; legacy fixture test doubles may omit it. */
+  objectPurge?: Pick<PostgresProductionAnalysisObjectPurgeRepository, 'processNext'>
 }
 
 export interface AuthRetentionDependencies {
@@ -111,6 +114,7 @@ export async function runSourceMaintenance(
   let productionWorkflowAdmissionsPurged = 0
   let productionAnalysisAdmissionsPurged = 0
   let sourceCollectionLeasesPurged = 0
+  let productionAnalysisObjectsPurged = 0
   let retentionTombstonesQueued = 0
   if (dependencies.admission) {
     for (const workspaceId of deletionWorkspaceIds) {
@@ -184,6 +188,16 @@ export async function runSourceMaintenance(
     }
     if (deletionTombstonesProcessed >= parsed.deletionBatchSize) break
   }
+  if (dependencies.objectPurge) {
+    for (const workspaceId of deletionWorkspaceIds) {
+      while (productionAnalysisObjectsPurged < parsed.retentionBatchSize) {
+        const result = await dependencies.objectPurge.processNext(workspaceId, parsed.occurredAt)
+        if (!result) break
+        if (result.purged) productionAnalysisObjectsPurged += 1
+      }
+      if (productionAnalysisObjectsPurged >= parsed.retentionBatchSize) break
+    }
+  }
 
   return sourceMaintenanceResultSchema.parse({
     jobId: parsed.jobId,
@@ -194,6 +208,7 @@ export async function runSourceMaintenance(
     productionWorkflowAdmissionsPurged,
     productionAnalysisAdmissionsPurged,
     sourceCollectionLeasesPurged,
+    productionAnalysisObjectsPurged,
     retentionTombstonesQueued,
     deletionTombstonesProcessed,
     deletionObjectsAffected,

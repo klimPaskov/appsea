@@ -133,6 +133,13 @@ export {
   type ProductionAnalysisAdmissionResult
 } from './production-analysis-admission-repository'
 export {
+  PostgresProductionAnalysisObjectPurgeRepository,
+  productionAnalysisObjectPurgeLimits,
+  type ProductionAnalysisObjectPurgeRecord,
+  type ProductionAnalysisObjectPurgeResult,
+  type ProductionAnalysisObjectPurgeState
+} from './production-analysis-object-purge-repository'
+export {
   AuthenticationConflictError,
   AuthenticationError,
   AuthAccountDeletionBlockedError,

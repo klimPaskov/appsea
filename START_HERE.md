@@ -49,7 +49,7 @@ Open `http://localhost:3000` after the web server starts.
   delivery approval, MFA/OIDC, and provider policy remain; owner-safe account
   closure is implemented but intentionally retains shared workspace research)
 - production database provisioning and production Temporal infrastructure (TLS/authentication, HA, backups, retention, deployment, and alerts)
-- production encrypted object storage, lifecycle rules, backup purge, and database lineage wiring
+- production encrypted object storage, lifecycle/versioning rules, backup purge, and workspace-closure/export deletion wiring
 - legacy production-analysis v1 history drain/retention and other deployment
   security controls
 - autonomous production deployment

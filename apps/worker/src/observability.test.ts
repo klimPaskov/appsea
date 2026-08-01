@@ -69,6 +69,7 @@ describe('worker observability', () => {
       productionWorkflowAdmissionsPurged: 6,
       productionAnalysisAdmissionsPurged: 8,
       sourceCollectionLeasesPurged: 7,
+      productionAnalysisObjectsPurged: 9,
       workspaceInvitationDeliveriesClaimed: 4,
       workspaceInvitationDeliveriesSent: 3,
       workspaceInvitationDeliveriesFailed: 1
@@ -88,6 +89,7 @@ describe('worker observability', () => {
       productionWorkflowAdmissionsPurged: 6,
       productionAnalysisAdmissionsPurged: 8,
       sourceCollectionLeasesPurged: 7,
+      productionAnalysisObjectsPurged: 9,
       workspaceInvitationDeliveriesClaimed: 4,
       workspaceInvitationDeliveriesSent: 3,
       workspaceInvitationDeliveriesFailed: 1

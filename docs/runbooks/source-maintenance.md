@@ -77,8 +77,20 @@ alerting; deployed scheduler ownership and legal/privacy/security activation
 remain release gates.
 
 Retention policies using `redact` or `tombstone` reuse this path. Policy drafts
-using `purge` are rejected until a separately reviewed object-store/database
-purge implementation is available.
+using `purge` remain rejected until the source/object/backups scope is reviewed;
+the output-object queue below is intentionally narrower than a general source
+purge policy.
+
+Migration `0043` queues the complete artifact, report, and plan object
+references when a production analysis is invalidated by source deletion. The
+maintenance worker marks each external object deleted, waits for the
+reference's immutable `retentionUntil`, and then purges it through the
+workspace-bound object-store adapter. Claims use `FOR UPDATE SKIP LOCKED`, are
+reclaimable after a stale lease, and retry with a fixed maximum attempt count.
+The queue retains no raw complaint content and is idempotent when a worker
+crashes after the external mark or purge. The worker requires
+`APPSEA_OBJECT_STORE_ROOT`; an encrypted/versioned cloud adapter and backup
+deletion verification remain deployment gates.
 
 Configuration is bounded by the command:
 
@@ -87,10 +99,11 @@ Configuration is bounded by the command:
 - `APPSEA_RETENTION_BATCH_SIZE` (1-1,000, default 100)
 - `APPSEA_SOURCE_QUOTA_RETENTION_DAYS` (1-3,650, default 30)
 - `APPSEA_DELETION_WORKSPACE_ID` (optional persistence-safe workspace ID)
+- `APPSEA_OBJECT_STORE_ROOT` (required absolute object-store adapter root)
 
 The worker emits secret-free quota expiry/purge, production collection and
-analysis admission purge, source-collection-lease purge,
-retention enqueue, deletion propagation, and failure events.
+analysis admission purge, source-collection-lease purge, retention enqueue,
+deletion propagation, output-object purge, and failure events.
 `sourceMaintenanceInputSchema` validates the configuration
 before repository work, and `runSourceMaintenance` returns bounded counters
 for the correlation job ID. Quota expiry and settled-reservation purge each
@@ -98,7 +111,7 @@ use the full quota batch budget; retention enqueue and deletion propagation have
 independent bounded budgets.
 Workspace enumeration is sorted and deduplicated, and a retry may reuse
 `APPSEA_SOURCE_MAINTENANCE_JOB_ID` (the default is a UTC-minute bucket). Run it
-from a scheduler with retry and alerting. External object storage/backups,
+from a scheduler with retry and alerting. Cloud object storage/backups,
 exports, explicit re-collection after source deletion, and production deployment
 behavior remain explicit release blockers. Operators may still start a reviewed
 analysis over the remaining active evidence; the migration guard prevents

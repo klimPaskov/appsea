@@ -37,6 +37,10 @@ This skill may change `packages/db`, directly affected contracts and producers, 
    separate from source collection, store only digest/input-hash metadata,
    consume/release it in the same transaction as run persistence, and make the
    requesting actor immutable with an owner/editor membership check.
+   For external object deletion, persist the complete workspace-bound object
+   reference in a separate forced-RLS queue before invalidation commits; keep
+   object marking/purge outside the database transaction and make claims,
+   stale recovery, retention eligibility, and retries explicit.
 9. Add both a populated forward-upgrade test and a fresh-install test. Include negative privilege, RLS, policy, immutability, and cross-wire assertions.
 10. Update the local runbook, source-of-truth docs, and memory in the same tranche.
 

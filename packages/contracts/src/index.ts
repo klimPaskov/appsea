@@ -2135,6 +2135,7 @@ export const sourceMaintenanceResultSchema = z
     productionWorkflowAdmissionsPurged: z.number().int().nonnegative().max(10_000),
     productionAnalysisAdmissionsPurged: z.number().int().nonnegative().max(10_000),
     sourceCollectionLeasesPurged: z.number().int().nonnegative().max(10_000),
+    productionAnalysisObjectsPurged: z.number().int().nonnegative().max(10_000),
     retentionTombstonesQueued: z.number().int().nonnegative().max(1_000),
     deletionTombstonesProcessed: z.number().int().nonnegative().max(1_000),
     deletionObjectsAffected: z.number().int().nonnegative().max(10_000_000),

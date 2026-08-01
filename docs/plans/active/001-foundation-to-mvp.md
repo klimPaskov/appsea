@@ -25,7 +25,7 @@ Status: production-shaped foundation implemented and validated locally; producti
 
 Implemented:
 
-- PostgreSQL 18 schema and forty-two forward, checksummed migrations
+- PostgreSQL 18 schema and forty-three forward, checksummed migrations
 - normalized source, evidence, complaint, cluster, competitor, opportunity, score, report, plan, audit, cost, deletion, outbox, and lineage tables
 - no-login owner, separate migrator, and least-privilege runtime role contract
 - forced workspace RLS and transaction-scoped workspace context
@@ -40,7 +40,10 @@ Implemented:
   propagation path
 - content-addressed object-reference contract with deterministic in-memory and
   local filesystem adapters for production analysis artifact/report/plan blobs;
-  production encryption, lifecycle, and backup purge remain open
+  migration `0043` now queues complete invalidated output references and the
+  local adapter performs retention-aware mark/purge retries; encrypted cloud
+  storage, lifecycle/versioning, workspace closure, exports, and backup purge
+  remain open
 - durable production-analysis run, policy/evidence/output lineage, report
   object-reference, RLS, terminal-transition, and source-deletion invalidation
   migration; idempotent repository stores redacted artifact/report/plan objects
@@ -65,6 +68,10 @@ Implemented:
   delivery outbox, security events, narrow security-definer functions, bounded
   purge, and a retryable signed provider worker; delivery remains kill-switched
   pending identity/provider approval
+
+The invalidated production-analysis output queue is a deliberate narrow slice:
+it does not claim source-wide retention purge, cloud backup deletion, or
+workspace-closure deletion.
 
 Remaining deployment work and the non-fixture object-store integration are
 tracked in `docs/status/known-gaps.md` and are not part of the completed
@@ -128,7 +135,7 @@ Implemented:
 
 Remaining production work: legacy v1 history drain/retention for the analysis
 workflow, authenticated/TLS-protected Temporal, HA,
-object-store/backups retention and purge, deployment, metrics, alerts, deployed
+cloud object-store/backups retention and purge, deployment, metrics, alerts, deployed
 snapshot scheduler ownership, and worker crash fault-injection proof. Migration `0037` now queues deletion-triggered
 active-evidence repairs; deployed scheduling, alerting, and production
 Temporal remain open. The repository-level collection and manual-analysis

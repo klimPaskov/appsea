@@ -1,4 +1,4 @@
-import { mkdtemp, rm } from 'node:fs/promises'
+import { mkdtemp, readFile, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
@@ -126,6 +126,39 @@ describe('filesystem cleanup', () => {
         now: '2026-07-27T00:00:00.000Z'
       })
       await expect(store.head('workspace-test', deleted)).resolves.toBeNull()
+    } finally {
+      await rm(root, { recursive: true, force: true })
+    }
+  })
+
+  it('removes an orphaned body when a crash left no metadata sidecar', async () => {
+    const root = await mkdtemp(join(tmpdir(), 'appsea-object-store-orphan-'))
+    try {
+      const store = new FileObjectStore(root)
+      const reference = await store.put(input())
+      const deleted = await store.markDeleted(
+        'workspace-test',
+        reference,
+        '2026-07-27T00:00:00.000Z',
+        'source deletion retention purge'
+      )
+      const workspaceSegment = Buffer.from('workspace-test', 'utf8').toString('base64url')
+      const metadataPath = join(
+        root,
+        workspaceSegment,
+        'plan-package',
+        `${deleted.contentHash}.blob.json`
+      )
+      const bodyPath = metadataPath.slice(0, -'.json'.length)
+      await rm(metadataPath)
+
+      await store.purge('workspace-test', {
+        reference: deleted,
+        authorization: 'retention-expired',
+        now: '2026-09-01T00:00:00.000Z'
+      })
+      await expect(store.head('workspace-test', deleted)).resolves.toBeNull()
+      await expect(readFile(bodyPath)).rejects.toMatchObject({ code: 'ENOENT' })
     } finally {
       await rm(root, { recursive: true, force: true })
     }

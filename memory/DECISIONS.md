@@ -166,15 +166,19 @@ storage, and approval remain separate boundaries.
 
 ## 2026-07-26: Keep non-fixture blobs behind an object-store seam
 
-Do not weaken the PostgreSQL plan/report storage boundary with inline JSONB for
-non-fixture payloads. Add a content-addressed object reference contract and
-deterministic in-memory/filesystem adapters first. References are workspace-
-bound, hash-validated, immutable on replay, tombstoned before reads are
-allowed, and purgeable only after retention expiry or an explicit deletion /
-workspace-closure authorization. The local adapter proves behavior but is not
-a production cloud deployment; encrypted S3-compatible storage, lifecycle and
-backup deletion, database lineage, and private read wiring remain separate
-reviewed work.
+Keep non-fixture plan/report payloads behind a content-addressed object seam,
+with workspace-bound, hash-validated, immutable references and tombstone-before-
+read behavior. The in-memory/filesystem adapter is not cloud deployment;
+encrypted storage, lifecycle, backup deletion, lineage, and private reads need
+separate review.
+
+## 2026-08-01: Queue invalidated analysis output purge separately
+
+Keep source invalidation and external deletion separate. Migration `0043`
+queues artifact/report/plan refs before commit; maintenance claims with stale
+recovery, marks deleted, waits for `retentionUntil`, then purges with bounded
+retries. Local orphan bodies are cleaned after sidecar loss. This is narrower
+than source-wide, cloud backup/version, closure, or export purge.
 
 ## 2026-07-26: Preserve production analysis provenance before persistence
 
@@ -306,15 +310,12 @@ external collection.
 
 ## 2026-08-01: Keep production analysis artifacts out of Temporal history
 
-The v1 workflow placed a redacted artifact, including complaint excerpts, in
-immutable Temporal history. New starts therefore use `production-analysis-v2`:
-only workspace, collection, analysis, seed-review, timestamp, and digest
-identifiers cross Temporal; the worker reconstructs the artifact inside the
-activity and PostgreSQL remains the commit authority. Existing v1 histories
-are not rewritten; deployment must drain or retain compatible workers under an
-approved retention plan. Retention uses the server-observed activity timestamp;
-repository checks reject materially future timestamps, and final lineage locks
-the active, current, unexpired policy with allowed/restricted commercial use.
+The v1 workflow placed redacted artifacts in Temporal history. New starts use
+`production-analysis-v2`: only workspace, collection, analysis, seed-review,
+timestamp, and digest identifiers cross Temporal; the worker reconstructs the
+artifact and PostgreSQL remains commit authority. Existing v1 histories need a
+drain/retention plan. Retention uses server-observed time; repository checks
+reject future timestamps and final lineage locks current policy/use.
 
 ## 2026-08-01: Make full-snapshot deletion inference identifier-only and durable
 

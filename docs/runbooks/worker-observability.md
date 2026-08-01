@@ -13,8 +13,8 @@ log sink and alert on:
 - `workflow_budget_rejected` events grouped by `cost_budget_exceeded` and
   `source_item_budget_exceeded` failure codes;
 - `source_maintenance_finished` and `auth_retention_finished` events grouped by
-  their bounded counters (including `productionWorkflowAdmissionsPurged` and
-  `sourceCollectionLeasesPurged`) and
+  their bounded counters (including `productionWorkflowAdmissionsPurged`,
+  `sourceCollectionLeasesPurged`, and `productionAnalysisObjectsPurged`) and
   job ID;
 - missing `worker_started`/`worker_stopped` heartbeats for the task queue;
 - database connection or migration failures from the process supervisor.
@@ -27,7 +27,9 @@ expiry and settled-reservation purge each receive their own batch budget, so
 one maintenance action cannot starve the other. The runners sort and dedupe
 workspace IDs, cap deletion work, and return schema-validated counters. The
 underlying PostgreSQL operations are idempotent, allowing a safe rerun after a
-worker interruption without creating a second workflow queue.
+worker interruption without creating a second workflow queue. Object purge
+claims are separately bounded and should alert when fixed retry attempts are
+exhausted; the worker never logs object URIs or exception text.
 
 Temporal remains the source of truth for retry and replay. The worker uses
 bounded activity retries and the PostgreSQL workflow checkpoint tables use

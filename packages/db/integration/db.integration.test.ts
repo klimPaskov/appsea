@@ -2760,6 +2760,139 @@ describe.sequential('PostgreSQL fixture persistence lifecycle', () => {
     ).rejects.toMatchObject({ code: '42501' })
   })
 
+  it('queues complete analysis object references when a source deletion invalidates a run', async () => {
+    const workspaceId = 'workspace-object-purge'
+    const analysisRunId = 'analysis-run-object-purge'
+    const fixedReference = (
+      kind: 'workflow-artifact' | 'report-json' | 'plan-package',
+      hash: string
+    ) => ({
+      version: 1,
+      uri: `appsea-object://${workspaceId}/${kind}/${hash}`,
+      workspaceId,
+      kind,
+      contentHash: hash,
+      byteLength: 1,
+      contentType: kind === 'report-json' ? 'application/json' : 'application/octet-stream',
+      createdAt: fixedAt,
+      retentionUntil: fixedAt,
+      deletionState: 'active',
+      deletedAt: null,
+      deletionReason: null
+    })
+    const artifactReference = fixedReference('workflow-artifact', 'a'.repeat(64))
+    const reportReference = fixedReference('report-json', 'b'.repeat(64))
+    const planReference = fixedReference('plan-package', 'c'.repeat(64))
+
+    try {
+      await withOwnerClient(async (client) => {
+        await client.query('BEGIN')
+        try {
+          await client.query("SELECT set_config('appsea.workspace_id', $1, true)", [workspaceId])
+          await client.query(
+            `INSERT INTO appsea.workspaces
+               (workspace_id, slug, display_name, visibility, fixture_only, status, created_at, updated_at)
+             VALUES ($1, 'workspace-object-purge', 'Object purge test', 'private', false, 'active', $2, $2)`,
+            [workspaceId, fixedAt]
+          )
+          await client.query(
+            `INSERT INTO appsea.research_campaigns
+               (workspace_id, campaign_id, name, purpose, state, configuration, budget, synthetic,
+                created_at, updated_at)
+             VALUES ($1, 'campaign-object-purge', 'Object purge test', 'deletion', 'completed', '{}', '{}', false, $2, $2)`,
+            [workspaceId, fixedAt]
+          )
+          await client.query(
+            `INSERT INTO appsea.research_runs
+               (workspace_id, run_id, campaign_id, idempotency_key, mode, state, artifact_id,
+                input_hash, artifact_snapshot, requested_at, started_at, completed_at)
+             VALUES ($1, 'run-object-purge', 'campaign-object-purge',
+                     'object-purge-run-idempotency', 'production', 'completed',
+                     'artifact-object-purge', repeat('d', 64), '{}', $2, $2, $2)`,
+            [workspaceId, fixedAt]
+          )
+          await client.query(
+            `INSERT INTO appsea.production_analysis_runs
+               (workspace_id, analysis_run_id, collection_run_id, idempotency_key,
+                analysis_version, input_hash, artifact_id, artifact_snapshot,
+                artifact_object_ref, report_object_ref, plan_object_ref, state,
+                availability_state, seed_review_id, seed_content_hash, requested_at, started_at)
+             VALUES ($1, $2, 'run-object-purge', 'object-purge-analysis-idempotency',
+                     'production-analysis-v1', repeat('e', 64), 'artifact-object-purge-analysis', '{}',
+                     $3::jsonb, $4::jsonb, $5::jsonb, 'running', 'active',
+                     'seed-object-purge', repeat('f', 64), $6, $6)`,
+            [
+              workspaceId,
+              analysisRunId,
+              JSON.stringify(artifactReference),
+              JSON.stringify(reportReference),
+              JSON.stringify(planReference),
+              fixedAt
+            ]
+          )
+          await client.query(
+            `UPDATE appsea.production_analysis_runs
+                SET availability_state = 'invalidated',
+                    invalidated_at = $3,
+                    invalidation_reason = 'Source deletion tombstone object-purge'
+              WHERE workspace_id = $1 AND analysis_run_id = $2`,
+            [workspaceId, analysisRunId, laterAt]
+          )
+          await client.query('COMMIT')
+        } catch (error) {
+          await client.query('ROLLBACK')
+          throw error
+        }
+      })
+
+      const queued = await withWorkspaceTransaction(
+        servicePool,
+        workspaceId,
+        (client) =>
+          client.query<{ object_kind: string; state: string; object_uri: string }>(
+            `SELECT object_kind, state, object_uri
+               FROM appsea.production_analysis_object_purge_jobs
+              WHERE workspace_id = $1
+              ORDER BY object_kind`,
+            [workspaceId]
+          ),
+        { readOnly: true }
+      )
+      expect(queued.rows).toHaveLength(3)
+      expect(queued.rows.every((row) => row.state === 'pending')).toBe(true)
+      expect(queued.rows.map((row) => row.object_kind)).toEqual([
+        'plan-package',
+        'report-json',
+        'workflow-artifact'
+      ])
+    } finally {
+      await withOwnerClient(async (client) => {
+        await client.query('BEGIN')
+        try {
+          await client.query(
+            'DELETE FROM appsea.production_analysis_object_purge_jobs WHERE workspace_id = $1',
+            [workspaceId]
+          )
+          await client.query(
+            'DELETE FROM appsea.production_analysis_runs WHERE workspace_id = $1',
+            [workspaceId]
+          )
+          await client.query('DELETE FROM appsea.research_runs WHERE workspace_id = $1', [
+            workspaceId
+          ])
+          await client.query('DELETE FROM appsea.research_campaigns WHERE workspace_id = $1', [
+            workspaceId
+          ])
+          await client.query('DELETE FROM appsea.workspaces WHERE workspace_id = $1', [workspaceId])
+          await client.query('COMMIT')
+        } catch (error) {
+          await client.query('ROLLBACK')
+          throw error
+        }
+      })
+    }
+  })
+
   it('rejects unknown applied migration history', async () => {
     try {
       await withOwnerClient(async (client) => {

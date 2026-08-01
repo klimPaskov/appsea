@@ -461,9 +461,12 @@ export class FileObjectStore implements ObjectStore {
   async purge(workspaceId: string, input: ObjectStorePurgeInput): Promise<void> {
     const parsed = validateReferenceForWorkspace(workspaceId, input.reference)
     const stored = await this.readReference(parsed)
-    if (!stored) return
-    assertPurgeAllowed(stored, input)
-    const paths = this.paths(stored)
+    // A crash can leave the body without its sidecar metadata after the
+    // metadata was durably tombstoned. The queue retains the immutable
+    // reference, so retrying purge must still remove that orphan rather than
+    // treating a missing sidecar as a successful no-op.
+    if (stored) assertPurgeAllowed(stored, input)
+    const paths = this.paths(stored ?? parsed)
     await rm(paths.body, { force: true })
     await rm(paths.metadata, { force: true })
     try {

@@ -26,6 +26,11 @@ description: Use when adding or changing AppSea worker commands, scheduled jobs,
     Keep source-collection and downstream-analysis admission ledgers separate;
     bind the immutable requesting actor and purge stale reservations through a
     bounded maintenance job.
+11. For external object deletion, enqueue the complete immutable reference in
+    PostgreSQL before touching the store. Mark the object deleted first, wait
+    for the stored retention deadline, then purge through the adapter. Use a
+    skip-locked claim with stale recovery and fixed retry metadata; a missing
+    sidecar/body must be safe to reconcile on a later attempt.
 
 Do not rely on an in-memory loop for production durability. Do not hide a partial result behind a successful exit code.
 

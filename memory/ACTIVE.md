@@ -38,6 +38,12 @@ reclaimed. Source maintenance purges stale analysis admissions and reports a
 bounded counter. The database-backed integration proof is present but remains
 Docker-blocked in this environment.
 
+Migration `0043_production_analysis_object_purge.sql` queues complete
+artifact/report/plan refs on invalidation. The repository marks, waits for
+retention, and purges with stale recovery/bounded retries; local orphan bodies
+are cleaned after sidecar loss. Cloud encryption/versioning, backups, closure,
+exports, and Docker integration proof remain open.
+
 On 2026-08-01, the production analysis Temporal envelope was versioned to
 `production-analysis-v2`. New starts carry only workspace, collection, analysis,
 seed-review, timestamp, and digest identifiers. `apps/worker` reconstructs the
@@ -51,8 +57,9 @@ the active, current, unexpired policy, requires allowed/restricted commercial
 use, and rechecks confirmed redacted evidence before linking outputs.
 Collection initialization fails closed without one.
 
-Open security follow-ups are object-store purge/crash races, stale recomputation
-claims, retryable tombstone propagation, and authenticated source-CLI admission.
+Open security follow-ups are cloud object/backup deletion verification, stale
+recomputation claims, retryable tombstone propagation, and authenticated
+source-CLI admission.
 Collection persistence now locks and rechecks the lease in its write transaction;
 these remain production-readiness blockers.
 
@@ -77,6 +84,9 @@ these remain production-readiness blockers.
 - `pnpm verify:persistence` and `pnpm verify:workflows` attempted on
   2026-07-25 and 2026-08-01; both are blocked by the unavailable Docker
   Desktop Linux engine pipe (`//./pipe/dockerDesktopLinuxEngine`)
+- 2026-08-01 object-purge focus: contracts, object-store, db, and worker suites
+  passed; the real PostgreSQL trigger/RLS integration test is present but
+  remains Docker-blocked.
 
 ## Next production tranche
 
@@ -96,14 +106,14 @@ these remain production-readiness blockers.
 - No real source is approved or enabled in the repository; the CFPB path is
   policy-gated and its production collection command has no active deployment.
 - No production database/Temporal deployment exists. Local fixture workflow is
-  not production infrastructure; identity delivery, role separation, purge,
-  and deployment validation remain.
+  not production infrastructure; identity delivery, role separation, cloud/
+  backup/closure purge, and deployment validation remain.
 - Account recovery and invitation delivery remain disabled pending provider, identity, DPA/retention, key-rotation, monitoring, and failure-drill approval; invitations accept existing accounts only.
 - Deletion propagation invalidates dependent production analysis runs and
   evidence/report/plan projections, and migration `0035` invalidates/de-ranks
   affected mutable opportunity projections; migration `0037` queues
   active-evidence recomputation, while explicit re-collection, cloud object
-  storage, exports, and backup purge remain open.
+  storage, exports, workspace closure, and backup purge remain open.
 - The production collection workflow is locally package-tested and PostgreSQL-
   idempotent, but no production Temporal deployment or integration proof exists;
   an optional approved-seed completion now queues analysis for a worker

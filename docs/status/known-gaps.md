@@ -55,13 +55,15 @@ terminal tombstone state/count rewrites are blocked, normalized evidence is
 replaced with a redaction marker, dependent report/plan versions are marked
 unavailable, active production analysis runs are marked `invalidated`, and
 mutable opportunity projections are invalidated/de-ranked when no newer active
-analysis remains while provenance remains. Object references are retained for
-an authorized purge pass. An explicit reviewed analysis can now re-cluster the
+analysis remains while provenance remains. Migration `0043` now queues the
+complete artifact/report/plan references for an authorized, retention-aware
+purge pass; the local adapter also removes orphaned bodies after a metadata
+sidecar crash. An explicit reviewed analysis can now re-cluster the
 remaining active evidence after deletion, but automatic recomputation
 scheduling now persists a source-tombstone/seed-bound job and dispatches through
 the existing analysis workflow. Automatic re-collection, object
-storage/backups, export purge, and deployed scheduler alerting are not
-implemented.
+storage/backups, workspace-closure purge, export purge, and deployed scheduler
+alerting are not implemented.
 Complaint review transitions and the
 explicit reviewed analysis-start route are implemented. Migration `0034` also
 provides an opt-in, seed-bound post-collection handoff with stale-claim
@@ -95,8 +97,10 @@ Production analysis workflow version `v2` now carries only identifiers and
 immutable digests into Temporal; the worker reconstructs its redacted artifact
 from workspace-bound rows inside the activity. This closes new raw-history
 leakage, but v1 histories need a controlled drain/retention plan. The activity
-still persists object-backed outputs before finalization, so object-store purge
-and crash-race handling require a separate reviewed worker; stale
+still persists object-backed outputs before finalization; migration `0043` and
+the maintenance worker now cover invalidated output-object marking, retention,
+bounded retry, and local orphan cleanup. Cloud object-store/backup deletion and
+external conditional-delete verification remain deployment work; stale
 recompute-claim reclamation, retryable tombstone propagation, and authentication
 for the direct source CLI also remain open. Retention is anchored to
 server-observed activity time and final
@@ -110,8 +114,10 @@ Non-fixture report, plan, and production-analysis artifact payloads require
 object storage; inline JSONB is deliberately restricted to compact metadata
 and synthetic fixture packages. `@appsea/object-store` now provides a bounded
 content-addressed in-memory/filesystem seam wired to migration `0030`, private
-analysis reads, and deletion invalidation. Encrypted S3-compatible deployment,
-lifecycle rules, backup purge, and fresh Docker-backed proof remain open.
+analysis reads, and deletion invalidation. Migration `0043` adds the durable
+invalidated-output purge queue. Encrypted S3-compatible deployment, lifecycle
+and versioning rules, backup purge, workspace-closure purge, and fresh
+Docker-backed proof remain open.
 
 ## Sources
 
@@ -129,13 +135,15 @@ bounded all-workspace maintenance through a migration-owner security-definer
 workspace enumerator, stale-claim recovery, and deletion propagation now exist.
 No source is currently enabled for market research, and production Temporal
 provisioning/cloud-storage deployment, automatic re-collection,
-object-store/backups purge, recomputation alerting, and
+cloud object-store/backups purge, recomputation alerting, and
 legal/privacy/security approval remain required. CFPB collection currently
 records zero source cost because the reviewed policy declares zero API cost;
 non-zero billing adapters are not implemented. Retention enqueue now derives
 bounded tombstones from the stored policy and reuses deletion propagation;
-policy drafts requesting an unsupported `purge` retention action are rejected
-until a purge implementation exists. Object-store/backups purge remains open;
+policy drafts requesting a general `purge` retention action remain rejected
+until source/object/backups scope is approved. Invalidated analysis output
+purge is now bounded through migration `0043`; cloud object-store/backups purge
+remains open;
 automatic recomputation dispatch now exists through migration `0037`, and
 migrations `0040`/`0041` provide a policy-gated identifier-only reconciliation
 job, page checkpoints, warning-preserving retries, and atomic tombstone
@@ -187,12 +195,13 @@ review page; the analysis-start boundary now accepts only an approved
 `seedReviewId`. Production analysis persistence, opt-in post-collection
 handoff orchestration, private active-output reads, and source-deletion
 invalidation are implemented, with editor/owner complaint review transitions
-on the private collection surface. Cloud object storage, external retention/purge propagation, and
-export purge remain open. Plan packages now have a separate owner/editor
+on the private collection surface. Cloud object storage, external retention/
+backup propagation, workspace-closure purge, and export purge remain open. Plan packages now have a separate owner/editor
 approval boundary and approved JSON export; both report and plan routes hydrate
 validated object-backed payloads before export. Source-item retention enqueue is
-implemented from the stored policy, but it does not purge object stores or
-backups.
+implemented from the stored policy; invalidated analysis outputs now enqueue
+retention-aware local object purges, but source-wide object-store and backup
+purge remain deployment work.
 
 ## Desktop
 
