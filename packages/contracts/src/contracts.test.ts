@@ -39,6 +39,9 @@ import {
   sourceSnapshotReconciliationReadModelSchema,
   sourceSnapshotReconciliationStartRequestSchema,
   researchJobBudgetSchema,
+  researchCampaignConfigurationSchema,
+  researchCampaignCreateInputSchema,
+  researchCampaignReadModelSchema,
   sourcePolicySchema,
   sourcePolicyApprovalInputSchema,
   sourceMaintenanceInputSchema,
@@ -1220,6 +1223,80 @@ describe('contracts', () => {
         }
       }).success
     ).toBe(true)
+  })
+
+  it('validates campaign configuration and keeps source readiness visible', () => {
+    const configuration = {
+      schemaVersion: 'campaign-v1' as const,
+      goal: 'Find recurring billing workflow problems.',
+      query: 'billing workflow',
+      seeds: ['billing', 'invoice failures'],
+      sourceIds: ['source:cfpb'],
+      languages: ['en'],
+      geographies: [],
+      dateRange: { from: null, to: null },
+      exclusions: ['employment disputes'],
+      maxEvidenceCount: 100,
+      refreshPolicy: 'weekly' as const,
+      sensitiveTopicPolicy: 'review' as const,
+      requestedDisplayMode: 'excerpt' as const
+    }
+    expect(researchCampaignConfigurationSchema.safeParse(configuration).success).toBe(true)
+    expect(
+      researchCampaignConfigurationSchema.safeParse({
+        ...configuration,
+        sourceIds: ['source:cfpb', 'source:cfpb']
+      }).success
+    ).toBe(false)
+    expect(
+      researchCampaignConfigurationSchema.safeParse({
+        ...configuration,
+        dateRange: { from: '2026-08-02T00:00:00.000Z', to: '2026-08-01T00:00:00.000Z' }
+      }).success
+    ).toBe(false)
+
+    const input = researchCampaignCreateInputSchema.parse({
+      campaignId: 'campaign:billing',
+      name: 'Billing workflow research',
+      purpose: 'opportunity-research',
+      configuration,
+      budget: {
+        currency: 'USD',
+        maxSourceItems: 100,
+        maxCostMicros: 0,
+        maxActivityAttempts: 3
+      }
+    })
+    expect(
+      researchCampaignReadModelSchema.parse({
+        workspaceId: 'workspace:one',
+        campaignId: input.campaignId,
+        name: input.name,
+        purpose: input.purpose,
+        state: 'draft',
+        configuration: input.configuration,
+        budget: input.budget,
+        synthetic: false,
+        sources: [
+          {
+            sourceId: 'source:cfpb',
+            displayName: 'CFPB',
+            sourceType: 'api',
+            lifecycleState: 'active',
+            policyVersion: 'cfpb-v1',
+            policyState: 'pending_review',
+            permittedPurposes: ['opportunity-research'],
+            enabled: false,
+            synthetic: false,
+            coverageNotes: ['Pending review'],
+            reviewedAt: null,
+            expiresAt: null
+          }
+        ],
+        createdAt: now,
+        updatedAt: now
+      })
+    ).toMatchObject({ state: 'draft', sources: [{ enabled: false }] })
   })
 
   it('accepts an explicit approved-seed reference for automatic analysis handoff', () => {

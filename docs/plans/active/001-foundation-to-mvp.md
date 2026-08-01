@@ -133,6 +133,16 @@ explicit independence attestation. Historical approvals remain immutable audit
 history but are returned to pending review until re-approved; no source is
 activated by this migration.
 
+The private campaign configuration slice now uses the existing
+`research_campaigns` JSONB columns with a strict `campaign-v1` write contract
+and a legacy read union. Owners/editors can create draft campaigns and all
+members can list/read them. Source registry metadata, policy readiness,
+fixture/non-fixture compatibility, approved-purpose checks, and
+identifier-only audit/outbox receipts are enforced in the authenticated
+repository. No migration was needed because the persisted columns already
+support the additive shape; connector activation and workflow admission remain
+separate reviewed boundaries.
+
 ### 2. Durable workflows
 
 Status: fixture and production-collection workflow boundaries plus an
@@ -279,6 +289,8 @@ Implemented:
 - authenticated active-session inventory at `/account/security` and same-origin, reauthenticated revocation of another session
 - owner-safe account closure at `/account/security`: recent step-up plus typed confirmation, session/reset revocation, profile anonymization, and workspace-owner blockers while shared research remains retained
 - private workspace opportunity/evidence/report/plan reads behind web API routes
+- private campaign configuration page and list/create/read API with source
+  policy readiness metadata and draft-only, non-activating writes
 - public leaderboard remains database-free and explicitly synthetic
 
 Remaining: verified account recovery/delivery policy, production

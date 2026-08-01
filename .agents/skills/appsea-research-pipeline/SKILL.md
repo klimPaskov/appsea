@@ -31,6 +31,10 @@ description: Use when implementing or changing AppSea collection, normalization,
 - Record cost and source quota usage.
 - Keep human review states explicit.
 - Do not publish partial artifacts as complete.
+- Treat campaign configuration as a validated, private intent record. New
+  `campaign-v1` writes may create only drafts; resolve source IDs and expose
+  lifecycle/policy readiness, but re-check policy, purpose, quota, deletion,
+  and budget at workflow admission before any collection.
 
 ## Validation
 

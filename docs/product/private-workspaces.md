@@ -42,6 +42,18 @@ The public AppSea leaderboard is a sparse, synthetic fixture surface. Private re
 
 Private opportunity routes expose overview, evidence/coverage, competitors/contrary-signals, report, and coding-plan pages. Evidence is filtered to source representations allowed for display, deletion-state active rows only, and explicit synthetic/redaction labels. The competitors page carries a validated competitive-research coverage record: fixture data is synthetic, production seed assumptions are reviewed-seed-only, and source-backed status requires permitted source and retained evidence identifiers. Fixture persistence now generates a versioned deterministic report that keeps observations, score inference, contrary evidence, recommendation, and source coverage separate; the report is linked to its coding plan. Source coverage gaps remain visible; missing access is not presented as absence of demand.
 
+Research campaigns are the private configuration boundary at
+`/workspace/:workspaceId/campaigns` and the corresponding workspace API. All
+members can list/read campaigns; owners and editors can create a validated
+`campaign-v1` draft with a bounded source allowlist, evidence limit, refresh
+policy, display mode, and USD budget. The read model resolves each source to
+its lifecycle/policy state, permitted purpose, synthetic flag, review/expiry
+timestamps, and coverage notes. A pending or unavailable policy is shown as a
+gap. Draft creation writes identifier-only audit/outbox receipts but never
+starts a workflow or activates a connector; collection admission rechecks
+policy, quota, deletion, and budget constraints. Existing fixture/workflow
+campaign JSON remains readable through a legacy compatibility shape.
+
 Workspace members can inspect bounded cross-run operational cost accounting at
 `GET /api/workspaces/:workspaceId/costs`. The read model keeps currencies and
 cost types separate, reports exact micro-unit strings, defaults to a 30-day

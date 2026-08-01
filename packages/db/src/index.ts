@@ -62,6 +62,12 @@ export {
   OpportunitySeedReviewPermissionError,
   PostgresOpportunitySeedReviewRepository
 } from './opportunity-seed-review-repository'
+export {
+  PostgresResearchCampaignRepository,
+  ResearchCampaignConflictError,
+  ResearchCampaignPermissionError,
+  ResearchCampaignSourceError
+} from './research-campaign-repository'
 export { PostgresProductionCollectionWorkflowRepository } from './production-collection-workflow-repository'
 export {
   PostgresProductionWorkflowAdmissionRepository,

@@ -1221,6 +1221,110 @@ export const researchJobBudgetSchema = z
   })
   .strict()
 
+export const researchCampaignStateSchema = z.enum([
+  'draft',
+  'validated',
+  'queued',
+  'running',
+  'paused',
+  'completed',
+  'partial',
+  'failed',
+  'canceled'
+])
+
+export const researchCampaignConfigurationSchema = z
+  .object({
+    schemaVersion: z.literal('campaign-v1'),
+    goal: z.string().min(1).max(2_000),
+    query: z.string().max(500),
+    seeds: z.array(z.string().min(1).max(240)).min(1).max(100),
+    sourceIds: z.array(appseaIdentifierSchema).min(1).max(16),
+    languages: z.array(z.string().min(2).max(16)).max(16),
+    geographies: z.array(z.string().min(1).max(120)).max(32),
+    dateRange: z
+      .object({
+        from: z.string().datetime().nullable(),
+        to: z.string().datetime().nullable()
+      })
+      .strict(),
+    exclusions: z.array(z.string().min(1).max(240)).max(100),
+    maxEvidenceCount: z.number().int().min(1).max(5_000),
+    refreshPolicy: z.enum(['manual', 'daily', 'weekly', 'monthly']),
+    sensitiveTopicPolicy: z.enum(['exclude', 'review']),
+    requestedDisplayMode: z.enum(['excerpt', 'metadata-only', 'aggregate-only'])
+  })
+  .strict()
+  .superRefine((configuration, context) => {
+    if (new Set(configuration.sourceIds).size !== configuration.sourceIds.length) {
+      context.addIssue({
+        code: 'custom',
+        path: ['sourceIds'],
+        message: 'Campaign source IDs must be unique'
+      })
+    }
+    if (
+      configuration.dateRange.from !== null &&
+      configuration.dateRange.to !== null &&
+      Date.parse(configuration.dateRange.from) >= Date.parse(configuration.dateRange.to)
+    ) {
+      context.addIssue({
+        code: 'custom',
+        path: ['dateRange'],
+        message: 'Campaign date range must end after it starts'
+      })
+    }
+  })
+
+const legacyResearchCampaignConfigurationSchema = z.record(z.string(), z.unknown())
+const legacyResearchCampaignBudgetSchema = z.record(z.string(), z.unknown())
+
+export const researchCampaignCreateInputSchema = z
+  .object({
+    campaignId: appseaIdentifierSchema,
+    name: z.string().min(1).max(160),
+    purpose: z.string().min(1).max(120),
+    configuration: researchCampaignConfigurationSchema,
+    budget: researchJobBudgetSchema
+  })
+  .strict()
+
+export const researchCampaignSourceReadModelSchema = z
+  .object({
+    sourceId: appseaIdentifierSchema,
+    displayName: z.string().min(1).max(240),
+    sourceType: z.enum(['fixture', 'api', 'export', 'licensed-feed', 'manual']),
+    lifecycleState: z.string().min(1).max(32),
+    policyVersion: z.string().min(1).max(80).nullable(),
+    policyState: sourcePolicyStateSchema.nullable(),
+    permittedPurposes: z.array(z.string().min(1).max(120)).max(100),
+    enabled: z.boolean(),
+    synthetic: z.boolean(),
+    coverageNotes: z.array(z.string().max(500)).max(100),
+    reviewedAt: z.string().datetime().nullable(),
+    expiresAt: z.string().datetime().nullable()
+  })
+  .strict()
+
+export const researchCampaignReadModelSchema = z
+  .object({
+    workspaceId: appseaIdentifierSchema,
+    campaignId: appseaIdentifierSchema,
+    name: z.string().min(1).max(160),
+    purpose: z.string().min(1).max(120),
+    state: researchCampaignStateSchema,
+    configuration: z.union([
+      researchCampaignConfigurationSchema,
+      legacyResearchCampaignConfigurationSchema
+    ]),
+    budget: z.union([researchJobBudgetSchema, legacyResearchCampaignBudgetSchema]),
+    synthetic: z.boolean(),
+    sources: z.array(researchCampaignSourceReadModelSchema).max(16),
+    createdAt: z.string().datetime(),
+    updatedAt: z.string().datetime()
+  })
+  .strict()
+
 /**
  * A production source collection is intentionally additive to the fixture
  * research artifact. It records a completed, provenance-preserving collection
@@ -3318,6 +3422,11 @@ export type Competitor = z.infer<typeof competitorSchema>
 export type ScoreFactors = z.infer<typeof scoreFactorsSchema>
 export type ScoreSnapshot = z.infer<typeof scoreSnapshotSchema>
 export type Opportunity = z.infer<typeof opportunitySchema>
+export type ResearchCampaignState = z.infer<typeof researchCampaignStateSchema>
+export type ResearchCampaignConfiguration = z.infer<typeof researchCampaignConfigurationSchema>
+export type ResearchCampaignCreateInput = z.infer<typeof researchCampaignCreateInputSchema>
+export type ResearchCampaignSourceReadModel = z.infer<typeof researchCampaignSourceReadModelSchema>
+export type ResearchCampaignReadModel = z.infer<typeof researchCampaignReadModelSchema>
 export type ResearchArtifact = z.infer<typeof researchArtifactSchema>
 export type FixtureResearchArtifact = z.infer<typeof fixtureResearchArtifactSchema>
 export type ProductionOpportunitySeed = z.infer<typeof productionOpportunitySeedSchema>

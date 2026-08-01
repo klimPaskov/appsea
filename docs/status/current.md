@@ -54,6 +54,15 @@ records are marked synthetic/unresolved; production reviewed seed assumptions
 are marked `reviewed-seed-only` with seed-review provenance and an explicit gap
 until a permitted competitor source supplies retained evidence.
 
+Private campaign configuration is now available at
+`/workspace/:workspaceId/campaigns` with authenticated list/create/read APIs.
+New writes use a strict `campaign-v1` JSONB contract, resolve source registry
+and policy readiness metadata, reject unknown or purpose-incompatible sources,
+and persist only draft campaigns with identifier-only audit/outbox receipts.
+Legacy fixture/workflow campaign rows remain readable. Campaign creation does
+not start a workflow or activate the disabled CFPB connector; workflow
+admission remains the policy/quota/deletion/budget gate.
+
 `pnpm analysis:sample` produces a visibly `testOnly` production-shaped CFPB
 artifact, report, deterministic score, and generic coding package under
 `artifacts/analysis-sample/`. It does not activate a connector, call the

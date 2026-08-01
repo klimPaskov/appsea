@@ -41,6 +41,9 @@ export default async function WorkspacePage() {
           <Link className="quiet-button" href={`/workspace/${workspace.workspaceId}/seed-reviews`}>
             Seed reviews
           </Link>
+          <Link className="quiet-button" href={`/workspace/${workspace.workspaceId}/campaigns`}>
+            Campaigns
+          </Link>
           <SignOutButton />
         </div>
       </div>

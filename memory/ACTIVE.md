@@ -105,6 +105,14 @@ production seeds are reviewed-seed-only with provenance, and source-backed
 status requires permitted source IDs, retained evidence IDs, and an observation
 time. Per-competitor observations and feature matrices remain open.
 
+The 2026-08-01 campaign slice adds strict `campaign-v1` contracts and a
+private draft repository/API/page. Source IDs resolve to lifecycle/policy
+readiness; fixture mixing, unknown sources, and approved-purpose mismatches
+fail closed. Creation writes identifier-only audit/outbox receipts and never
+starts Temporal or activates a connector. Legacy campaign JSON remains
+readable. Edit/delete, run controls, refresh scheduling, source picker, live
+activation, and Docker PostgreSQL proof remain open.
+
 ## Next production tranche
 
 1. Legal/privacy/security approval and CFPB policy activation.

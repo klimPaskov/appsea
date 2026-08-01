@@ -1,5 +1,13 @@
 # Data flow
 
+Campaign configuration is a separate private step before this execution
+sequence. An authenticated owner/editor writes a strict `campaign-v1` draft
+through the workspace repository after resolving source IDs and displaying
+policy readiness. The write records only identifiers in audit/outbox metadata;
+it does not start Temporal or activate a connector. Existing fixture/workflow
+campaign JSON remains readable, while new workflow admission rechecks the
+current policy, purpose, quota, deletion obligations, and budget.
+
 1. An authorized client submits a bounded, hashed workflow request; the web
    boundary binds the authenticated user as the requesting principal, then
    migration `0038` verifies the active private non-fixture workspace and

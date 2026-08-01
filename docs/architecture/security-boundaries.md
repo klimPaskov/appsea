@@ -39,6 +39,15 @@ for that pre-context authorization lookup.
   trigger rejects unattested or self-owned approvals, and pre-0054 approvals
   are conservatively disabled until re-reviewed. This strengthens the gate but
   does not grant legal, privacy, or security approval or activate a source.
+- Research campaign creation is a separate private boundary. The web route
+  requires an authenticated owner/editor and same-origin request; the
+  repository repeats membership and private-workspace checks inside an RLS
+  transaction. Source IDs must exist in the global registry, fixture and
+  non-fixture sources cannot be mixed, and an approved policy must list the
+  requested purpose. Pending or unavailable policies may be recorded only as
+  visible readiness gaps. Creation writes identifier-only audit/outbox
+  receipts and cannot activate a connector or start a workflow; later job
+  admission must recheck policy and budgets.
 - Migration `0032` makes complaint curation an explicit workspace boundary:
   only active workspace editors and owners can transition an active complaint
   observation from `unreviewed` to `confirmed`/`rejected` or from `confirmed`

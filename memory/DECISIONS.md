@@ -7,40 +7,27 @@ Foundation decisions remain archived; see linked file.
 
 ## 2026-07-24: Temporal orchestration with PostgreSQL commit authority
 
-Use the pinned Temporal TypeScript workflow package for scheduling, bounded
-retries, cancellation, and recovery. Keep workflow history sanitized and small;
-keep database/research side effects in activities. PostgreSQL remains the commit
-authority for RLS, checkpoints, output lineage, and one-time ledgers. A
-non-cancellable persistence safe point plus terminal reconciliation handles late
-cancellation and response loss. The local Temporal Compose server is a
-development-only proof, not a production deployment.
+Use pinned Temporal workflows for scheduling, bounded retries, cancellation,
+and recovery, with sanitized history and side effects in activities. PostgreSQL
+owns RLS, checkpoints, lineage, and ledgers; the persistence safe point and
+terminal reconciliation handle late cancellation. Local Compose is development
+proof, not production deployment.
 
 ## 2026-07-24: Authenticated private workspaces
 
-Store users and workspace memberships in PostgreSQL, hash passwords with scrypt,
-hash opaque session tokens, and use HttpOnly SameSite cookies at the web boundary.
-Every private read checks membership before setting the transaction-local RLS
-context. Keep the public leaderboard database-free and synthetic. Durable
-login/signup/reauthentication throttling and bounded session cleanup are
-implemented. Member roster reads and role/removal mutations are owner-only, use
-a serialized last-owner guard, require an explicit password step-up for a
-15-minute session window, and emit identifier-only audit/outbox events. Account
-recovery, invitations, account deletion, MFA/OIDC, and production identity
-policy remain a separate reviewed tranche, with distributed deployment
-validation still required.
+Store users/memberships in PostgreSQL, hash passwords/tokens, and use
+HttpOnly SameSite cookies. Every private read checks membership before RLS
+context. Keep the public leaderboard synthetic. Owner membership mutations use
+last-owner and password-step-up guards with identifier-only receipts; recovery,
+invitations, closure, MFA/OIDC, and production identity remain reviewed work.
 
 ## 2026-07-24: Durable source quota and deletion projections
 
-Source quotas use PostgreSQL security-definer reservations: minute windows are
-global across workspaces, reservation rows retain workspace/run/idempotency
-lineage, and commit/release/expiry/purge are idempotent and workspace-scoped
-under RLS. Connectors receive only a narrow ledger capability and fail closed
-outside tests without it. Deletion tombstones use skip-locked claims with stale
-lease recovery; source raw references are cleared, normalized evidence and
-stored report/plan payloads are replaced with markers, and dependent
-reports/plans become unavailable while provenance remains. Recomputing
-complaint/cluster/opportunity projections and purging external objects/backups
-remain open; active report/plan payloads are immutable after insertion.
+Source quotas use security-definer reservations with global minute windows,
+workspace/run/idempotency lineage, and idempotent commit/release/expiry. A
+narrow connector capability fails closed outside tests. Deletion tombstones
+clear raw references, mark dependent reports/plans unavailable, and retain
+provenance; recomputation and external purge remain open.
 
 ## 2026-07-24: Review before report export
 
@@ -54,21 +41,17 @@ object storage, retention, or deletion duties are complete.
 
 ## 2026-07-24: Explicit session inventory and revocation
 
-Expose active authentication sessions through a private account-security route
-using only stable session identifiers and timestamps. Revoke another session
-only after same-origin password reauthentication, and reject attempts to revoke
-the current session. The database query resolves the current token to a user
-before updating the target, so a session identifier alone never grants access
-to another user's authentication material; recovery, MFA/OIDC, and account
-deletion remain separate identity work.
+Expose active sessions privately using stable IDs/timestamps. Revoke another
+session only after same-origin password reauthentication and reject the current
+session; the database resolves the current token before updating the target.
+Recovery, MFA/OIDC, and account deletion remain separate identity work.
 
 ## 2026-07-24: Bounded maintenance runners and scheduler correlation
 
-Keep source quota/deletion and authentication retention entry points as pure,
-contract-validated runners. Cap inputs, sort/deduplicate workspace IDs, use
-independent budgets, and emit bounded counters with stable scheduler IDs.
-PostgreSQL remains the idempotency boundary; deployment, alerting, and recovery
-ownership must be reviewed before claiming production scheduling.
+Keep quota/deletion and auth retention as pure, contract-validated runners with
+capped inputs, independent budgets, and stable scheduler IDs. PostgreSQL is the
+idempotency boundary; deployment, alerting, and recovery ownership require
+review before production scheduling.
 
 ## 2026-07-24: Provider-neutral password recovery boundary
 
@@ -348,3 +331,13 @@ Private opportunity reads separate competitive-research state from competitor
 rows: fixtures are synthetic/unresolved, approved seeds are reviewed-seed-only,
 and source-backed requires permitted source IDs, retained evidence IDs, and an
 observation time. This prevents missing coverage becoming a market claim.
+
+## 2026-08-01: Persist campaign intent before collection
+
+Use existing `research_campaigns` JSONB columns for strict `campaign-v1` writes
+and a bounded legacy read union. Owners/editors create only `draft` campaigns;
+members inspect source lifecycle/policy readiness. The repository rejects
+unknown sources, fixture mixing, and approved-purpose mismatches, then writes
+identifier-only audit/outbox receipts. It never starts Temporal or activates a
+connector; workflow admission rechecks policy, quota, deletion, and budget.
+No migration was needed because the table shape is additive.

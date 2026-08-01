@@ -16,6 +16,7 @@
     "./production-analysis-object-purge": "./src/production-analysis-object-purge-repository.ts",
     "./production-analysis-recompute": "./src/production-analysis-recompute-repository.ts",
     "./opportunity-seed-review": "./src/opportunity-seed-review.ts",
+    "./research-campaign": "./src/research-campaign-repository.ts",
     "./source-policy": "./src/source-policy.ts"
   },
   "scripts": {
