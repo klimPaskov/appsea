@@ -81,6 +81,10 @@ export {
   type SourceCollectionLeaseResult
 } from './source-collection-lease-repository'
 export {
+  PostgresMaintenanceSchedulerLeaseRepository,
+  maintenanceSchedulerLeaseLimits
+} from './maintenance-scheduler-lease-repository'
+export {
   PostgresSourceSnapshotReconciliationRepository,
   SourceSnapshotReconciliationAdmissionDeniedError,
   SourceSnapshotReconciliationClaimError,

@@ -25,6 +25,7 @@ const maximumWorkspaceCount = 10_000
 const maximumAffectedObjects = 10_000_000
 
 export interface SourceMaintenanceDependencies {
+  assertLease?: () => Promise<void>
   quota: Pick<
     PostgresSourceQuotaRepository,
     'listActiveWorkspaceIds' | 'expireStale' | 'purgeSettled'
@@ -49,6 +50,7 @@ export interface SourceMaintenanceDependencies {
 }
 
 export interface AuthRetentionDependencies {
+  assertLease?: () => Promise<void>
   auth: Pick<PostgresAuthRepository, 'purgeExpiredSessions'>
 }
 
@@ -85,6 +87,8 @@ export async function runSourceMaintenance(
   dependencies: SourceMaintenanceDependencies
 ): Promise<SourceMaintenanceResult> {
   const parsed = sourceMaintenanceInputSchema.parse(input)
+  const assertLease = dependencies.assertLease ?? (async () => undefined)
+  await assertLease()
   const quotaWorkspaceIds = sortedWorkspaceIds(await dependencies.quota.listActiveWorkspaceIds())
   const deletionWorkspaceIds = parsed.workspaceId
     ? [appseaIdentifierSchema.parse(parsed.workspaceId)]
@@ -95,6 +99,7 @@ export async function runSourceMaintenance(
   for (const workspaceId of quotaWorkspaceIds) {
     if (quotaReservationsExpired >= parsed.quotaBatchSize) break
     const remaining = parsed.quotaBatchSize - quotaReservationsExpired
+    await assertLease()
     const expired = countWithin(
       await dependencies.quota.expireStale(workspaceId, parsed.occurredAt, remaining),
       'quotaReservationsExpired',
@@ -107,6 +112,7 @@ export async function runSourceMaintenance(
   for (const workspaceId of quotaWorkspaceIds) {
     if (quotaReservationsPurged >= parsed.quotaBatchSize) break
     const remaining = parsed.quotaBatchSize - quotaReservationsPurged
+    await assertLease()
     const purged = countWithin(
       await dependencies.quota.purgeSettled(workspaceId, before, remaining),
       'quotaReservationsPurged',
@@ -134,6 +140,7 @@ export async function runSourceMaintenance(
     for (const workspaceId of deletionWorkspaceIds) {
       if (productionWorkflowAdmissionsPurged >= parsed.retentionBatchSize) break
       const remaining = parsed.retentionBatchSize - productionWorkflowAdmissionsPurged
+      await assertLease()
       const purged = countWithin(
         await dependencies.admission.purge(workspaceId, before, remaining),
         'productionWorkflowAdmissionsPurged',
@@ -146,6 +153,7 @@ export async function runSourceMaintenance(
     for (const workspaceId of deletionWorkspaceIds) {
       if (productionAnalysisAdmissionsPurged >= parsed.retentionBatchSize) break
       const remaining = parsed.retentionBatchSize - productionAnalysisAdmissionsPurged
+      await assertLease()
       const purged = countWithin(
         await dependencies.analysisAdmission.purge(workspaceId, before, remaining),
         'productionAnalysisAdmissionsPurged',
@@ -158,6 +166,7 @@ export async function runSourceMaintenance(
     for (const workspaceId of deletionWorkspaceIds) {
       if (sourceCollectionLeasesPurged >= parsed.retentionBatchSize) break
       const remaining = parsed.retentionBatchSize - sourceCollectionLeasesPurged
+      await assertLease()
       const purged = countWithin(
         await dependencies.leases.purge(workspaceId, before, remaining),
         'sourceCollectionLeasesPurged',
@@ -169,6 +178,7 @@ export async function runSourceMaintenance(
   if (dependencies.snapshotReconciliation) {
     for (const workspaceId of deletionWorkspaceIds) {
       if (sourceSnapshotReconciliationsProcessed >= parsed.snapshotReconciliationBatchSize) break
+      await assertLease()
       const result = await dependencies.snapshotReconciliation(workspaceId)
       if (!result) continue
       sourceSnapshotReconciliationsProcessed += 1
@@ -189,6 +199,7 @@ export async function runSourceMaintenance(
   for (const workspaceId of deletionWorkspaceIds) {
     if (retentionTombstonesQueued >= parsed.retentionBatchSize) break
     const remaining = parsed.retentionBatchSize - retentionTombstonesQueued
+    await assertLease()
     const queued = countWithin(
       await dependencies.deletion.enqueueExpired(workspaceId, parsed.occurredAt, remaining),
       'retentionTombstonesQueued',
@@ -198,6 +209,7 @@ export async function runSourceMaintenance(
   }
   for (const workspaceId of deletionWorkspaceIds) {
     while (deletionTombstonesProcessed < parsed.deletionBatchSize) {
+      await assertLease()
       const result = await dependencies.deletion.processNext(workspaceId)
       if (!result) break
       deletionTombstonesProcessed += 1
@@ -225,6 +237,7 @@ export async function runSourceMaintenance(
   if (dependencies.objectPurge) {
     for (const workspaceId of deletionWorkspaceIds) {
       while (productionAnalysisObjectsPurged < parsed.retentionBatchSize) {
+        await assertLease()
         const result = await dependencies.objectPurge.processNext(workspaceId, parsed.occurredAt)
         if (!result) break
         if (result.purged) productionAnalysisObjectsPurged += 1
@@ -263,6 +276,7 @@ export async function runAuthRetention(
   dependencies: AuthRetentionDependencies
 ): Promise<AuthRetentionResult> {
   const parsed = authRetentionInputSchema.parse(input)
+  await (dependencies.assertLease ?? (async () => undefined))()
   const result = await dependencies.auth.purgeExpiredSessions(
     parsed.retentionDays,
     parsed.batchSize

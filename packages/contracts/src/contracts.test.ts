@@ -35,6 +35,12 @@ import {
   sourcePolicySchema,
   sourceMaintenanceInputSchema,
   sourceMaintenanceResultSchema,
+  maintenanceSchedulerNameSchema,
+  maintenanceSchedulerOwnerIdSchema,
+  maintenanceSchedulerLeaseTokenSchema,
+  maintenanceSchedulerLeaseResultSchema,
+  maintenanceSchedulerRenewResultSchema,
+  maintenanceSchedulerReleaseResultSchema,
   workspaceOpportunityReadModelSchema,
   workspaceOpportunityDetailReadModelSchema,
   workspaceReportApprovalInputSchema,
@@ -369,6 +375,41 @@ describe('contracts', () => {
   })
 
   it('bounds maintenance job inputs and outputs', () => {
+    expect(maintenanceSchedulerNameSchema.safeParse('appsea-source-maintenance-v1').success).toBe(
+      true
+    )
+    expect(maintenanceSchedulerOwnerIdSchema.safeParse('worker:host-1:123').success).toBe(true)
+    expect(maintenanceSchedulerLeaseTokenSchema.safeParse('token:worker:host-1:123').success).toBe(
+      true
+    )
+    expect(
+      maintenanceSchedulerLeaseResultSchema.safeParse({
+        acquired: true,
+        leaseUntil: now,
+        leaseToken: 'token:worker:host-1:123'
+      }).success
+    ).toBe(true)
+    expect(
+      maintenanceSchedulerRenewResultSchema.safeParse({
+        renewed: false,
+        leaseUntil: null
+      }).success
+    ).toBe(true)
+    expect(maintenanceSchedulerReleaseResultSchema.safeParse({ released: true }).success).toBe(true)
+    expect(maintenanceSchedulerNameSchema.safeParse('bad name').success).toBe(false)
+    expect(maintenanceSchedulerOwnerIdSchema.safeParse('x').success).toBe(false)
+    expect(maintenanceSchedulerLeaseTokenSchema.safeParse('short').success).toBe(false)
+    expect(
+      maintenanceSchedulerLeaseResultSchema.safeParse({
+        acquired: true,
+        leaseUntil: null,
+        leaseToken: null
+      }).success
+    ).toBe(false)
+    expect(
+      maintenanceSchedulerRenewResultSchema.safeParse({ renewed: true, leaseUntil: null }).success
+    ).toBe(false)
+
     const sourceInput = {
       jobId: 'maintenance:source:123',
       occurredAt: now,

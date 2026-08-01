@@ -29,7 +29,13 @@ and deletion counters, including `workspaceInvitationsDeleted`. Set `APPSEA_AUTH
 retry must keep the same correlation ID; otherwise the command uses a
 UTC-minute bucket. It emits secret-free `auth_retention_finished` or
 `auth_retention_failed` events and should be retried by the supervisor on
-failure.
+failure. Migration `0046` protects the pass with the
+`appsea-auth-maintenance-v1` server-clock lease. The lease uses the dedicated
+`appsea_maintenance` connection from `APPSEA_MAINTENANCE_DATABASE_URL` and a
+per-acquisition token; the data work continues through `DATABASE_URL`. Set a
+unique `APPSEA_SCHEDULER_OWNER_ID` in production and optionally bound the lease with
+`APPSEA_MAINTENANCE_LEASE_SECONDS` (30-3,600, default 900); a contended run
+emits `maintenance_scheduler_lease_contended` without touching retention rows.
 
 Source quota reservations and tombstone propagation share the source
 maintenance command:

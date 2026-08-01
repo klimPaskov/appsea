@@ -58,6 +58,12 @@ Success/failure counters use the fixed event names
 `workspaceInvitationDeliveriesClaimed`, `workspaceInvitationDeliveriesSent`,
 and `workspaceInvitationDeliveriesFailed`.
 
+Migration `0046` protects the delivery pass with the same server-clock owner
+lease. The lease uses the dedicated `appsea_maintenance` connection from
+`APPSEA_MAINTENANCE_DATABASE_URL`, separate from the data-work connection.
+Production requires a unique `APPSEA_SCHEDULER_OWNER_ID`; a contended run exits
+without claiming rows and lease loss is a fixed failure code.
+
 ## Retention and incident response
 
 `pnpm --filter @appsea/worker auth:retention` purges expired invitations and

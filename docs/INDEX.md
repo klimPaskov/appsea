@@ -65,6 +65,7 @@
 - [`adrs/0006-postgresql-persistence.md`](adrs/0006-postgresql-persistence.md)
 - [`adrs/0007-durable-workflow-orchestration.md`](adrs/0007-durable-workflow-orchestration.md)
 - [`adrs/0008-authenticated-private-workspaces.md`](adrs/0008-authenticated-private-workspaces.md)
+- [`adrs/0009-maintenance-scheduler-ownership.md`](adrs/0009-maintenance-scheduler-ownership.md)
 
 ## Generated references
 
@@ -103,3 +104,4 @@
 - [`status/production-object-storage-completion-report-2026-08-01.md`](status/production-object-storage-completion-report-2026-08-01.md)
 - [`status/operational-health-completion-report-2026-08-01.md`](status/operational-health-completion-report-2026-08-01.md)
 - [`status/temporal-worker-configuration-completion-report-2026-08-01.md`](status/temporal-worker-configuration-completion-report-2026-08-01.md)
+- [`status/maintenance-scheduler-lease-completion-report-2026-08-01.md`](status/maintenance-scheduler-lease-completion-report-2026-08-01.md)

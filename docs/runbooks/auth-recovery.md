@@ -51,6 +51,14 @@ the fixed `APPSEA_AUTH_RECOVERY_DELIVERY_FAILED` code and become retryable
 after five minutes. The worker emits counters only and never logs tokens,
 passwords, provider responses, or raw exceptions.
 
+Migration `0046` also protects the delivery pass with a server-clock lease.
+The lease uses the dedicated `appsea_maintenance` connection from
+`APPSEA_MAINTENANCE_DATABASE_URL`, separate from the data-work connection.
+Production requires a unique `APPSEA_SCHEDULER_OWNER_ID`; development/test runs
+generate an ephemeral owner. Lease contention is a no-op with a bounded
+`maintenance_scheduler_lease_contended` event, while lease loss is a fixed
+failure code.
+
 The gateway request carries a delivery ID/idempotency key, timestamp, nonce,
 and HMAC signature. It must reject redirects and retain no reset token beyond
 its approved delivery purpose. The reset URL carries the token in a URL

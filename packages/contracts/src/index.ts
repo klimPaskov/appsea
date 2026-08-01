@@ -2144,6 +2144,50 @@ export const workflowJobReadModelSchema = z
 
 export const maintenanceJobIdSchema = appseaIdentifierSchema
 
+export const maintenanceSchedulerNameSchema = z
+  .string()
+  .min(3)
+  .max(80)
+  .regex(/^[a-z][a-z0-9_-]+$/)
+
+export const maintenanceSchedulerOwnerIdSchema = z
+  .string()
+  .min(3)
+  .max(160)
+  .regex(/^[a-zA-Z0-9][a-zA-Z0-9._:-]*$/)
+
+export const maintenanceSchedulerLeaseTokenSchema = z
+  .string()
+  .min(16)
+  .max(128)
+  .regex(/^[a-zA-Z0-9][a-zA-Z0-9._:-]*$/)
+
+export const maintenanceSchedulerLeaseResultSchema = z
+  .object({
+    acquired: z.boolean(),
+    leaseUntil: z.string().datetime().nullable(),
+    leaseToken: maintenanceSchedulerLeaseTokenSchema.nullable()
+  })
+  .refine((value) => !value.acquired || value.leaseUntil !== null, {
+    message: 'acquired leases must include an expiry'
+  })
+  .refine((value) => !value.acquired || value.leaseToken !== null, {
+    message: 'acquired leases must include a token'
+  })
+  .strict()
+
+export const maintenanceSchedulerRenewResultSchema = z
+  .object({
+    renewed: z.boolean(),
+    leaseUntil: z.string().datetime().nullable()
+  })
+  .refine((value) => value.renewed === (value.leaseUntil !== null), {
+    message: 'renewed leases must include an expiry'
+  })
+  .strict()
+
+export const maintenanceSchedulerReleaseResultSchema = z.object({ released: z.boolean() }).strict()
+
 export const sourceMaintenanceInputSchema = z
   .object({
     jobId: maintenanceJobIdSchema,
@@ -2814,6 +2858,14 @@ export type FixtureResearchWorkflowResult = z.infer<typeof fixtureResearchWorkfl
 export type FixtureResearchWorkflowStatus = z.infer<typeof fixtureResearchWorkflowStatusSchema>
 export type WorkflowJobReadModel = z.infer<typeof workflowJobReadModelSchema>
 export type MaintenanceJobId = z.infer<typeof maintenanceJobIdSchema>
+export type MaintenanceSchedulerName = z.infer<typeof maintenanceSchedulerNameSchema>
+export type MaintenanceSchedulerOwnerId = z.infer<typeof maintenanceSchedulerOwnerIdSchema>
+export type MaintenanceSchedulerLeaseToken = z.infer<typeof maintenanceSchedulerLeaseTokenSchema>
+export type MaintenanceSchedulerLeaseResult = z.infer<typeof maintenanceSchedulerLeaseResultSchema>
+export type MaintenanceSchedulerRenewResult = z.infer<typeof maintenanceSchedulerRenewResultSchema>
+export type MaintenanceSchedulerReleaseResult = z.infer<
+  typeof maintenanceSchedulerReleaseResultSchema
+>
 export type SourceMaintenanceInput = z.infer<typeof sourceMaintenanceInputSchema>
 export type SourceMaintenanceResult = z.infer<typeof sourceMaintenanceResultSchema>
 export type AuthRetentionInput = z.infer<typeof authRetentionInputSchema>

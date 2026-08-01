@@ -33,6 +33,7 @@ import {
   PostgresProductionAnalysisRecomputeRepository,
   PostgresOpportunitySeedReviewRepository,
   PostgresProductionWorkflowAdmissionRepository,
+  PostgresMaintenanceSchedulerLeaseRepository,
   PostgresSourceCollectionLeaseRepository,
   PostgresSourceSnapshotReconciliationRepository,
   ProductionWorkflowConcurrencyLimitError,
@@ -55,6 +56,7 @@ function requiredEnvironment(name: string): string {
 }
 
 const serviceDatabaseUrl = requiredEnvironment('APPSEA_TEST_DATABASE_URL')
+const maintenanceDatabaseUrl = requiredEnvironment('APPSEA_TEST_MAINTENANCE_DATABASE_URL')
 const migrationDatabaseUrl = requiredEnvironment('APPSEA_TEST_MIGRATION_DATABASE_URL')
 if (process.env.APPSEA_ALLOW_DESTRUCTIVE_DB_TESTS !== 'yes') {
   throw new Error('APPSEA_ALLOW_DESTRUCTIVE_DB_TESTS=yes is required')
@@ -83,6 +85,7 @@ function assertDisposableDatabaseUrl(value: string, expectedUsername: string): v
 }
 
 assertDisposableDatabaseUrl(serviceDatabaseUrl, 'appsea_service')
+assertDisposableDatabaseUrl(maintenanceDatabaseUrl, 'appsea_maintenance')
 assertDisposableDatabaseUrl(migrationDatabaseUrl, 'appsea_migrator')
 
 const migrationPool = createDatabasePool(
@@ -99,6 +102,14 @@ const servicePool = createDatabasePool(
     NODE_ENV: 'test',
     APPSEA_DATABASE_SSL_MODE: 'disable',
     APPSEA_DATABASE_APPLICATION_NAME: 'appsea-db-service-integration'
+  })
+)
+const maintenancePool = createDatabasePool(
+  databaseConfigFromEnv({
+    DATABASE_URL: maintenanceDatabaseUrl,
+    NODE_ENV: 'test',
+    APPSEA_DATABASE_SSL_MODE: 'disable',
+    APPSEA_DATABASE_APPLICATION_NAME: 'appsea-db-maintenance-integration'
   })
 )
 const migrationOptions = { role: 'appsea_owner' } as const
@@ -394,7 +405,7 @@ describe.sequential('PostgreSQL fixture persistence lifecycle', () => {
   }, 30_000)
 
   afterAll(async () => {
-    await Promise.all([servicePool.end(), migrationPool.end()])
+    await Promise.all([servicePool.end(), maintenancePool.end(), migrationPool.end()])
   })
 
   it('applies an exact migration history and repairs a populated version-one upgrade', () => {
@@ -443,7 +454,14 @@ describe.sequential('PostgreSQL fixture persistence lifecycle', () => {
       '0036',
       '0037',
       '0038',
-      '0039'
+      '0039',
+      '0040',
+      '0041',
+      '0042',
+      '0043',
+      '0044',
+      '0045',
+      '0046'
     ])
     expect(secondMigrationResult.applied).toEqual([])
     expect(secondMigrationResult.alreadyApplied).toEqual([
@@ -485,7 +503,14 @@ describe.sequential('PostgreSQL fixture persistence lifecycle', () => {
       '0036',
       '0037',
       '0038',
-      '0039'
+      '0039',
+      '0040',
+      '0041',
+      '0042',
+      '0043',
+      '0044',
+      '0045',
+      '0046'
     ])
   })
 
@@ -520,6 +545,43 @@ describe.sequential('PostgreSQL fixture persistence lifecycle', () => {
     })
     await expect(servicePool.query('SET ROLE appsea_owner')).rejects.toMatchObject({
       code: '42501'
+    })
+    await expect(servicePool.query('SET ROLE appsea_maintenance')).rejects.toMatchObject({
+      code: '42501'
+    })
+    const maintenanceRole = await maintenancePool.query<{
+      current_role: string
+      rolsuper: boolean
+      rolbypassrls: boolean
+      rolinherit: boolean
+      rolreplication: boolean
+      incoming_membership: boolean
+      outgoing_membership: boolean
+    }>(
+      `SELECT current_user AS current_role,
+              role.rolsuper,
+              role.rolbypassrls,
+              role.rolinherit,
+              role.rolreplication,
+              EXISTS (
+                SELECT 1 FROM pg_auth_members membership
+                 WHERE membership.roleid = role.oid
+              ) AS incoming_membership,
+              EXISTS (
+                SELECT 1 FROM pg_auth_members membership
+                 WHERE membership.member = role.oid
+              ) AS outgoing_membership
+         FROM pg_roles role
+        WHERE role.rolname = current_user`
+    )
+    expect(maintenanceRole.rows[0]).toEqual({
+      current_role: 'appsea_maintenance',
+      rolsuper: false,
+      rolbypassrls: false,
+      rolinherit: false,
+      rolreplication: false,
+      incoming_membership: false,
+      outgoing_membership: false
     })
     await expect(
       servicePool.query('ALTER TABLE appsea.opportunities DISABLE ROW LEVEL SECURITY')
@@ -558,6 +620,94 @@ describe.sequential('PostgreSQL fixture persistence lifecycle', () => {
                  $2, 'active', $2, $3, $2)`,
         ['a'.repeat(64), fixedAt, latestAt]
       )
+    ).rejects.toMatchObject({ code: '42501' })
+  })
+
+  it('serializes maintenance scheduler ownership and permits server-clock takeover', async () => {
+    await expect(
+      servicePool.query(
+        `SELECT * FROM appsea.acquire_maintenance_scheduler_lease($1, $2, $3, $4)`,
+        ['appsea-source-maintenance-v1', 'worker:service:blocked', 'token:service:blocked', 30]
+      )
+    ).rejects.toMatchObject({ code: '42501' })
+    await expect(
+      servicePool.query(`SELECT * FROM appsea.renew_maintenance_scheduler_lease($1, $2, $3, $4)`, [
+        'appsea-source-maintenance-v1',
+        'worker:service:blocked',
+        'token:service:blocked',
+        30
+      ])
+    ).rejects.toMatchObject({ code: '42501' })
+    await expect(
+      servicePool.query(`SELECT * FROM appsea.release_maintenance_scheduler_lease($1, $2, $3)`, [
+        'appsea-source-maintenance-v1',
+        'worker:service:blocked',
+        'token:service:blocked'
+      ])
+    ).rejects.toMatchObject({ code: '42501' })
+    const repository = new PostgresMaintenanceSchedulerLeaseRepository(maintenancePool)
+    const schedulerName = 'appsea-source-maintenance-v1'
+    const firstOwner = 'worker:integration:one'
+    const secondOwner = 'worker:integration:two'
+    const firstToken = 'token:integration:one'
+    const secondToken = 'token:integration:two'
+    const [first, second] = await Promise.all([
+      repository.acquire(schedulerName, firstOwner, firstToken, 30),
+      repository.acquire(schedulerName, secondOwner, secondToken, 30)
+    ])
+    expect([first.acquired, second.acquired].filter(Boolean)).toHaveLength(1)
+    const currentOwner = first.acquired ? firstOwner : secondOwner
+    const otherOwner = first.acquired ? secondOwner : firstOwner
+    const currentToken = first.acquired ? firstToken : secondToken
+    const otherToken = first.acquired ? secondToken : firstToken
+
+    const [sameOwnerFirst, sameOwnerSecond] = await Promise.all([
+      repository.acquire(schedulerName, currentOwner, 'token:integration:same-owner-a', 30),
+      repository.acquire(schedulerName, currentOwner, 'token:integration:same-owner-b', 30)
+    ])
+    expect(sameOwnerFirst.acquired).toBe(false)
+    expect(sameOwnerSecond.acquired).toBe(false)
+
+    await expect(repository.renew(schedulerName, otherOwner, otherToken, 30)).resolves.toEqual({
+      renewed: false,
+      leaseUntil: null
+    })
+    await expect(repository.release(schedulerName, otherOwner, otherToken)).resolves.toEqual({
+      released: false
+    })
+
+    await withOwnerClient(async (client) => {
+      await client.query(
+        `UPDATE appsea.maintenance_scheduler_leases
+            SET lease_until = clock_timestamp() - interval '1 second'
+          WHERE scheduler_name = $1`,
+        [schedulerName]
+      )
+    })
+    await expect(
+      repository.acquire(schedulerName, otherOwner, otherToken, 30)
+    ).resolves.toMatchObject({
+      acquired: true
+    })
+    await expect(repository.release(schedulerName, otherOwner, otherToken)).resolves.toEqual({
+      released: true
+    })
+    await expect(
+      servicePool.query('SELECT * FROM appsea.maintenance_scheduler_leases')
+    ).rejects.toThrow()
+
+    // The stale original owner cannot release the replacement lease.
+    await expect(repository.release(schedulerName, currentOwner, currentToken)).resolves.toEqual({
+      released: false
+    })
+    await expect(
+      repository.acquire(schedulerName, currentOwner, 'token:integration:retry', 30)
+    ).resolves.toMatchObject({ acquired: true })
+    await expect(
+      repository.release(schedulerName, currentOwner, 'token:integration:retry')
+    ).resolves.toEqual({ released: true })
+    await expect(
+      maintenancePool.query('SELECT * FROM appsea.maintenance_scheduler_leases')
     ).rejects.toMatchObject({ code: '42501' })
   })
 

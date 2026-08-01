@@ -1,5 +1,6 @@
 import { authRecoveryBatchInputSchema } from '@appsea/contracts'
 import type { PasswordResetDeliveryRecord, PostgresAuthRepository } from '@appsea/db'
+import { MaintenanceSchedulerLeaseLostError } from './maintenance-scheduler'
 
 export interface AuthRecoveryBatchResult {
   claimed: number
@@ -8,6 +9,7 @@ export interface AuthRecoveryBatchResult {
 }
 
 export interface AuthRecoveryBatchDependencies {
+  assertLease?: () => Promise<void>
   auth: Pick<
     PostgresAuthRepository,
     'claimPasswordResetDeliveries' | 'completePasswordResetDelivery' | 'failPasswordResetDelivery'
@@ -20,11 +22,14 @@ export async function runAuthRecoveryBatch(
   dependencies: AuthRecoveryBatchDependencies
 ): Promise<AuthRecoveryBatchResult> {
   const input = authRecoveryBatchInputSchema.parse({ batchSize })
+  const assertLease = dependencies.assertLease ?? (async () => undefined)
+  await assertLease()
   const records = await dependencies.auth.claimPasswordResetDeliveries(input.batchSize)
   let sent = 0
   let failed = 0
   for (const record of records) {
     try {
+      await assertLease()
       if (
         !Number.isFinite(Date.parse(record.expiresAt)) ||
         Date.parse(record.expiresAt) <= Date.now()
@@ -32,11 +37,14 @@ export async function runAuthRecoveryBatch(
         throw new Error('expired delivery')
       }
       await dependencies.delivery.send(record)
+      await assertLease()
       await dependencies.auth.completePasswordResetDelivery(record.deliveryId)
       sent += 1
-    } catch {
+    } catch (error) {
+      if (error instanceof MaintenanceSchedulerLeaseLostError) throw error
       failed += 1
       try {
+        await assertLease()
         await dependencies.auth.failPasswordResetDelivery(
           record.deliveryId,
           'APPSEA_AUTH_RECOVERY_DELIVERY_FAILED'

@@ -16,6 +16,9 @@ log sink and alert on:
   their bounded counters (including `productionWorkflowAdmissionsPurged`,
   `sourceCollectionLeasesPurged`, and `productionAnalysisObjectsPurged`) and
   job ID;
+- `maintenance_scheduler_lease_contended` events, plus fixed
+  `APPSEA_MAINTENANCE_SCHEDULER_LEASE_LOST` or
+  `APPSEA_MAINTENANCE_SCHEDULER_LEASE_RELEASE_FAILED` failures;
 - missing `worker_started`/`worker_stopped` heartbeats for the task queue;
 - database connection or migration failures from the process supervisor.
 
@@ -36,6 +39,19 @@ underlying PostgreSQL operations are idempotent, allowing a safe rerun after a
 worker interruption without creating a second workflow queue. Object purge
 claims are separately bounded and should alert when fixed retry attempts are
 exhausted; the worker never logs object URIs or exception text.
+
+Migration `0046` adds a server-clock scheduler lease shared by source
+maintenance, auth retention, password-recovery delivery, and workspace-
+invitation delivery. Only the standalone `appsea_maintenance` role may call
+the four allowlisted lease functions; workers receive that role through
+`APPSEA_MAINTENANCE_DATABASE_URL`, separate from `DATABASE_URL`. Production
+requires a stable, unique `APPSEA_SCHEDULER_OWNER_ID`; development/test runs
+generate an ephemeral owner. Each acquisition has a unique token, renews
+during a pass, rejects concurrent owners (including same-owner retries),
+permits takeover after expiry, and releases only when owner and token match.
+This is a repository-level duplicate-run guard, not a fencing token for a
+long-running database mutation or external delivery; deployment still owns
+scheduler availability, durable metric retention, and alert routing.
 
 Temporal remains the source of truth for retry and replay. The worker uses
 bounded activity retries and the PostgreSQL workflow checkpoint tables use

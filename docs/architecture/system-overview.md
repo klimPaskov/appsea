@@ -65,6 +65,16 @@ hashes, bounded warnings, and server-observed checkpoints; a scheduler can
 claim queued or stale jobs without the original caller key. A warning-free
 short page is required before the persistence transaction compares the staged
 identifier set with active source items and enqueues deletion tombstones.
+Migration `0046` adds a global, non-workspace scheduler lease for bounded
+maintenance and delivery commands. Its security-definer acquire, renew, and
+owner/token-checked release functions use PostgreSQL server time and are
+callable only through the standalone `appsea_maintenance` role supplied by
+`APPSEA_MAINTENANCE_DATABASE_URL`; `appsea_service` cannot execute them or
+select/mutate the lease table directly. The per-acquisition token prevents
+same-owner overwrites and stale release. The lease prevents duplicate passes
+across scheduler instances but is not a fencing token for a long-running
+mutation and does not replace deployed scheduler ownership, alert routing, or
+metric retention.
 The post-collection production analysis workflow is versioned as `v2`: only
 workspace/collection/analysis/seed identifiers and immutable digests cross
 Temporal, while the worker rebuilds the evidence-backed artifact inside its

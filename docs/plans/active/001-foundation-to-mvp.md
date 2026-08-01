@@ -25,7 +25,7 @@ Status: production-shaped foundation implemented and validated locally; producti
 
 Implemented:
 
-- PostgreSQL 18 schema and forty-five forward, checksummed migrations
+- PostgreSQL 18 schema and forty-six forward, checksummed migrations
 - normalized source, evidence, complaint, cluster, competitor, opportunity, score, report, plan, audit, cost, deletion, outbox, and lineage tables
 - no-login owner, separate migrator, and least-privilege runtime role contract
 - forced workspace RLS and transaction-scoped workspace context
@@ -71,6 +71,10 @@ Implemented:
   authenticated editor admission route, workspace-scoped source-reconciliation
   rate/concurrency limits, immutable user/service actor attribution, and an
   explicit `appsea-worker` service-principal guard for the direct command
+- migration `0046_maintenance_scheduler_leases.sql` adds a server-clock,
+  owner/token-checked acquire/renew/release lease for scheduled maintenance and
+  delivery commands; only the dedicated `appsea_maintenance` role may call the
+  functions and direct table access remains revoked from runtime roles
 - global-auth password-reset tokens with latest-only semantics, encrypted
   delivery outbox, security events, narrow security-definer functions, bounded
   purge, and a retryable signed provider worker; delivery remains kill-switched
@@ -266,6 +270,8 @@ and Temporal-start idempotency. Production collection now carries settled source
 request cost from quota settlement through its immutable snapshot/result,
 workflow checkpoint, and audit/outbox metadata; known policy-cost overages are
 rejected before source lease acquisition;
+scheduled commands now share migration `0046`'s server-clock owner/token lease
+with renewal, stale takeover, guarded mutations, and fixed lease-loss failures;
 the long-lived worker emits a bounded 30-second heartbeat and the web service
 exposes fail-closed liveness/readiness probes; deployed scheduler ownership,
 durable metric retention/alerting, traces, role separation, incident drills,

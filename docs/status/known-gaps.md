@@ -78,16 +78,24 @@ remain open.
 
 Source and authentication maintenance entry points now use schema-validated,
 bounded pure runners with stable scheduler job IDs and secret-free structured
-result events. The source-maintenance pass resumes at most one due snapshot per
-sorted workspace under an independent batch budget and reports terminal,
-retry, and coverage-gap counters; the targeted resume command remains for
-operator recovery. The existing repository operations are idempotent for safe
-reruns. The long-lived worker now emits a bounded `worker_heartbeat` event
-every 30 seconds, and the web service exposes no-store liveness/readiness
-probes that fail closed on PostgreSQL, authenticated Temporal, or object-store
-dependency checks. These signals improve deployment validation but do not
-provide a deployed scheduler, durable metric retention, alert ownership,
-cross-run operational accounting, or a fresh Docker-backed recovery proof.
+result events. Migration `0046` adds a PostgreSQL server-clock lease with
+per-acquisition tokens, a dedicated `appsea_maintenance` role, and
+owner/token-checked acquire/renew/release functions; source maintenance, auth
+retention, password recovery, and workspace-invitation delivery skip a
+contended pass and fail with fixed lease-loss codes. The source-maintenance pass
+resumes at most one due snapshot per sorted workspace under an independent batch
+budget and reports terminal, retry, and coverage-gap counters; the targeted
+resume command remains for operator recovery. The existing repository
+operations are idempotent for safe reruns. The long-lived worker now emits a
+bounded `worker_heartbeat` event every 30 seconds, and the web service exposes
+no-store liveness/readiness probes that fail closed on PostgreSQL, authenticated
+Temporal, or object-store dependency checks. These signals improve deployment
+validation but do not provide a deployed scheduler, database fencing inside
+long-running mutations, durable metric retention, alert ownership, cross-run
+operational accounting, per-scheduler maintenance credentials, or a fresh
+Docker-backed recovery proof. The current `appsea_maintenance` coordinator is
+trusted across the four allowlisted names; production data-work role separation
+and optional per-scheduler isolation remain release gates.
 
 The production workflow start route caps both declared and chunked JSON bodies
 and now calls the migration `0038` admission function before Temporal. The

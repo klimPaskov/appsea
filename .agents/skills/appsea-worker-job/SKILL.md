@@ -59,6 +59,17 @@ description: Use when adding or changing AppSea worker commands, scheduled jobs,
     per workspace, and apply an independent batch budget. Report terminal,
     retry, and coverage-gap counters without logging source content or caller
     idempotency keys; keep a targeted resume command for operator recovery.
+17. For scheduled cross-workspace maintenance or delivery passes, acquire the
+    migration `0046` server-clock lease through the shared worker wrapper before
+    opening repository work. Use the dedicated `appsea_maintenance` connection
+    from `APPSEA_MAINTENANCE_DATABASE_URL`; never grant the lease functions to
+    `appsea_service`. Require a unique production owner ID and a fresh token per
+    acquisition, renew during a bounded pass, call the wrapper's `assertLease`
+    before bounded mutations, skip contended ownership without touching work,
+    release only with matching owner and token, and map renewal/release loss to
+    fixed failure codes. An in-memory lock is never a substitute for this
+    repository boundary, and the lease is not a fencing token for a transaction
+    that can outlive its expiry.
 
 Do not rely on an in-memory loop for production durability. Do not hide a partial result behind a successful exit code.
 

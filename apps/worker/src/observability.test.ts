@@ -56,6 +56,7 @@ describe('worker observability', () => {
     emitWorkerEvent({
       event: 'source_maintenance_finished',
       taskQueue: 'appsea-source-maintenance-v1',
+      schedulerName: 'appsea-source-maintenance-v1',
       jobId: 'maintenance:source:123',
       workspacesScanned: 4,
       deletionTombstonesProcessed: 2,
@@ -83,6 +84,7 @@ describe('worker observability', () => {
     const payload = JSON.parse(String(log.mock.calls[0]?.[0])) as Record<string, unknown>
     expect(payload).toMatchObject({
       jobId: 'maintenance:source:123',
+      schedulerName: 'appsea-source-maintenance-v1',
       workspacesScanned: 4,
       deletionTombstonesProcessed: 2,
       deletionObjectsAffected: 8,

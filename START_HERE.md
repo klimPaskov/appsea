@@ -29,6 +29,7 @@ Open `http://localhost:3000` after the web server starts.
 - PostgreSQL migrations, normalized fixture persistence, RLS, lineage, and replay verification
 - durable fixture workflow with PostgreSQL checkpoints, bounded retries, budgets, cancellation, and Temporal restart/replay proof
 - shared fail-closed Temporal endpoint configuration for the web client and durable worker (local loopback or production TLS/API-key/namespace/CA settings)
+- server-clock PostgreSQL scheduler leases for bounded maintenance and delivery commands, with a dedicated maintenance role, per-acquisition tokens, owner-checked renewal, stale takeover, and fixed lease-loss events
 - authenticated production workflow ingress with durable per-workspace rate/concurrency admission, idempotent replay, and bounded admission retention
 - policy-bound production source collection leases with stable server-observed capture timestamps, post-fetch policy rechecks, and bounded lease retention
 - identifier-only production-analysis workflow v2; the worker reconstructs

@@ -1,6 +1,7 @@
 export interface WorkerEvent {
   event: string
   taskQueue: string
+  schedulerName?: string
   jobId?: string
   workflowId?: string
   state?: string
@@ -48,6 +49,10 @@ function finiteInteger(value: number | undefined): number | undefined {
   return value === undefined || !Number.isSafeInteger(value) || value < 0 ? undefined : value
 }
 
+function schedulerName(value: string | undefined): string | undefined {
+  return value && /^[a-z][a-z0-9_-]{2,79}$/.test(value) ? value : undefined
+}
+
 /**
  * Emit a small, structured, secret-free event for log collection. Event
  * payloads deliberately accept only bounded counters and fixed identifiers;
@@ -61,6 +66,9 @@ export function emitWorkerEvent(event: WorkerEvent): void {
     observedAt: new Date().toISOString(),
     event: event.event,
     taskQueue: event.taskQueue,
+    ...(schedulerName(event.schedulerName)
+      ? { schedulerName: schedulerName(event.schedulerName) }
+      : {}),
     ...(event.jobId ? { jobId: event.jobId } : {}),
     ...(event.workflowId ? { workflowId: event.workflowId } : {}),
     ...(event.state ? { state: event.state } : {}),

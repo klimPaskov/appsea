@@ -1,12 +1,25 @@
 import { workspaceInvitationDeliveryBatchInputSchema } from '@appsea/contracts'
-import { createDatabasePool, databaseConfigFromEnv, PostgresAuthRepository } from '@appsea/db'
+import {
+  createDatabasePool,
+  databaseConfigFromEnv,
+  PostgresAuthRepository,
+  PostgresMaintenanceSchedulerLeaseRepository
+} from '@appsea/db'
 import { emitWorkerEvent } from './observability'
 import { createWorkspaceInvitationDeliveryClient } from './workspace-invitation-delivery'
 import { runWorkspaceInvitationBatch } from './workspace-invitation-runner'
+import {
+  maintenanceSchedulerLeaseSecondsFromEnv,
+  maintenanceSchedulerOwnerIdFromEnv,
+  maintenanceSchedulerFailureCode,
+  maintenanceDatabaseConfigFromEnv,
+  runWithMaintenanceSchedulerLease
+} from './maintenance-scheduler'
 
 const taskQueue = 'appsea-workspace-invitations-v1'
 const enabled =
-  process.env.NODE_ENV !== 'production' || process.env.APPSEA_AUTH_INVITATIONS_ENABLED === 'true'
+  ['development', 'test'].includes(process.env.NODE_ENV ?? '') ||
+  (process.env.NODE_ENV === 'production' && process.env.APPSEA_AUTH_INVITATIONS_ENABLED === 'true')
 
 if (!enabled) {
   emitWorkerEvent({
@@ -19,31 +32,57 @@ if (!enabled) {
   const input = workspaceInvitationDeliveryBatchInputSchema.safeParse({ batchSize })
   const jobId = `workspace-invitations:${Math.floor(Date.now() / 60_000)}`
   let pool: ReturnType<typeof createDatabasePool> | undefined
+  let maintenancePool: ReturnType<typeof createDatabasePool> | undefined
   try {
     if (!input.success) throw new Error('invalid batch size')
     const delivery = createWorkspaceInvitationDeliveryClient()
     pool = createDatabasePool(databaseConfigFromEnv())
-    const result = await runWorkspaceInvitationBatch(input.data.batchSize, {
-      auth: new PostgresAuthRepository(pool),
-      delivery
-    })
-    emitWorkerEvent({
-      event: 'workspace_invitation_delivery_finished',
-      taskQueue,
-      jobId,
-      workspaceInvitationDeliveriesClaimed: result.claimed,
-      workspaceInvitationDeliveriesSent: result.sent,
-      workspaceInvitationDeliveriesFailed: result.failed
-    })
-  } catch {
+    maintenancePool = createDatabasePool(maintenanceDatabaseConfigFromEnv())
+    const schedulerName = taskQueue
+    const ownerId = maintenanceSchedulerOwnerIdFromEnv()
+    const leaseSeconds = maintenanceSchedulerLeaseSecondsFromEnv()
+    const leaseRun = await runWithMaintenanceSchedulerLease(
+      { schedulerName, ownerId, leaseSeconds },
+      new PostgresMaintenanceSchedulerLeaseRepository(maintenancePool),
+      async ({ assertLease }) => {
+        return runWorkspaceInvitationBatch(input.data.batchSize, {
+          auth: new PostgresAuthRepository(pool!),
+          delivery,
+          assertLease
+        })
+      }
+    )
+    if (!leaseRun.acquired) {
+      emitWorkerEvent({
+        event: 'maintenance_scheduler_lease_contended',
+        taskQueue,
+        jobId,
+        schedulerName
+      })
+    } else {
+      const result = leaseRun.result
+      emitWorkerEvent({
+        event: 'workspace_invitation_delivery_finished',
+        taskQueue,
+        jobId,
+        workspaceInvitationDeliveriesClaimed: result.claimed,
+        workspaceInvitationDeliveriesSent: result.sent,
+        workspaceInvitationDeliveriesFailed: result.failed
+      })
+    }
+  } catch (error) {
     emitWorkerEvent({
       event: 'workspace_invitation_delivery_failed',
       taskQueue,
       jobId,
-      failureCode: 'APPSEA_WORKSPACE_INVITATION_DELIVERY_FAILED'
+      failureCode: maintenanceSchedulerFailureCode(
+        error,
+        'APPSEA_WORKSPACE_INVITATION_DELIVERY_FAILED'
+      )
     })
     process.exitCode = 1
   } finally {
     if (pool) await pool.end()
+    if (maintenancePool) await maintenancePool.end()
   }
 }

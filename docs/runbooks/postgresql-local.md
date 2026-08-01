@@ -7,6 +7,7 @@ This runbook covers the repository's PostgreSQL 18 development and integration-t
 - `appsea_owner` owns schema objects and cannot log in.
 - `appsea_migrator` can log in and assume `appsea_owner` only for reviewed migrations.
 - `appsea_service` is the non-owner runtime role. It cannot bypass row-level security, assume the owner role, change source policy rows directly, rewrite immutable history, or truncate tables.
+- `appsea_maintenance` is a standalone, non-inheriting login role that may execute only the migration `0046` scheduler lease functions. It cannot read or mutate lease rows directly and must not be reused by the web or research runtime.
 - Every private workspace transaction must use `withAuthenticatedWorkspaceTransaction`,
   which checks membership before setting `appsea.workspace_id`. The controlled
   fixture worker may use `withWorkspaceTransaction` only for its fixture-only path.
@@ -35,7 +36,7 @@ docker compose -f infra/local/compose.yaml up -d postgres
 docker compose -f infra/local/compose.yaml ps
 ```
 
-The container binds PostgreSQL only to `127.0.0.1:5433`. Its initialization script creates the `appsea` and disposable `appsea_test` databases plus the three local roles.
+The container binds PostgreSQL only to `127.0.0.1:5433`. Its initialization script creates the `appsea` and disposable `appsea_test` databases plus the four local roles.
 
 ## Apply migrations
 
@@ -69,11 +70,13 @@ pnpm verify:persistence:fresh
 
 `verify:persistence:fresh` is intentionally destructive: it removes the Compose project's local PostgreSQL named volume before recreating it. Do not run it when local development data must be retained.
 
-The integration test itself will drop only the `appsea` schema and migration-history table inside the exact local `appsea_test` database. It requires loopback port `5433`, exact service and migrator usernames, the database marker comment, and `APPSEA_ALLOW_DESTRUCTIVE_DB_TESTS=yes`. Connection-string query parameters are rejected so they cannot redirect the destructive target.
+The integration test itself will drop only the `appsea` schema and migration-history table inside the exact local `appsea_test` database. It requires loopback port `5433`, exact service, maintenance, and migrator usernames, the database marker comment, and `APPSEA_ALLOW_DESTRUCTIVE_DB_TESTS=yes`. Connection-string query parameters are rejected so they cannot redirect the destructive target.
 
 ## Exercise the application repository
 
-After migrating the `appsea` database, set `DATABASE_URL` to the local `appsea_service` URL and run:
+After migrating the `appsea` database, set `DATABASE_URL` to the local `appsea_service` URL and
+`APPSEA_MAINTENANCE_DATABASE_URL` to the local `appsea_maintenance` URL before running
+maintenance commands:
 
 ```bash
 pnpm worker:fixture:persist

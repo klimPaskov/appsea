@@ -7,11 +7,19 @@ import {
   PostgresProductionAnalysisAdmissionRepository,
   PostgresProductionAnalysisObjectPurgeRepository,
   PostgresProductionWorkflowAdmissionRepository,
+  PostgresMaintenanceSchedulerLeaseRepository,
   PostgresSourceCollectionLeaseRepository,
   PostgresSourceQuotaRepository
 } from '@appsea/db'
 import { emitWorkerEvent } from './observability'
 import { runSourceMaintenance } from './maintenance-runner'
+import {
+  maintenanceDatabaseConfigFromEnv,
+  maintenanceSchedulerLeaseSecondsFromEnv,
+  maintenanceSchedulerOwnerIdFromEnv,
+  maintenanceSchedulerFailureCode,
+  runWithMaintenanceSchedulerLease
+} from './maintenance-scheduler'
 import {
   defaultSourceSnapshotReconciliationDependencies,
   runNextProductionCfpbSnapshotReconciliation
@@ -42,109 +50,135 @@ const validatedJobId = sourceMaintenanceInputSchema.safeParse(input).success
   : undefined
 const objectStore = objectStoreFromEnv(process.env)
 const pool = createDatabasePool(databaseConfigFromEnv())
+let maintenancePool: ReturnType<typeof createDatabasePool> | undefined
 
 try {
-  const quotaRepository = new PostgresSourceQuotaRepository(pool)
-  const deletionRepository = new PostgresDeletionPropagationRepository(pool)
-  const admissionRepository = new PostgresProductionWorkflowAdmissionRepository(pool)
-  const analysisAdmissionRepository = new PostgresProductionAnalysisAdmissionRepository(pool)
-  const objectPurgeRepository = new PostgresProductionAnalysisObjectPurgeRepository(
-    pool,
-    objectStore
+  maintenancePool = createDatabasePool(maintenanceDatabaseConfigFromEnv())
+  const schedulerName = taskQueue
+  const ownerId = maintenanceSchedulerOwnerIdFromEnv()
+  const leaseSeconds = maintenanceSchedulerLeaseSecondsFromEnv()
+  const leaseRun = await runWithMaintenanceSchedulerLease(
+    { schedulerName, ownerId, leaseSeconds },
+    new PostgresMaintenanceSchedulerLeaseRepository(maintenancePool),
+    async ({ assertLease }) => {
+      const quotaRepository = new PostgresSourceQuotaRepository(pool)
+      const deletionRepository = new PostgresDeletionPropagationRepository(pool)
+      const admissionRepository = new PostgresProductionWorkflowAdmissionRepository(pool)
+      const analysisAdmissionRepository = new PostgresProductionAnalysisAdmissionRepository(pool)
+      const objectPurgeRepository = new PostgresProductionAnalysisObjectPurgeRepository(
+        pool,
+        objectStore
+      )
+      const leaseRepository = new PostgresSourceCollectionLeaseRepository(pool)
+      const snapshotDependencies = defaultSourceSnapshotReconciliationDependencies(pool)
+      await assertLease()
+      return runSourceMaintenance(input, {
+        quota: quotaRepository,
+        deletion: deletionRepository,
+        admission: admissionRepository,
+        analysisAdmission: analysisAdmissionRepository,
+        leases: leaseRepository,
+        objectPurge: objectPurgeRepository,
+        snapshotReconciliation: async (workspaceId) => {
+          await assertLease()
+          return runNextProductionCfpbSnapshotReconciliation(workspaceId, snapshotDependencies)
+        },
+        assertLease
+      })
+    }
   )
-  const leaseRepository = new PostgresSourceCollectionLeaseRepository(pool)
-  const snapshotDependencies = defaultSourceSnapshotReconciliationDependencies(pool)
-  const result = await runSourceMaintenance(input, {
-    quota: quotaRepository,
-    deletion: deletionRepository,
-    admission: admissionRepository,
-    analysisAdmission: analysisAdmissionRepository,
-    leases: leaseRepository,
-    objectPurge: objectPurgeRepository,
-    snapshotReconciliation: (workspaceId) =>
-      runNextProductionCfpbSnapshotReconciliation(workspaceId, snapshotDependencies)
-  })
-  emitWorkerEvent({
-    event: 'source_quota_expiry_finished',
-    taskQueue,
-    jobId: result.jobId,
-    quotaReservationsExpired: result.quotaReservationsExpired,
-    quotaReservationsPurged: result.quotaReservationsPurged,
-    productionWorkflowAdmissionsPurged: result.productionWorkflowAdmissionsPurged,
-    productionAnalysisAdmissionsPurged: result.productionAnalysisAdmissionsPurged,
-    sourceCollectionLeasesPurged: result.sourceCollectionLeasesPurged
-  })
-  if (result.sourceSnapshotReconciliationsProcessed > 0) {
+  if (!leaseRun.acquired) {
     emitWorkerEvent({
-      event: 'source_snapshot_reconciliation_batch_finished',
+      event: 'maintenance_scheduler_lease_contended',
+      taskQueue,
+      ...(validatedJobId ? { jobId: validatedJobId } : {}),
+      schedulerName
+    })
+  } else {
+    const result = leaseRun.result
+    emitWorkerEvent({
+      event: 'source_quota_expiry_finished',
       taskQueue,
       jobId: result.jobId,
+      quotaReservationsExpired: result.quotaReservationsExpired,
+      quotaReservationsPurged: result.quotaReservationsPurged,
+      productionWorkflowAdmissionsPurged: result.productionWorkflowAdmissionsPurged,
+      productionAnalysisAdmissionsPurged: result.productionAnalysisAdmissionsPurged,
+      sourceCollectionLeasesPurged: result.sourceCollectionLeasesPurged
+    })
+    if (result.sourceSnapshotReconciliationsProcessed > 0) {
+      emitWorkerEvent({
+        event: 'source_snapshot_reconciliation_batch_finished',
+        taskQueue,
+        jobId: result.jobId,
+        sourceSnapshotReconciliationsProcessed: result.sourceSnapshotReconciliationsProcessed,
+        sourceSnapshotReconciliationsCompleted: result.sourceSnapshotReconciliationsCompleted,
+        sourceSnapshotReconciliationsIncomplete: result.sourceSnapshotReconciliationsIncomplete,
+        sourceSnapshotReconciliationsFailed: result.sourceSnapshotReconciliationsFailed,
+        sourceSnapshotReconciliationsRetried: result.sourceSnapshotReconciliationsRetried,
+        sourceSnapshotCoverageGaps: result.sourceSnapshotCoverageGaps
+      })
+    }
+    if (result.retentionTombstonesQueued > 0) {
+      emitWorkerEvent({
+        event: 'source_retention_tombstones_queued',
+        taskQueue,
+        jobId: result.jobId,
+        retentionTombstonesQueued: result.retentionTombstonesQueued
+      })
+    }
+    if (result.productionAnalysisObjectsPurged > 0) {
+      emitWorkerEvent({
+        event: 'production_analysis_object_purge_finished',
+        taskQueue,
+        jobId: result.jobId,
+        productionAnalysisObjectsPurged: result.productionAnalysisObjectsPurged
+      })
+    }
+    if (result.deletionTombstonesProcessed > 0) {
+      emitWorkerEvent({
+        event: 'deletion_propagation_batch_finished',
+        taskQueue,
+        jobId: result.jobId,
+        deletionTombstonesProcessed: result.deletionTombstonesProcessed,
+        deletionObjectsAffected: result.deletionObjectsAffected,
+        deletionOpportunitiesInvalidated: result.deletionOpportunitiesInvalidated,
+        recomputationJobsQueued: result.recomputationJobsQueued
+      })
+    }
+    emitWorkerEvent({
+      event: 'source_maintenance_finished',
+      taskQueue,
+      jobId: result.jobId,
+      workspacesScanned: result.quotaWorkspacesScanned + result.deletionWorkspacesScanned,
+      quotaReservationsExpired: result.quotaReservationsExpired,
+      quotaReservationsPurged: result.quotaReservationsPurged,
+      productionWorkflowAdmissionsPurged: result.productionWorkflowAdmissionsPurged,
+      productionAnalysisAdmissionsPurged: result.productionAnalysisAdmissionsPurged,
+      sourceCollectionLeasesPurged: result.sourceCollectionLeasesPurged,
+      productionAnalysisObjectsPurged: result.productionAnalysisObjectsPurged,
       sourceSnapshotReconciliationsProcessed: result.sourceSnapshotReconciliationsProcessed,
       sourceSnapshotReconciliationsCompleted: result.sourceSnapshotReconciliationsCompleted,
       sourceSnapshotReconciliationsIncomplete: result.sourceSnapshotReconciliationsIncomplete,
       sourceSnapshotReconciliationsFailed: result.sourceSnapshotReconciliationsFailed,
       sourceSnapshotReconciliationsRetried: result.sourceSnapshotReconciliationsRetried,
-      sourceSnapshotCoverageGaps: result.sourceSnapshotCoverageGaps
-    })
-  }
-  if (result.retentionTombstonesQueued > 0) {
-    emitWorkerEvent({
-      event: 'source_retention_tombstones_queued',
-      taskQueue,
-      jobId: result.jobId,
-      retentionTombstonesQueued: result.retentionTombstonesQueued
-    })
-  }
-  if (result.productionAnalysisObjectsPurged > 0) {
-    emitWorkerEvent({
-      event: 'production_analysis_object_purge_finished',
-      taskQueue,
-      jobId: result.jobId,
-      productionAnalysisObjectsPurged: result.productionAnalysisObjectsPurged
-    })
-  }
-  if (result.deletionTombstonesProcessed > 0) {
-    emitWorkerEvent({
-      event: 'deletion_propagation_batch_finished',
-      taskQueue,
-      jobId: result.jobId,
+      sourceSnapshotCoverageGaps: result.sourceSnapshotCoverageGaps,
+      retentionTombstonesQueued: result.retentionTombstonesQueued,
       deletionTombstonesProcessed: result.deletionTombstonesProcessed,
       deletionObjectsAffected: result.deletionObjectsAffected,
       deletionOpportunitiesInvalidated: result.deletionOpportunitiesInvalidated,
       recomputationJobsQueued: result.recomputationJobsQueued
     })
   }
-  emitWorkerEvent({
-    event: 'source_maintenance_finished',
-    taskQueue,
-    jobId: result.jobId,
-    workspacesScanned: result.quotaWorkspacesScanned + result.deletionWorkspacesScanned,
-    quotaReservationsExpired: result.quotaReservationsExpired,
-    quotaReservationsPurged: result.quotaReservationsPurged,
-    productionWorkflowAdmissionsPurged: result.productionWorkflowAdmissionsPurged,
-    productionAnalysisAdmissionsPurged: result.productionAnalysisAdmissionsPurged,
-    sourceCollectionLeasesPurged: result.sourceCollectionLeasesPurged,
-    productionAnalysisObjectsPurged: result.productionAnalysisObjectsPurged,
-    sourceSnapshotReconciliationsProcessed: result.sourceSnapshotReconciliationsProcessed,
-    sourceSnapshotReconciliationsCompleted: result.sourceSnapshotReconciliationsCompleted,
-    sourceSnapshotReconciliationsIncomplete: result.sourceSnapshotReconciliationsIncomplete,
-    sourceSnapshotReconciliationsFailed: result.sourceSnapshotReconciliationsFailed,
-    sourceSnapshotReconciliationsRetried: result.sourceSnapshotReconciliationsRetried,
-    sourceSnapshotCoverageGaps: result.sourceSnapshotCoverageGaps,
-    retentionTombstonesQueued: result.retentionTombstonesQueued,
-    deletionTombstonesProcessed: result.deletionTombstonesProcessed,
-    deletionObjectsAffected: result.deletionObjectsAffected,
-    deletionOpportunitiesInvalidated: result.deletionOpportunitiesInvalidated,
-    recomputationJobsQueued: result.recomputationJobsQueued
-  })
-} catch {
+} catch (error) {
   emitWorkerEvent({
     event: 'source_maintenance_failed',
     taskQueue,
     ...(validatedJobId ? { jobId: validatedJobId } : {}),
-    failureCode: 'APPSEA_SOURCE_MAINTENANCE_FAILED'
+    failureCode: maintenanceSchedulerFailureCode(error, 'APPSEA_SOURCE_MAINTENANCE_FAILED')
   })
   process.exitCode = 1
 } finally {
   await pool.end()
+  if (maintenancePool) await maintenancePool.end()
 }

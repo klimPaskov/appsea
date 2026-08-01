@@ -1,12 +1,13 @@
 CREATE ROLE appsea_owner NOLOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION NOBYPASSRLS;
 CREATE ROLE appsea_migrator LOGIN PASSWORD 'appsea-migrator-local-only' NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION NOBYPASSRLS;
 CREATE ROLE appsea_service LOGIN PASSWORD 'appsea-service-local-only' NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION NOBYPASSRLS;
+CREATE ROLE appsea_maintenance LOGIN PASSWORD 'appsea-maintenance-local-only' NOSUPERUSER NOCREATEDB NOCREATEROLE NOINHERIT NOREPLICATION NOBYPASSRLS;
 GRANT appsea_owner TO appsea_migrator;
 
 CREATE DATABASE appsea OWNER appsea_owner;
 CREATE DATABASE appsea_test OWNER appsea_owner;
 REVOKE CONNECT ON DATABASE appsea FROM PUBLIC;
 REVOKE CONNECT ON DATABASE appsea_test FROM PUBLIC;
-GRANT CONNECT ON DATABASE appsea TO appsea_migrator, appsea_service;
-GRANT CONNECT ON DATABASE appsea_test TO appsea_migrator, appsea_service;
+GRANT CONNECT ON DATABASE appsea TO appsea_migrator, appsea_service, appsea_maintenance;
+GRANT CONNECT ON DATABASE appsea_test TO appsea_migrator, appsea_service, appsea_maintenance;
 COMMENT ON DATABASE appsea_test IS 'appsea-disposable-test-database';

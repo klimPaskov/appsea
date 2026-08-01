@@ -96,6 +96,8 @@ async function main() {
     env: {
       APPSEA_TEST_DATABASE_URL:
         'postgres://appsea_service:appsea-service-local-only@localhost:5433/appsea_test',
+      APPSEA_TEST_MAINTENANCE_DATABASE_URL:
+        'postgres://appsea_maintenance:appsea-maintenance-local-only@localhost:5433/appsea_test',
       APPSEA_TEST_MIGRATION_DATABASE_URL:
         'postgres://appsea_migrator:appsea-migrator-local-only@localhost:5433/appsea_test',
       APPSEA_ALLOW_DESTRUCTIVE_DB_TESTS: 'yes',

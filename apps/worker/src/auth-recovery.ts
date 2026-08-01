@@ -1,12 +1,25 @@
 import { authRecoveryBatchInputSchema } from '@appsea/contracts'
-import { createDatabasePool, databaseConfigFromEnv, PostgresAuthRepository } from '@appsea/db'
+import {
+  createDatabasePool,
+  databaseConfigFromEnv,
+  PostgresAuthRepository,
+  PostgresMaintenanceSchedulerLeaseRepository
+} from '@appsea/db'
 import { emitWorkerEvent } from './observability'
 import { createPasswordResetDeliveryClient } from './auth-recovery-delivery'
 import { runAuthRecoveryBatch } from './auth-recovery-runner'
+import {
+  maintenanceSchedulerLeaseSecondsFromEnv,
+  maintenanceSchedulerOwnerIdFromEnv,
+  maintenanceSchedulerFailureCode,
+  maintenanceDatabaseConfigFromEnv,
+  runWithMaintenanceSchedulerLease
+} from './maintenance-scheduler'
 
 const taskQueue = 'appsea-auth-recovery-v1'
 const enabled =
-  process.env.NODE_ENV !== 'production' || process.env.APPSEA_AUTH_RECOVERY_ENABLED === 'true'
+  ['development', 'test'].includes(process.env.NODE_ENV ?? '') ||
+  (process.env.NODE_ENV === 'production' && process.env.APPSEA_AUTH_RECOVERY_ENABLED === 'true')
 
 if (!enabled) {
   emitWorkerEvent({
@@ -19,31 +32,54 @@ if (!enabled) {
   const input = authRecoveryBatchInputSchema.safeParse({ batchSize })
   const jobId = `auth-recovery:${Math.floor(Date.now() / 60_000)}`
   let pool: ReturnType<typeof createDatabasePool> | undefined
+  let maintenancePool: ReturnType<typeof createDatabasePool> | undefined
   try {
     if (!input.success) throw new Error('invalid batch size')
     const delivery = createPasswordResetDeliveryClient()
     pool = createDatabasePool(databaseConfigFromEnv())
-    const result = await runAuthRecoveryBatch(input.data.batchSize, {
-      auth: new PostgresAuthRepository(pool),
-      delivery
-    })
-    emitWorkerEvent({
-      event: 'auth_recovery_finished',
-      taskQueue,
-      jobId,
-      passwordResetDeliveriesClaimed: result.claimed,
-      passwordResetDeliveriesSent: result.sent,
-      passwordResetDeliveriesFailed: result.failed
-    })
-  } catch {
+    maintenancePool = createDatabasePool(maintenanceDatabaseConfigFromEnv())
+    const schedulerName = taskQueue
+    const ownerId = maintenanceSchedulerOwnerIdFromEnv()
+    const leaseSeconds = maintenanceSchedulerLeaseSecondsFromEnv()
+    const leaseRun = await runWithMaintenanceSchedulerLease(
+      { schedulerName, ownerId, leaseSeconds },
+      new PostgresMaintenanceSchedulerLeaseRepository(maintenancePool),
+      async ({ assertLease }) => {
+        return runAuthRecoveryBatch(input.data.batchSize, {
+          auth: new PostgresAuthRepository(pool!),
+          delivery,
+          assertLease
+        })
+      }
+    )
+    if (!leaseRun.acquired) {
+      emitWorkerEvent({
+        event: 'maintenance_scheduler_lease_contended',
+        taskQueue,
+        jobId,
+        schedulerName
+      })
+    } else {
+      const result = leaseRun.result
+      emitWorkerEvent({
+        event: 'auth_recovery_finished',
+        taskQueue,
+        jobId,
+        passwordResetDeliveriesClaimed: result.claimed,
+        passwordResetDeliveriesSent: result.sent,
+        passwordResetDeliveriesFailed: result.failed
+      })
+    }
+  } catch (error) {
     emitWorkerEvent({
       event: 'auth_recovery_failed',
       taskQueue,
       jobId,
-      failureCode: 'APPSEA_AUTH_RECOVERY_FAILED'
+      failureCode: maintenanceSchedulerFailureCode(error, 'APPSEA_AUTH_RECOVERY_FAILED')
     })
     process.exitCode = 1
   } finally {
     if (pool) await pool.end()
+    if (maintenancePool) await maintenancePool.end()
   }
 }

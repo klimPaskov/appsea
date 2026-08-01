@@ -12,3 +12,10 @@ retention, HA, backups, and deployment controls require a separate reviewed
 configuration. Emit only the bounded, secret-free events defined by
 `src/observability.ts`; never add raw exception messages, source text, bearer
 tokens, passwords, or database URLs to worker logs.
+
+Scheduled maintenance and delivery entry points must acquire the migration
+`0046` server-clock lease through `src/maintenance-scheduler.ts` using the
+dedicated `APPSEA_MAINTENANCE_DATABASE_URL`/`appsea_maintenance` connection.
+Production requires a unique `APPSEA_SCHEDULER_OWNER_ID`; each acquisition has
+a fresh token, a contended lease must skip work, guarded mutations should call
+`assertLease`, and renewal/release failures must use fixed event codes.

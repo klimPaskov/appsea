@@ -196,13 +196,33 @@ for that pre-context authorization lookup.
   identifier-only audit/outbox receipts. Export returns only an approved,
   schema-validated report read model and never raw source payloads.
 - Production role provisioning and migrations require reviewed infrastructure and explicit approval; the local bootstrap is not a deployment recipe.
-- The current local/CI runtime still shares `appsea_service` across web and
-  worker paths. Production must split authentication, research, and maintenance
-  roles before handling real accounts or source data.
+- The current local/CI web and research paths still use `appsea_service`, while
+  scheduled maintenance lease calls use the separate, non-inheriting
+  `appsea_maintenance` role from `APPSEA_MAINTENANCE_DATABASE_URL`. Production
+  must still split authentication, research, and maintenance data-work roles
+  before handling real accounts or source data.
 - Production workflow activities cannot auto-create fixture workspaces; those
   workspaces must be provisioned and authorized ahead of time. Local/test runs
   retain the convenience auto-provisioning path. A database trigger also rejects
   direct workflow inserts for inactive or non-fixture workspaces.
+
+## Maintenance scheduler boundary
+
+- Migration `0046` stores one global lease per fixed scheduler name. Only the
+  standalone `appsea_maintenance` role can call the security-definer acquire,
+  renew, and owner/token-checked release functions; `appsea_service` cannot
+  execute them or select/mutate lease rows directly.
+- Lease expiry and takeover use PostgreSQL `clock_timestamp()`, not caller
+  timestamps. Every acquisition has a unique token, and same-owner retries
+  cannot overwrite an active lease. A renewal failure is a fixed failure code
+  and must stop the pass before a successful completion claim.
+- The lease is a duplicate-run guard for bounded maintenance and delivery. It
+  is not a fencing token for a long-running database transaction or external
+  delivery; production still needs bounded transaction/runtime work and does
+  not prove a deployed scheduler, durable metrics, alert ownership, or incident
+  response. The current coordinator role is trusted across the four allowlisted
+  scheduler names; production may isolate scheduler credentials further if a
+  compromise of one maintenance process must not starve another.
 
 ## Temporal boundary
 

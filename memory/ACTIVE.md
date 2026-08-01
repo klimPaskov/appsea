@@ -70,6 +70,18 @@ pinned CA for both the native activity connection and client connection.
 Topology, namespace/task-queue authorization, HA, retention, and deployment
 proof remain open.
 
+Migration `0046_maintenance_scheduler_leases.sql` adds a global, server-clock
+lease per fixed scheduler name. The DB repository exposes acquire/renew/release
+through security-definer functions available only to the standalone,
+non-inheriting `appsea_maintenance` role; direct runtime table access and
+`appsea_service` function execution are revoked. Each acquisition has a fresh
+token. Source maintenance, auth retention, password recovery, and invitation
+delivery use unique production owner IDs, renew during bounded passes, guard
+mutations with lease assertions, skip contention, and emit fixed
+lease-loss/release failures. This prevents duplicate repository passes but does
+not provide database fencing inside a long-running mutation, deployed scheduler
+ownership, durable metrics, or alert routing.
+
 ## Validated commands
 
 - `pnpm verify` passed 2026-08-01: packages, samples, smoke, and repo checks.
@@ -79,9 +91,9 @@ proof remain open.
 - 2026-08-01 tombstone-retry focus: db lint, db typecheck, db 73-test suite,
   worker typecheck, worker 48-test suite passed; migration and integration
   assertions are present.
-- 2026-08-01 source-maintenance scheduler focus: contracts 62-test suite and
-  worker 48-test suite passed; the real PostgreSQL scheduler path remains
-  Docker-blocked.
+- 2026-08-01 scheduler-lease focus: contracts 62-test suite, db 77-test suite,
+  worker 56-test suite, lint, and typecheck passed; real PostgreSQL concurrency,
+  grant, and takeover proof remains Docker-blocked.
 - 2026-08-01 collection-cost focus: contracts 62, connectors 16, db 74,
   workflows 21, and worker 48 tests passed; full repository verification passed.
 - `pnpm verify:persistence` and `pnpm verify:workflows` attempted on
@@ -96,8 +108,8 @@ proof remain open.
 3. Provider/identity approval, verified recovery/invitation delivery, and
    deploy/operate validated auth/source maintenance jobs.
 4. Explicit re-collection after deletion and general report/export workflows.
-5. Operational monitoring, cost controls, production database/Temporal
-   provisioning, and security review.
+5. Operational monitoring, deployed scheduler ownership, cost controls,
+   production database/Temporal provisioning, and security review.
 
 ## Current blockers
 
