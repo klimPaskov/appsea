@@ -219,6 +219,9 @@ importers:
       '@appsea/reports':
         specifier: workspace:*
         version: link:../reports
+      '@appsea/research':
+        specifier: workspace:*
+        version: link:../research
       '@appsea/scoring':
         specifier: workspace:*
         version: link:../scoring
@@ -226,9 +229,6 @@ importers:
         specifier: 8.22.0
         version: 8.22.0
     devDependencies:
-      '@appsea/research':
-        specifier: workspace:*
-        version: link:../research
       '@types/node':
         specifier: 26.1.1
         version: 26.1.1

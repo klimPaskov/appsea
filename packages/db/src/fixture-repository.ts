@@ -359,6 +359,10 @@ export class PostgresFixtureResearchRepository {
           }
 
           for (const complaint of parsed.artifact.complaints) {
+            const analysis = parsed.artifact.analyses.find(
+              (candidate) => candidate.complaintId === complaint.id
+            )
+            if (!analysis) throw new Error(`Missing complaint analysis for ${complaint.id}`)
             const sourceItemId = hashedIdentifier('source-item', {
               sourceId: complaint.sourceId,
               sourceRecordId: complaint.sourceRecordId
@@ -495,29 +499,36 @@ export class PostgresFixtureResearchRepository {
             const complaintHash = contentHash({
               evidenceHash,
               complaint,
+              analysis,
               extractionVersion: fixtureExtractionVersion
             })
             await client.query(
               `INSERT INTO appsea.complaint_observations
                (workspace_id, complaint_id, evidence_id, classification, complaint_type,
                 problem_statement, affected_workflow, target_product, target_company, target_feature,
-                severity, confidence, review_state, extraction_version, synthetic, content_hash, created_at)
-             VALUES ($1, $2, $3, 'complaint', $4, $5, $6, $7, $8, $9, 2, 0.8000,
-                     'unreviewed', $10, $11, $12, $13)
+                severity, confidence, review_state, extraction_version, synthetic, content_hash,
+                analysis_snapshot, created_at)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14,
+                     $15, $16, $17::jsonb, $18)
              ON CONFLICT (workspace_id, complaint_id) DO NOTHING`,
               [
                 parsed.workspaceId,
                 complaint.id,
                 evidenceId,
-                complaint.category,
-                complaint.text,
-                complaint.feature,
-                complaint.product,
-                complaint.company,
-                complaint.feature,
-                fixtureExtractionVersion,
+                analysis.classification,
+                analysis.complaintType,
+                analysis.problemStatement,
+                analysis.affectedWorkflow,
+                analysis.entities.product.canonicalName ?? complaint.product,
+                analysis.entities.company.canonicalName ?? complaint.company,
+                analysis.entities.feature.canonicalName ?? complaint.feature,
+                analysis.severity,
+                analysis.classificationConfidence,
+                analysis.reviewState,
+                analysis.extractionVersion,
                 complaint.synthetic,
                 complaintHash,
+                JSON.stringify(analysis),
                 parsed.requestedAt
               ]
             )

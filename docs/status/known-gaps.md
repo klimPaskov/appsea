@@ -4,6 +4,13 @@
 
 No live social platform is enabled. Fixture data cannot estimate market size, complaint frequency, or current momentum.
 
+Complaint observations now carry a deterministic, versioned classification and
+entity-resolution snapshot with severity and uncertainty fields. The rules are
+not a trained classifier, do not estimate unique authors, and intentionally
+leave substitute/competitor resolution unresolved until separately reviewed
+permitted research is available. Human correction is persisted only as review
+state in this slice; richer corrected field editing remains open.
+
 ## Infrastructure
 
 The PostgreSQL schema, repository, migrations, RLS, local role bootstrap, and CI integration suite exist. Production role provisioning, secrets, verified TLS, backups, high availability, deployment, and migration approval automation do not.

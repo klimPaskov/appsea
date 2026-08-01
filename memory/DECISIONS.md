@@ -3,10 +3,7 @@
 The six foundation decisions from 2026-07-10 are archived in
 [`archive/DECISIONS-foundation-2026-07-10.md`](archive/DECISIONS-foundation-2026-07-10.md).
 
-The five foundation decisions above remain archived with their original detail:
-PostgreSQL role separation and forced workspace RLS, immutable run lineage,
-PostgreSQL as workflow state rather than a polling queue, and an explicit
-fixture report template.
+Foundation decisions remain archived; see linked file.
 
 ## 2026-07-24: Temporal orchestration with PostgreSQL commit authority
 
@@ -342,3 +339,8 @@ failure metadata and cannot re-enter processing; completion remains idempotent.
 ## 2026-08-01: Fence
 
 `0052` fences SQL mutations; external effects remain outside.
+
+## 2026-08-01: Versioned complaint analysis snapshots
+
+`0053` stores replayable derived analysis beside each complaint; unresolved
+entity types stay explicit and reports carry the snapshot lineage.

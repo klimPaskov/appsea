@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { calculateOpportunityScore } from '@appsea/scoring'
+import { analyzeComplaint } from '@appsea/research'
 import { contentHash } from './hash'
 import {
   assertProductionAnalysisTimestamps,
@@ -123,6 +124,7 @@ function artifact(): ProductionResearchArtifact {
       reviewedAt: at
     },
     complaints: [complaint],
+    analyses: [analyzeComplaint(complaint)],
     clusters: [
       {
         id: 'cluster:one',

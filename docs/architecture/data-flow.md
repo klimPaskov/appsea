@@ -18,7 +18,8 @@
 7. The worker rechecks lease expiry and policy approval immediately before
    persistence; an inactive lease becomes terminal and requires reconciliation.
 8. A production collection checkpoint persists non-synthetic source items,
-   redacted evidence, unreviewed complaint observations, coverage gaps, and
+   redacted evidence, unreviewed complaint observations, deterministic
+   classification/entity-resolution snapshots, coverage gaps, and
    deletion tombstone events idempotently before downstream research begins.
    After a completed deletion, an authenticated editor or owner may explicitly
    branch into a one-record tombstone-bound collection. The exact source-native
@@ -30,10 +31,13 @@
    `unreviewed` -> `confirmed`/`rejected` and `confirmed` -> `rejected`
    transitions; review receipts contain identifiers only.
 10. The production-shaped analysis checkpoint normalizes and deduplicates the
-    validated payload while preserving source-native identifiers, evidence and
+    validated payload, computes one versioned complaint-analysis snapshot per
+    retained complaint, and preserves source-native identifiers, evidence and
     source-item identity, the approved policy review hash, and display policy.
 11. Clustering groups observations by product and problem category; each
-    membership points back to a retained complaint ID.
+    membership points back to a retained complaint ID. Classification and
+    entity confidence remain visible beside the cluster and unresolved
+    competitor/substitute types are not treated as negative evidence.
 12. Workspace seed reviews persist product, competitor, contrary-evidence, and
     score assumptions as immutable content-hashed records. Editors review them
     and owners approve them before analysis may reference the seed ID.

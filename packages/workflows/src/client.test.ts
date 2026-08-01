@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { productionResearchArtifactSchema } from '@appsea/contracts'
+import { complaintAnalysisSchema, productionResearchArtifactSchema } from '@appsea/contracts'
 import {
   prepareFixtureResearchWorkflowStart,
   prepareProductionAnalysisWorkflowStart,
@@ -8,6 +8,66 @@ import {
 } from './client'
 
 const analysisAt = '2026-07-10T00:00:00.000Z'
+const analysisFor = (complaintId: string) =>
+  complaintAnalysisSchema.parse({
+    complaintId,
+    classification: 'complaint',
+    complaintType: 'reliability',
+    problemStatement: 'Redacted observation',
+    expectedOutcome: null,
+    observedOutcome: 'Redacted observation',
+    consequence: null,
+    affectedWorkflow: 'Feature',
+    workaround: null,
+    featureMentions: ['Feature'],
+    userSegmentHints: [],
+    severity: 2,
+    recurrence: 'unknown',
+    switchingIntent: 'unknown',
+    paymentSignal: 'unknown',
+    actionabilityProbability: 0.8,
+    classificationConfidence: 0.8,
+    entityConfidence: 0.9,
+    manipulationRisk: 0,
+    piiFlags: [],
+    policyFlags: ['source-policy-representation-applied'],
+    reviewState: 'unreviewed',
+    extractionVersion: 'complaint-analysis-v0.1.0',
+    derivation: {
+      skillVersion: 'appsea-complaint-analysis-v1',
+      modelVersion: 'test',
+      promptVersion: 'none'
+    },
+    entities: {
+      product: {
+        entityType: 'product',
+        surfaceText: 'Product',
+        canonicalName: 'Product',
+        confidence: 0.9,
+        resolution: 'exact',
+        evidence: 'source-field'
+      },
+      company: {
+        entityType: 'company',
+        surfaceText: 'Company',
+        canonicalName: 'Company',
+        confidence: 0.9,
+        resolution: 'exact',
+        evidence: 'source-field'
+      },
+      feature: {
+        entityType: 'feature',
+        surfaceText: 'Feature',
+        canonicalName: 'Feature',
+        confidence: 0.9,
+        resolution: 'exact',
+        evidence: 'source-field'
+      },
+      substitutes: [],
+      competitors: [],
+      unresolvedTypes: ['substitute', 'competitor']
+    }
+  })
 const analysisArtifact = productionResearchArtifactSchema.parse({
   id: 'analysis-artifact:workflow',
   mode: 'production',
@@ -140,6 +200,7 @@ const analysisArtifact = productionResearchArtifactSchema.parse({
       allowedRepresentation: 'metadata-only'
     }
   ],
+  analyses: [analysisFor('complaint:workflow')],
   clusters: [
     {
       id: 'cluster:workflow',

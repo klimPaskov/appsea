@@ -1,6 +1,7 @@
 import type { Pool, PoolClient, QueryResultRow } from 'pg'
 import {
   appseaIdentifierSchema,
+  complaintAnalysisSchema,
   productionAnalysisComplaintSchema,
   productionAnalysisHandoffReadModelSchema,
   productionCollectionAnalysisSourceSchema,
@@ -24,6 +25,7 @@ import {
   type WorkspaceComplaintReviewInput,
   type WorkspaceComplaintReviewReadModel
 } from '@appsea/contracts'
+import { analyzeComplaint } from '@appsea/research'
 import { contentHash } from './hash'
 import { IdempotencyConflictError, ImmutableRecordConflictError } from './fixture-repository'
 import { withAuthenticatedWorkspaceTransaction, withWorkspaceTransaction } from './transaction'
@@ -591,6 +593,7 @@ export class PostgresProductionCollectionRepository {
         company_candidate: string
         feature_candidate: string
         category_candidate: string
+        analysis_snapshot: unknown
         allowed_representation: 'excerpt' | 'metadata-only' | 'aggregate-only'
         redacted: boolean
         captured_at: Date | string
@@ -605,7 +608,7 @@ export class PostgresProductionCollectionRepository {
                   evidence.company_candidate, evidence.feature_candidate,
                   evidence.category_candidate, evidence.allowed_representation,
                   evidence.redacted, source_item.captured_at, source_item.published_at,
-                  complaint.review_state
+                  complaint.review_state, complaint.analysis_snapshot
              FROM appsea.research_run_source_items run_item
              JOIN appsea.research_run_complaints run_complaint
                ON run_complaint.workspace_id = run_item.workspace_id
@@ -1088,38 +1091,45 @@ export class PostgresProductionCollectionRepository {
               sourceItemId,
               extractionVersion: productionExtractionVersion
             })
+            const analysis = analyzeComplaint(complaint)
             const complaintHash = contentHash({
               evidenceHash,
-              classification: 'complaint',
-              complaintType: complaint.category,
-              problemStatement: text,
-              affectedWorkflow: complaint.feature,
-              targetProduct: complaint.product,
-              targetCompany: complaint.company,
-              targetFeature: complaint.feature,
-              extractionVersion: productionExtractionVersion
+              classification: analysis.classification,
+              complaintType: analysis.complaintType,
+              problemStatement: analysis.problemStatement,
+              affectedWorkflow: analysis.affectedWorkflow,
+              targetProduct: analysis.entities.product.canonicalName ?? complaint.product,
+              targetCompany: analysis.entities.company.canonicalName ?? complaint.company,
+              targetFeature: analysis.entities.feature.canonicalName ?? complaint.feature,
+              extractionVersion: analysis.extractionVersion,
+              analysis
             })
             await client.query(
               `INSERT INTO appsea.complaint_observations
                (workspace_id, complaint_id, evidence_id, classification, complaint_type,
                 problem_statement, affected_workflow, target_product, target_company,
                 target_feature, severity, confidence, review_state, extraction_version,
-                synthetic, content_hash, created_at)
-             VALUES ($1, $2, $3, 'complaint', $4, $5, $6, $7, $8, $9, 2, 0.5000,
-                     'unreviewed', $10, false, $11, $12)
+                synthetic, content_hash, analysis_snapshot, created_at)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13,
+                     $14, false, $15, $16::jsonb, $17)
              ON CONFLICT (workspace_id, complaint_id) DO NOTHING`,
               [
                 parsed.request.workspaceId,
                 complaintId,
                 evidenceId,
-                complaint.category,
-                text,
-                complaint.feature,
-                complaint.product,
-                complaint.company,
-                complaint.feature,
-                productionExtractionVersion,
+                analysis.classification,
+                analysis.complaintType,
+                analysis.problemStatement,
+                analysis.affectedWorkflow,
+                analysis.entities.product.canonicalName ?? complaint.product,
+                analysis.entities.company.canonicalName ?? complaint.company,
+                analysis.entities.feature.canonicalName ?? complaint.feature,
+                analysis.severity,
+                analysis.classificationConfidence,
+                analysis.reviewState,
+                analysis.extractionVersion,
                 complaintHash,
+                JSON.stringify(analysis),
                 parsed.observedAt
               ]
             )
@@ -1356,6 +1366,7 @@ export class PostgresProductionCollectionRepository {
         company_candidate: string
         feature_candidate: string
         category_candidate: string
+        analysis_snapshot: unknown
         allowed_representation: 'excerpt' | 'metadata-only' | 'aggregate-only'
         redacted: boolean
         captured_at: Date | string
@@ -1368,7 +1379,8 @@ export class PostgresProductionCollectionRepository {
                   evidence.language, evidence.product_candidate,
                   evidence.company_candidate, evidence.feature_candidate,
                   evidence.category_candidate, evidence.allowed_representation,
-                  evidence.redacted, source_item.captured_at, source_item.published_at
+                  evidence.redacted, source_item.captured_at, source_item.published_at,
+                  complaint.analysis_snapshot
              FROM appsea.research_run_source_items run_item
              JOIN appsea.research_run_complaints run_complaint
                ON run_complaint.workspace_id = run_item.workspace_id
@@ -1477,6 +1489,7 @@ export class PostgresProductionCollectionRepository {
         company: row.company_candidate,
         feature: row.feature_candidate,
         category: row.category_candidate,
+        analysis: complaintAnalysisSchema.parse(row.analysis_snapshot),
         synthetic: false,
         redacted: row.redacted,
         allowedRepresentation: row.allowed_representation,
@@ -1598,7 +1611,13 @@ export class PostgresProductionCollectionRepository {
 
           await client.query(
             `UPDATE appsea.complaint_observations
-                SET review_state = $4
+                SET review_state = $4,
+                    analysis_snapshot = jsonb_set(
+                      COALESCE(analysis_snapshot, '{}'::jsonb),
+                      '{reviewState}',
+                      to_jsonb($4::text),
+                      true
+                    )
               WHERE workspace_id = $1
                 AND complaint_id = $2
                 AND EXISTS (

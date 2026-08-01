@@ -75,6 +75,8 @@ export default async function PrivateOpportunityPage({
                 <span>{evidence.product}</span>
                 <span>{evidence.category}</span>
                 <span>{evidence.synthetic ? 'Synthetic fixture' : evidence.sourceItemId}</span>
+                <span>{evidence.analysis.complaintType.replace('_', ' ')}</span>
+                <span>Severity {evidence.analysis.severity}/5</span>
               </div>
               <p>{evidence.text}</p>
             </li>

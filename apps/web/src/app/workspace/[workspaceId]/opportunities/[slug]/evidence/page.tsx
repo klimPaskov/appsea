@@ -85,8 +85,15 @@ export default async function PrivateEvidencePage({
                 <span>{evidence.product}</span>
                 <span>{evidence.category}</span>
                 <span>{evidence.synthetic ? 'Synthetic fixture' : evidence.sourceItemId}</span>
+                <span>{evidence.analysis.complaintType.replace('_', ' ')}</span>
+                <span>Severity {evidence.analysis.severity}/5</span>
               </div>
               <p>{evidence.text}</p>
+              <p className="complaint-meta">
+                Classification {evidence.analysis.classificationConfidence.toFixed(2)}; entities{' '}
+                {evidence.analysis.entityConfidence.toFixed(2)}. Unresolved:{' '}
+                {evidence.analysis.entities.unresolvedTypes.join(', ') || 'none'}.
+              </p>
             </li>
           ))}
         </ul>

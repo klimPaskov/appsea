@@ -97,6 +97,15 @@ completed matching tombstone.
 - PostgreSQL migration/read/deletion/concurrency/role integration is staged but
   Docker-blocked because the Docker Desktop Linux engine pipe is unavailable.
 
+On 2026-08-01, migration `0053_complaint_analysis_snapshots.sql` added a
+validated JSONB derived-analysis checkpoint beside each complaint. Research
+artifacts require one deterministic classification/entity snapshot per
+complaint; reports and private evidence expose severity, confidence, and
+unresolved competitor/substitute types. Historical snapshots upgrade
+conservatively. This is a rule-based checkpoint, not live market research;
+aliases, unique authors, contextual resolution, field correction, and sourced
+competitor research remain open.
+
 ## Next production tranche
 
 1. Legal/privacy/security approval and activation of the CFPB connector policy.

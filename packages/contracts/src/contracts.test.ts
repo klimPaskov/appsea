@@ -141,6 +141,67 @@ const validFixturePersistenceInput: FixturePersistenceInput = {
         allowedRepresentation: 'fixture' as const
       }
     ],
+    analyses: [
+      {
+        complaintId: 'complaint-fixture',
+        classification: 'complaint',
+        complaintType: 'workflow_gap',
+        problemStatement: 'Synthetic fixture complaint.',
+        expectedOutcome: null,
+        observedOutcome: 'Synthetic fixture complaint.',
+        consequence: null,
+        affectedWorkflow: 'Fixture feature',
+        workaround: null,
+        featureMentions: ['Fixture feature'],
+        userSegmentHints: [],
+        severity: 1,
+        recurrence: 'unknown',
+        switchingIntent: 'unknown',
+        paymentSignal: 'unknown',
+        actionabilityProbability: 0.8,
+        classificationConfidence: 0.8,
+        entityConfidence: 0.9,
+        manipulationRisk: 0,
+        piiFlags: [],
+        policyFlags: ['synthetic-fixture'],
+        reviewState: 'unreviewed',
+        extractionVersion: 'complaint-analysis-v0.1.0',
+        derivation: {
+          skillVersion: 'appsea-complaint-analysis-v1',
+          modelVersion: 'deterministic-rules-v1',
+          promptVersion: 'none'
+        },
+        entities: {
+          product: {
+            entityType: 'product',
+            surfaceText: 'Fixture product',
+            canonicalName: 'Fixture product',
+            confidence: 0.9,
+            resolution: 'exact',
+            evidence: 'source-field'
+          },
+          company: {
+            entityType: 'company',
+            surfaceText: 'Fixture company',
+            canonicalName: 'Fixture company',
+            confidence: 0.9,
+            resolution: 'exact',
+            evidence: 'source-field'
+          },
+          feature: {
+            entityType: 'feature',
+            surfaceText: 'Fixture feature',
+            canonicalName: 'Fixture feature',
+            confidence: 0.9,
+            resolution: 'exact',
+            evidence: 'source-field'
+          },
+          substitutes: [],
+          competitors: [],
+          unresolvedTypes: ['substitute', 'competitor']
+        }
+      }
+    ],
     clusters: [
       {
         id: 'cluster-fixture',

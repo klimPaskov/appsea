@@ -39,6 +39,11 @@ for that pre-context authorization lookup.
   observation from `unreviewed` to `confirmed`/`rejected` or from `confirmed`
   to `rejected`. Review audit/outbox receipts contain identifiers and state,
   never complaint text, and deleted evidence cannot be reviewed.
+- Migration `0053` stores derived complaint analysis in a validated JSONB
+  snapshot. The deterministic extractor receives already policy-checked
+  evidence, records its version and confidence, and emits no competitor or
+  substitute relation without a reviewed source. Imported text remains data,
+  and analysis output cannot write instructions, code, skills, or memory.
 - Migration `0033` makes opportunity-seed assumptions an explicit workspace
   boundary. Seed content is validated before insertion, immutable after create,
   and transitions through `unreviewed` -> `reviewed` -> `approved` only through

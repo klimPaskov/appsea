@@ -137,6 +137,99 @@ export const complaintReviewStateSchema = z.enum([
   'rejected'
 ])
 
+export const complaintClassificationSchema = z.enum([
+  'complaint',
+  'feature_request',
+  'question',
+  'praise',
+  'support_response',
+  'joke',
+  'spam',
+  'unrelated'
+])
+
+export const complaintTypeSchema = z.enum([
+  'missing_capability',
+  'broken_behavior',
+  'usability',
+  'performance',
+  'reliability',
+  'integration',
+  'pricing',
+  'privacy',
+  'security',
+  'support',
+  'accessibility',
+  'platform_restriction',
+  'workflow_gap',
+  'other'
+])
+
+export const complaintEntityReferenceSchema = z
+  .object({
+    entityType: z.enum(['product', 'company', 'feature', 'substitute', 'competitor']),
+    surfaceText: z.string().min(1).max(240),
+    canonicalName: z.string().min(1).max(240).nullable(),
+    confidence: z.number().min(0).max(1),
+    resolution: z.enum(['exact', 'normalized', 'contextual', 'ambiguous', 'unresolved']),
+    evidence: z.enum(['source-field', 'source-context', 'reviewed-seed', 'not-inferred'])
+  })
+  .strict()
+
+export const complaintEntityResolutionSchema = z
+  .object({
+    product: complaintEntityReferenceSchema,
+    company: complaintEntityReferenceSchema,
+    feature: complaintEntityReferenceSchema,
+    substitutes: z.array(complaintEntityReferenceSchema).max(50),
+    competitors: z.array(complaintEntityReferenceSchema).max(50),
+    unresolvedTypes: z
+      .array(z.enum(['product', 'company', 'feature', 'substitute', 'competitor']))
+      .max(5)
+  })
+  .strict()
+
+/**
+ * A derived observation is intentionally separate from the source complaint.
+ * It records deterministic extraction, entity confidence, and unresolved
+ * market dimensions without turning a missing lookup into negative evidence.
+ */
+export const complaintAnalysisSchema = z
+  .object({
+    complaintId: z.string().min(1),
+    classification: complaintClassificationSchema,
+    complaintType: complaintTypeSchema,
+    problemStatement: z.string().min(1).max(20_000),
+    expectedOutcome: z.string().min(1).max(2_000).nullable(),
+    observedOutcome: z.string().min(1).max(20_000),
+    consequence: z.string().min(1).max(2_000).nullable(),
+    affectedWorkflow: z.string().min(1).max(2_000),
+    workaround: z.string().min(1).max(2_000).nullable(),
+    featureMentions: z.array(z.string().min(1).max(240)).max(50),
+    userSegmentHints: z.array(z.string().min(1).max(240)).max(50),
+    severity: z.number().int().min(0).max(5),
+    recurrence: z.enum(['none', 'occasional', 'repeated', 'persistent', 'unknown']),
+    switchingIntent: z.enum(['none', 'possible', 'explicit', 'unknown']),
+    paymentSignal: z.enum(['none', 'weak', 'explicit', 'unknown']),
+    actionabilityProbability: z.number().min(0).max(1),
+    classificationConfidence: z.number().min(0).max(1),
+    entityConfidence: z.number().min(0).max(1),
+    manipulationRisk: z.number().min(0).max(1),
+    piiFlags: z.array(z.string().min(1).max(120)).max(50),
+    policyFlags: z.array(z.string().min(1).max(160)).max(50),
+    reviewState: complaintReviewStateSchema,
+    extractionVersion: z.string().min(1).max(80),
+    derivation: z
+      .object({
+        skillVersion: z.string().min(1).max(80),
+        modelVersion: z.string().min(1).max(80),
+        promptVersion: z.string().min(1).max(80)
+      })
+      .strict(),
+    entities: complaintEntityResolutionSchema
+  })
+  .strict()
+
 export const complaintClusterSchema = z.object({
   id: z.string().min(1),
   title: z.string().min(1),
@@ -503,6 +596,7 @@ export const researchArtifactSchema = z.object({
   createdAt: z.string().datetime(),
   sourcePolicies: z.array(sourcePolicySchema).min(1).max(16),
   complaints: z.array(complaintSchema).min(1).max(5_000),
+  analyses: z.array(complaintAnalysisSchema).min(1).max(5_000),
   clusters: z.array(complaintClusterSchema).min(1).max(2_000),
   opportunity: opportunitySchema,
   coverageGaps: z.array(z.string()).max(500),
@@ -563,6 +657,20 @@ export const fixtureResearchArtifactSchema = researchArtifactSchema
     const complaintIds = artifact.complaints.map((complaint) => complaint.id)
     const complaintIdSet = new Set(complaintIds)
     if (!unique(complaintIds)) addIssue(['complaints'], 'Fixture complaint IDs must be unique')
+    const analysisIds = artifact.analyses.map((analysis) => analysis.complaintId)
+    if (!unique(analysisIds))
+      addIssue(['analyses'], 'Fixture analysis complaint IDs must be unique')
+    if (!sameSet(analysisIds, complaintIds)) {
+      addIssue(['analyses'], 'Fixture analyses must cover each complaint exactly once')
+    }
+    artifact.analyses.forEach((analysis, index) => {
+      if (!complaintIdSet.has(analysis.complaintId)) {
+        addIssue(
+          ['analyses', index, 'complaintId'],
+          'Analysis must reference an artifact complaint'
+        )
+      }
+    })
     const nativeKeys = artifact.complaints.map(
       (complaint) => `${complaint.sourceId}\0${complaint.sourceRecordId}`
     )
@@ -698,6 +806,7 @@ export const opportunityReportObservationSchema = z
     product: z.string().min(1),
     feature: z.string().min(1),
     category: z.string().min(1),
+    analysis: complaintAnalysisSchema.nullable().default(null),
     excerpt: z.string().max(20_000).nullable(),
     redacted: z.boolean(),
     allowedRepresentation: z.enum(['excerpt', 'metadata-only', 'aggregate-only', 'fixture']),
@@ -1211,6 +1320,14 @@ export const productionResearchArtifactSchema = researchArtifactSchema
       context.addIssue({ code: 'custom', path, message })
     }
     const complaintIds = new Set(artifact.complaints.map((complaint) => complaint.id))
+    const analysisIds = artifact.analyses.map((analysis) => analysis.complaintId)
+    if (
+      analysisIds.length !== complaintIds.size ||
+      new Set(analysisIds).size !== analysisIds.length ||
+      !analysisIds.every((complaintId) => complaintIds.has(complaintId))
+    ) {
+      addIssue(['analyses'], 'Production analyses must cover each retained complaint exactly once')
+    }
     const memberships = artifact.clusters.flatMap((cluster) => cluster.complaintIds)
     if (artifact.analysisRunId === artifact.runId) {
       addIssue(['analysisRunId'], 'Analysis run must be distinct from the collection run')
@@ -1545,6 +1662,7 @@ export const productionCollectionEvidenceReadModelSchema = z
     company: z.string().min(1),
     feature: z.string().min(1),
     category: z.string().min(1),
+    analysis: complaintAnalysisSchema,
     synthetic: z.literal(false),
     redacted: z.boolean(),
     allowedRepresentation: z.enum(['excerpt', 'metadata-only', 'aggregate-only']),
@@ -2925,6 +3043,7 @@ export const workspaceEvidenceReadModelSchema = z
     company: z.string().min(1),
     feature: z.string().min(1),
     category: z.string().min(1),
+    analysis: complaintAnalysisSchema,
     synthetic: z.boolean(),
     redacted: z.boolean(),
     allowedRepresentation: z.enum(['excerpt', 'metadata-only', 'aggregate-only', 'fixture']),
@@ -3019,6 +3138,11 @@ export type SourcePolicyState = z.infer<typeof sourcePolicyStateSchema>
 export type SourceDeletionEvent = z.infer<typeof sourceDeletionEventSchema>
 export type Complaint = z.infer<typeof complaintSchema>
 export type ComplaintReviewState = z.infer<typeof complaintReviewStateSchema>
+export type ComplaintClassification = z.infer<typeof complaintClassificationSchema>
+export type ComplaintType = z.infer<typeof complaintTypeSchema>
+export type ComplaintEntityReference = z.infer<typeof complaintEntityReferenceSchema>
+export type ComplaintEntityResolution = z.infer<typeof complaintEntityResolutionSchema>
+export type ComplaintAnalysis = z.infer<typeof complaintAnalysisSchema>
 export type ComplaintCluster = z.infer<typeof complaintClusterSchema>
 export type Competitor = z.infer<typeof competitorSchema>
 export type ScoreFactors = z.infer<typeof scoreFactorsSchema>

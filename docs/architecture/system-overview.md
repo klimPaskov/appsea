@@ -103,6 +103,10 @@ time and holds the per-scheduler advisory and lease-row locks through selected
 source, deletion, admission, retention, and delivery-state transactions;
 external source/provider/object-store effects remain outside this atomic
 boundary.
+Migration `0053` adds a JSONB complaint-analysis snapshot with a validated
+deterministic classification/entity-resolution contract. Historical run
+snapshots are upgraded from already persisted complaint observations; missing
+competitor and substitute evidence remains an explicit unresolved gap.
 The post-collection production analysis workflow is versioned as `v2`: only
 workspace/collection/analysis/seed identifiers and immutable digests cross
 Temporal, while the worker rebuilds the evidence-backed artifact inside its

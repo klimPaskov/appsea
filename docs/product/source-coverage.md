@@ -24,3 +24,9 @@ until the non-synthetic research/report pipeline is durably persisted, reviewed,
 and approved. A test-only offline composition sample exists for contract and
 package validation, but it cannot establish market coverage or activate a
 source.
+
+Each retained complaint now also exposes a versioned derived-analysis snapshot:
+classification type, severity, recurrence and switching signals, entity
+confidence, and unresolved competitor/substitute dimensions. These values are
+inference with explicit confidence and review state; they do not replace
+provenance or turn missing source access into a market conclusion.

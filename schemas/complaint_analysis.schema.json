@@ -1,0 +1,168 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.appsea.local/complaint_analysis.schema.json",
+  "title": "AppSea Derived Complaint Analysis",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "complaintId",
+    "classification",
+    "complaintType",
+    "problemStatement",
+    "expectedOutcome",
+    "observedOutcome",
+    "consequence",
+    "affectedWorkflow",
+    "workaround",
+    "featureMentions",
+    "userSegmentHints",
+    "severity",
+    "recurrence",
+    "switchingIntent",
+    "paymentSignal",
+    "actionabilityProbability",
+    "classificationConfidence",
+    "entityConfidence",
+    "manipulationRisk",
+    "piiFlags",
+    "policyFlags",
+    "reviewState",
+    "extractionVersion",
+    "derivation",
+    "entities"
+  ],
+  "properties": {
+    "complaintId": { "type": "string", "minLength": 1 },
+    "classification": {
+      "enum": [
+        "complaint",
+        "feature_request",
+        "question",
+        "praise",
+        "support_response",
+        "joke",
+        "spam",
+        "unrelated"
+      ]
+    },
+    "complaintType": {
+      "enum": [
+        "missing_capability",
+        "broken_behavior",
+        "usability",
+        "performance",
+        "reliability",
+        "integration",
+        "pricing",
+        "privacy",
+        "security",
+        "support",
+        "accessibility",
+        "platform_restriction",
+        "workflow_gap",
+        "other"
+      ]
+    },
+    "problemStatement": { "type": "string", "minLength": 1, "maxLength": 20000 },
+    "expectedOutcome": { "type": ["string", "null"], "maxLength": 2000 },
+    "observedOutcome": { "type": "string", "minLength": 1, "maxLength": 20000 },
+    "consequence": { "type": ["string", "null"], "maxLength": 2000 },
+    "affectedWorkflow": { "type": "string", "minLength": 1, "maxLength": 2000 },
+    "workaround": { "type": ["string", "null"], "maxLength": 2000 },
+    "featureMentions": {
+      "type": "array",
+      "maxItems": 50,
+      "items": { "type": "string", "minLength": 1, "maxLength": 240 }
+    },
+    "userSegmentHints": {
+      "type": "array",
+      "maxItems": 50,
+      "items": { "type": "string", "minLength": 1, "maxLength": 240 }
+    },
+    "severity": { "type": "integer", "minimum": 0, "maximum": 5 },
+    "recurrence": { "enum": ["none", "occasional", "repeated", "persistent", "unknown"] },
+    "switchingIntent": { "enum": ["none", "possible", "explicit", "unknown"] },
+    "paymentSignal": { "enum": ["none", "weak", "explicit", "unknown"] },
+    "actionabilityProbability": { "type": "number", "minimum": 0, "maximum": 1 },
+    "classificationConfidence": { "type": "number", "minimum": 0, "maximum": 1 },
+    "entityConfidence": { "type": "number", "minimum": 0, "maximum": 1 },
+    "manipulationRisk": { "type": "number", "minimum": 0, "maximum": 1 },
+    "piiFlags": {
+      "type": "array",
+      "maxItems": 50,
+      "items": { "type": "string", "minLength": 1, "maxLength": 120 }
+    },
+    "policyFlags": {
+      "type": "array",
+      "maxItems": 50,
+      "items": { "type": "string", "minLength": 1, "maxLength": 160 }
+    },
+    "reviewState": { "enum": ["unreviewed", "confirmed", "corrected", "rejected"] },
+    "extractionVersion": { "type": "string", "minLength": 1, "maxLength": 80 },
+    "derivation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["skillVersion", "modelVersion", "promptVersion"],
+      "properties": {
+        "skillVersion": { "type": "string", "minLength": 1, "maxLength": 80 },
+        "modelVersion": { "type": "string", "minLength": 1, "maxLength": 80 },
+        "promptVersion": { "type": "string", "minLength": 1, "maxLength": 80 }
+      }
+    },
+    "entities": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "product",
+        "company",
+        "feature",
+        "substitutes",
+        "competitors",
+        "unresolvedTypes"
+      ],
+      "properties": {
+        "product": { "$ref": "#/$defs/entityReference" },
+        "company": { "$ref": "#/$defs/entityReference" },
+        "feature": { "$ref": "#/$defs/entityReference" },
+        "substitutes": {
+          "type": "array",
+          "maxItems": 50,
+          "items": { "$ref": "#/$defs/entityReference" }
+        },
+        "competitors": {
+          "type": "array",
+          "maxItems": 50,
+          "items": { "$ref": "#/$defs/entityReference" }
+        },
+        "unresolvedTypes": {
+          "type": "array",
+          "maxItems": 5,
+          "uniqueItems": true,
+          "items": { "enum": ["product", "company", "feature", "substitute", "competitor"] }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "entityReference": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "entityType",
+        "surfaceText",
+        "canonicalName",
+        "confidence",
+        "resolution",
+        "evidence"
+      ],
+      "properties": {
+        "entityType": { "enum": ["product", "company", "feature", "substitute", "competitor"] },
+        "surfaceText": { "type": "string", "minLength": 1, "maxLength": 240 },
+        "canonicalName": { "type": ["string", "null"], "maxLength": 240 },
+        "confidence": { "type": "number", "minimum": 0, "maximum": 1 },
+        "resolution": { "enum": ["exact", "normalized", "contextual", "ambiguous", "unresolved"] },
+        "evidence": { "enum": ["source-field", "source-context", "reviewed-seed", "not-inferred"] }
+      }
+    }
+  }
+}

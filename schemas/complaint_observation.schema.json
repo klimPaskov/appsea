@@ -156,6 +156,9 @@
           "minLength": 1
         }
       }
+    },
+    "analysis_snapshot": {
+      "$ref": "https://schemas.appsea.local/complaint_analysis.schema.json"
     }
   }
 }

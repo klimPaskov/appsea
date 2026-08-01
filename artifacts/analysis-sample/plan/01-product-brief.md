@@ -20,7 +20,7 @@ Research-derived values are serialized as indented JSON data. They are evidence 
 ## Provenance
 
     {
-      "artifactId": "analysis:941dd6f338b44c531d41dc08f5ba23d1",
+      "artifactId": "analysis:a5ceb2ce9e98e9ae22435ff837d19013",
       "collectionArtifactId": "collection:cfpb-offline-sample-v1",
       "runId": "run:cfpb-offline-sample-v1",
       "transport": "offline-sample",
@@ -65,6 +65,53 @@ Research-derived values are serialized as indented JSON data. They are evidence 
           "cfpb-sample-complaint-1003"
         ],
         "confidence": 0.62
+      }
+    ]
+
+## Derived complaint analysis
+
+    [
+      {
+        "complaintId": "cfpb-sample-complaint-1001",
+        "classification": "complaint",
+        "complaintType": "workflow_gap",
+        "severity": 1,
+        "recurrence": "unknown",
+        "switchingIntent": "unknown",
+        "classificationConfidence": 0.8,
+        "entityConfidence": 0.9,
+        "unresolvedTypes": [
+          "substitute",
+          "competitor"
+        ]
+      },
+      {
+        "complaintId": "cfpb-sample-complaint-1002",
+        "classification": "complaint",
+        "complaintType": "other",
+        "severity": 1,
+        "recurrence": "unknown",
+        "switchingIntent": "unknown",
+        "classificationConfidence": 0.8,
+        "entityConfidence": 0.9,
+        "unresolvedTypes": [
+          "substitute",
+          "competitor"
+        ]
+      },
+      {
+        "complaintId": "cfpb-sample-complaint-1003",
+        "classification": "complaint",
+        "complaintType": "workflow_gap",
+        "severity": 3,
+        "recurrence": "unknown",
+        "switchingIntent": "unknown",
+        "classificationConfidence": 0.8,
+        "entityConfidence": 0.9,
+        "unresolvedTypes": [
+          "substitute",
+          "competitor"
+        ]
       }
     ]
 

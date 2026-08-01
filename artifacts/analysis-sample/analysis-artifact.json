@@ -1,5 +1,5 @@
 {
-  "id": "analysis:941dd6f338b44c531d41dc08f5ba23d1",
+  "id": "analysis:a5ceb2ce9e98e9ae22435ff837d19013",
   "mode": "production",
   "createdAt": "2026-07-26T00:00:00.000Z",
   "sourcePolicies": [
@@ -107,6 +107,206 @@
       "evidenceId": "evidence:cfpb-sample-1003",
       "sourceItemId": "source-item:cfpb-sample-1003",
       "evidenceHash": "3333333333333333333333333333333333333333333333333333333333333333"
+    }
+  ],
+  "analyses": [
+    {
+      "complaintId": "cfpb-sample-complaint-1001",
+      "classification": "complaint",
+      "complaintType": "workflow_gap",
+      "problemStatement": "The next teammate cannot see the ownership history after a handoff.",
+      "expectedOutcome": null,
+      "observedOutcome": "The next teammate cannot see the ownership history after a handoff.",
+      "consequence": null,
+      "affectedWorkflow": "ownership history",
+      "workaround": null,
+      "featureMentions": [
+        "ownership history"
+      ],
+      "userSegmentHints": [],
+      "severity": 1,
+      "recurrence": "unknown",
+      "switchingIntent": "unknown",
+      "paymentSignal": "unknown",
+      "actionabilityProbability": 0.8,
+      "classificationConfidence": 0.8,
+      "entityConfidence": 0.9,
+      "manipulationRisk": 0,
+      "piiFlags": [],
+      "policyFlags": [
+        "source-policy-representation-applied"
+      ],
+      "reviewState": "unreviewed",
+      "extractionVersion": "complaint-analysis-v0.1.0",
+      "derivation": {
+        "skillVersion": "appsea-complaint-analysis-v1",
+        "modelVersion": "deterministic-rules-v1",
+        "promptVersion": "none"
+      },
+      "entities": {
+        "product": {
+          "entityType": "product",
+          "surfaceText": "Example Inbox",
+          "canonicalName": "Example Inbox",
+          "confidence": 0.9,
+          "resolution": "exact",
+          "evidence": "source-field"
+        },
+        "company": {
+          "entityType": "company",
+          "surfaceText": "Example Company",
+          "canonicalName": "Example Company",
+          "confidence": 0.9,
+          "resolution": "exact",
+          "evidence": "source-field"
+        },
+        "feature": {
+          "entityType": "feature",
+          "surfaceText": "ownership history",
+          "canonicalName": "ownership history",
+          "confidence": 0.9,
+          "resolution": "exact",
+          "evidence": "source-field"
+        },
+        "substitutes": [],
+        "competitors": [],
+        "unresolvedTypes": [
+          "substitute",
+          "competitor"
+        ]
+      }
+    },
+    {
+      "complaintId": "cfpb-sample-complaint-1002",
+      "classification": "complaint",
+      "complaintType": "other",
+      "problemStatement": "A reassigned conversation does not show who changed its owner.",
+      "expectedOutcome": null,
+      "observedOutcome": "A reassigned conversation does not show who changed its owner.",
+      "consequence": null,
+      "affectedWorkflow": "reassignment audit",
+      "workaround": null,
+      "featureMentions": [
+        "reassignment audit"
+      ],
+      "userSegmentHints": [],
+      "severity": 1,
+      "recurrence": "unknown",
+      "switchingIntent": "unknown",
+      "paymentSignal": "unknown",
+      "actionabilityProbability": 0.8,
+      "classificationConfidence": 0.8,
+      "entityConfidence": 0.9,
+      "manipulationRisk": 0,
+      "piiFlags": [],
+      "policyFlags": [
+        "source-policy-representation-applied"
+      ],
+      "reviewState": "unreviewed",
+      "extractionVersion": "complaint-analysis-v0.1.0",
+      "derivation": {
+        "skillVersion": "appsea-complaint-analysis-v1",
+        "modelVersion": "deterministic-rules-v1",
+        "promptVersion": "none"
+      },
+      "entities": {
+        "product": {
+          "entityType": "product",
+          "surfaceText": "Example Inbox",
+          "canonicalName": "Example Inbox",
+          "confidence": 0.9,
+          "resolution": "exact",
+          "evidence": "source-field"
+        },
+        "company": {
+          "entityType": "company",
+          "surfaceText": "Example Company",
+          "canonicalName": "Example Company",
+          "confidence": 0.9,
+          "resolution": "exact",
+          "evidence": "source-field"
+        },
+        "feature": {
+          "entityType": "feature",
+          "surfaceText": "reassignment audit",
+          "canonicalName": "reassignment audit",
+          "confidence": 0.9,
+          "resolution": "exact",
+          "evidence": "source-field"
+        },
+        "substitutes": [],
+        "competitors": [],
+        "unresolvedTypes": [
+          "substitute",
+          "competitor"
+        ]
+      }
+    },
+    {
+      "complaintId": "cfpb-sample-complaint-1003",
+      "classification": "complaint",
+      "complaintType": "workflow_gap",
+      "problemStatement": "Manual handoff notes become stale before the next shift starts.",
+      "expectedOutcome": null,
+      "observedOutcome": "Manual handoff notes become stale before the next shift starts.",
+      "consequence": null,
+      "affectedWorkflow": "handoff notes",
+      "workaround": null,
+      "featureMentions": [
+        "handoff notes"
+      ],
+      "userSegmentHints": [],
+      "severity": 3,
+      "recurrence": "unknown",
+      "switchingIntent": "unknown",
+      "paymentSignal": "unknown",
+      "actionabilityProbability": 0.8,
+      "classificationConfidence": 0.8,
+      "entityConfidence": 0.9,
+      "manipulationRisk": 0,
+      "piiFlags": [],
+      "policyFlags": [
+        "source-policy-representation-applied"
+      ],
+      "reviewState": "unreviewed",
+      "extractionVersion": "complaint-analysis-v0.1.0",
+      "derivation": {
+        "skillVersion": "appsea-complaint-analysis-v1",
+        "modelVersion": "deterministic-rules-v1",
+        "promptVersion": "none"
+      },
+      "entities": {
+        "product": {
+          "entityType": "product",
+          "surfaceText": "Example Inbox",
+          "canonicalName": "Example Inbox",
+          "confidence": 0.9,
+          "resolution": "exact",
+          "evidence": "source-field"
+        },
+        "company": {
+          "entityType": "company",
+          "surfaceText": "Example Company",
+          "canonicalName": "Example Company",
+          "confidence": 0.9,
+          "resolution": "exact",
+          "evidence": "source-field"
+        },
+        "feature": {
+          "entityType": "feature",
+          "surfaceText": "handoff notes",
+          "canonicalName": "handoff notes",
+          "confidence": 0.9,
+          "resolution": "exact",
+          "evidence": "source-field"
+        },
+        "substitutes": [],
+        "competitors": [],
+        "unresolvedTypes": [
+          "substitute",
+          "competitor"
+        ]
+      }
     }
   ],
   "clusters": [

@@ -52,6 +52,11 @@ export function mapProductionAnalysisToOpportunityDetail(
       company: complaint.company,
       feature: complaint.feature,
       category: complaint.category,
+      analysis:
+        model.artifact.analyses.find((analysis) => analysis.complaintId === complaint.id) ??
+        (() => {
+          throw new Error(`Missing complaint analysis for ${complaint.id}`)
+        })(),
       synthetic: false,
       redacted: complaint.redacted,
       allowedRepresentation: complaint.allowedRepresentation,

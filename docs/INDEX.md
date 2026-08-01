@@ -69,6 +69,7 @@
 - [`adrs/0008-authenticated-private-workspaces.md`](adrs/0008-authenticated-private-workspaces.md)
 - [`adrs/0009-maintenance-scheduler-ownership.md`](adrs/0009-maintenance-scheduler-ownership.md)
 - [`adrs/0010-maintenance-transaction-fencing.md`](adrs/0010-maintenance-transaction-fencing.md)
+- [`adrs/0011-complaint-analysis-snapshots.md`](adrs/0011-complaint-analysis-snapshots.md)
 
 ## Generated references
 
@@ -115,3 +116,4 @@
 - [`status/direct-source-admission-completion-report-2026-08-01.md`](status/direct-source-admission-completion-report-2026-08-01.md)
 - [`status/production-output-governance-completion-report-2026-08-01.md`](status/production-output-governance-completion-report-2026-08-01.md)
 - [`status/maintenance-scheduler-fencing-completion-report-2026-08-01.md`](status/maintenance-scheduler-fencing-completion-report-2026-08-01.md)
+- [`status/complaint-analysis-snapshot-completion-report-2026-08-01.md`](status/complaint-analysis-snapshot-completion-report-2026-08-01.md)

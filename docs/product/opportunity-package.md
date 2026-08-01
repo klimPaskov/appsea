@@ -19,6 +19,12 @@ A generated coding-agent package contains:
 
 Claims in the package must point back to evidence or state that they are inference. The fixture generator writes a complete sample under `artifacts/plans/`.
 
+Evidence observations include a versioned derived-analysis record with
+classification, severity, recurrence, switching signals, entity confidence,
+and unresolved market dimensions. It is an inference checkpoint with explicit
+review state; it never substitutes for source provenance or separately
+reviewed competitor research.
+
 Fixture report versions are deterministic and keep retained observations,
 versioned score inference, contrary evidence, recommendation, coverage gaps, and
 source-policy metadata distinct. They are not market research and do not imply

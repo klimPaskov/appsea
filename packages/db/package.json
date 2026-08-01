@@ -29,12 +29,12 @@
   "dependencies": {
     "@appsea/contracts": "workspace:*",
     "@appsea/object-store": "workspace:*",
+    "@appsea/research": "workspace:*",
     "@appsea/reports": "workspace:*",
     "@appsea/scoring": "workspace:*",
     "pg": "8.22.0"
   },
   "devDependencies": {
-    "@appsea/research": "workspace:*",
     "@types/node": "26.1.1",
     "@types/pg": "8.20.0",
     "tsx": "4.23.0",

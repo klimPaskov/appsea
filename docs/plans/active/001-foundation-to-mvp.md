@@ -25,7 +25,7 @@ Status: production-shaped foundation implemented and validated locally; producti
 
 Implemented:
 
-- PostgreSQL 18 schema and fifty-two forward, checksummed migrations
+- PostgreSQL 18 schema and fifty-three forward, checksummed migrations
 - normalized source, evidence, complaint, cluster, competitor, opportunity, score, report, plan, audit, cost, deletion, outbox, and lineage tables
 - no-login owner, separate migrator, and least-privilege runtime role contract
 - forced workspace RLS and transaction-scoped workspace context
@@ -118,6 +118,11 @@ lease-row locks through selected maintenance transactions. Source quota,
 deletion, admission, lease purge, authentication retention, and delivery state
 transitions fail closed for a stale token; external source/provider/object-store
 effects and snapshot reconciliation remain outside the atomic fence.
+
+Migration `0053_complaint_analysis_snapshots.sql` persists one validated,
+versioned derived classification/entity-resolution snapshot per complaint and
+upgrades historical run snapshots without changing source evidence. Missing
+competitor and substitute research remains explicitly unresolved.
 
 ### 2. Durable workflows
 
@@ -281,14 +286,16 @@ Status: private evidence inspection, source-policy coverage, complaint curation,
 generation, stored report/plan reads, report approval governance, approved JSON
 export, a separate approved-source collection evidence view, durable production
 analysis/object references, active-output private reads, and a
-production-shaped report/package composition checkpoint are implemented;
+production-shaped report/package composition checkpoint, and a persisted
+versioned complaint classification/entity-resolution checkpoint are implemented;
 cloud object storage, recomputation alerting, and export retention remain. Report and plan
 approval/export now hydrate validated object-backed production payloads before
 applying their separate governance boundaries. Production analysis read models
 carry the linked report/plan approval states from PostgreSQL so private
 opportunity pages do not infer stale draft defaults.
 
-The report contract keeps retained observations, deterministic score inference,
+The report contract keeps retained observations and their derived analysis,
+deterministic score inference,
 contrary evidence, recommendation, source coverage, and coverage gaps separate.
 Reports are versioned in `report_versions` and linked to their plan package. Reads
 exclude inactive source rows and non-redacted non-fixture evidence.

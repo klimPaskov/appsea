@@ -43,6 +43,7 @@ export function generateOpportunityReport(
   generatedAt = new Date().toISOString()
 ): OpportunityReport {
   const artifact = parseResearchArtifact(artifactInput)
+  const analyses = new Map(artifact.analyses.map((analysis) => [analysis.complaintId, analysis]))
   const observations = artifact.complaints.map((complaint) => ({
     evidenceId: 'evidenceId' in complaint ? complaint.evidenceId : `evidence:${complaint.id}`,
     sourceRecordId: complaint.sourceRecordId,
@@ -51,6 +52,11 @@ export function generateOpportunityReport(
     product: complaint.product,
     feature: complaint.feature,
     category: complaint.category,
+    analysis: (() => {
+      const analysis = analyses.get(complaint.id)
+      if (!analysis) throw new Error(`Missing complaint analysis for ${complaint.id}`)
+      return analysis
+    })(),
     excerpt:
       complaint.allowedRepresentation === 'excerpt' || complaint.allowedRepresentation === 'fixture'
         ? complaint.text
@@ -330,6 +336,22 @@ ${indentedJson(
     summary: cluster.summary,
     complaintIds: cluster.complaintIds,
     confidence: cluster.confidence
+  }))
+)}
+
+## Derived complaint analysis
+
+${indentedJson(
+  artifact.analyses.map((analysis) => ({
+    complaintId: analysis.complaintId,
+    classification: analysis.classification,
+    complaintType: analysis.complaintType,
+    severity: analysis.severity,
+    recurrence: analysis.recurrence,
+    switchingIntent: analysis.switchingIntent,
+    classificationConfidence: analysis.classificationConfidence,
+    entityConfidence: analysis.entityConfidence,
+    unresolvedTypes: analysis.entities.unresolvedTypes
   }))
 )}
 
@@ -626,6 +648,22 @@ ${indentedJson(
     summary: cluster.summary,
     complaintIds: cluster.complaintIds,
     confidence: cluster.confidence
+  }))
+)}
+
+## Derived complaint analysis
+
+${indentedJson(
+  artifact.analyses.map((analysis) => ({
+    complaintId: analysis.complaintId,
+    classification: analysis.classification,
+    complaintType: analysis.complaintType,
+    severity: analysis.severity,
+    recurrence: analysis.recurrence,
+    switchingIntent: analysis.switchingIntent,
+    classificationConfidence: analysis.classificationConfidence,
+    entityConfidence: analysis.entityConfidence,
+    unresolvedTypes: analysis.entities.unresolvedTypes
   }))
 )}
 

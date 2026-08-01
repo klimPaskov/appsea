@@ -65,7 +65,8 @@ describe('database foundation', () => {
       '0049',
       '0050',
       '0051',
-      '0052'
+      '0052',
+      '0053'
     ])
     expect(migrations[0]?.checksum).toMatch(/^[a-f0-9]{64}$/)
     expect(migrations[0]?.sql).toContain('CREATE TABLE appsea.evidence_records')
@@ -476,6 +477,14 @@ describe('database foundation', () => {
     expect(maintenanceFencingMigration?.sql).toContain(
       'GRANT EXECUTE ON FUNCTION appsea.assert_maintenance_scheduler_lease'
     )
+    const complaintAnalysisMigration = migrations.find((migration) => migration.version === '0053')
+    expect(complaintAnalysisMigration?.sql).toContain(
+      'ADD COLUMN IF NOT EXISTS analysis_snapshot jsonb'
+    )
+    expect(complaintAnalysisMigration?.sql).toContain('complaint_analysis_snapshot_object')
+    expect(complaintAnalysisMigration?.sql).toContain("'unresolvedTypes'")
+    expect(complaintAnalysisMigration?.sql).toContain("'{analyses}'")
+    expect(complaintAnalysisMigration?.sql).toContain('production_analysis_runs')
   })
 
   it('requires verified TLS for production database connections', () => {

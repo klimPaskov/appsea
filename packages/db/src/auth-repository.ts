@@ -10,6 +10,7 @@ import {
 import type { Pool, PoolClient, QueryResultRow } from 'pg'
 import {
   appseaIdentifierSchema,
+  complaintAnalysisSchema,
   objectReferenceSchema,
   authPasswordResetInputSchema,
   authPasswordResetRequestInputSchema,
@@ -363,6 +364,7 @@ interface EvidenceRow extends QueryResultRow {
   company_candidate: string
   feature_candidate: string
   category_candidate: string
+  analysis_snapshot: unknown
   synthetic: boolean
   redacted: boolean
   allowed_representation: WorkspaceEvidenceReadModel['allowedRepresentation']
@@ -2140,7 +2142,7 @@ export class PostgresAuthRepository {
               evidence.language, evidence.product_candidate, evidence.company_candidate,
               evidence.feature_candidate, evidence.category_candidate, evidence.synthetic,
               evidence.redacted, evidence.allowed_representation, source_item.captured_at,
-              source_item.published_at
+              source_item.published_at, complaint.analysis_snapshot
          FROM appsea.research_run_source_items run_item
          JOIN appsea.evidence_records evidence
            ON evidence.workspace_id = run_item.workspace_id
@@ -2148,6 +2150,9 @@ export class PostgresAuthRepository {
          JOIN appsea.source_items source_item
            ON source_item.workspace_id = run_item.workspace_id
           AND source_item.source_item_id = run_item.source_item_id
+         JOIN appsea.complaint_observations complaint
+           ON complaint.workspace_id = evidence.workspace_id
+          AND complaint.evidence_id = evidence.evidence_id
         WHERE run_item.workspace_id = $1 AND run_item.run_id = $2
            AND evidence.deletion_state = 'active'
            AND source_item.deletion_state = 'active'
@@ -2166,6 +2171,7 @@ export class PostgresAuthRepository {
         company: row.company_candidate,
         feature: row.feature_candidate,
         category: row.category_candidate,
+        analysis: complaintAnalysisSchema.parse(row.analysis_snapshot),
         synthetic: row.synthetic,
         redacted: row.redacted,
         allowedRepresentation: row.allowed_representation,

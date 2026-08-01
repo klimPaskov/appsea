@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
+  complaintAnalysisSchema,
   productionAnalysisInputSchema,
   productionResearchArtifactSchema,
   workspaceOpportunitySeedApprovalInputSchema,
@@ -8,6 +9,67 @@ import {
 } from './index'
 
 const now = '2026-07-26T00:00:00.000Z'
+
+const analysisFor = (complaintId: string) =>
+  complaintAnalysisSchema.parse({
+    complaintId,
+    classification: 'complaint',
+    complaintType: 'workflow_gap',
+    problemStatement: 'The handoff history is unavailable to the next teammate.',
+    expectedOutcome: null,
+    observedOutcome: 'The handoff history is unavailable to the next teammate.',
+    consequence: null,
+    affectedWorkflow: 'handoff history',
+    workaround: null,
+    featureMentions: ['handoff history'],
+    userSegmentHints: [],
+    severity: 2,
+    recurrence: 'unknown',
+    switchingIntent: 'unknown',
+    paymentSignal: 'unknown',
+    actionabilityProbability: 0.8,
+    classificationConfidence: 0.8,
+    entityConfidence: 0.9,
+    manipulationRisk: 0,
+    piiFlags: [],
+    policyFlags: ['source-policy-representation-applied'],
+    reviewState: 'unreviewed',
+    extractionVersion: 'complaint-analysis-v0.1.0',
+    derivation: {
+      skillVersion: 'appsea-complaint-analysis-v1',
+      modelVersion: 'test',
+      promptVersion: 'none'
+    },
+    entities: {
+      product: {
+        entityType: 'product',
+        surfaceText: 'Example Inbox',
+        canonicalName: 'Example Inbox',
+        confidence: 0.9,
+        resolution: 'exact',
+        evidence: 'source-field'
+      },
+      company: {
+        entityType: 'company',
+        surfaceText: 'Example Company',
+        canonicalName: 'Example Company',
+        confidence: 0.9,
+        resolution: 'exact',
+        evidence: 'source-field'
+      },
+      feature: {
+        entityType: 'feature',
+        surfaceText: 'handoff history',
+        canonicalName: 'handoff history',
+        confidence: 0.9,
+        resolution: 'exact',
+        evidence: 'source-field'
+      },
+      substitutes: [],
+      competitors: [],
+      unresolvedTypes: ['substitute', 'competitor']
+    }
+  })
 
 function input(overrides: Partial<ProductionAnalysisInput> = {}): ProductionAnalysisInput {
   return {
@@ -233,6 +295,7 @@ describe('production analysis contracts', () => {
       createdAt: now,
       sourcePolicies: [input().policySnapshot.policy],
       complaints: input().complaints,
+      analyses: [analysisFor('complaint:sample-1')],
       clusters: [
         {
           id: 'cluster:sample',

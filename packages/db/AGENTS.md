@@ -18,3 +18,8 @@ Scheduled mutations must carry the private `MaintenanceSchedulerFence` into
 the same service transaction as the write; migration `0052` holds the lease
 advisory/row lock through commit. Do not claim this fence covers external
 source, provider, or object-store effects.
+
+Complaint-derived fields must be persisted with the immutable observation in a
+versioned `analysis_snapshot` JSONB column. Backfill older rows conservatively,
+keep unresolved entity types explicit, and expose snapshot review-state changes
+through the same workspace transaction as the relational review state.

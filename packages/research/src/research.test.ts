@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
+  analyzeComplaint,
+  analyzeComplaints,
   buildFixtureResearchArtifact,
   buildProductionResearchArtifact,
   clusterComplaints,
@@ -26,6 +28,38 @@ const complaint = {
 }
 
 describe('fixture research', () => {
+  it('classifies complaints deterministically and keeps unresolved market entities explicit', () => {
+    const analyzed = analyzeComplaint({
+      ...complaint,
+      product: 'Teams',
+      category: 'handoff loss',
+      text: 'The handoff fails every time and we need an alternative.'
+    })
+    expect(analyzed.complaintType).toBe('workflow_gap')
+    expect(analyzed.severity).toBe(3)
+    expect(analyzed.recurrence).toBe('persistent')
+    expect(analyzed.switchingIntent).toBe('explicit')
+    expect(analyzed.entities.product.resolution).toBe('ambiguous')
+    expect(analyzed.entities.product.canonicalName).toBeNull()
+    expect(analyzed.entities.unresolvedTypes).toContain('competitor')
+    expect(analyzed.entities.substitutes).toEqual([])
+    expect(analyzed).toEqual(
+      analyzeComplaint({
+        ...complaint,
+        product: 'Teams',
+        category: 'handoff loss',
+        text: 'The handoff fails every time and we need an alternative.'
+      })
+    )
+  })
+
+  it('orders analysis snapshots by complaint identity for replay', () => {
+    const first = analyzeComplaints([complaint, { ...complaint, id: 'c0' }])
+    const replay = analyzeComplaints([{ ...complaint, id: 'c0' }, complaint])
+    expect(replay).toEqual(first)
+    expect(first.map((entry) => entry.complaintId)).toEqual(['c0', 'c1'])
+  })
+
   it('normalizes and deduplicates source records', () => {
     expect(deduplicateComplaints([complaint, complaint])).toEqual([
       { ...complaint, text: 'repeated spaces' }
@@ -36,6 +70,10 @@ describe('fixture research', () => {
     const artifact = await buildFixtureResearchArtifact('2026-07-10T00:00:00.000Z')
     expect(artifact.mode).toBe('fixture')
     expect(artifact.complaints).toHaveLength(4)
+    expect(artifact.analyses).toHaveLength(4)
+    expect(artifact.analyses.map((analysis) => analysis.complaintId).sort()).toEqual(
+      artifact.complaints.map((entry) => entry.id).sort()
+    )
     expect(artifact.clusters.length).toBeGreaterThan(0)
     expect(artifact.coverageGaps.length).toBeGreaterThan(0)
   })
@@ -218,6 +256,7 @@ describe('production analysis composition', () => {
     expect(replay).toEqual(first)
     expect(first.mode).toBe('production')
     expect(first.testOnly).toBe(true)
+    expect(first.analyses).toHaveLength(first.complaints.length)
     expect(first.clusters.flatMap((cluster) => cluster.complaintIds).sort()).toEqual(
       first.complaints.map((complaint) => complaint.id).sort()
     )
