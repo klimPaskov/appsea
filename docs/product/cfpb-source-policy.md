@@ -30,14 +30,17 @@ The route is documented by CFPB Open Tech at
 database page says the published data is freely available to use, analyze, and
 build on. No credentials, browser automation, scraping, or access-restriction
 workaround is used. The connector sends `search_term`, `field`, `frm`, `size`,
-and `format=json` parameters only.
+and `format=json` parameters only. Filtered collection may send `search_term`;
+identifier-only reconciliation deliberately omits it and sends only the
+bounded offset/size traversal parameters.
 
 ## Policy metadata
 
 The typed record is `cfpbSourcePolicy` in
 `packages/connectors/src/index.ts`.
 
-- Purpose: opportunity research, development, and testing after approval.
+- Purpose: opportunity research, identifier-only deletion reconciliation,
+  development, and testing after approval.
 - Commercial-use state: `allowed` as an engineering reading of the public-data
   statement; counsel must confirm the intended commercial product use.
 - Display: `excerpt`, and only for narratives returned through the public API.
@@ -79,10 +82,16 @@ verified, or a measure of total market harm.
 ## Deletion synchronization
 
 The source exposes no deletion webhook or tombstone feed in the approved route.
-Filtered pages therefore emit no deletion claim. `syncCfpbDeletions` can emit a
-source deletion event only after an operator-approved full snapshot comparison;
-the event carries the source record ID, observation time, and reason. The
-source-maintenance worker turns those events into `deletion_tombstones`, redacts
+Filtered pages therefore emit no deletion claim. The durable reconciliation job
+uses only unfiltered identifier pages with the separate
+`deletion-reconciliation` purpose, and it emits tombstones only after a bounded
+traversal observes a short, warning-free page. A capped or malformed traversal
+is recorded as an incomplete coverage gap and emits no deletion tombstones.
+`syncCfpbDeletions` remains the pure comparison helper for fixture and adapter
+tests; the production repository performs the comparison and tombstone insert
+in one lease-asserted transaction. The event carries the source record ID,
+observation time, and reason. The source-maintenance worker turns those events
+into `deletion_tombstones`, redacts
 source-item raw references and normalized evidence, and marks dependent
 reports/plans unavailable while retaining provenance. Complaint/cluster
 recomputation, export/object-store purge, and backup expiry verification remain

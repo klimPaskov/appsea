@@ -31,11 +31,15 @@ Before implementation, document:
 4. Map raw records into the shared complaint contract.
 5. Preserve stable source identifiers and timestamps when permitted.
 6. Add pagination, rate limiting, idempotency, retry limits, and deletion identifiers.
+   If deletion is inferred from absence, use a separate unfiltered identifier-only
+   traversal purpose; never reuse filtered complaint pages as a deletion proof.
+   Persist page hashes and bounded malformed/coverage warnings before allowing
+   a warning-free short page to drive tombstone creation.
 7. Redact or minimize personal data.
 8. Add fixtures that never contain real private content.
 9. Test disabled, quota, malformed, deletion, and partial-failure paths.
 
-Never scrape around an access restriction. Never claim coverage beyond the implemented collection route.
+Never scrape around an access restriction. Never claim coverage beyond the implemented collection route. A capped, malformed, or quota-uncertain full snapshot is an explicit coverage gap, not evidence of absence.
 
 ## Completion
 

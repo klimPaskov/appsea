@@ -25,7 +25,7 @@ Status: production-shaped foundation implemented and validated locally; producti
 
 Implemented:
 
-- PostgreSQL 18 schema and thirty-nine forward, checksummed migrations
+- PostgreSQL 18 schema and forty-one forward, checksummed migrations
 - normalized source, evidence, complaint, cluster, competitor, opportunity, score, report, plan, audit, cost, deletion, outbox, and lineage tables
 - no-login owner, separate migrator, and least-privilege runtime role contract
 - forced workspace RLS and transaction-scoped workspace context
@@ -55,6 +55,10 @@ Implemented:
   attempt to an approved policy review, preserves one server-observed capture
   timestamp across retries, rechecks policy/expiry immediately before
   persistence, and bounds terminal-lease retention through source maintenance
+- migrations `0040_source_snapshot_reconciliation.sql` and
+  `0041_source_snapshot_page_checkpoints.sql` add policy-gated, identifier-only
+  full-snapshot jobs, immutable page checkpoints with persisted warnings,
+  skip-locked scheduler claims, and same-transaction tombstone finalization
 - skip-locked deletion tombstone propagation that redacts source/evidence rows
   and marks dependent report/plan versions unavailable
 - global-auth password-reset tokens with latest-only semantics, encrypted
@@ -104,6 +108,10 @@ Implemented:
   supplies its immutable observed timestamp to complaint/quota provenance, and
   passes the lease into a same-transaction persistence assertion; the lease is
   released only after commit
+- the CFPB snapshot runner fetches only unfiltered identifier pages, resumes
+  from durable offsets without the raw caller key, records visible coverage
+  gaps for malformed/capped traversals, and emits tombstones only after a
+  warning-free short page
 - migration `0034_production_analysis_handoffs.sql` adds an approved-seed-bound,
   skip-locked handoff queue written in the collection completion transaction;
   the durable worker reconstructs active policy/evidence lineage and starts the
@@ -114,8 +122,8 @@ Implemented:
 
 Remaining production work: legacy v1 history drain/retention for the analysis
 workflow, authenticated/TLS-protected Temporal, HA,
-object-store/backups retention and purge, deployment, metrics, alerts, and worker
-crash fault-injection proof. Migration `0037` now queues deletion-triggered
+object-store/backups retention and purge, deployment, metrics, alerts, deployed
+snapshot scheduler ownership, and worker crash fault-injection proof. Migration `0037` now queues deletion-triggered
 active-evidence repairs; deployed scheduling, alerting, and production
 Temporal remain open. The repository-level production ingress gate is now
 implemented; deployed scheduler ownership and infrastructure authorization
@@ -138,6 +146,10 @@ Implemented:
   pending legal/privacy/security approval
 - deterministic synthetic HTTP fixtures covering disabled/pending/expired
   policy, quota, malformed, partial, and deletion paths
+- identifier-only CFPB snapshot pages use the unfiltered official route,
+  durable quota idempotency, bounded malformed-ID warnings, and no narrative
+  retention; the reconciliation worker finalizes only from a warning-free
+  short page
 - source-policy record at `docs/product/cfpb-source-policy.md`
 
 Remaining: assign legal/privacy/security owners, confirm intended commercial use

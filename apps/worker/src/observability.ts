@@ -7,6 +7,10 @@ export interface WorkerEvent {
   attempt?: number
   workspacesScanned?: number
   sourceItems?: number
+  snapshotPagesScanned?: number
+  snapshotSourceRecords?: number
+  snapshotDeletionsQueued?: number
+  snapshotCoverageGaps?: number
   costMicros?: number
   sessionsDeleted?: number
   rateLimitsDeleted?: number
@@ -58,6 +62,18 @@ export function emitWorkerEvent(event: WorkerEvent): void {
       : {}),
     ...(finiteInteger(event.sourceItems) !== undefined
       ? { sourceItems: finiteInteger(event.sourceItems) }
+      : {}),
+    ...(finiteInteger(event.snapshotPagesScanned) !== undefined
+      ? { snapshotPagesScanned: finiteInteger(event.snapshotPagesScanned) }
+      : {}),
+    ...(finiteInteger(event.snapshotSourceRecords) !== undefined
+      ? { snapshotSourceRecords: finiteInteger(event.snapshotSourceRecords) }
+      : {}),
+    ...(finiteInteger(event.snapshotDeletionsQueued) !== undefined
+      ? { snapshotDeletionsQueued: finiteInteger(event.snapshotDeletionsQueued) }
+      : {}),
+    ...(finiteInteger(event.snapshotCoverageGaps) !== undefined
+      ? { snapshotCoverageGaps: finiteInteger(event.snapshotCoverageGaps) }
       : {}),
     ...(finiteInteger(event.costMicros) !== undefined
       ? { costMicros: finiteInteger(event.costMicros) }

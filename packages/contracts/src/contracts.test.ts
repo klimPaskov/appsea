@@ -28,6 +28,7 @@ import {
   productionWorkflowAdmissionDecisionSchema,
   sourceCollectionLeaseResultSchema,
   sourceSnapshotReconciliationInputSchema,
+  sourceSnapshotReconciliationPageSchema,
   sourceSnapshotReconciliationReadModelSchema,
   researchJobBudgetSchema,
   sourcePolicySchema,
@@ -188,6 +189,7 @@ describe('contracts', () => {
     expect(
       sourceSnapshotReconciliationReadModelSchema.safeParse({
         ...base,
+        inputHash: 'b'.repeat(64),
         state: 'incomplete',
         attemptCount: 1,
         pagesScanned: 10,
@@ -200,9 +202,32 @@ describe('contracts', () => {
         observedAt: now,
         finishedAt: now,
         nextOffset: 1_000,
+        nextAttemptAt: now,
         updatedAt: now
       }).success
     ).toBe(true)
+    expect(
+      sourceSnapshotReconciliationPageSchema.safeParse({
+        offset: 0,
+        pageSize: 100,
+        sourceRecordCount: 1,
+        sourceRecordIds: ['123'],
+        shortPage: true,
+        completeSnapshot: true,
+        warnings: []
+      }).success
+    ).toBe(true)
+    expect(
+      sourceSnapshotReconciliationPageSchema.safeParse({
+        offset: 0,
+        pageSize: 100,
+        sourceRecordCount: 100,
+        sourceRecordIds: ['123'],
+        shortPage: true,
+        completeSnapshot: true,
+        warnings: []
+      }).success
+    ).toBe(false)
   })
 
   it('rejects a source without a reviewed policy', () => {

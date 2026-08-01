@@ -30,6 +30,9 @@ This skill may change `packages/db`, directly affected contracts and producers, 
 6. Make cross-object ownership and run lineage database constraints, not repository conventions.
 7. Gate source collection and evidence display against immutable approved policy metadata. Runtime paths may not override source kill switches.
 8. Make idempotency safe under concurrent identical and conflicting starts. Preserve one run, one audit event, and one outbox event.
+   For full-snapshot deletion reconciliation, keep staged data identifier-only,
+   make page checkpoints immutable, and assert the source lease in the same
+   transaction that compares active source items and enqueues tombstones.
 9. Add both a populated forward-upgrade test and a fresh-install test. Include negative privilege, RLS, policy, immutability, and cross-wire assertions.
 10. Update the local runbook, source-of-truth docs, and memory in the same tranche.
 

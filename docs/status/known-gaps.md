@@ -109,14 +109,14 @@ lifecycle rules, backup purge, and fresh Docker-backed proof remain open.
 
 The CFPB Consumer Complaint Database connector is implemented with an explicit
 typed policy, conservative quotas, narrative-only mapping, bounded request
-timeouts, and a separate full-snapshot deletion reconciliation helper, but remains disabled
-(`pending_review`). Migration `0027` now records operator-only draft
+timeouts, and a separate identifier-only full-snapshot deletion reconciliation
+worker, but remains disabled (`pending_review`). Migration `0027` now records operator-only draft
 registration and immutable approval evidence; an approved snapshot can feed
 the bounded production collection workflow, which persists non-synthetic
 source/evidence/complaint lineage, idempotent job/checkpoint state, and a
 private inspection route. The filtered collection request emits no deletion
-events; full-snapshot reconciliation is a separate maintenance operation that
-is not yet wired to a scheduler. Durable cross-workspace quota reservations,
+events; migration `0041` adds immutable identifier page checkpoints, persisted
+warnings, a bounded direct command, and a private resume command. Durable cross-workspace quota reservations,
 bounded all-workspace maintenance through a migration-owner security-definer
 workspace enumerator, stale-claim recovery, and deletion propagation now exist.
 No source is currently enabled for market research, and production Temporal
@@ -128,10 +128,10 @@ non-zero billing adapters are not implemented. Retention enqueue now derives
 bounded tombstones from the stored policy and reuses deletion propagation;
 policy drafts requesting an unsupported `purge` retention action are rejected
 until a purge implementation exists. Object-store/backups purge remains open;
-automatic recomputation dispatch now exists through migration `0037`, and migration
-`0040` now provides a policy-gated identifier-only reconciliation job/staging
-projection, but
-alerting and deployed scheduler ownership remain open. A production-shaped
+automatic recomputation dispatch now exists through migration `0037`, and
+migrations `0040`/`0041` provide a policy-gated identifier-only reconciliation
+job, page checkpoints, warning-preserving retries, and atomic tombstone
+finalization, but alerting and deployed scheduler ownership remain open. A production-shaped
 offline composition checkpoint now proves normalization, deduplication, clustering,
 explicit seeded scoring, generic report generation, and generic plan generation;
 it is test-only/in-memory and is not a live-source analysis run. The reviewed

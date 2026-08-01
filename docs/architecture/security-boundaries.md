@@ -86,6 +86,13 @@ for that pre-context authorization lookup.
   the lease row through commit; release happens only after commit. Uncertain
   quota settlement or inactive leases remain explicit reconciliation states.
   Runtime code has no direct lease-table write grant.
+- Migrations `0040` and `0041` place full-snapshot deletion inference behind a
+  policy-gated, forced-RLS job and immutable identifier-only page checkpoints.
+  The CFPB worker never stages narratives, preserves malformed/capped traversal
+  warnings across retries, and cannot enqueue tombstones unless a warning-free
+  short page was observed. Final identifier comparison, lease assertion, and
+  tombstone insertion share one transaction; scheduler claims do not require a
+  raw caller idempotency key.
 - Source-item acquisition policy and evidence display representation are relationally enforced.
 - Fixture report generation keeps retained observations, deterministic score
   inference, contrary evidence, recommendation, and source coverage in separate

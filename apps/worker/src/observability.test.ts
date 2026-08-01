@@ -11,6 +11,10 @@ describe('worker observability', () => {
       workflowId: 'workflow:fixture:one',
       state: 'completed',
       sourceItems: 20,
+      snapshotPagesScanned: 2,
+      snapshotSourceRecords: 140,
+      snapshotDeletionsQueued: 3,
+      snapshotCoverageGaps: 0,
       costMicros: 0
     })
     const payload = JSON.parse(String(log.mock.calls[0]?.[0])) as Record<string, unknown>
@@ -19,7 +23,11 @@ describe('worker observability', () => {
       service: 'appsea-worker',
       event: 'workflow_finished',
       workflowId: 'workflow:fixture:one',
-      sourceItems: 20
+      sourceItems: 20,
+      snapshotPagesScanned: 2,
+      snapshotSourceRecords: 140,
+      snapshotDeletionsQueued: 3,
+      snapshotCoverageGaps: 0
     })
     expect(payload).not.toHaveProperty('password')
     expect(JSON.stringify(payload)).not.toContain('DATABASE_URL')

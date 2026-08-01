@@ -323,3 +323,11 @@ are not rewritten; deployment must drain or retain compatible workers under an
 approved retention plan. Retention uses the server-observed activity timestamp;
 repository checks reject materially future timestamps, and final lineage locks
 the active, current, unexpired policy with allowed/restricted commercial use.
+
+## 2026-08-01: Make full-snapshot deletion inference identifier-only and durable
+
+Filtered pages cannot prove deletion. CFPB uses an unfiltered
+`deletion-reconciliation` purpose and stores identifiers, page hashes, warnings,
+and checkpoints. Migration `0041` persists warnings and idempotent pages; only
+a warning-free short page in the lease tx may enqueue tombstones. A settled
+quota without its checkpoint needs reconciliation; no auto-refetch.

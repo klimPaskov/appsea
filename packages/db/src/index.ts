@@ -81,6 +81,18 @@ export {
   type SourceCollectionLeaseResult
 } from './source-collection-lease-repository'
 export {
+  PostgresSourceSnapshotReconciliationRepository,
+  SourceSnapshotReconciliationClaimError,
+  SourceSnapshotReconciliationConflictError,
+  SourceSnapshotReconciliationIncompleteError,
+  SourceSnapshotReconciliationPolicyDeniedError,
+  SourceSnapshotReconciliationStateError,
+  type SourceSnapshotReconciliationClaim,
+  type SourceSnapshotReconciliationFinishInput,
+  type SourceSnapshotReconciliationLease,
+  type SourceSnapshotReconciliationPageInput
+} from './source-snapshot-reconciliation-repository'
+export {
   PostgresProductionAnalysisHandoffRepository,
   ProductionAnalysisHandoffConflictError,
   ProductionAnalysisHandoffStateError,

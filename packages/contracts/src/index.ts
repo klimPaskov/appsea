@@ -2203,6 +2203,10 @@ export const sourceSnapshotReconciliationResultSchema = z
 export const sourceSnapshotReconciliationReadModelSchema = z
   .object({
     ...sourceSnapshotReconciliationResultSchema.shape,
+    inputHash: z
+      .string()
+      .length(64)
+      .regex(/^[a-f0-9]{64}$/),
     idempotencyKey: z
       .string()
       .length(64)
@@ -2211,9 +2215,45 @@ export const sourceSnapshotReconciliationReadModelSchema = z
     maxRecords: z.number().int().min(1).max(1_000),
     state: sourceSnapshotReconciliationStateSchema,
     nextOffset: z.number().int().nonnegative().max(1_000),
+    nextAttemptAt: z.string().datetime(),
     updatedAt: z.string().datetime()
   })
   .strict()
+
+export const sourceSnapshotReconciliationPageSchema = z
+  .object({
+    offset: z.number().int().nonnegative().max(1_000),
+    pageSize: z.number().int().min(1).max(1_000),
+    sourceRecordCount: z.number().int().nonnegative().max(1_000),
+    sourceRecordIds: z.array(z.string().min(1).max(240)).max(1_000),
+    shortPage: z.boolean(),
+    completeSnapshot: z.boolean(),
+    warnings: z.array(z.string().min(1).max(500)).max(50)
+  })
+  .strict()
+  .superRefine((page, context) => {
+    if (page.sourceRecordCount < page.sourceRecordIds.length) {
+      context.addIssue({
+        code: 'custom',
+        path: ['sourceRecordIds'],
+        message: 'sourceRecordIds cannot exceed sourceRecordCount'
+      })
+    }
+    if (page.shortPage !== page.sourceRecordCount < page.pageSize) {
+      context.addIssue({
+        code: 'custom',
+        path: ['shortPage'],
+        message: 'shortPage must match the returned source record count'
+      })
+    }
+    if (page.completeSnapshot && (!page.shortPage || page.warnings.length > 0)) {
+      context.addIssue({
+        code: 'custom',
+        path: ['completeSnapshot'],
+        message: 'A complete snapshot page must be short and warning-free'
+      })
+    }
+  })
 
 export const authRetentionInputSchema = z
   .object({
@@ -2650,6 +2690,9 @@ export type SourceSnapshotReconciliationResult = z.infer<
 >
 export type SourceSnapshotReconciliationReadModel = z.infer<
   typeof sourceSnapshotReconciliationReadModelSchema
+>
+export type SourceSnapshotReconciliationPage = z.infer<
+  typeof sourceSnapshotReconciliationPageSchema
 >
 export type ProductionCollectionWorkflowInput = z.infer<
   typeof productionCollectionWorkflowInputSchema

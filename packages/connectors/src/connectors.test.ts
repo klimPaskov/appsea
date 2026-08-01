@@ -306,6 +306,77 @@ describe('connector policy gate', () => {
     expect(result.deletions).toEqual([])
   })
 
+  it('collects identifier-only unfiltered snapshot pages without retaining narratives', async () => {
+    let requestedUrl: URL | undefined
+    const connector = new CfpbConnector({
+      policy: approvedCfpbPolicy,
+      fetchImpl: async (url) => {
+        requestedUrl = url as URL
+        return new Response(JSON.stringify([cfpbRecord]), { status: 200 })
+      },
+      now: () => '2026-07-24T00:00:00.000Z'
+    })
+    const result = await connector.collectSnapshotPage({
+      offset: 100,
+      limit: 2,
+      purpose: 'deletion-reconciliation',
+      requestedDisplayMode: 'excerpt',
+      reconciliationId: 'reconciliation:source:0123456789abcdef0123456789abcdef'
+    })
+    expect(result).toMatchObject({
+      offset: 100,
+      pageSize: 2,
+      sourceRecordCount: 1,
+      sourceRecordIds: ['123456'],
+      shortPage: true,
+      completeSnapshot: true,
+      warnings: []
+    })
+    expect(requestedUrl?.searchParams.get('frm')).toBe('100')
+    expect(requestedUrl?.searchParams.get('size')).toBe('2')
+    expect(requestedUrl?.searchParams.get('search_term')).toBeNull()
+  })
+
+  it('marks malformed identifier pages unsafe for deletion absence', async () => {
+    const connector = new CfpbConnector({
+      policy: approvedCfpbPolicy,
+      fetchImpl: async () =>
+        new Response(JSON.stringify([{ complaint_id: 'not-numeric' }]), { status: 200 }),
+      now: () => '2026-07-24T00:00:00.000Z'
+    })
+    const result = await connector.collectSnapshotPage({
+      offset: 0,
+      limit: 10,
+      purpose: 'deletion-reconciliation',
+      requestedDisplayMode: 'excerpt',
+      reconciliationId: 'reconciliation:source:fedcba9876543210fedcba9876543210'
+    })
+    expect(result.sourceRecordIds).toEqual([])
+    expect(result.shortPage).toBe(true)
+    expect(result.completeSnapshot).toBe(false)
+    expect(result.warnings[0]).toMatch(/valid complaint identifier/)
+  })
+
+  it('rejects filtered-purpose snapshot requests before network access', async () => {
+    let requestCount = 0
+    const connector = new CfpbConnector({
+      policy: approvedCfpbPolicy,
+      fetchImpl: async () => {
+        requestCount += 1
+        return new Response('[]', { status: 200 })
+      }
+    })
+    await expect(
+      connector.collectSnapshotPage({
+        offset: 0,
+        limit: 1,
+        purpose: 'opportunity-research',
+        requestedDisplayMode: 'excerpt'
+      })
+    ).rejects.toThrow(/deletion-reconciliation/)
+    expect(requestCount).toBe(0)
+  })
+
   it('rejects a response whose declared body exceeds the byte budget', async () => {
     const connector = new CfpbConnector({
       policy: approvedCfpbPolicy,

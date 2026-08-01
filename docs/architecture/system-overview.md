@@ -57,6 +57,12 @@ requires a matching operator-approved policy review, preserves one observed
 collection timestamp across retries, rechecks/locks policy and lease inside the
 collection persistence transaction, and exposes only bounded terminal-lease
 purge to maintenance.
+Migrations `0040` and `0041` add a forced-RLS, policy-gated full-snapshot
+reconciliation projection. The worker stores only source identifiers, page
+hashes, bounded warnings, and server-observed checkpoints; a scheduler can
+claim queued or stale jobs without the original caller key. A warning-free
+short page is required before the persistence transaction compares the staged
+identifier set with active source items and enqueues deletion tombstones.
 The post-collection production analysis workflow is versioned as `v2`: only
 workspace/collection/analysis/seed identifiers and immutable digests cross
 Temporal, while the worker rebuilds the evidence-backed artifact inside its

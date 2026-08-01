@@ -32,6 +32,7 @@ import {
   PostgresOpportunitySeedReviewRepository,
   PostgresProductionWorkflowAdmissionRepository,
   PostgresSourceCollectionLeaseRepository,
+  PostgresSourceSnapshotReconciliationRepository,
   ProductionWorkflowConcurrencyLimitError,
   ProductionWorkflowRateLimitError,
   PostgresWorkflowJobRepository,
@@ -726,6 +727,150 @@ describe.sequential('PostgreSQL fixture persistence lifecycle', () => {
             WHERE source_id = $1`,
           [sourceId]
         )
+        await client.query('DELETE FROM appsea.source_policy_versions WHERE source_id = $1', [
+          sourceId
+        ])
+        await client.query('DELETE FROM appsea.sources WHERE source_id = $1', [sourceId])
+        await client.query('DELETE FROM appsea.workspaces WHERE workspace_id = $1', [workspaceId])
+      })
+    }
+  })
+
+  it('finalizes a complete identifier snapshot and enqueues only missing active source items', async () => {
+    const workspaceId = 'workspace-snapshot'
+    const sourceId = 'source-snapshot-test'
+    const policyVersion = 'snapshot-v1'
+    const policyHash = 'c'.repeat(64)
+    const reconciliationId = 'reconciliation:source:0123456789abcdef0123456789abcdef'
+    const input = {
+      workspaceId,
+      reconciliationId,
+      sourceId,
+      policyVersion,
+      idempotencyKey: 'd'.repeat(64),
+      pageSize: 2,
+      maxRecords: 10,
+      requestedAt: fixedAt
+    }
+    await withOwnerClient(async (client) => {
+      await client.query(
+        `INSERT INTO appsea.workspaces
+           (workspace_id, slug, display_name, visibility, fixture_only, status, created_at, updated_at)
+         VALUES ($1, 'snapshot-workspace', 'Snapshot Workspace', 'private', false, 'active', $2, $2)`,
+        [workspaceId, fixedAt]
+      )
+      await client.query(
+        `INSERT INTO appsea.sources
+           (source_id, display_name, source_type, lifecycle_state, current_policy_version,
+            created_at, updated_at)
+         VALUES ($1, 'Snapshot Source', 'api', 'disabled_pending_review', NULL, $2, $2)`,
+        [sourceId, fixedAt]
+      )
+      await client.query(
+        `INSERT INTO appsea.source_policy_versions
+           (source_id, policy_version, policy_state, permitted_purposes, commercial_use,
+            access_method, retention_days, deletion_required, attribution_required,
+            display_mode, coverage_notes, policy_document_ref, reviewed_at, expires_at,
+            policy_payload, content_hash, created_at)
+         VALUES ($1, $2, 'approved', ARRAY['deletion-reconciliation'], 'allowed', 'test route',
+                 30, true, true, 'excerpt', ARRAY['identifier-only integration policy'],
+                 'https://example.com/snapshot-policy', $3, NULL, '{}'::jsonb, $4, $3)`,
+        [sourceId, policyVersion, fixedAt, policyHash]
+      )
+      await client.query(
+        `INSERT INTO appsea.source_policy_reviews
+           (review_id, source_id, policy_version, decision, reviewer,
+            approval_reference, notes, content_hash, reviewed_at, recorded_at)
+         VALUES ('review:snapshot:test', $1, $2, 'approved', 'integration-test',
+                 'approval:snapshot:test', ARRAY['test-only'], $3, $4, $4)`,
+        [sourceId, policyVersion, policyHash, fixedAt]
+      )
+      await client.query(
+        `UPDATE appsea.sources
+            SET lifecycle_state = 'active', current_policy_version = $2, updated_at = $3
+          WHERE source_id = $1`,
+        [sourceId, policyVersion, fixedAt]
+      )
+      await client.query(
+        `INSERT INTO appsea.source_items
+           (workspace_id, source_item_id, source_id, source_policy_version,
+            source_record_id, canonical_locator, query_route, content_hash,
+            captured_at, synthetic, collection_purpose, requested_display_mode, created_at)
+         VALUES ($1, 'source-item-snapshot-missing', $2, $3, 'record-missing',
+                 'https://example.com/record-missing', 'full-snapshot', repeat('e', 64),
+                 $4, false, 'deletion-reconciliation', 'excerpt', $4),
+                ($1, 'source-item-snapshot-present', $2, $3, 'record-present',
+                 'https://example.com/record-present', 'full-snapshot', repeat('f', 64),
+                 $4, false, 'deletion-reconciliation', 'excerpt', $4)`,
+        [workspaceId, sourceId, policyVersion, fixedAt]
+      )
+    })
+
+    const repository = new PostgresSourceSnapshotReconciliationRepository(servicePool)
+    const leaseRepository = new PostgresSourceCollectionLeaseRepository(servicePool)
+    try {
+      await expect(repository.enqueue(input)).resolves.toMatchObject({ state: 'queued' })
+      const claim = await repository.claimById(workspaceId, reconciliationId)
+      expect(claim).toMatchObject({ state: 'running', observedAt: expect.any(String) })
+      if (!claim) throw new Error('snapshot job was not claimed')
+      const leaseId = `lease:source-snapshot:${reconciliationId}:attempt:${claim.attemptCount}`
+      await expect(
+        leaseRepository.acquire({
+          workspaceId,
+          leaseId,
+          sourceId,
+          policyVersion,
+          inputHash: claim.inputHash,
+          observedAt: claim.observedAt!
+        })
+      ).resolves.toMatchObject({ decision: 'acquired' })
+      await repository.appendPage(workspaceId, reconciliationId, claim.claimToken, {
+        offset: 0,
+        pageSize: 2,
+        sourceRecordCount: 1,
+        sourceRecordIds: ['record-present'],
+        shortPage: true,
+        warnings: []
+      })
+      const finished = await repository.finish({
+        workspaceId,
+        reconciliationId,
+        claimToken: claim.claimToken,
+        fullSnapshot: true,
+        coverageGaps: [],
+        warnings: [],
+        lease: { leaseId, inputHash: claim.inputHash }
+      })
+      expect(finished).toMatchObject({ state: 'completed', deletionCount: 1 })
+      const tombstone = await withWorkspaceTransaction(
+        servicePool,
+        workspaceId,
+        (client) =>
+          client.query<{ count: string }>(
+            `SELECT count(*)::text AS count
+               FROM appsea.deletion_tombstones
+              WHERE workspace_id = $1 AND source_id = $2 AND source_record_id = 'record-missing'`,
+            [workspaceId, sourceId]
+          ),
+        { readOnly: true }
+      )
+      expect(tombstone.rows[0]?.count).toBe('1')
+    } finally {
+      await withOwnerClient(async (client) => {
+        await client.query('DELETE FROM appsea.deletion_tombstones WHERE workspace_id = $1', [
+          workspaceId
+        ])
+        await client.query(
+          'DELETE FROM appsea.source_snapshot_reconciliation_jobs WHERE workspace_id = $1',
+          [workspaceId]
+        )
+        await client.query('DELETE FROM appsea.source_collection_leases WHERE workspace_id = $1', [
+          workspaceId
+        ])
+        await client.query('DELETE FROM appsea.source_items WHERE workspace_id = $1', [workspaceId])
+        await client.query('DELETE FROM appsea.source_policy_reviews WHERE source_id = $1', [
+          sourceId
+        ])
         await client.query('DELETE FROM appsea.source_policy_versions WHERE source_id = $1', [
           sourceId
         ])

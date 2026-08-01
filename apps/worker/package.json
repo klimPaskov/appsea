@@ -18,6 +18,8 @@
     "source:maintenance": "tsx src/source-maintenance.ts",
     "workflow:fixture": "tsx src/workflow-fixture.ts",
     "source:cfpb": "tsx src/production-cfpb.ts",
+    "source:cfpb:reconcile": "tsx src/production-cfpb-reconciliation-cli.ts",
+    "source:cfpb:reconcile:next": "tsx src/production-cfpb-reconciliation-next.ts",
     "source:policy:cfpb": "tsx src/source-policy-cfpb-review.ts",
     "workflow:worker": "tsx src/durable-worker.ts"
   },

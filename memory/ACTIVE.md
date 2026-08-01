@@ -27,11 +27,13 @@ purges terminal or expired admissions through source maintenance. Migration
 `0039` also binds each external fetch to an approved policy review, replays one
 immutable server-observed capture timestamp, rechecks policy/expiry before
 persistence, releases after commit, and purges terminal leases through source
-maintenance. Migration `0040` now adds a policy-gated, identifier-only full-snapshot
-reconciliation job and staging projection; its repository, connector page loop,
-atomic tombstone finalization, and scheduler boundary remain open. Next is infrastructure hardening: Temporal provisioning, role separation, automatic
-re-collection, non-fixture outputs, and identity-provider approval. Fixture and
-production collection routes are Temporal gateways; signup workspaces remain
+maintenance. Migrations `0040` and `0041` now add a policy-gated,
+identifier-only full-snapshot reconciliation job, durable page checkpoints,
+warning persistence, atomic tombstone finalization, and a scheduler-resume
+boundary. CFPB remains disabled; deployed scheduler ownership, policy approval,
+and infrastructure hardening remain open. Next: Temporal provisioning, role
+separation, re-collection, non-fixture outputs, and identity-provider approval.
+Fixture and production collection routes are Temporal gateways; signup workspaces remain
 non-fixture by design.
 
 On 2026-08-01, the production analysis Temporal envelope was versioned to
@@ -47,17 +49,14 @@ the active, current, unexpired policy, requires allowed/restricted commercial
 use, and rechecks confirmed redacted evidence before linking outputs.
 Collection initialization fails closed without one.
 
-The same security review left these follow-ups open: object-store purge and
-crash races, stale recomputation claim recovery, retryable tombstone propagation,
-and authenticated admission for the direct source CLI. Collection persistence
-now locks and rechecks the lease in the write transaction. These are blockers to a production-readiness claim, not
-reasons to weaken the v2 history boundary.
+Open security follow-ups are object-store purge/crash races, stale recomputation
+claims, retryable tombstone propagation, and authenticated source-CLI admission.
+Collection persistence now locks and rechecks the lease in its write transaction;
+these remain production-readiness blockers.
 
-The 2026-07-26 analysis checkpoint composes validated non-fixture collection
-data into deterministic clusters, score, report, and coding package; it is
-test-only. Migration `0030` and `PostgresProductionAnalysisRepository` persist
-lineage, projections, and content-addressed references with replay and
-deletion invalidation. Cloud storage, purge, and deployment proof remain open.
+The 2026-07-26 non-fixture analysis composition is test-only; migration `0030`
+and its repository persist lineage, projections, and content-addressed
+references. Cloud storage, purge, and deployment proof remain open.
 
 Foundation (2026-07-11 through 2026-07-25): PostgreSQL
 18/RLS/provenance, deterministic fixture analysis/sparse leaderboard,
@@ -76,6 +75,10 @@ integration remain open.
 - 2026-08-01 lease-atomicity follow-up: production collection persistence now
   locks/rechecks the policy lease in the same transaction as the write; db and
   worker focused suites passed
+- 2026-08-01 snapshot-reconciliation focus: migration `0041`, repository page
+  checkpoints, warning-preserving retries, CFPB identifier-only traversal, and
+  bounded direct/resume worker commands passed contracts/db/connectors/worker
+  suites; PostgreSQL integration remains Docker-blocked
 - Direct TypeScript, ESLint, Prettier, memory, and focused recomputation checks pass; the handoff
   focus passed 62, the private status focus 59, and contracts/db/worker/web suites passed 165. Seed SVG
   generated; raster awaits `cairosvg`; Temporal suites remain blocked by missing
@@ -114,9 +117,8 @@ integration remain open.
   idempotent, but no production Temporal deployment or integration proof exists;
   an optional approved-seed completion now queues analysis for a worker
   handoff. Cloud object-storage handling, recomputation alerting,
-  explicit re-collection, and
-  scheduled reconciliation remain open; a settled quota without a persisted
-  result requires operator reconciliation.
+  explicit re-collection, and deployed reconciliation scheduling remain open; a
+  settled quota without a persisted result requires operator reconciliation.
 - Production workflow admission is implemented in migration `0038` with five
   starts per 15 minutes, two active jobs, a five-minute reservation TTL, and
   bounded maintenance purge. Deployment authorization, scheduler ownership,

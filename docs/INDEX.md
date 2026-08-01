@@ -46,6 +46,7 @@
 - [`runbooks/account-closure.md`](runbooks/account-closure.md)
 - [`runbooks/source-policy-review.md`](runbooks/source-policy-review.md)
 - [`runbooks/production-source-collection.md`](runbooks/production-source-collection.md)
+- [`runbooks/source-reconciliation.md`](runbooks/source-reconciliation.md)
 - [`runbooks/production-analysis.md`](runbooks/production-analysis.md)
 - [`runbooks/source-maintenance.md`](runbooks/source-maintenance.md)
 - [`runbooks/ui-reference-loop.md`](runbooks/ui-reference-loop.md)

@@ -40,7 +40,8 @@ stable. PostgreSQL
 persists the source-native record identity, policy version, capture/published
 times, redacted evidence, unreviewed complaint observation, coverage gaps, and
 an outbox/audit receipt. A filtered collection does not emit deletion events;
-full-snapshot deletion reconciliation is a separate maintenance operation. A
+full-snapshot deletion reconciliation is a separate durable maintenance job;
+see [`source-reconciliation.md`](source-reconciliation.md). A
 repeated request with a different input is an idempotency conflict.
 
 The persistence repository asserts the lease and current policy inside the same

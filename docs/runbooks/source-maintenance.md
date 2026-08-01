@@ -50,6 +50,24 @@ cutoff; it never deletes source evidence or policy history. An inactive lease
 or quota settlement without a completed result remains an operator-
 reconciliation case.
 
+Full-snapshot deletion reconciliation is a separate durable worker boundary;
+it does not run as part of the ordinary maintenance pass:
+
+```text
+pnpm --filter @appsea/worker source:cfpb:reconcile
+pnpm --filter @appsea/worker source:cfpb:reconcile:next
+```
+
+The direct command hashes the caller idempotency key before enqueueing. The
+resume command claims only due CFPB jobs and needs only the workspace ID. Page
+checkpoints store source identifiers, hashes, and bounded warnings; tombstones
+are inserted only after the worker observes a warning-free short page and the
+database locks/asserts the source lease in the same transaction. A capped or
+malformed traversal records a coverage gap and emits no deletion absence claim.
+Run the resume command from a reviewed scheduler with bounded retries and
+alerting; deployed scheduler ownership and legal/privacy/security activation
+remain release gates.
+
 Retention policies using `redact` or `tombstone` reuse this path. Policy drafts
 using `purge` are rejected until a separately reviewed object-store/database
 purge implementation is available.

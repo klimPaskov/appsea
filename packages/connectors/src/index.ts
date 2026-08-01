@@ -209,7 +209,12 @@ const cfpbSourcePolicy = freezePolicy(
     sourceType: 'api',
     enabled: false,
     policyState: 'pending_review',
-    permittedPurposes: ['opportunity-research', 'development', 'testing'],
+    permittedPurposes: [
+      'opportunity-research',
+      'deletion-reconciliation',
+      'development',
+      'testing'
+    ],
     commercialUse: 'allowed',
     accessMethod: 'Official CFPB public JSON search API; no credentials and no scraping',
     retentionDays: 30,
@@ -270,8 +275,13 @@ function asIsoDate(value: string | null): string {
 
 function cfpbRecordId(record: CfpbRecord): string {
   const value = record.complaint_id
-  if (typeof value === 'number' && Number.isSafeInteger(value)) return String(value)
-  if (typeof value === 'string' && /^[0-9]+$/.test(value)) return value
+  const id =
+    typeof value === 'number' && Number.isSafeInteger(value)
+      ? String(value)
+      : typeof value === 'string' && /^[0-9]+$/.test(value)
+        ? value
+        : null
+  if (id && id.length <= 240) return id
   throw new SourceRecordMalformedError()
 }
 
@@ -367,6 +377,28 @@ export interface CfpbDeletionSyncRequest {
 
 export interface CfpbDeletionSyncResult {
   deletions: SourceDeletionEvent[]
+  warnings: string[]
+}
+
+/** Identifier-only page used by the durable full-snapshot reconciliation job. */
+export interface CfpbSnapshotPageRequest {
+  offset: number
+  limit: number
+  purpose: string
+  requestedDisplayMode: SourcePolicy['displayMode']
+  workspaceId?: string
+  reconciliationId?: string
+  policyVersion?: string
+  idempotencyKey?: string
+}
+
+export interface CfpbSnapshotPageResult {
+  offset: number
+  pageSize: number
+  sourceRecordCount: number
+  sourceRecordIds: string[]
+  shortPage: boolean
+  completeSnapshot: boolean
   warnings: string[]
 }
 
@@ -624,5 +656,110 @@ export class CfpbConnector implements SourceConnector {
     )
     await this.commitDurableQuota(request, reservation, records.length)
     return { policy: this.policy, complaints, deletions: [], warnings }
+  }
+
+  /**
+   * Fetch one unfiltered, identifier-only page. This method never maps or
+   * persists complaint narratives. A page is deletion-safe only when it is
+   * short and every returned record has a valid stable source identifier.
+   */
+  async collectSnapshotPage(request: CfpbSnapshotPageRequest): Promise<CfpbSnapshotPageResult> {
+    if (!Number.isSafeInteger(request.offset) || request.offset < 0 || request.offset > 1_000_000) {
+      throw new Error('CFPB snapshot offset is outside the supported range')
+    }
+    if (request.purpose !== 'deletion-reconciliation') {
+      throw new Error('CFPB snapshot pages require the deletion-reconciliation purpose')
+    }
+    if (!this.policy.deletionRequired) {
+      throw new Error('CFPB snapshot pages require a source policy with deletion duties')
+    }
+    const collectionRequest: CollectionRequest = {
+      query: '',
+      limit: request.limit,
+      purpose: request.purpose,
+      requestedDisplayMode: request.requestedDisplayMode,
+      ...(request.workspaceId ? { workspaceId: request.workspaceId } : {}),
+      ...(request.reconciliationId ? { runId: request.reconciliationId } : {}),
+      ...(request.policyVersion ? { policyVersion: request.policyVersion } : {}),
+      ...(request.idempotencyKey ? { idempotencyKey: request.idempotencyKey } : {})
+    }
+    assertPolicyAllowsCollection(this.policy, collectionRequest)
+    const reservation = await this.reserveDurableQuota(collectionRequest)
+    const url = new URL(this.baseUrl)
+    url.searchParams.set('field', 'all')
+    url.searchParams.set('frm', String(request.offset))
+    url.searchParams.set('size', String(request.limit))
+    url.searchParams.set('format', 'json')
+
+    let response: Response
+    const abortController = new AbortController()
+    const timeout = setTimeout(() => abortController.abort(), CFPB_REQUEST_TIMEOUT_MS)
+    try {
+      response = await this.fetchImpl(url, {
+        headers: { accept: 'application/json' },
+        signal: abortController.signal,
+        redirect: 'error'
+      })
+    } catch {
+      clearTimeout(timeout)
+      await this.commitDurableQuota(collectionRequest, reservation, 0)
+      throw new Error('CFPB snapshot request failed before a response was received')
+    }
+    if (!response.ok) {
+      clearTimeout(timeout)
+      await this.commitDurableQuota(collectionRequest, reservation, 0)
+      throw new Error('CFPB snapshot returned a non-success response')
+    }
+
+    let payload: unknown
+    try {
+      payload = await readCfpbJson(response)
+    } catch (error) {
+      clearTimeout(timeout)
+      await this.commitDurableQuota(collectionRequest, reservation, 0)
+      if (error instanceof SourceResponseTooLargeError) throw error
+      throw new SourceRecordMalformedError()
+    }
+    clearTimeout(timeout)
+
+    let records: unknown[]
+    try {
+      records = extractCfpbRecords(payload)
+    } catch (error) {
+      await this.commitDurableQuota(collectionRequest, reservation, 0)
+      throw error
+    }
+    if (records.length > request.limit || records.length > this.policy.quota.maxRecordsPerRequest) {
+      await this.commitDurableQuota(collectionRequest, reservation, request.limit)
+      throw new SourceQuotaExceededError('CFPB snapshot exceeded the approved record quota')
+    }
+
+    const sourceRecordIds: string[] = []
+    let malformedCount = 0
+    for (const record of records) {
+      try {
+        sourceRecordIds.push(cfpbRecordId(asRecord(record) ?? {}))
+      } catch (error) {
+        if (!(error instanceof SourceRecordMalformedError)) throw error
+        malformedCount += 1
+      }
+    }
+    const warnings =
+      malformedCount > 0
+        ? [
+            `${malformedCount} source records lacked a valid complaint identifier; the snapshot cannot establish deletion absence.`
+          ]
+        : []
+    await this.commitDurableQuota(collectionRequest, reservation, records.length)
+    const shortPage = records.length < request.limit
+    return {
+      offset: request.offset,
+      pageSize: request.limit,
+      sourceRecordCount: records.length,
+      sourceRecordIds: [...new Set(sourceRecordIds)],
+      shortPage,
+      completeSnapshot: shortPage && warnings.length === 0,
+      warnings
+    }
   }
 }
