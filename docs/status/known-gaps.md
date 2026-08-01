@@ -90,10 +90,10 @@ immutable digests into Temporal; the worker reconstructs its redacted artifact
 from workspace-bound rows inside the activity. This closes new raw-history
 leakage, but v1 histories need a controlled drain/retention plan. The activity
 still persists object-backed outputs before finalization, so object-store purge
-and crash-race handling require a separate reviewed worker; lease
-assert-to-persist atomicity, stale recompute-claim reclamation, retryable
-tombstone propagation, and authentication for the direct source CLI also
-remain open. Retention is anchored to server-observed activity time and final
+and crash-race handling require a separate reviewed worker; stale
+recompute-claim reclamation, retryable tombstone propagation, and authentication
+for the direct source CLI also remain open. Retention is anchored to
+server-observed activity time and final
 lineage rechecks active/current/unexpired policy, commercial-use eligibility,
 and confirmed redacted evidence. The manual analysis route still needs a
 workspace admission/rate gate and authenticated initiator attribution.
@@ -145,12 +145,13 @@ field-level redaction that preserves derived payloads is not implemented.
 Migration `0039` adds a workspace-scoped, digest-only source collection lease.
 The lease binds acquisition to the current active policy and matching operator
 approval review, stores one observed collection timestamp for retry replay, and
-is asserted again immediately before persistence. The persistence snapshot now
-uses that observed timestamp while `requestedAt` remains caller/idempotency
-metadata. Terminal or expired leases are bounded by source maintenance. This
-closes the repository-level policy read/fetch race, but production deployment
-still needs lease-revocation drills, scheduler ownership, Temporal namespace
-authorization, and Docker-backed crash/retry evidence. A quota settled without
+is asserted and row-locked inside the same transaction as persistence. The
+persistence snapshot uses that observed timestamp while `requestedAt` remains
+caller/idempotency metadata. Terminal or expired leases are bounded by source
+maintenance. This closes the repository-level policy read/fetch and
+assert-to-persist race, but production deployment still needs lease-revocation
+drills, scheduler ownership, Temporal namespace authorization, and Docker-backed
+crash/retry evidence. A quota settled without
 a persisted result intentionally remains an operator-reconciliation boundary;
 the worker does not release or re-fetch optimistically.
 

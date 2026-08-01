@@ -54,8 +54,9 @@ admission with fixed rate/concurrency limits, digest-only replay identity, and
 bounded terminal/expired-row purge.
 Migration `0039` adds a forced-RLS, digest-only source collection lease. It
 requires a matching operator-approved policy review, preserves one observed
-collection timestamp across retries, rechecks policy immediately before
-persistence, and exposes only bounded terminal-lease purge to maintenance.
+collection timestamp across retries, rechecks/locks policy and lease inside the
+collection persistence transaction, and exposes only bounded terminal-lease
+purge to maintenance.
 The post-collection production analysis workflow is versioned as `v2`: only
 workspace/collection/analysis/seed identifiers and immutable digests cross
 Temporal, while the worker rebuilds the evidence-backed artifact inside its

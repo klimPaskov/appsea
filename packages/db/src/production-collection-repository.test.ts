@@ -1,13 +1,21 @@
 import { describe, expect, it, vi } from 'vitest'
+import { productionCollectionPersistenceInputSchema } from '@appsea/contracts'
+import { contentHash } from './hash'
 
 const mocks = vi.hoisted(() => ({
-  handoffRows: [] as Array<Record<string, unknown>>
+  handoffRows: [] as Array<Record<string, unknown>>,
+  leaseAssertions: 0
 }))
 
 vi.mock('./transaction', () => ({
   withAuthenticatedWorkspaceTransaction: async (
     _pool: unknown,
     _userId: string,
+    _workspaceId: string,
+    operation: (client: unknown) => Promise<unknown>
+  ) => operation({ query: fakeQuery }),
+  withWorkspaceTransaction: async (
+    _pool: unknown,
     _workspaceId: string,
     operation: (client: unknown) => Promise<unknown>
   ) => operation({ query: fakeQuery })
@@ -45,9 +53,56 @@ const run = {
   requested_at: at
 }
 
+const persistenceInput = productionCollectionPersistenceInputSchema.parse({
+  request: {
+    workspaceId: 'workspace:one',
+    campaignId: 'campaign:production:one',
+    runId: 'run:production:one',
+    idempotencyKey: 'a'.repeat(64),
+    sourceId: 'source:cfpb',
+    policyVersion: 'cfpb-v1',
+    query: 'billing',
+    limit: 1,
+    purpose: 'opportunity-research',
+    requestedDisplayMode: 'excerpt',
+    budget: {
+      currency: 'USD',
+      maxSourceItems: 1,
+      maxCostMicros: 0,
+      maxActivityAttempts: 1
+    },
+    requestedAt: at
+  },
+  observedAt: at,
+  policy: {
+    sourceId: 'source:cfpb',
+    displayName: 'Test source',
+    sourceType: 'api',
+    enabled: true,
+    policyState: 'approved',
+    permittedPurposes: ['opportunity-research'],
+    commercialUse: 'allowed',
+    accessMethod: 'official API',
+    retentionDays: 30,
+    deletionRequired: true,
+    attributionRequired: true,
+    displayMode: 'excerpt',
+    coverageNotes: ['test'],
+    reviewedAt: at,
+    policyDocumentRef: 'https://example.com/policy'
+  },
+  complaints: [],
+  deletions: [],
+  warnings: []
+})
+
 async function fakeQuery(text: string): Promise<{ rows: unknown[] }> {
   if (text.includes('SELECT fixture_only, status, visibility')) {
     return { rows: [{ fixture_only: false, status: 'active', visibility: 'private' }] }
+  }
+  if (text.includes('assert_source_collection_lease')) {
+    mocks.leaseAssertions += 1
+    return { rows: [{ active: true }] }
   }
   if (text.includes('FROM appsea.research_runs')) return { rows: [run] }
   if (text.includes('FROM appsea.production_analysis_handoffs')) {
@@ -112,5 +167,20 @@ describe('production collection read model', () => {
     )
 
     expect(readModel?.analysisHandoff).toBeNull()
+  })
+
+  it('locks and rechecks the source lease inside the persistence transaction', async () => {
+    mocks.leaseAssertions = 0
+    run.input_hash = contentHash(persistenceInput)
+
+    const { PostgresProductionCollectionRepository } =
+      await import('./production-collection-repository')
+    const result = await new PostgresProductionCollectionRepository({} as never).persistWithLease(
+      persistenceInput,
+      { leaseId: 'lease:source-collection:test', inputHash: 'b'.repeat(64) }
+    )
+
+    expect(result.replayed).toBe(true)
+    expect(mocks.leaseAssertions).toBe(1)
   })
 })

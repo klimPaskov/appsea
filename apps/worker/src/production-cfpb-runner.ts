@@ -6,6 +6,7 @@ import {
 } from '@appsea/contracts'
 import {
   contentHash,
+  ProductionCollectionLeaseAssertionError,
   PostgresProductionCollectionRepository,
   PostgresSourcePolicyRepository,
   PostgresSourceQuotaRepository,
@@ -138,19 +139,28 @@ export async function runProductionCfpbCollection(
       policyVersion: effectiveRequest.policyVersion,
       idempotencyKey: effectiveRequest.idempotencyKey
     })
-    if (!(await leaseRepository.assertActive(effectiveRequest.workspaceId, leaseId, requestHash))) {
-      throw new ProductionCollectionReconciliationError(
-        'Source collection lease became inactive before persistence; operator reconciliation is required'
+    let persisted: ProductionCollectionResult
+    try {
+      persisted = await repository.persistWithLease(
+        {
+          request: effectiveRequest,
+          observedAt: stableObservedAt,
+          policy: collected.policy,
+          complaints: collected.complaints,
+          deletions: collected.deletions,
+          warnings: collected.warnings
+        },
+        { leaseId, inputHash: requestHash }
       )
+    } catch (error) {
+      if (error instanceof ProductionCollectionLeaseAssertionError) {
+        throw new ProductionCollectionReconciliationError(
+          'Source collection lease became inactive before persistence; operator reconciliation is required',
+          { cause: error }
+        )
+      }
+      throw error
     }
-    const persisted = await repository.persist({
-      request: effectiveRequest,
-      observedAt: stableObservedAt,
-      policy: collected.policy,
-      complaints: collected.complaints,
-      deletions: collected.deletions,
-      warnings: collected.warnings
-    })
     if (!(await leaseRepository.release(effectiveRequest.workspaceId, leaseId, requestHash))) {
       throw new ProductionCollectionReconciliationError(
         'Source collection result persisted but its lease could not be released; replay is required'

@@ -305,11 +305,12 @@ and then trust that policy snapshot after a revocation or expiry race. Migration
 requires the active source, current policy version, and a matching immutable
 operator approval review. The lease owns one server/workflow-observed capture
 timestamp, which retries replay rather than re-stamping complaint provenance.
-The worker asserts the lease and policy immediately before persistence and
-releases it only after the collection transaction commits. Terminal leases are
-purged through the existing bounded source-maintenance job. An uncertain quota
-settlement remains explicit operator reconciliation; automatic re-fetch would
-risk duplicate external collection.
+The worker passes the lease identity into the persistence repository, which
+asserts and row-locks the lease inside the same transaction as the collection
+write; release occurs only after commit. Terminal leases are purged through the
+existing bounded source-maintenance job. An uncertain quota settlement remains
+explicit operator reconciliation; automatic re-fetch would risk duplicate
+external collection.
 
 ## 2026-08-01: Keep production analysis artifacts out of Temporal history
 

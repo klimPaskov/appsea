@@ -101,8 +101,9 @@ Implemented:
   consumes reservations, and bounded source maintenance purges terminal or
   expired admission rows
 - the production runner acquires a digest-only source lease before the fetch,
-  supplies its immutable observed timestamp to complaint/quota provenance,
-  asserts the lease before persistence, and releases it only after commit
+  supplies its immutable observed timestamp to complaint/quota provenance, and
+  passes the lease into a same-transaction persistence assertion; the lease is
+  released only after commit
 - migration `0034_production_analysis_handoffs.sql` adds an approved-seed-bound,
   skip-locked handoff queue written in the collection completion transaction;
   the durable worker reconstructs active policy/evidence lineage and starts the

@@ -28,6 +28,18 @@ import { contentHash } from './hash'
 import { IdempotencyConflictError, ImmutableRecordConflictError } from './fixture-repository'
 import { withAuthenticatedWorkspaceTransaction, withWorkspaceTransaction } from './transaction'
 
+export interface ProductionCollectionPersistenceLease {
+  leaseId: string
+  inputHash: string
+}
+
+export class ProductionCollectionLeaseAssertionError extends Error {
+  constructor() {
+    super('Source collection lease was not active for persistence')
+    this.name = 'ProductionCollectionLeaseAssertionError'
+  }
+}
+
 const productionNormalizerVersion = 'production-normalizer-v1'
 const productionExtractionVersion = 'production-extractor-v1'
 
@@ -145,6 +157,34 @@ async function isProductionWorkspace(client: PoolClient, workspaceId: string): P
     workspace.status === 'active' &&
     workspace.visibility === 'private'
   )
+}
+
+function validatePersistenceLease(
+  lease: ProductionCollectionPersistenceLease
+): ProductionCollectionPersistenceLease {
+  return {
+    leaseId: appseaIdentifierSchema.parse(lease.leaseId),
+    inputHash: (() => {
+      if (!/^[a-f0-9]{64}$/.test(lease.inputHash)) {
+        throw new Error('Production collection lease inputHash must be a lowercase SHA-256 digest')
+      }
+      return lease.inputHash
+    })()
+  }
+}
+
+async function assertPersistenceLeaseInTransaction(
+  client: PoolClient,
+  workspaceId: string,
+  lease: ProductionCollectionPersistenceLease
+): Promise<void> {
+  const result = await client.query<{ active: boolean }>(
+    `SELECT appsea.assert_source_collection_lease($1, $2, $3) AS active`,
+    [workspaceId, lease.leaseId, lease.inputHash]
+  )
+  if (!result.rows[0]?.active) {
+    throw new ProductionCollectionLeaseAssertionError()
+  }
 }
 
 async function assertHash(
@@ -578,6 +618,21 @@ export class PostgresProductionCollectionRepository {
   }
 
   async persist(input: ProductionCollectionPersistenceInput): Promise<ProductionCollectionResult> {
+    return this.persistInternal(input)
+  }
+
+  /** Persist only while the policy-bound source lease is locked and active. */
+  async persistWithLease(
+    input: ProductionCollectionPersistenceInput,
+    lease: ProductionCollectionPersistenceLease
+  ): Promise<ProductionCollectionResult> {
+    return this.persistInternal(input, validatePersistenceLease(lease))
+  }
+
+  private async persistInternal(
+    input: ProductionCollectionPersistenceInput,
+    persistenceLease?: ProductionCollectionPersistenceLease
+  ): Promise<ProductionCollectionResult> {
     const parsed = productionCollectionPersistenceInputSchema.parse(input)
     const inputHash = contentHash(parsed)
     const artifactId = hashIdentifier('production-collection', {
@@ -595,6 +650,13 @@ export class PostgresProductionCollectionRepository {
           if (!(await isProductionWorkspace(client, parsed.request.workspaceId))) {
             throw new Error(
               'Production collection requires an active private non-fixture workspace'
+            )
+          }
+          if (persistenceLease) {
+            await assertPersistenceLeaseInTransaction(
+              client,
+              parsed.request.workspaceId,
+              persistenceLease
             )
           }
           const existing = await readRun(

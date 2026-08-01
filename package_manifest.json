@@ -1,10 +1,10 @@
 {
   "name": "AppSea Codex Starter",
   "version": "0.3.0",
-  "generatedAt": "2026-08-01T08:04:48+00:00",
+  "generatedAt": "2026-08-01T08:26:39+00:00",
   "fileCount": 599,
-  "byteCount": 24274368,
-  "packageDigest": "ac684921af9e74c1ff302610c3401531e2c013ec3657cc9a00379d1267aaa14c",
+  "byteCount": 24282585,
+  "packageDigest": "1674ad0a158992347865fec6f5def69cbba023379bbc84fd8c68cd65ecf683d3",
   "files": [
     {
       "path": ".agents/skills/AGENTS.md",
@@ -1006,7 +1006,7 @@
       "path": "apps/web/tsconfig.tsbuildinfo",
       "category": "application code",
       "bytes": 246002,
-      "sha256": "0686bf2c43d9167a010ea0811b1c6baa216839361566084377a3e1280a068cf7"
+      "sha256": "40f260b27fa443ca8eaaa260337987fc1f688e83afa5d0ca101d64114106b85f"
     },
     {
       "path": "apps/worker/AGENTS.md",
@@ -1155,14 +1155,14 @@
     {
       "path": "apps/worker/src/production-cfpb-runner.test.ts",
       "category": "application code",
-      "bytes": 5852,
-      "sha256": "a263779868f8494ecc4840a16123782403c2c28a801749ad2d0bec4b07b84e23"
+      "bytes": 7071,
+      "sha256": "702f2e89f49007f45ae8d74e6f5236ab05bb7a3bd255764b7c81b731e8c0c922"
     },
     {
       "path": "apps/worker/src/production-cfpb-runner.ts",
       "category": "application code",
-      "bytes": 7286,
-      "sha256": "68cbf25d8bef8c86465831353bdd4133e36ad7f5f88c61f72d6d77328a3bb60c"
+      "bytes": 7530,
+      "sha256": "c57f69b059fe89c399a3e16e9043eda55003c28aec183138083d71a047baf6be"
     },
     {
       "path": "apps/worker/src/production-cfpb.ts",
@@ -1348,7 +1348,7 @@
       "path": "artifacts/plans/inbox-relay/01-product-brief.md",
       "category": "generated sample artifact",
       "bytes": 3694,
-      "sha256": "43da616f07c0257a138c1c843bf8db77fd84eb47c81c82d62ef0a8e9d83c8c4d"
+      "sha256": "d0e53028762bec0b662eb59484bad0a3e165a170d02963a46309549867f6525e"
     },
     {
       "path": "artifacts/plans/inbox-relay/02-mvp-scope.md",
@@ -1366,7 +1366,7 @@
       "path": "artifacts/plans/inbox-relay/04-task-graph.json",
       "category": "generated sample artifact",
       "bytes": 4730,
-      "sha256": "636f31215f38bdc2cc15ba52a1617db13de9f967906cf9bcf9013dc7ff4bc1b4"
+      "sha256": "0e30d7983070d3ef23b4069c1e5c7506e52aabc417e900e4457b939e20001db8"
     },
     {
       "path": "artifacts/plans/inbox-relay/05-validation.md",
@@ -1390,7 +1390,7 @@
       "path": "artifacts/research/seed-research-artifact.json",
       "category": "generated sample artifact",
       "bytes": 8625,
-      "sha256": "ae795a165f184c3f51721b8c1ea3fbad7e899430c3f56e5ff0263bfa201083ea"
+      "sha256": "47c10f248f85146b775a1a029011ebc396dd5592060efc662fb45ee45871f47b"
     },
     {
       "path": "CHANGELOG.md",
@@ -1779,14 +1779,14 @@
     {
       "path": "docs/architecture/security-boundaries.md",
       "category": "documentation",
-      "bytes": 14468,
-      "sha256": "3faad0b93da3607c471c83b5b08f1bad7a172a0a16f2192d9a4433e38a3eeb71"
+      "bytes": 14686,
+      "sha256": "0002cafb31a163a906a9945b54cc7f12c387b65d670ac074a25892c94a17be65"
     },
     {
       "path": "docs/architecture/system-overview.md",
       "category": "documentation",
-      "bytes": 4487,
-      "sha256": "149b27011eacf3f399c23af471906a6e81172e048236e9d298efbc45dc9fc4e5"
+      "bytes": 4518,
+      "sha256": "86521f6445a60c9b66b4728bc18dae8a37d824473d9395471a6fa0dfcf231939"
     },
     {
       "path": "docs/generated/repository-map.md",
@@ -1815,8 +1815,8 @@
     {
       "path": "docs/plans/active/001-foundation-to-mvp.md",
       "category": "documentation",
-      "bytes": 13545,
-      "sha256": "25d881638256706b5361f46616b96d8c37fbef92269fa03844217a71efc3199f"
+      "bytes": 13583,
+      "sha256": "06448de7e01026790983e02864f712459241ab05398e327c02ef34d59bcaa9a6"
     },
     {
       "path": "docs/product/account-closure.md",
@@ -1935,8 +1935,8 @@
     {
       "path": "docs/runbooks/production-source-collection.md",
       "category": "documentation",
-      "bytes": 8152,
-      "sha256": "d8b1aa0ededef1053b916fa93ec9ce135a5ed63c28bd27a7673773d4a8367c16"
+      "bytes": 8221,
+      "sha256": "0c432bc4ddb97817717055f78f3c7887a57212f6d81cb5e83d1509f1c0bc739e"
     },
     {
       "path": "docs/runbooks/source-maintenance.md",
@@ -2163,8 +2163,8 @@
     {
       "path": "docs/status/current.md",
       "category": "documentation",
-      "bytes": 7920,
-      "sha256": "e768acdaa58fb834dcc763ac583a416663df1613fd7c943fca6aa1f4570ffe74"
+      "bytes": 8195,
+      "sha256": "6e83bf6bde76829d604396cc9bddcfe6e8df507e6913f904d95ab8e020c79ebd"
     },
     {
       "path": "docs/status/durable-workflow-completion-report.md",
@@ -2181,8 +2181,8 @@
     {
       "path": "docs/status/known-gaps.md",
       "category": "documentation",
-      "bytes": 12708,
-      "sha256": "6429415b8ec6484b88e613865a970185072d9b4662507ce4124ad69415c3cbdf"
+      "bytes": 12834,
+      "sha256": "edd3f8ffea971346b3ae8d72c64df4a2f14c390b4ec1f2f99ba1caafc9af016e"
     },
     {
       "path": "docs/status/opportunity-availability-repair-completion-report-2026-07-29.md",
@@ -2211,8 +2211,8 @@
     {
       "path": "docs/status/production-analysis-history-boundary-completion-report-2026-08-01.md",
       "category": "documentation",
-      "bytes": 3021,
-      "sha256": "bdc85bb12245e5bf02bc4987a0a514c2467d6602abc28ce70effeff740b1db86"
+      "bytes": 3453,
+      "sha256": "458e30251993176a152ef7f21fed458e1c209a880c08903744751ac7887be505"
     },
     {
       "path": "docs/status/production-readiness-audit-2026-07-25.md",
@@ -2229,8 +2229,8 @@
     {
       "path": "docs/status/source-collection-lease-completion-report-2026-08-01.md",
       "category": "documentation",
-      "bytes": 3648,
-      "sha256": "c4ecd579f8febce0560b409c3207f52337d1f22f30a1f33cbf185948601be3e4"
+      "bytes": 4209,
+      "sha256": "b681e44a19a5a83b63232d649b6427cf00eaec6b7e12a0cc3da7b7b1cd60136b"
     },
     {
       "path": "docs/status/starter-completion-report.md",
@@ -2445,8 +2445,8 @@
     {
       "path": "memory/ACTIVE.md",
       "category": "project memory",
-      "bytes": 7990,
-      "sha256": "f9bcea8fef2b5600bf2dfce1d941b683dfde3a093028325b17e53357a3007cfa"
+      "bytes": 7592,
+      "sha256": "2b15141fe3529451e9028e6c8b1f5660a03626e0d19ce26fe35a1ba2dc77909f"
     },
     {
       "path": "memory/AGENTS.md",
@@ -2463,14 +2463,14 @@
     {
       "path": "memory/DECISIONS.md",
       "category": "project memory",
-      "bytes": 19409,
-      "sha256": "8cd6fdae09f121cdce950b41171ef6426d37639cb731d348af15df17325de314"
+      "bytes": 19547,
+      "sha256": "76dc66d3b9d41451fdbb16cfffcc298cbdeefa84f6c76b3c4762ac7719f7634c"
     },
     {
       "path": "memory/HOT.md",
       "category": "project memory",
-      "bytes": 2416,
-      "sha256": "06b60010c84476a4170725f6d4f9625a91cf8409e8bedf7480e22a5aba8c5b30"
+      "bytes": 2451,
+      "sha256": "01da509ee603de6870384046995c20b30d9e357a46372fe8194b456284a000a8"
     },
     {
       "path": "memory/LESSONS.md",
@@ -2481,8 +2481,8 @@
     {
       "path": "memory/PROJECT.md",
       "category": "project memory",
-      "bytes": 5150,
-      "sha256": "24202454ae92e11d703936adc9d9d7e40cd956eec4b9ddfa6725337d46a4449f"
+      "bytes": 5191,
+      "sha256": "7cd0a390f431d8f01aeecb4e6bf604e879980eb154afcafc972fe7e24268d8a2"
     },
     {
       "path": "memory/README.md",
@@ -3033,8 +3033,8 @@
     {
       "path": "packages/db/src/index.ts",
       "category": "shared package",
-      "bytes": 4896,
-      "sha256": "e0b951213f244c77117aac7106ae23f596580589b7cf12eedf84f13c385ac5be"
+      "bytes": 5073,
+      "sha256": "b2261d78207edc0321d5770a74ff230085c0ed866567c0f5da75b3e09addc697"
     },
     {
       "path": "packages/db/src/migrations.ts",
@@ -3099,20 +3099,20 @@
     {
       "path": "packages/db/src/production-collection-repository.test.ts",
       "category": "shared package",
-      "bytes": 3713,
-      "sha256": "0be4410c6813f7c40621eb3370e3d3d3b75beedadc05ac69c0c0a4da9b69b68c"
+      "bytes": 5835,
+      "sha256": "37d619ec65574f1d9bd4c01a618fea9a1e1443ae10901838cf29bf9b1d2653e2"
     },
     {
       "path": "packages/db/src/production-collection-repository.ts",
       "category": "shared package",
-      "bytes": 59032,
-      "sha256": "95a1fa99748ed2d1b781cfad4f18c5cb016a9bd54aca870e2dd35a2546aebaf6"
+      "bytes": 60977,
+      "sha256": "13f61755e0d8113cdf7f05d18be05be0d70f06cc3deb120f9df7247b1679d047"
     },
     {
       "path": "packages/db/src/production-collection-workflow-repository.ts",
       "category": "shared package",
-      "bytes": 29281,
-      "sha256": "d1464242e6d70e9a0bbb69f6ba4ab4d44c501610f73d47d02f453fd67dd703ce"
+      "bytes": 29478,
+      "sha256": "80ea61151e12f164324aed7dd776e0448d077810d0b3df21f37d1baacb786a60"
     },
     {
       "path": "packages/db/src/production-collection-workflow.ts",
@@ -3129,14 +3129,14 @@
     {
       "path": "packages/db/src/production-workflow-admission-repository.test.ts",
       "category": "shared package",
-      "bytes": 5538,
-      "sha256": "98e609652e53bf03189fb7e27610d9fa36b2b9c30be0a71fe0d3e434f256561c"
+      "bytes": 5884,
+      "sha256": "8ade120d30a943fbfe2c39f1369b1d2cbaa8a82b16b4d9f729fcbffef1a986ca"
     },
     {
       "path": "packages/db/src/production-workflow-admission-repository.ts",
       "category": "shared package",
-      "bytes": 8615,
-      "sha256": "c56009bc7bb117779f2b39aa4a6a257f8275fdd04ef177c72d0c93dd3f6a8568"
+      "bytes": 9016,
+      "sha256": "a388e5baeb0aa2960bcb1f3d190589b7c0dfc94652f4216741ecbf4bb5f7cbeb"
     },
     {
       "path": "packages/db/src/source-collection-lease-repository.test.ts",

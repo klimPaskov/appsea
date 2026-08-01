@@ -43,10 +43,12 @@ export {
 } from './source-policy-repository'
 export {
   PostgresProductionCollectionRepository,
+  ProductionCollectionLeaseAssertionError,
   ProductionCollectionAnalysisUnavailableError,
   ProductionComplaintReviewConflictError,
   ProductionComplaintReviewNotFoundError,
-  ProductionComplaintReviewPermissionError
+  ProductionComplaintReviewPermissionError,
+  type ProductionCollectionPersistenceLease
 } from './production-collection-repository'
 export {
   OpportunitySeedReviewConflictError,

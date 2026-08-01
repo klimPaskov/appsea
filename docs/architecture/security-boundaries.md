@@ -81,10 +81,11 @@ for that pre-context authorization lookup.
 - Migration `0039` places the external fetch itself behind a forced-RLS,
   digest-only collection lease. Acquisition requires the current active source,
   policy version, and matching operator approval review; retries replay the
-  stored observed timestamp. The worker asserts the lease and policy immediately
-  before persistence, releases it only after commit, and leaves uncertain quota
-  settlement or inactive leases for explicit reconciliation. Runtime code has
-  no direct lease-table write grant.
+  stored observed timestamp. The persistence repository asserts the lease and
+  policy inside the same transaction that writes the collection result, locking
+  the lease row through commit; release happens only after commit. Uncertain
+  quota settlement or inactive leases remain explicit reconciliation states.
+  Runtime code has no direct lease-table write grant.
 - Source-item acquisition policy and evidence display representation are relationally enforced.
 - Fixture report generation keeps retained observations, deterministic score
   inference, contrary evidence, recommendation, and source coverage in separate

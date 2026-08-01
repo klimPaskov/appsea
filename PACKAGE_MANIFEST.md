@@ -1,10 +1,10 @@
 # AppSea package manifest
 
 - Version: `0.3.0`
-- Generated: `2026-08-01T08:04:48+00:00`
+- Generated: `2026-08-01T08:26:39+00:00`
 - Indexed files: `599`
-- Indexed bytes: `24274368`
-- Package digest: `ac684921af9e74c1ff302610c3401531e2c013ec3657cc9a00379d1267aaa14c`
+- Indexed bytes: `24282585`
+- Package digest: `1674ad0a158992347865fec6f5def69cbba023379bbc84fd8c68cd65ecf683d3`
 
 ## Category counts
 
@@ -195,7 +195,7 @@
 | `apps/web/src/server/temporal.test.ts` | application code | 2117 | `598061eece6a` |
 | `apps/web/src/server/temporal.ts` | application code | 5590 | `3d19cadf8f69` |
 | `apps/web/tsconfig.json` | application code | 294 | `21018296f4bc` |
-| `apps/web/tsconfig.tsbuildinfo` | application code | 246002 | `0686bf2c43d9` |
+| `apps/web/tsconfig.tsbuildinfo` | application code | 246002 | `40f260b27fa4` |
 | `apps/worker/AGENTS.md` | application code | 942 | `9266e791f069` |
 | `apps/worker/package.json` | application code | 1442 | `0c90261919a8` |
 | `apps/worker/src/analysis-sample.test.ts` | application code | 1454 | `6a83df025231` |
@@ -220,8 +220,8 @@
 | `apps/worker/src/production-analysis-recompute.test.ts` | application code | 5955 | `48e62f444b66` |
 | `apps/worker/src/production-analysis-recompute.ts` | application code | 6005 | `a4104caf9185` |
 | `apps/worker/src/production-analysis-runner.ts` | application code | 1045 | `39f8cdd8b582` |
-| `apps/worker/src/production-cfpb-runner.test.ts` | application code | 5852 | `a263779868f8` |
-| `apps/worker/src/production-cfpb-runner.ts` | application code | 7286 | `68cbf25d8bef` |
+| `apps/worker/src/production-cfpb-runner.test.ts` | application code | 7071 | `702f2e89f490` |
+| `apps/worker/src/production-cfpb-runner.ts` | application code | 7530 | `c57f69b059fe` |
 | `apps/worker/src/production-cfpb.ts` | application code | 2802 | `498623b0cdd8` |
 | `apps/worker/src/production-workflow-activities.ts` | application code | 8597 | `d39b664a517d` |
 | `apps/worker/src/signed-delivery.ts` | application code | 3009 | `44c2620b1fc3` |
@@ -252,14 +252,14 @@
 | `artifacts/analysis-sample/plan/README.md` | generated sample artifact | 612 | `79999a74b3da` |
 | `artifacts/analysis-sample/report.json` | generated sample artifact | 6383 | `57b621b87bc3` |
 | `artifacts/plans/.gitkeep` | generated sample artifact | 0 | `e3b0c44298fc` |
-| `artifacts/plans/inbox-relay/01-product-brief.md` | generated sample artifact | 3694 | `43da616f07c0` |
+| `artifacts/plans/inbox-relay/01-product-brief.md` | generated sample artifact | 3694 | `d0e53028762b` |
 | `artifacts/plans/inbox-relay/02-mvp-scope.md` | generated sample artifact | 653 | `1c8387af8d68` |
 | `artifacts/plans/inbox-relay/03-architecture.md` | generated sample artifact | 510 | `5b7f07c2b385` |
-| `artifacts/plans/inbox-relay/04-task-graph.json` | generated sample artifact | 4730 | `636f31215f38` |
+| `artifacts/plans/inbox-relay/04-task-graph.json` | generated sample artifact | 4730 | `0e30d7983070` |
 | `artifacts/plans/inbox-relay/05-validation.md` | generated sample artifact | 814 | `de37e0f8051f` |
 | `artifacts/plans/inbox-relay/README.md` | generated sample artifact | 483 | `6b4d104eb04c` |
 | `artifacts/research/.gitkeep` | generated sample artifact | 0 | `e3b0c44298fc` |
-| `artifacts/research/seed-research-artifact.json` | generated sample artifact | 8625 | `ae795a165f18` |
+| `artifacts/research/seed-research-artifact.json` | generated sample artifact | 8625 | `47c10f248f85` |
 | `CHANGELOG.md` | repository control | 456 | `03797146f9c4` |
 | `design/DESIGN_TOKENS.md` | design source | 999 | `4b5aaffa4ba9` |
 | `design/IMPLEMENTATION_NOTES.md` | design source | 1216 | `ddf93f26538b` |
@@ -324,13 +324,13 @@
 | `docs/AGENTS.md` | documentation | 326 | `da7080695bd5` |
 | `docs/architecture/data-flow.md` | documentation | 5586 | `28289faca22c` |
 | `docs/architecture/repository-map.md` | documentation | 1204 | `967baf264628` |
-| `docs/architecture/security-boundaries.md` | documentation | 14468 | `3faad0b93da3` |
-| `docs/architecture/system-overview.md` | documentation | 4487 | `149b27011eac` |
+| `docs/architecture/security-boundaries.md` | documentation | 14686 | `0002cafb31a1` |
+| `docs/architecture/system-overview.md` | documentation | 4518 | `86521f6445a6` |
 | `docs/generated/repository-map.md` | documentation | 362 | `5f82174f1cf5` |
 | `docs/generated/skill-catalog.md` | documentation | 5674 | `9e9558f5f7ca` |
 | `docs/generated/subagent-catalog.md` | documentation | 3208 | `4b22a84ea338` |
 | `docs/INDEX.md` | documentation | 5513 | `316a98433c39` |
-| `docs/plans/active/001-foundation-to-mvp.md` | documentation | 13545 | `25d881638256` |
+| `docs/plans/active/001-foundation-to-mvp.md` | documentation | 13583 | `06448de7e010` |
 | `docs/product/account-closure.md` | documentation | 1413 | `6be177f329bb` |
 | `docs/product/cfpb-source-policy.md` | documentation | 7373 | `5c88969e2f85` |
 | `docs/product/leaderboard.md` | documentation | 702 | `738c3987f7c1` |
@@ -350,7 +350,7 @@
 | `docs/runbooks/guidance-checkpoint.md` | documentation | 519 | `ae8c643fcd0d` |
 | `docs/runbooks/postgresql-local.md` | documentation | 5466 | `cb7f6328b563` |
 | `docs/runbooks/production-analysis.md` | documentation | 7289 | `ad786224c7ee` |
-| `docs/runbooks/production-source-collection.md` | documentation | 8152 | `d8b1aa0edede` |
+| `docs/runbooks/production-source-collection.md` | documentation | 8221 | `0c432bc4ddb9` |
 | `docs/runbooks/source-maintenance.md` | documentation | 4648 | `37129a917843` |
 | `docs/runbooks/source-policy-review.md` | documentation | 1941 | `54cb467b0b56` |
 | `docs/runbooks/temporal-local.md` | documentation | 3312 | `2827caacc699` |
@@ -388,18 +388,18 @@
 | `docs/status/account-session-lifecycle-completion-report.md` | documentation | 2697 | `c66450a55a60` |
 | `docs/status/auth-recovery-completion-report.md` | documentation | 3442 | `4d10aa9e353a` |
 | `docs/status/automatic-recomputation-completion-report-2026-08-01.md` | documentation | 5154 | `7befd68b6d77` |
-| `docs/status/current.md` | documentation | 7920 | `e768acdaa58f` |
+| `docs/status/current.md` | documentation | 8195 | `6e83bf6bde76` |
 | `docs/status/durable-workflow-completion-report.md` | documentation | 9449 | `e66cad3a4c16` |
 | `docs/status/evidence-report-completion-report.md` | documentation | 3255 | `07f56fb78183` |
-| `docs/status/known-gaps.md` | documentation | 12708 | `6429415b8ec6` |
+| `docs/status/known-gaps.md` | documentation | 12834 | `edd3f8ffea97` |
 | `docs/status/opportunity-availability-repair-completion-report-2026-07-29.md` | documentation | 2949 | `dbc7e3d22430` |
 | `docs/status/opportunity-seed-review-completion-report-2026-07-26.md` | documentation | 5951 | `0e2d51c42187` |
 | `docs/status/production-analysis-completion-report-2026-07-26.md` | documentation | 8413 | `347e77f3a62a` |
 | `docs/status/production-analysis-handoff-completion-report-2026-07-26.md` | documentation | 6515 | `e62b28258835` |
-| `docs/status/production-analysis-history-boundary-completion-report-2026-08-01.md` | documentation | 3021 | `bdc85bb12245` |
+| `docs/status/production-analysis-history-boundary-completion-report-2026-08-01.md` | documentation | 3453 | `458e30251993` |
 | `docs/status/production-readiness-audit-2026-07-25.md` | documentation | 10790 | `f5142606571a` |
 | `docs/status/production-workflow-ingress-admission-completion-report-2026-08-01.md` | documentation | 6309 | `1b9f50c7b6e2` |
-| `docs/status/source-collection-lease-completion-report-2026-08-01.md` | documentation | 3648 | `c4ecd579f8fe` |
+| `docs/status/source-collection-lease-completion-report-2026-08-01.md` | documentation | 4209 | `b681e44a19a5` |
 | `docs/status/starter-completion-report.md` | documentation | 2042 | `b39d21a20afd` |
 | `docs/status/worker-maintenance-hardening-completion-report.md` | documentation | 3359 | `3a5942064dd6` |
 | `docs/status/workspace-invitation-completion-report.md` | documentation | 2721 | `74c07dcb7eb2` |
@@ -435,13 +435,13 @@
 | `GOAL_PROMPT.md` | repository control | 2314 | `3c7b0de673e9` |
 | `infra/local/compose.yaml` | repository control | 1117 | `68627245500c` |
 | `infra/local/init/0001-create-test-database.sql` | repository control | 807 | `71f73dad8102` |
-| `memory/ACTIVE.md` | project memory | 7990 | `f9bcea8fef2b` |
+| `memory/ACTIVE.md` | project memory | 7592 | `2b15141fe352` |
 | `memory/AGENTS.md` | project memory | 288 | `4ac39e6496a2` |
 | `memory/archive/DECISIONS-foundation-2026-07-10.md` | project memory | 1223 | `8d70ea0edd6c` |
-| `memory/DECISIONS.md` | project memory | 19409 | `8cd6fdae09f1` |
-| `memory/HOT.md` | project memory | 2416 | `06b60010c844` |
+| `memory/DECISIONS.md` | project memory | 19547 | `76dc66d3b9d4` |
+| `memory/HOT.md` | project memory | 2451 | `01da509ee603` |
 | `memory/LESSONS.md` | project memory | 1955 | `2f1b2fffc727` |
-| `memory/PROJECT.md` | project memory | 5150 | `24202454ae92` |
+| `memory/PROJECT.md` | project memory | 5191 | `7cd0a390f431` |
 | `memory/README.md` | project memory | 529 | `095c2b1c046a` |
 | `memory/sessions/2026-07-10-starter-handoff.md` | project memory | 1051 | `07a2edb40988` |
 | `memory/sessions/2026-07-24-2026-07-24-durable-workflow-connector.md` | project memory | 1806 | `3a55aa3aa3ad` |
@@ -533,7 +533,7 @@
 | `packages/db/src/deletion-propagation-repository.ts` | shared package | 26597 | `9abb718601b0` |
 | `packages/db/src/fixture-repository.ts` | shared package | 45197 | `67294e4a565c` |
 | `packages/db/src/hash.ts` | shared package | 883 | `3b39e48fbb73` |
-| `packages/db/src/index.ts` | shared package | 4896 | `e0b951213f24` |
+| `packages/db/src/index.ts` | shared package | 5073 | `b2261d78207e` |
 | `packages/db/src/migrations.ts` | shared package | 6063 | `0a193ff13750` |
 | `packages/db/src/opportunity-seed-review-repository.ts` | shared package | 12916 | `40b314a4b079` |
 | `packages/db/src/opportunity-seed-review.ts` | shared package | 250 | `4ae99a312a38` |
@@ -544,13 +544,13 @@
 | `packages/db/src/production-analysis-repository.test.ts` | shared package | 6389 | `a85d16dbb372` |
 | `packages/db/src/production-analysis-repository.ts` | shared package | 55379 | `ba5d45741168` |
 | `packages/db/src/production-analysis.ts` | shared package | 260 | `0629c4b40ebc` |
-| `packages/db/src/production-collection-repository.test.ts` | shared package | 3713 | `0be4410c6813` |
-| `packages/db/src/production-collection-repository.ts` | shared package | 59032 | `95a1fa99748e` |
-| `packages/db/src/production-collection-workflow-repository.ts` | shared package | 29281 | `d1464242e6d7` |
+| `packages/db/src/production-collection-repository.test.ts` | shared package | 5835 | `37d619ec6557` |
+| `packages/db/src/production-collection-repository.ts` | shared package | 60977 | `13f61755e0d8` |
+| `packages/db/src/production-collection-workflow-repository.ts` | shared package | 29478 | `80ea61151e12` |
 | `packages/db/src/production-collection-workflow.ts` | shared package | 109 | `4182bb6c9aeb` |
 | `packages/db/src/production-collection.ts` | shared package | 270 | `82ac6d3001eb` |
-| `packages/db/src/production-workflow-admission-repository.test.ts` | shared package | 5538 | `98e609652e53` |
-| `packages/db/src/production-workflow-admission-repository.ts` | shared package | 8615 | `c56009bc7bb1` |
+| `packages/db/src/production-workflow-admission-repository.test.ts` | shared package | 5884 | `8ade120d30a9` |
+| `packages/db/src/production-workflow-admission-repository.ts` | shared package | 9016 | `a388e5baeb0a` |
 | `packages/db/src/source-collection-lease-repository.test.ts` | shared package | 5284 | `211ce01fea65` |
 | `packages/db/src/source-collection-lease-repository.ts` | shared package | 9157 | `e83568545b03` |
 | `packages/db/src/source-policy-repository.test.ts` | shared package | 3903 | `587e1bcaea8f` |

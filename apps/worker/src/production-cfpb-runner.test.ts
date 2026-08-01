@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
+import { ProductionCollectionLeaseAssertionError } from '@appsea/db'
 
 const state = vi.hoisted(() => ({
   completed: undefined as unknown,
@@ -12,6 +13,8 @@ const state = vi.hoisted(() => ({
   connectorObservedAt: undefined as string | undefined,
   connectorRequest: undefined as unknown,
   persistInput: undefined as unknown,
+  persistenceLease: undefined as unknown,
+  persistError: undefined as unknown,
   asserted: false,
   released: false
 }))
@@ -56,13 +59,17 @@ vi.mock('@appsea/connectors', () => ({
 
 vi.mock('@appsea/db', () => ({
   contentHash: () => 'a'.repeat(64),
+  ProductionCollectionLeaseAssertionError: class extends Error {},
   PostgresProductionCollectionRepository: class {
     async readCompletedIdentity() {
       return state.completed
     }
 
-    async persist(input: unknown) {
+    async persistWithLease(input: unknown, lease: unknown) {
+      if (state.persistError) throw state.persistError
       state.persistInput = input
+      state.persistenceLease = lease
+      state.asserted = true
       return {
         workspaceId: 'workspace:one',
         campaignId: 'campaign:one',
@@ -114,11 +121,6 @@ vi.mock('@appsea/db', () => ({
       return state.lease
     }
 
-    async assertActive() {
-      state.asserted = true
-      return true
-    }
-
     async release() {
       state.released = true
       return true
@@ -159,6 +161,8 @@ describe('production CFPB runner lease lifecycle', () => {
     state.acquireInput = undefined
     state.connectorObservedAt = undefined
     state.persistInput = undefined
+    state.persistenceLease = undefined
+    state.persistError = undefined
     state.asserted = false
     state.released = false
 
@@ -174,6 +178,10 @@ describe('production CFPB runner lease lifecycle', () => {
     })
     expect(state.connectorObservedAt).toBe('2026-07-10T00:00:00.000Z')
     expect(state.persistInput).toMatchObject({ observedAt: '2026-07-10T00:00:00.000Z' })
+    expect(state.persistenceLease).toMatchObject({
+      leaseId: 'lease:source-collection:' + 'a'.repeat(64),
+      inputHash: 'a'.repeat(64)
+    })
     expect(state.asserted).toBe(true)
     expect(state.released).toBe(true)
   })
@@ -187,6 +195,8 @@ describe('production CFPB runner lease lifecycle', () => {
     }
     state.connectorObservedAt = undefined
     state.persistInput = undefined
+    state.persistenceLease = undefined
+    state.persistError = undefined
     state.asserted = false
     state.released = false
 
@@ -196,5 +206,24 @@ describe('production CFPB runner lease lifecycle', () => {
 
     expect(state.connectorObservedAt).toBe('2026-07-09T23:59:00.000Z')
     expect(state.persistInput).toMatchObject({ observedAt: '2026-07-09T23:59:00.000Z' })
+  })
+
+  it('turns an inactive lease at the atomic persistence boundary into reconciliation', async () => {
+    state.lease = {
+      decision: 'acquired',
+      replayed: false,
+      observedAt: '2026-07-10T00:00:00.000Z',
+      expiresAt: '2026-07-10T00:30:00.000Z'
+    }
+    state.persistError = new ProductionCollectionLeaseAssertionError()
+    state.released = false
+
+    await expect(
+      runProductionCfpbCollection({} as never, request, {
+        observedAt: '2026-07-10T00:00:00.000Z'
+      })
+    ).rejects.toThrow('operator reconciliation is required')
+    expect(state.released).toBe(false)
+    state.persistError = undefined
   })
 })

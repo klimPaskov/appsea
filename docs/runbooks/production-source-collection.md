@@ -43,9 +43,10 @@ an outbox/audit receipt. A filtered collection does not emit deletion events;
 full-snapshot deletion reconciliation is a separate maintenance operation. A
 repeated request with a different input is an idempotency conflict.
 
-Immediately before persistence, the worker asserts the lease and current policy
-again. An expired or revoked lease is terminal and fails closed; the lease is
-released only after the collection transaction commits. If quota was settled or
+The persistence repository asserts the lease and current policy inside the same
+transaction as the collection write and locks the lease row through commit. An
+expired or revoked lease is terminal and fails closed; the lease is released
+only after the collection transaction commits. If quota was settled or
 the lease became inactive without a completed result, do not start a new fetch:
 retain the digest and use operator reconciliation.
 

@@ -46,9 +46,9 @@ use, and rechecks confirmed redacted evidence before linking outputs.
 Collection initialization fails closed without one.
 
 The same security review left these follow-ups open: object-store purge and
-crash races, lease assert-to-persist atomicity, stale recomputation claim
-recovery, retryable tombstone propagation, and authenticated admission for the
-direct source CLI. These are blockers to a production-readiness claim, not
+crash races, stale recomputation claim recovery, retryable tombstone propagation,
+and authenticated admission for the direct source CLI. Collection persistence
+now locks and rechecks the lease in the write transaction. These are blockers to a production-readiness claim, not
 reasons to weaken the v2 history boundary.
 
 The 2026-07-26 analysis checkpoint composes validated non-fixture collection
@@ -63,16 +63,6 @@ auth/workspaces, retry-safe fixture Temporal boundary. Provider
 delivery, MFA/OIDC, production identity, infrastructure, and Docker-backed
 integration remain open.
 
-Implemented production checkpoint (2026-07-25): contracts, approved-policy
-source gate, non-fixture collection persistence, provenance/coverage/tombstones,
-private evidence/status reads, durable workflow projection, actor attribution,
-retention/deletion propagation, deterministic analysis/report/plan persistence,
-reviewed-seed handoff, complaint review, and plan approval/export. Migrations
-`0027` through `0037` provide those boundaries; `0031` accepts the existing
-`deleted:<tombstone>` URI marker. Cloud storage, purge, recomputation alerting,
-explicit re-collection, and deployed scheduling remain open. No source is
-approved or live.
-
 ## Validated commands
 
 - `pnpm verify` passed 2026-08-01: packages, samples, smoke, repo checks
@@ -81,6 +71,9 @@ approved or live.
   replay, rate, concurrency, and purge coverage but remains Docker-blocked
 - 2026-08-01 source-lease focus: contracts, db, and worker suites passed; the
   PostgreSQL lease replay/policy fixture is present but Docker-blocked
+- 2026-08-01 lease-atomicity follow-up: production collection persistence now
+  locks/rechecks the policy lease in the same transaction as the write; db and
+  worker focused suites passed
 - Direct TypeScript, ESLint, Prettier, memory, and focused recomputation checks pass; the handoff
   focus passed 62, the private status focus 59, and contracts/db/worker/web suites passed 165. Seed SVG
   generated; raster awaits `cairosvg`; Temporal suites remain blocked by missing

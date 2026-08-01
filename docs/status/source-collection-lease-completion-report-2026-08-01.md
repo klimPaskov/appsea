@@ -9,11 +9,12 @@ stable observed collection timestamp. The runtime role cannot write the lease
 table directly.
 
 The worker acquires or replays the lease, passes its observed timestamp to the
-connector for complaint capture and quota provenance, asserts the lease and
-current approval immediately before persistence, and releases it only after the
-collection transaction commits. A terminal lease, inactive policy, or uncertain
-quota settlement fails closed and requires operator reconciliation. The CFPB
-policy remains disabled and pending review.
+connector for complaint capture and quota provenance, and passes the lease
+identity into the persistence repository. The repository asserts the lease and
+current approval inside the same transaction as the collection write, locking
+the lease through commit; release happens only afterward. A terminal lease,
+inactive policy, or uncertain quota settlement fails closed and requires
+operator reconciliation. The CFPB policy remains disabled and pending review.
 
 ## Changed surfaces
 
@@ -24,8 +25,11 @@ policy remains disabled and pending review.
   matching `source_policy_reviews` approval checks.
 - `packages/db/src/source-collection-lease-repository.ts`: validated worker
   capability, conflict/terminal/policy errors, and bounded purge.
+- `packages/db/src/production-collection-repository.ts`: lease-aware atomic
+  persistence transaction and a fail-closed assertion error.
 - `apps/worker`: runner/workflow lease lifecycle, stable capture provenance,
-  persistence timestamps, maintenance purge, and secret-free observability.
+  same-transaction lease handoff, persistence timestamps, maintenance purge, and
+  secret-free observability.
 - Tests cover contract shape, repository decisions/validation, migration
   assertions, maintenance budgeting, observability, and a Docker-backed
   PostgreSQL replay/policy fixture.
@@ -51,10 +55,12 @@ crash/replay execution remain unproven here.
 
 The lease contains no complaint text, raw provider payload, personal data, or
 caller idempotency key. It is digest-only and workspace-scoped. Acquisition and
-the pre-persistence assertion both require an active non-fixture source, the
-current approved policy version, a non-expired reviewed policy, and an immutable
-approved review whose content hash matches the policy. No connector was
-activated and no legal or commercial-use claim was changed.
+the persistence-transaction assertion both require an active non-fixture source,
+the current approved policy version, a non-expired reviewed policy, and an
+immutable approved review whose content hash matches the policy. The lease row
+is locked until the collection write commits, so revocation cannot race between
+assertion and persistence. No connector was activated and no legal or
+commercial-use claim was changed.
 
 ## Simplifications and remaining gaps
 
@@ -68,6 +74,8 @@ activated and no legal or commercial-use claim was changed.
 - If quota has settled but the collection result is absent, the worker leaves
   the lease terminal/uncertain and does not automatically re-fetch. Operator
   reconciliation and crash/failure drills remain release work.
+- The repository-level assert-to-persist race is closed by the same-transaction
+  lease lock; Docker-backed revocation/concurrent-write proof remains pending.
 - Docker-backed integration, production PostgreSQL/Temporal provisioning,
   identity-provider approval, source legal approval, cloud object/backup purge,
   and desktop release packaging remain open.

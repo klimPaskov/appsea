@@ -42,13 +42,15 @@ The persistence slice stores normalized fixture and reviewed production source/e
 
 New production-analysis v2 starts exclude raw evidence from Temporal history, but
 legacy v1 histories may already contain artifact payloads and require controlled
-worker draining/retention. Object-store purge/race handling,
-lease assert-to-persist atomicity, stale recompute-claim recovery, terminal
-tombstone retry, and authenticated admission for the direct source CLI remain
-open security and operations work.
+worker draining/retention. Object-store purge/race handling, stale
+recompute-claim recovery, terminal tombstone retry, and authenticated admission
+for the direct source CLI remain open security and operations work.
 The analysis activity now anchors retention to server-observed time, rejects
 materially future timestamps, and finalizes only against an active/current/
 unexpired policy with allowed or restricted commercial use and confirmed,
 redacted evidence. Production collection initialization now fails closed when
 its database admission reservation is absent or already consumed. Manual
 analysis admission/rate limits and initiator actor attribution remain open.
+Production collection persistence now locks and rechecks its source lease in the
+same transaction as the collection write; lease revocation cannot win between
+the assertion and commit.
