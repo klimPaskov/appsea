@@ -25,7 +25,7 @@ Status: production-shaped foundation implemented and validated locally; producti
 
 Implemented:
 
-- PostgreSQL 18 schema and forty-one forward, checksummed migrations
+- PostgreSQL 18 schema and forty-two forward, checksummed migrations
 - normalized source, evidence, complaint, cluster, competitor, opportunity, score, report, plan, audit, cost, deletion, outbox, and lineage tables
 - no-login owner, separate migrator, and least-privilege runtime role contract
 - forced workspace RLS and transaction-scoped workspace context
@@ -104,6 +104,12 @@ Implemented:
   replayed digests do not consume another slot, workflow initialization
   consumes reservations, and bounded source maintenance purges terminal or
   expired admission rows
+- migration `0042_production_analysis_ingress_admission.sql` adds the reviewed
+  manual-analysis admission ledger: the private route binds an authenticated
+  user actor, reserves a digest/input hash before Temporal, and the worker
+  consumes/releases the reservation with run persistence; actor identity is
+  immutable, owner/editor membership is checked at insert, and consumed or
+  released digests replay without another slot
 - the production runner acquires a digest-only source lease before the fetch,
   supplies its immutable observed timestamp to complaint/quota provenance, and
   passes the lease into a same-transaction persistence assertion; the lease is
@@ -125,9 +131,9 @@ workflow, authenticated/TLS-protected Temporal, HA,
 object-store/backups retention and purge, deployment, metrics, alerts, deployed
 snapshot scheduler ownership, and worker crash fault-injection proof. Migration `0037` now queues deletion-triggered
 active-evidence repairs; deployed scheduling, alerting, and production
-Temporal remain open. The repository-level production ingress gate is now
-implemented; deployed scheduler ownership and infrastructure authorization
-remain separate release work.
+Temporal remain open. The repository-level collection and manual-analysis
+ingress gates are now implemented; deployed scheduler ownership and
+infrastructure authorization remain separate release work.
 
 ### 3. First real connector
 

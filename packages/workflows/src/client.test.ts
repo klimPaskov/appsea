@@ -311,5 +311,39 @@ describe('production workflow client boundary', () => {
     expect(JSON.stringify(prepared)).not.toContain('Redacted observation')
     expect(prepared.input).not.toHaveProperty('artifact')
     expect(prepared.input.seedReviewId).toBe(analysisArtifact.opportunitySeedReview.reviewId)
+    expect(prepared.input.requestedBy).toEqual({
+      actorType: 'service',
+      actorId: 'appsea-worker'
+    })
+  })
+
+  it('binds a user initiator into the identifier-only analysis envelope', () => {
+    const prepared = prepareProductionAnalysisWorkflowStart({
+      workspaceId: 'workspace-analysis-workflow',
+      collectionRunId: analysisArtifact.runId,
+      analysisRunId: 'analysis-run:user-start',
+      idempotencyKey: 'sentinel-analysis-user-idempotency-key',
+      workflowVersion: 'production-analysis-v2',
+      requestedAt: analysisAt,
+      seedReviewId: analysisArtifact.opportunitySeedReview.reviewId,
+      requestedBy: { actorType: 'user', actorId: 'user:owner' }
+    })
+    expect(prepared.input.requestedBy).toEqual({
+      actorType: 'user',
+      actorId: 'user:owner'
+    })
+    expect(JSON.stringify(prepared)).not.toContain('sentinel-analysis-user-idempotency-key')
+
+    const servicePrepared = prepareProductionAnalysisWorkflowStart({
+      workspaceId: 'workspace-analysis-workflow',
+      collectionRunId: analysisArtifact.runId,
+      analysisRunId: 'analysis-run:user-start',
+      idempotencyKey: 'sentinel-analysis-user-idempotency-key',
+      workflowVersion: 'production-analysis-v2',
+      requestedAt: analysisAt,
+      seedReviewId: analysisArtifact.opportunitySeedReview.reviewId
+    })
+    expect(prepared.workflowId).toBe(servicePrepared.workflowId)
+    expect(prepared.input.inputHash).not.toBe(servicePrepared.input.inputHash)
   })
 })

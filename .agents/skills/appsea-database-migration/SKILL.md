@@ -33,6 +33,10 @@ This skill may change `packages/db`, directly affected contracts and producers, 
    For full-snapshot deletion reconciliation, keep staged data identifier-only,
    make page checkpoints immutable, and assert the source lease in the same
    transaction that compares active source items and enqueues tombstones.
+   For authenticated downstream workflow starts, keep the admission ledger
+   separate from source collection, store only digest/input-hash metadata,
+   consume/release it in the same transaction as run persistence, and make the
+   requesting actor immutable with an owner/editor membership check.
 9. Add both a populated forward-upgrade test and a fresh-install test. Include negative privilege, RLS, policy, immutability, and cross-wire assertions.
 10. Update the local runbook, source-of-truth docs, and memory in the same tranche.
 

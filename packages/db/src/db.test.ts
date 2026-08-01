@@ -54,7 +54,8 @@ describe('database foundation', () => {
       '0038',
       '0039',
       '0040',
-      '0041'
+      '0041',
+      '0042'
     ])
     expect(migrations[0]?.checksum).toMatch(/^[a-f0-9]{64}$/)
     expect(migrations[0]?.sql).toContain('CREATE TABLE appsea.evidence_records')
@@ -114,6 +115,9 @@ describe('database foundation', () => {
     )
     const sourceSnapshotPageCheckpointMigration = migrations.find(
       (migration) => migration.version === '0041'
+    )
+    const productionAnalysisAdmissionMigration = migrations.find(
+      (migration) => migration.version === '0042'
     )
     expect(authMigration?.sql).toContain('CREATE TABLE appsea.users')
     expect(authMigration?.sql).toContain('CREATE TABLE appsea.auth_sessions')
@@ -333,6 +337,23 @@ describe('database foundation', () => {
       'source_snapshot_reconciliation_due_idx'
     )
     expect(sourceSnapshotPageCheckpointMigration?.sql).toContain('FORCE ROW LEVEL SECURITY')
+    expect(productionAnalysisAdmissionMigration?.sql).toContain(
+      'CREATE TABLE appsea.production_analysis_workflow_admissions'
+    )
+    expect(productionAnalysisAdmissionMigration?.sql).toContain(
+      'CREATE OR REPLACE FUNCTION appsea.admit_production_analysis_workflow'
+    )
+    expect(productionAnalysisAdmissionMigration?.sql).toContain(
+      'CREATE OR REPLACE FUNCTION appsea.consume_production_analysis_workflow_admission'
+    )
+    expect(productionAnalysisAdmissionMigration?.sql).toContain(
+      'CREATE OR REPLACE FUNCTION appsea.release_production_analysis_workflow_admission'
+    )
+    expect(productionAnalysisAdmissionMigration?.sql).toContain(
+      "existing.state IN ('consumed', 'released')"
+    )
+    expect(productionAnalysisAdmissionMigration?.sql).toContain('production_analysis_actor_guard')
+    expect(productionAnalysisAdmissionMigration?.sql).toContain('FORCE ROW LEVEL SECURITY')
   })
 
   it('requires verified TLS for production database connections', () => {

@@ -7,8 +7,17 @@ import {
   ProductionCollectionAnalysisUnavailableError,
   PostgresProductionCollectionRepository
 } from '@appsea/db/production-collection'
+import {
+  PostgresProductionAnalysisAdmissionRepository,
+  ProductionAnalysisAdmissionConflictError,
+  ProductionAnalysisConcurrencyLimitError,
+  ProductionAnalysisRateLimitError
+} from '@appsea/db/production-analysis-admission'
 import { PostgresOpportunitySeedReviewRepository } from '@appsea/db/opportunity-seed-review'
-import { startProductionAnalysisWorkflow } from '@appsea/workflows'
+import {
+  prepareProductionAnalysisWorkflowStart,
+  startProductionAnalysisWorkflow
+} from '@appsea/workflows'
 import { NextResponse } from 'next/server'
 import {
   forbiddenResponse,
@@ -91,13 +100,18 @@ export async function POST(
   }
 
   try {
-    const source = await new PostgresProductionCollectionRepository(
-      getDatabasePool()
-    ).readForAnalysis(session.user.userId, parsedWorkspaceId.data, parsedRunId.data)
+    const pool = getDatabasePool()
+    const source = await new PostgresProductionCollectionRepository(pool).readForAnalysis(
+      session.user.userId,
+      parsedWorkspaceId.data,
+      parsedRunId.data
+    )
     if (!source) return Response.json({ error: 'Collection not found' }, { status: 404 })
-    const seedReview = await new PostgresOpportunitySeedReviewRepository(
-      getDatabasePool()
-    ).readApprovedForUser(session.user.userId, parsedWorkspaceId.data, parsed.data.seedReviewId)
+    const seedReview = await new PostgresOpportunitySeedReviewRepository(pool).readApprovedForUser(
+      session.user.userId,
+      parsedWorkspaceId.data,
+      parsed.data.seedReviewId
+    )
     if (!seedReview) {
       return Response.json(
         { error: 'An approved opportunity seed review is required' },
@@ -111,8 +125,16 @@ export async function POST(
       idempotencyKey: parsed.data.idempotencyKey,
       workflowVersion: 'production-analysis-v2',
       requestedAt: parsed.data.requestedAt,
-      seedReviewId: seedReview.seedReviewId
+      seedReviewId: seedReview.seedReviewId,
+      requestedBy: { actorType: 'user', actorId: session.user.userId }
     }
+    const prepared = prepareProductionAnalysisWorkflowStart(workflowRequest)
+    await new PostgresProductionAnalysisAdmissionRepository(pool).admitForUser({
+      workspaceId: parsedWorkspaceId.data,
+      userId: session.user.userId,
+      idempotencyDigest: prepared.input.idempotencyDigest,
+      inputHash: prepared.input.inputHash
+    })
     const handle = await startProductionAnalysisWorkflow(
       await getTemporalWorkflowClient(),
       workflowRequest
@@ -126,6 +148,30 @@ export async function POST(
       return Response.json(
         { error: 'Collection needs confirmed excerpt evidence before analysis can start' },
         { status: 422, headers: privateResponseHeaders }
+      )
+    }
+    if (error instanceof ProductionAnalysisRateLimitError) {
+      return Response.json(
+        { error: 'Analysis start rate limit exceeded' },
+        {
+          status: 429,
+          headers: { ...privateResponseHeaders, 'retry-after': String(error.retryAfterSeconds) }
+        }
+      )
+    }
+    if (error instanceof ProductionAnalysisConcurrencyLimitError) {
+      return Response.json(
+        { error: 'Analysis concurrency limit exceeded' },
+        {
+          status: 429,
+          headers: { ...privateResponseHeaders, 'retry-after': String(error.retryAfterSeconds) }
+        }
+      )
+    }
+    if (error instanceof ProductionAnalysisAdmissionConflictError) {
+      return Response.json(
+        { error: 'Analysis idempotency key conflicts with a previous request' },
+        { status: 409, headers: privateResponseHeaders }
       )
     }
     if (error instanceof Error && error.message.includes('idempotency key conflicts')) {

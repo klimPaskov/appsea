@@ -119,6 +119,20 @@ export {
   sanitizeProductionArtifact
 } from './production-analysis-repository'
 export {
+  PostgresProductionAnalysisAdmissionRepository,
+  ProductionAnalysisAdmissionConflictError,
+  ProductionAnalysisAdmissionRequiredError,
+  ProductionAnalysisConcurrencyLimitError,
+  ProductionAnalysisRateLimitError,
+  assertProductionAnalysisAdmissionConsumed,
+  consumeProductionAnalysisAdmissionInTransaction,
+  releaseProductionAnalysisAdmissionInTransaction,
+  productionAnalysisAdmissionLimits,
+  type ProductionAnalysisAdmissionDecision,
+  type ProductionAnalysisAdmissionInput,
+  type ProductionAnalysisAdmissionResult
+} from './production-analysis-admission-repository'
+export {
   AuthenticationConflictError,
   AuthenticationError,
   AuthAccountDeletionBlockedError,

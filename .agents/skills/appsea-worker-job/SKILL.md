@@ -20,6 +20,12 @@ description: Use when adding or changing AppSea worker commands, scheduled jobs,
 9. Test duplicate runs, partial failure, retry, and resume. If a source quota
    reservation settles without a matching checkpoint, stop for explicit
    reconciliation instead of issuing an unbounded duplicate request.
+10. For authenticated workflow starts, reserve a digest-only admission before
+    contacting the durable workflow service, consume it in the same transaction
+    as job/run initialization, and release it on terminal completion/failure.
+    Keep source-collection and downstream-analysis admission ledgers separate;
+    bind the immutable requesting actor and purge stale reservations through a
+    bounded maintenance job.
 
 Do not rely on an in-memory loop for production durability. Do not hide a partial result behind a successful exit code.
 

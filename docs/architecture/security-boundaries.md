@@ -78,6 +78,14 @@ for that pre-context authorization lookup.
   closed and rolls back if the reservation cannot be consumed on either the
   existing-job or insert path. The limits are fixed in the reviewed migration
   rather than accepted from request input.
+- Migration `0042` applies the same fail-closed boundary to the manual
+  production-analysis route. The route binds the authenticated owner/editor
+  to a digest-only reservation before contacting Temporal; the worker consumes
+  that reservation in the same transaction as analysis-run creation and
+  releases it on terminal failure or completion. The run stores an immutable
+  user/service actor, the insert trigger verifies user membership, and
+  consumed/released digests replay without another admission slot. The
+  separate ledger cannot authorize collection or source access.
 - Migration `0039` places the external fetch itself behind a forced-RLS,
   digest-only collection lease. Acquisition requires the current active source,
   policy version, and matching operator approval review; retries replay the
@@ -189,6 +197,10 @@ for that pre-context authorization lookup.
   excluded from history and logs. Authenticated starts carry a bounded user
   actor (service starts use `appsea-worker`); PostgreSQL verifies workspace
   owner/editor membership and terminal audit events copy the immutable actor.
+- Manual production-analysis starts carry the same immutable actor plus a
+  separate digest/input admission reservation. The worker must consume that
+  reservation before creating a user-attributed run; missing or expired
+  reservations fail closed, while terminal/released digests replay.
 - Production analysis workflow version `production-analysis-v2` carries only
   workspace, collection, analysis, seed-review, digest, and timestamp
   identifiers. The worker reconstructs the reviewed artifact inside the

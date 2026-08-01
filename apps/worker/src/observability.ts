@@ -25,6 +25,7 @@ export interface WorkerEvent {
   quotaReservationsExpired?: number
   quotaReservationsPurged?: number
   productionWorkflowAdmissionsPurged?: number
+  productionAnalysisAdmissionsPurged?: number
   sourceCollectionLeasesPurged?: number
   retentionTombstonesQueued?: number
   deletionTombstonesProcessed?: number
@@ -128,6 +129,13 @@ export function emitWorkerEvent(event: WorkerEvent): void {
       ? {
           productionWorkflowAdmissionsPurged: finiteInteger(
             event.productionWorkflowAdmissionsPurged
+          )
+        }
+      : {}),
+    ...(finiteInteger(event.productionAnalysisAdmissionsPurged) !== undefined
+      ? {
+          productionAnalysisAdmissionsPurged: finiteInteger(
+            event.productionAnalysisAdmissionsPurged
           )
         }
       : {}),

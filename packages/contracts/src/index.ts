@@ -201,6 +201,21 @@ export const appseaIdentifierSchema = z
   .max(160)
   .regex(/^[a-z][a-z0-9_:-]*$/)
 
+export const workflowActorSchema = z.discriminatedUnion('actorType', [
+  z
+    .object({
+      actorType: z.literal('user'),
+      actorId: appseaIdentifierSchema
+    })
+    .strict(),
+  z
+    .object({
+      actorType: z.literal('service'),
+      actorId: z.literal('appsea-worker')
+    })
+    .strict()
+])
+
 export const productionAnalysisTransportSchema = z.enum(['offline-sample', 'persisted-collection'])
 
 const contentHashSchema = z
@@ -1263,6 +1278,12 @@ export const productionAnalysisPersistenceInputSchema = z
     analysisRunId: appseaIdentifierSchema,
     idempotencyKey: z.string().min(16).max(200),
     requestedAt: z.string().datetime(),
+    workflowInputHash: z
+      .string()
+      .length(64)
+      .regex(/^[a-f0-9]{64}$/)
+      .optional(),
+    requestedBy: workflowActorSchema.optional(),
     artifact: productionResearchArtifactSchema
   })
   .strict()
@@ -1565,21 +1586,6 @@ export const workflowIdSchema = z
 
 export const workflowTaskQueueSchema = z.literal('appsea-research-v1')
 
-export const workflowActorSchema = z.discriminatedUnion('actorType', [
-  z
-    .object({
-      actorType: z.literal('user'),
-      actorId: appseaIdentifierSchema
-    })
-    .strict(),
-  z
-    .object({
-      actorType: z.literal('service'),
-      actorId: z.literal('appsea-worker')
-    })
-    .strict()
-])
-
 export const fixtureResearchWorkflowStartRequestSchema = z
   .object({
     workspaceId: appseaIdentifierSchema,
@@ -1811,7 +1817,8 @@ export const productionAnalysisWorkflowStartRequestSchema = z
     idempotencyKey: z.string().min(16).max(200),
     workflowVersion: z.literal('production-analysis-v2'),
     requestedAt: z.string().datetime(),
-    seedReviewId: appseaIdentifierSchema
+    seedReviewId: appseaIdentifierSchema,
+    requestedBy: workflowActorSchema.optional()
   })
   .strict()
 
@@ -1847,7 +1854,8 @@ export const productionAnalysisWorkflowInputSchema = z
       .regex(/^[a-f0-9]{64}$/),
     workflowVersion: z.literal('production-analysis-v2'),
     requestedAt: z.string().datetime(),
-    seedReviewId: appseaIdentifierSchema
+    seedReviewId: appseaIdentifierSchema,
+    requestedBy: workflowActorSchema
   })
   .strict()
 
@@ -2125,6 +2133,7 @@ export const sourceMaintenanceResultSchema = z
     quotaReservationsExpired: z.number().int().nonnegative().max(10_000),
     quotaReservationsPurged: z.number().int().nonnegative().max(10_000),
     productionWorkflowAdmissionsPurged: z.number().int().nonnegative().max(10_000),
+    productionAnalysisAdmissionsPurged: z.number().int().nonnegative().max(10_000),
     sourceCollectionLeasesPurged: z.number().int().nonnegative().max(10_000),
     retentionTombstonesQueued: z.number().int().nonnegative().max(1_000),
     deletionTombstonesProcessed: z.number().int().nonnegative().max(1_000),

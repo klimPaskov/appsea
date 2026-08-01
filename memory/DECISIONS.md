@@ -158,16 +158,11 @@ object-store/backups purge, and aggregate recomputation remain separate work.
 
 ## 2026-07-26: Offline production analysis composition boundary
 
-Add a production-shaped, offline composition boundary that accepts only an
-approved-shaped, non-fixture collection payload and an explicitly reviewed
-opportunity seed. Normalization, deduplication, deterministic clustering, and
-score calculation are code-owned; complaint text cannot infer factor values or
-change a rank. The composer emits a production-mode artifact, evidence-backed
-generic report, and six-file plan template with `testOnly` and transport
-metadata. The sample uses redacted CFPB-shaped fixtures and never activates a
-connector, writes production persistence, or claims market evidence. Durable
-post-collection persistence, orchestration, object storage, and approval remain
-the next tranche.
+Keep an offline, production-shaped composition boundary that accepts only
+reviewed non-fixture input and a reviewed seed. Code owns normalization,
+clustering, and scoring; the sample is visibly test-only and never activates a
+source or claims market evidence. Durable persistence, orchestration, object
+storage, and approval remain separate boundaries.
 
 ## 2026-07-26: Keep non-fixture blobs behind an object-store seam
 
@@ -260,14 +255,11 @@ preserving the complaint-confirmation gate.
 
 ## 2026-08-01: Require linked active output before same-run recovery
 
-Source deletion invalidates mutable opportunity projections and must not be
-undone by an ordinary update with the old collection run. Migration `0036`
-allows a same-run reactivation only after a new production analysis has linked
-its active score/plan output; that analysis is reconstructed from active,
-confirmed, policy-allowed evidence and retains deletion coverage gaps. The
-private reviewed analysis route can perform this repair explicitly, while
-automatic scheduling and source re-collection remain separate approval-gated
-work.
+Source deletion invalidates mutable opportunity projections. Migration `0036`
+allows same-run reactivation only after a new analysis links active score/plan
+output built from active, confirmed, policy-allowed evidence; coverage gaps
+remain visible. Automatic scheduling and source re-collection stay separate
+approval-gated work.
 
 ## 2026-08-01: Queue deletion-triggered active-evidence recomputation
 
@@ -331,3 +323,13 @@ Filtered pages cannot prove deletion. CFPB uses an unfiltered
 and checkpoints. Migration `0041` persists warnings and idempotent pages; only
 a warning-free short page in the lease tx may enqueue tombstones. A settled
 quota without its checkpoint needs reconciliation; no auto-refetch.
+
+## 2026-08-01: Admit manual analysis separately and bind its initiator
+
+Manual production analysis is downstream, not source collection, so migration
+`0042` gives it a separate digest/input admission ledger. The private route
+binds the owner/editor; the worker consumes/releases with run persistence, and
+the run stores an immutable membership-checked actor. The digest excludes the
+actor so a workspace key cannot fork; actor remains in the input hash and a
+mismatch conflicts. Consumed/released digests replay; expired reservations
+alone are reclaimable.

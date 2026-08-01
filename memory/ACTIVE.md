@@ -20,21 +20,23 @@ job/checkpoint projection, policy trigger, bounded policy-derived retention
 tombstone enqueue, hashed idempotency, terminal reconciliation, and user/service
 actor attribution, and deletion-triggered recomputation dispatch state;
 the workflow/client/activity boundary is package-tested but not deployed.
-Migration `0038_production_workflow_ingress_admission.sql` adds a fixed,
-database-serialized per-workspace production start rate/concurrency gate before
-Temporal, consumes short-lived reservations during workflow initialization, and
-purges terminal or expired admissions through source maintenance. Migration
-`0039` also binds each external fetch to an approved policy review, replays one
-immutable server-observed capture timestamp, rechecks policy/expiry before
-persistence, releases after commit, and purges terminal leases through source
-maintenance. Migrations `0040` and `0041` now add a policy-gated,
-identifier-only full-snapshot reconciliation job, durable page checkpoints,
-warning persistence, atomic tombstone finalization, and a scheduler-resume
-boundary. CFPB remains disabled; deployed scheduler ownership, policy approval,
-and infrastructure hardening remain open. Next: Temporal provisioning, role
+Migration `0038` gates collection starts, `0039` binds external fetches to
+policy leases, and `0040`/`0041` add identifier-only snapshot reconciliation.
+CFPB remains disabled; deployed scheduler ownership, policy approval, and
+infrastructure hardening remain open. Next: Temporal provisioning, role
 separation, re-collection, non-fixture outputs, and identity-provider approval.
 Fixture and production collection routes are Temporal gateways; signup workspaces remain
 non-fixture by design.
+
+Migration `0042_production_analysis_ingress_admission.sql` adds the reviewed
+manual-analysis boundary. The private route binds an authenticated owner/editor,
+reserves only an idempotency digest and workflow input hash before Temporal, and
+the worker consumes/releases the reservation with analysis-run persistence.
+Analysis runs store an immutable user/service actor; consumed or released
+digests replay without another slot, while expired reservations may be
+reclaimed. Source maintenance purges stale analysis admissions and reports a
+bounded counter. The database-backed integration proof is present but remains
+Docker-blocked in this environment.
 
 On 2026-08-01, the production analysis Temporal envelope was versioned to
 `production-analysis-v2`. New starts carry only workspace, collection, analysis,
@@ -54,20 +56,10 @@ claims, retryable tombstone propagation, and authenticated source-CLI admission.
 Collection persistence now locks and rechecks the lease in its write transaction;
 these remain production-readiness blockers.
 
-The 2026-07-26 non-fixture analysis composition is test-only; migration `0030`
-and its repository persist lineage, projections, and content-addressed
-references. Cloud storage, purge, and deployment proof remain open.
-
-Foundation (2026-07-11 through 2026-07-25): PostgreSQL
-18/RLS/provenance, deterministic fixture analysis/sparse leaderboard,
-auth/workspaces, retry-safe fixture Temporal boundary. Provider
-delivery, MFA/OIDC, production identity, infrastructure, and Docker-backed
-integration remain open.
-
 ## Validated commands
 
 - `pnpm verify` passed 2026-08-01: packages, samples, smoke, repo checks
-- 2026-08-01 ingress-admission focus: 198 contract/db/worker/web suite tests passed;
+- 2026-08-01 ingress-admission focus: 248 contract/db/workflow/worker/web suite tests passed;
   the integration suite now contains PostgreSQL admission serialization,
   replay, rate, concurrency, and purge coverage but remains Docker-blocked
 - 2026-08-01 source-lease focus: contracts, db, and worker suites passed; the
@@ -79,10 +71,9 @@ integration remain open.
   checkpoints, warning-preserving retries, CFPB identifier-only traversal, and
   bounded direct/resume worker commands passed contracts/db/connectors/worker
   suites; PostgreSQL integration remains Docker-blocked
-- Direct TypeScript, ESLint, Prettier, memory, and focused recomputation checks pass; the handoff
-  focus passed 62, the private status focus 59, and contracts/db/worker/web suites passed 165. Seed SVG
-  generated; raster awaits `cairosvg`; Temporal suites remain blocked by missing
-  `protobufjs`
+- Direct TypeScript, ESLint, Prettier, memory, and recomputation checks pass;
+  the seed SVG is generated; raster awaits `cairosvg`, and Docker-backed
+  Temporal suites remain blocked by the unavailable engine.
 - `pnpm verify:persistence` and `pnpm verify:workflows` attempted on
   2026-07-25 and 2026-08-01; both are blocked by the unavailable Docker
   Desktop Linux engine pipe (`//./pipe/dockerDesktopLinuxEngine`)

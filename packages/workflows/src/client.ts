@@ -224,6 +224,10 @@ export function prepareProductionAnalysisWorkflowStart(
   request: ProductionAnalysisWorkflowStartRequest
 ): PreparedProductionAnalysisWorkflowStart {
   const parsed = productionAnalysisWorkflowStartRequestSchema.parse(request)
+  const requestedBy = parsed.requestedBy ?? {
+    actorType: 'service' as const,
+    actorId: 'appsea-worker'
+  }
   const idempotencyDigest = sha256(
     canonicalJson({
       endpoint: 'production-analysis',
@@ -240,7 +244,8 @@ export function prepareProductionAnalysisWorkflowStart(
     idempotencyDigest,
     workflowVersion: parsed.workflowVersion,
     requestedAt: parsed.requestedAt,
-    seedReviewId: parsed.seedReviewId
+    seedReviewId: parsed.seedReviewId,
+    requestedBy
   }
   const input = productionAnalysisWorkflowInputSchema.parse({
     ...hashMaterial,

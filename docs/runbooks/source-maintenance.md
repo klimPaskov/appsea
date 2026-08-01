@@ -41,6 +41,14 @@ reservation. The bounded maintenance pass also purges consumed, released, or
 expired admissions older than the retention cutoff; it never deletes workflow
 jobs or research evidence.
 
+Migration `0042` adds a separate downstream-analysis admission ledger. The
+private manual analysis route binds the session user and reserves only the
+workflow digest/input hash before Temporal. The worker consumes the reservation
+with analysis-run creation and releases it on terminal completion/failure;
+consumed or released digests replay without another slot. The same maintenance
+pass purges stale analysis admissions and reports their bounded count separately
+as `productionAnalysisAdmissionsPurged`.
+
 Migration `0039` adds digest-only source collection leases. Acquisition is
 bound to the active source-policy review and stores one observed timestamp for
 retry replay. The worker asserts the lease immediately before collection
@@ -80,8 +88,8 @@ Configuration is bounded by the command:
 - `APPSEA_SOURCE_QUOTA_RETENTION_DAYS` (1-3,650, default 30)
 - `APPSEA_DELETION_WORKSPACE_ID` (optional persistence-safe workspace ID)
 
-The worker emits secret-free quota expiry/purge, production admission and
-source-collection-lease purge,
+The worker emits secret-free quota expiry/purge, production collection and
+analysis admission purge, source-collection-lease purge,
 retention enqueue, deletion propagation, and failure events.
 `sourceMaintenanceInputSchema` validates the configuration
 before repository work, and `runSourceMaintenance` returns bounded counters

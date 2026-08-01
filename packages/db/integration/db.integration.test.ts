@@ -29,6 +29,7 @@ import {
   PostgresFixtureResearchRepository,
   PostgresAuthRepository,
   PostgresDeletionPropagationRepository,
+  PostgresProductionAnalysisAdmissionRepository,
   PostgresOpportunitySeedReviewRepository,
   PostgresProductionWorkflowAdmissionRepository,
   PostgresSourceCollectionLeaseRepository,
@@ -1250,6 +1251,76 @@ describe.sequential('PostgreSQL fixture persistence lifecycle', () => {
         ORDER BY relation.relname`
     )
     expect(violations.rows).toEqual([])
+  })
+
+  it('admits, consumes, releases, and preserves the actor for a manual analysis start', async () => {
+    const workspaceId = 'workspace-analysis-admission'
+    const userId = 'user-analysis-admission'
+    const digest = 'a'.repeat(64)
+    const inputHash = 'b'.repeat(64)
+    await withOwnerClient(async (client) => {
+      await client.query(
+        `INSERT INTO appsea.workspaces
+           (workspace_id, slug, display_name, visibility, fixture_only, status, created_at, updated_at)
+         VALUES ($1, $2, 'Analysis admission workspace', 'private', false, 'active', $3, $3)`,
+        [workspaceId, workspaceId, fixedAt]
+      )
+      await client.query(
+        `INSERT INTO appsea.users
+           (user_id, email, display_name, password_hash, created_at, updated_at)
+         VALUES ($1, $2, 'Analysis admission user', repeat('x', 64), $3, $3)`,
+        [userId, `${userId}@example.com`, fixedAt]
+      )
+      await client.query(
+        `INSERT INTO appsea.workspace_memberships
+           (workspace_id, user_id, role, created_at, updated_at)
+         VALUES ($1, $2, 'owner', $3, $3)`,
+        [workspaceId, userId, fixedAt]
+      )
+    })
+
+    const admissions = new PostgresProductionAnalysisAdmissionRepository(servicePool)
+    await expect(
+      admissions.admitForUser({
+        workspaceId,
+        userId,
+        idempotencyDigest: digest,
+        inputHash
+      })
+    ).resolves.toMatchObject({ decision: 'admitted', replayed: false })
+    await expect(admissions.consume(workspaceId, digest, inputHash, userId)).resolves.toBe(true)
+    await expect(admissions.release(workspaceId, digest, inputHash, userId)).resolves.toBe(true)
+
+    const stored = await withWorkspaceTransaction(
+      servicePool,
+      workspaceId,
+      async (client) => {
+        const result = await client.query<{
+          state: string
+          requested_by_actor_type: string
+          requested_by_actor_id: string
+        }>(
+          `SELECT state, requested_by_actor_type, requested_by_actor_id
+             FROM appsea.production_analysis_workflow_admissions
+            WHERE workspace_id = $1 AND idempotency_digest = $2`,
+          [workspaceId, digest]
+        )
+        return result.rows[0]
+      },
+      { readOnly: true }
+    )
+    expect(stored).toEqual({
+      state: 'released',
+      requested_by_actor_type: 'user',
+      requested_by_actor_id: userId
+    })
+
+    await withOwnerClient((client) =>
+      client.query('DELETE FROM appsea.workspaces WHERE workspace_id = $1', [workspaceId])
+    )
+    await withOwnerClient((client) =>
+      client.query('DELETE FROM appsea.users WHERE user_id = $1', [userId])
+    )
   })
 
   it('persists, replays, and proves normalized synthetic provenance', async () => {

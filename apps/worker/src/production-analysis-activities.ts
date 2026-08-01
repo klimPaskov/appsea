@@ -8,6 +8,7 @@ import {
   ImmutableRecordConflictError,
   PostgresProductionAnalysisRepository,
   ProductionAnalysisAvailabilityError,
+  ProductionAnalysisAdmissionRequiredError,
   ProductionAnalysisLineageError,
   ProductionAnalysisStateError
 } from '@appsea/db'
@@ -27,6 +28,12 @@ function sanitizedFailure(error: unknown): ApplicationFailure {
   if (error instanceof ProductionAnalysisLineageError) {
     return ApplicationFailure.nonRetryable(
       'The production analysis policy or evidence lineage boundary rejected the request.',
+      'APPSEA_POLICY_DENIED'
+    )
+  }
+  if (error instanceof ProductionAnalysisAdmissionRequiredError) {
+    return ApplicationFailure.nonRetryable(
+      'Production analysis admission is missing or expired.',
       'APPSEA_POLICY_DENIED'
     )
   }
@@ -96,6 +103,8 @@ export function createProductionAnalysisActivities(
           analysisRunId: parsed.input.analysisRunId,
           idempotencyKey: parsed.input.idempotencyDigest,
           requestedAt: parsed.occurredAt,
+          workflowInputHash: parsed.input.inputHash,
+          requestedBy: parsed.input.requestedBy,
           artifact
         })
         emitWorkerEvent({

@@ -15,7 +15,7 @@
   approval governance, approved JSON export, a content-addressed
   object-storage seam/test adapter, and an explicit confirmed-evidence
   analysis-start route implemented
-- PostgreSQL persistence: forty-one forward, checksummed migrations plus least-privilege repositories, durable auth controls, owner-scoped member administration and existing-account invitations with session step-up, owner-safe account closure, complaint review plus immutable seed-review and report/plan approval guards, source quota reservations, policy-derived retention tombstones, deletion lineage, monotonic source/evidence/tombstone guards, migration-owner source-policy review/activation evidence, a migration-owner maintenance enumerator, fixture and production-collection workflow checkpoints with principal attribution, deterministic analysis handoff and deletion-triggered recomputation queues, durable production-analysis lineage/object references, source-deletion invalidation, mutable opportunity availability repair, same-run active-evidence re-analysis recovery, and database-serialized production ingress admissions through migrations `0036`–`0041`, plus policy-bound source collection leases, identifier-only snapshot page checkpoints, warning-preserving retries, and atomic full-snapshot tombstone finalization
+- PostgreSQL persistence: forty-two forward, checksummed migrations plus least-privilege repositories, durable auth controls, owner-scoped member administration and existing-account invitations with session step-up, owner-safe account closure, complaint review plus immutable seed-review and report/plan approval guards, source quota reservations, policy-derived retention tombstones, deletion lineage, monotonic source/evidence/tombstone guards, migration-owner source-policy review/activation evidence, a migration-owner maintenance enumerator, fixture and production-collection workflow checkpoints with principal attribution, deterministic analysis handoff and deletion-triggered recomputation queues, durable production-analysis lineage/object references, immutable analysis initiator attribution, source-deletion invalidation, mutable opportunity availability repair, same-run active-evidence re-analysis recovery, and database-serialized production ingress admissions through migrations `0036`–`0042`, plus policy-bound source collection leases, identifier-only snapshot page checkpoints, warning-preserving retries, and atomic full-snapshot tombstone finalization, and manual analysis admission/replay limits
 - Database verification: PostgreSQL 18 fresh-install and populated-upgrade lifecycle is covered by local/CI gates; this environment currently lacks Docker for a fresh rerun
 - Native Codex skills: 21 synchronized skills
 - Codex helper agents: 11 bounded agents
@@ -50,7 +50,12 @@ materially future timestamps, and finalizes only against an active/current/
 unexpired policy with allowed or restricted commercial use and confirmed,
 redacted evidence. Production collection initialization now fails closed when
 its database admission reservation is absent or already consumed. Manual
-analysis admission/rate limits and initiator actor attribution remain open.
+analysis admission/rate limits and initiator actor attribution are now
+implemented by migration `0042`; deployed scheduler ownership, Temporal
+authorization, and Docker-backed concurrency proof remain open. The reviewed
+route reserves a digest/input hash before Temporal, binds an immutable user
+actor, and consumes/releases that reservation with run persistence; duplicate
+consumed/released digests replay without another slot.
 Production collection persistence now locks and rechecks its source lease in the
 same transaction as the collection write; lease revocation cannot win between
 the assertion and commit.

@@ -84,6 +84,12 @@ payload fields. Workflow initialization fails closed if the reservation is
 missing or already consumed, including the duplicate-job path. A deployed
 scheduler, authenticated Temporal namespace, and multi-instance failure proof
 are still required before this boundary can be called production-operated.
+Migration `0042` adds the same boundary to the reviewed manual production-
+analysis route: the route binds a user actor, reserves a digest/input hash
+before Temporal, and the worker consumes/releases that reservation in the same
+transaction as run creation or terminal failure. Actor identity is immutable
+and the database checks owner/editor membership on insert. A released or
+consumed analysis digest replays without consuming another slot.
 
 Production analysis workflow version `v2` now carries only identifiers and
 immutable digests into Temporal; the worker reconstructs its redacted artifact
@@ -95,8 +101,10 @@ recompute-claim reclamation, retryable tombstone propagation, and authentication
 for the direct source CLI also remain open. Retention is anchored to
 server-observed activity time and final
 lineage rechecks active/current/unexpired policy, commercial-use eligibility,
-and confirmed redacted evidence. The manual analysis route still needs a
-workspace admission/rate gate and authenticated initiator attribution.
+and confirmed redacted evidence. The manual analysis route now has a workspace
+admission/rate gate and authenticated initiator attribution through migration
+`0042`; deployment still needs a scheduler, Temporal authorization, and
+crash/failure proof for that boundary.
 
 Non-fixture report, plan, and production-analysis artifact payloads require
 object storage; inline JSONB is deliberately restricted to compact metadata

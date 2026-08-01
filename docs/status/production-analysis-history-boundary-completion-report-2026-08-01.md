@@ -31,6 +31,11 @@ remains disabled and no synthetic fixture is presented as market research.
 - Production collection workflow initialization now fails closed when the
   database admission reservation is missing or already consumed; both the
   existing-job and insert paths roll back instead of starting Temporal.
+- Migration `0042` adds an authenticated manual-analysis admission boundary:
+  the private route stores only a digest/input reservation before Temporal,
+  binds the session user into the identifier-only envelope, and the worker
+  consumes/releases that reservation with run persistence. Actor identity is
+  immutable, and consumed/released digests replay without another slot.
 - Route, client, and recomputation tests assert that no artifact crosses the
   start boundary.
 
@@ -58,8 +63,8 @@ This tranche does not erase existing v1 Temporal histories. A deployment must
 drain or retain v1 workers until those executions finish, then remove v1 only
 through an approved retention plan. Object-store purge and crash-race
 handling, atomic lease assert-to-persist ownership, stale recompute claim
-recovery, retryable tombstone propagation, manual analysis admission and
-initiator attribution, source-policy reviewer independence, and production
+recovery, retryable tombstone propagation, source-policy reviewer
+independence, and production
 Temporal TLS/namespace authorization remain open. The direct source CLI still
 bypasses the authenticated web admission boundary; the collection workflow
 itself now requires a consumed database reservation. Docker-backed database

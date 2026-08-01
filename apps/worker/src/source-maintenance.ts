@@ -3,6 +3,7 @@ import {
   createDatabasePool,
   databaseConfigFromEnv,
   PostgresDeletionPropagationRepository,
+  PostgresProductionAnalysisAdmissionRepository,
   PostgresProductionWorkflowAdmissionRepository,
   PostgresSourceCollectionLeaseRepository,
   PostgresSourceQuotaRepository
@@ -35,11 +36,13 @@ try {
   const quotaRepository = new PostgresSourceQuotaRepository(pool)
   const deletionRepository = new PostgresDeletionPropagationRepository(pool)
   const admissionRepository = new PostgresProductionWorkflowAdmissionRepository(pool)
+  const analysisAdmissionRepository = new PostgresProductionAnalysisAdmissionRepository(pool)
   const leaseRepository = new PostgresSourceCollectionLeaseRepository(pool)
   const result = await runSourceMaintenance(input, {
     quota: quotaRepository,
     deletion: deletionRepository,
     admission: admissionRepository,
+    analysisAdmission: analysisAdmissionRepository,
     leases: leaseRepository
   })
   emitWorkerEvent({
@@ -49,6 +52,7 @@ try {
     quotaReservationsExpired: result.quotaReservationsExpired,
     quotaReservationsPurged: result.quotaReservationsPurged,
     productionWorkflowAdmissionsPurged: result.productionWorkflowAdmissionsPurged,
+    productionAnalysisAdmissionsPurged: result.productionAnalysisAdmissionsPurged,
     sourceCollectionLeasesPurged: result.sourceCollectionLeasesPurged
   })
   if (result.retentionTombstonesQueued > 0) {
@@ -78,6 +82,7 @@ try {
     quotaReservationsExpired: result.quotaReservationsExpired,
     quotaReservationsPurged: result.quotaReservationsPurged,
     productionWorkflowAdmissionsPurged: result.productionWorkflowAdmissionsPurged,
+    productionAnalysisAdmissionsPurged: result.productionAnalysisAdmissionsPurged,
     sourceCollectionLeasesPurged: result.sourceCollectionLeasesPurged,
     retentionTombstonesQueued: result.retentionTombstonesQueued,
     deletionTombstonesProcessed: result.deletionTombstonesProcessed,

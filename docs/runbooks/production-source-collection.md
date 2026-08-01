@@ -111,6 +111,14 @@ confirmed excerpt evidence and returns a Temporal workflow ID. It is available
 as a manual fallback when collection was started without
 `analysisSeedReviewId` or when a reviewer chooses a different approved seed.
 
+The route binds `requestedBy` to the authenticated owner/editor, prepares a
+digest-only `production-analysis-v2` envelope, and calls the migration `0042`
+admission function before contacting Temporal. The worker consumes that
+reservation in the same transaction as analysis-run creation and releases it
+on terminal failure or completion; consumed or released digests replay without
+another rate/concurrency slot. Admission reservations are purged by the
+bounded source-maintenance job.
+
 Seed review lifecycle:
 
 - `POST /api/workspaces/:workspaceId/seed-reviews` creates an immutable
@@ -137,7 +145,10 @@ authenticated owner/editor gateway:
   is reached. The workflow initialization transaction consumes the short-lived
   reservation, and source maintenance purges terminal or expired admission
   rows. These limits are fixed in reviewed migration `0038`; request payloads
-  cannot raise them.
+  cannot raise them. Manual production analysis uses a separate `0042` ledger
+  with the same fixed five-start/two-active limits and a five-minute
+  reservation; the collection admission cannot authorize analysis, and the
+  analysis admission cannot authorize source collection.
   The workflow activity then acquires the migration `0039` source lease before
   contacting the connector; admission and collection leases are separate
   boundaries and both replay by digest.

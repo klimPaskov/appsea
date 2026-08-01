@@ -1,5 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { POST } from './api/workspaces/[workspaceId]/research/production/[runId]/analysis/route'
+import {
+  ProductionAnalysisAdmissionConflictError,
+  ProductionAnalysisConcurrencyLimitError,
+  ProductionAnalysisRateLimitError
+} from '@appsea/db/production-analysis-admission'
 
 const mocks = vi.hoisted(() => ({
   readSession: vi.fn(),
@@ -7,6 +12,8 @@ const mocks = vi.hoisted(() => ({
   canStartProductionWorkflow: vi.fn(),
   readForAnalysis: vi.fn(),
   readApprovedForUser: vi.fn(),
+  admitForUser: vi.fn(),
+  prepareProductionAnalysisWorkflowStart: vi.fn(),
   startProductionAnalysisWorkflow: vi.fn(),
   errors: { ProductionCollectionAnalysisUnavailableError: class extends Error {} }
 }))
@@ -36,8 +43,31 @@ vi.mock('@appsea/db/opportunity-seed-review', () => ({
     readApprovedForUser = mocks.readApprovedForUser
   }
 }))
+vi.mock('@appsea/db/production-analysis-admission', () => ({
+  PostgresProductionAnalysisAdmissionRepository: class {
+    admitForUser = mocks.admitForUser
+  },
+  ProductionAnalysisAdmissionConflictError: class extends Error {},
+  ProductionAnalysisConcurrencyLimitError: class extends Error {
+    retryAfterSeconds: number
+
+    constructor(retryAfterSeconds: number) {
+      super('concurrency')
+      this.retryAfterSeconds = retryAfterSeconds
+    }
+  },
+  ProductionAnalysisRateLimitError: class extends Error {
+    retryAfterSeconds: number
+
+    constructor(retryAfterSeconds: number) {
+      super('rate')
+      this.retryAfterSeconds = retryAfterSeconds
+    }
+  }
+}))
 vi.mock('@appsea/workflows', () => ({
-  startProductionAnalysisWorkflow: mocks.startProductionAnalysisWorkflow
+  startProductionAnalysisWorkflow: mocks.startProductionAnalysisWorkflow,
+  prepareProductionAnalysisWorkflowStart: mocks.prepareProductionAnalysisWorkflowStart
 }))
 
 const session = {
@@ -96,6 +126,8 @@ describe('production analysis start route', () => {
   beforeEach(() => {
     mocks.readForAnalysis.mockReset()
     mocks.readApprovedForUser.mockReset()
+    mocks.admitForUser.mockReset()
+    mocks.prepareProductionAnalysisWorkflowStart.mockReset()
     mocks.startProductionAnalysisWorkflow.mockReset()
     mocks.readSession.mockResolvedValue(session)
     mocks.sameOriginRequest.mockReturnValue(true)
@@ -111,6 +143,16 @@ describe('production analysis start route', () => {
       warnings: []
     })
     mocks.readApprovedForUser.mockResolvedValue(seedReview)
+    mocks.admitForUser.mockResolvedValue({
+      decision: 'admitted',
+      replayed: false,
+      retryAfterSeconds: 0,
+      reservationExpiresAt: '2026-07-26T00:05:00.000Z'
+    })
+    mocks.prepareProductionAnalysisWorkflowStart.mockReturnValue({
+      workflowId: 'workflow:analysis:workspace:one:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
+      input: { idempotencyDigest: 'a'.repeat(64), inputHash: 'b'.repeat(64) }
+    })
     mocks.startProductionAnalysisWorkflow.mockResolvedValue({
       workflowId: 'workflow:analysis:workspace:one:abc'
     })
@@ -163,6 +205,12 @@ describe('production analysis start route', () => {
       data: { workflowId: 'workflow:analysis:workspace:one:abc', analysisRunId: 'analysis:one' }
     })
     expect(mocks.readForAnalysis).toHaveBeenCalledWith('user:owner', 'workspace:one', 'run:one')
+    expect(mocks.admitForUser).toHaveBeenCalledWith({
+      workspaceId: 'workspace:one',
+      userId: 'user:owner',
+      idempotencyDigest: 'a'.repeat(64),
+      inputHash: 'b'.repeat(64)
+    })
     expect(mocks.startProductionAnalysisWorkflow).toHaveBeenCalledTimes(1)
     expect(mocks.startProductionAnalysisWorkflow.mock.calls[0]?.[0]).toBeUndefined()
     expect(mocks.startProductionAnalysisWorkflow.mock.calls[0]?.[1]).toEqual(
@@ -172,7 +220,8 @@ describe('production analysis start route', () => {
         analysisRunId: 'analysis:one',
         idempotencyKey: 'analysis-idempotency-1',
         seedReviewId: 'seed-review:one',
-        workflowVersion: 'production-analysis-v2'
+        workflowVersion: 'production-analysis-v2',
+        requestedBy: { actorType: 'user', actorId: 'user:owner' }
       })
     )
     expect(mocks.startProductionAnalysisWorkflow.mock.calls[0]?.[1]).not.toHaveProperty('artifact')
@@ -243,6 +292,47 @@ describe('production analysis start route', () => {
       { params: Promise.resolve({ workspaceId: 'workspace:one', runId: 'run:one' }) }
     )
     expect(response.status).toBe(422)
+    expect(mocks.startProductionAnalysisWorkflow).not.toHaveBeenCalled()
+    expect(mocks.admitForUser).not.toHaveBeenCalled()
+  })
+
+  it('returns bounded admission failures without starting Temporal', async () => {
+    mocks.admitForUser.mockRejectedValue(new ProductionAnalysisRateLimitError(42))
+    const rate = await POST(
+      request({
+        analysisRunId: 'analysis:one',
+        idempotencyKey: 'analysis-idempotency-1',
+        requestedAt: '2026-07-26T00:00:00.000Z',
+        seedReviewId: 'seed-review:one'
+      }),
+      { params: Promise.resolve({ workspaceId: 'workspace:one', runId: 'run:one' }) }
+    )
+    expect(rate.status).toBe(429)
+    expect(rate.headers.get('retry-after')).toBe('42')
+
+    mocks.admitForUser.mockRejectedValue(new ProductionAnalysisConcurrencyLimitError(60))
+    const concurrency = await POST(
+      request({
+        analysisRunId: 'analysis:one',
+        idempotencyKey: 'analysis-idempotency-1',
+        requestedAt: '2026-07-26T00:00:00.000Z',
+        seedReviewId: 'seed-review:one'
+      }),
+      { params: Promise.resolve({ workspaceId: 'workspace:one', runId: 'run:one' }) }
+    )
+    expect(concurrency.status).toBe(429)
+
+    mocks.admitForUser.mockRejectedValue(new ProductionAnalysisAdmissionConflictError())
+    const conflict = await POST(
+      request({
+        analysisRunId: 'analysis:one',
+        idempotencyKey: 'analysis-idempotency-1',
+        requestedAt: '2026-07-26T00:00:00.000Z',
+        seedReviewId: 'seed-review:one'
+      }),
+      { params: Promise.resolve({ workspaceId: 'workspace:one', runId: 'run:one' }) }
+    )
+    expect(conflict.status).toBe(409)
     expect(mocks.startProductionAnalysisWorkflow).not.toHaveBeenCalled()
   })
 

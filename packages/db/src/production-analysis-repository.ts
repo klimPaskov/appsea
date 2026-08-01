@@ -12,7 +12,8 @@ import {
   type ProductionAnalysisReadModel,
   type ProductionAnalysisResult,
   type ProductionAnalysisSnapshot,
-  type ProductionResearchArtifact
+  type ProductionResearchArtifact,
+  type WorkflowActor
 } from '@appsea/contracts'
 import {
   decodeOpportunityReport,
@@ -27,6 +28,12 @@ import type { ObjectStore } from '@appsea/object-store'
 import { canonicalJson, contentHash } from './hash'
 import { IdempotencyConflictError, ImmutableRecordConflictError } from './fixture-repository'
 import { withAuthenticatedWorkspaceTransaction, withWorkspaceTransaction } from './transaction'
+import {
+  assertProductionAnalysisAdmissionConsumed,
+  consumeProductionAnalysisAdmissionInTransaction,
+  releaseProductionAnalysisAdmissionInTransaction,
+  ProductionAnalysisAdmissionRequiredError
+} from './production-analysis-admission-repository'
 
 const analysisVersion = 'production-analysis-v1'
 const clusterVersion = 'production-cluster-v1'
@@ -51,6 +58,8 @@ interface AnalysisRunRow extends QueryResultRow {
   score_snapshot_id: string | null
   report_id: string | null
   plan_package_id: string | null
+  requested_by_actor_type: 'user' | 'service'
+  requested_by_actor_id: string
   completed_at: Date | string | null
   invalidated_at: Date | string | null
   invalidation_reason: string | null
@@ -300,6 +309,17 @@ async function workspaceIsProduction(client: PoolClient, workspaceId: string): P
   )
 }
 
+function requestedByForInput(input: ProductionAnalysisPersistenceInput): WorkflowActor {
+  return input.requestedBy ?? { actorType: 'service', actorId: 'appsea-worker' }
+}
+
+function workflowInputHashForUser(input: ProductionAnalysisPersistenceInput): string {
+  if (!input.workflowInputHash) {
+    throw new ProductionAnalysisAdmissionRequiredError()
+  }
+  return input.workflowInputHash
+}
+
 async function readRun(
   client: PoolClient,
   workspaceId: string,
@@ -311,6 +331,7 @@ async function readRun(
             input_hash, artifact_id, artifact_snapshot, artifact_object_ref,
             report_object_ref, plan_object_ref, state, availability_state,
             opportunity_id, score_snapshot_id, report_id, plan_package_id,
+            requested_by_actor_type, requested_by_actor_id,
             completed_at, invalidated_at, invalidation_reason
        FROM appsea.production_analysis_runs
       WHERE workspace_id = $1 AND analysis_run_id = $2
@@ -331,6 +352,7 @@ async function readRunByIdempotency(
             input_hash, artifact_id, artifact_snapshot, artifact_object_ref,
             report_object_ref, plan_object_ref, state, availability_state,
             opportunity_id, score_snapshot_id, report_id, plan_package_id,
+            requested_by_actor_type, requested_by_actor_id,
             completed_at, invalidated_at, invalidation_reason
        FROM appsea.production_analysis_runs
       WHERE workspace_id = $1 AND idempotency_key = $2
@@ -559,6 +581,11 @@ export class PostgresProductionAnalysisRepository {
     input: ProductionAnalysisPersistenceInput,
     inputHash: string
   ): Promise<AnalysisRunRow> {
+    const requestedBy = requestedByForInput(input)
+    const workflowInputHash =
+      requestedBy.actorType === 'user'
+        ? workflowInputHashForUser(input)
+        : (input.workflowInputHash ?? inputHash)
     const create = async (): Promise<AnalysisRunRow> =>
       withWorkspaceTransaction(
         this.pool,
@@ -572,6 +599,13 @@ export class PostgresProductionAnalysisRepository {
           const existingById = await readRun(client, input.workspaceId, input.analysisRunId, true)
           if (existingById && existingById.idempotency_key !== input.idempotencyKey) {
             throw new ImmutableRecordConflictError('production analysis run', input.analysisRunId)
+          }
+          if (
+            existingById &&
+            (existingById.requested_by_actor_type !== requestedBy.actorType ||
+              existingById.requested_by_actor_id !== requestedBy.actorId)
+          ) {
+            throw new ImmutableRecordConflictError('production analysis actor', input.analysisRunId)
           }
           const existing = await readRunByIdempotency(
             client,
@@ -592,6 +626,17 @@ export class PostgresProductionAnalysisRepository {
             if (existing.state === 'completed') return existing
             if (['failed', 'canceled'].includes(existing.state)) {
               throw new ProductionAnalysisStateError(existing.analysis_run_id, existing.state)
+            }
+            if (requestedBy.actorType === 'user') {
+              assertProductionAnalysisAdmissionConsumed(
+                await consumeProductionAnalysisAdmissionInTransaction(
+                  client,
+                  input.workspaceId,
+                  input.idempotencyKey,
+                  workflowInputHash,
+                  requestedBy.actorId
+                )
+              )
             }
             await assertCollectionAndPolicyLineage(client, input)
             await assertEvidenceLineage(client, input)
@@ -624,6 +669,17 @@ export class PostgresProductionAnalysisRepository {
 
           await assertCollectionAndPolicyLineage(client, input)
           await assertEvidenceLineage(client, input)
+          if (requestedBy.actorType === 'user') {
+            assertProductionAnalysisAdmissionConsumed(
+              await consumeProductionAnalysisAdmissionInTransaction(
+                client,
+                input.workspaceId,
+                input.idempotencyKey,
+                workflowInputHash,
+                requestedBy.actorId
+              )
+            )
+          }
           const initialSnapshot = {
             mode: 'production-analysis',
             analysisRunId: input.analysisRunId,
@@ -648,11 +704,12 @@ export class PostgresProductionAnalysisRepository {
           await client.query(
             `INSERT INTO appsea.production_analysis_runs
              (workspace_id, analysis_run_id, collection_run_id, idempotency_key,
-              analysis_version, input_hash, artifact_id, artifact_snapshot, state,
+             analysis_version, input_hash, artifact_id, artifact_snapshot, state,
               availability_state, seed_review_id, seed_content_hash, coverage_gaps,
-              warnings, requested_at, started_at)
+              warnings, requested_by_actor_type, requested_by_actor_id,
+              requested_at, started_at)
            VALUES ($1, $2, $3, $4, $5, $6, $7, $8::jsonb, 'running', 'active',
-                   $9, $10, $11, $12, $13, $13)`,
+                   $9, $10, $11, $12, $13, $14, $15, $15)`,
             [
               input.workspaceId,
               input.analysisRunId,
@@ -666,6 +723,8 @@ export class PostgresProductionAnalysisRepository {
               input.artifact.opportunitySeedReview.contentHash,
               input.artifact.coverageGaps,
               input.artifact.warnings,
+              requestedBy.actorType,
+              requestedBy.actorId,
               input.requestedAt
             ]
           )
@@ -688,6 +747,15 @@ export class PostgresProductionAnalysisRepository {
           if (existingById) {
             if (existingById.input_hash !== inputHash) {
               throw new ImmutableRecordConflictError('production analysis run', input.analysisRunId)
+            }
+            if (
+              existingById.requested_by_actor_type !== requestedBy.actorType ||
+              existingById.requested_by_actor_id !== requestedBy.actorId
+            ) {
+              throw new ImmutableRecordConflictError(
+                'production analysis actor',
+                input.analysisRunId
+              )
             }
             if (existingById.availability_state !== 'active') {
               throw new ProductionAnalysisAvailabilityError(
@@ -713,6 +781,12 @@ export class PostgresProductionAnalysisRepository {
           if (existing.input_hash !== inputHash) {
             throw new IdempotencyConflictError(input.idempotencyKey)
           }
+          if (
+            existing.requested_by_actor_type !== requestedBy.actorType ||
+            existing.requested_by_actor_id !== requestedBy.actorId
+          ) {
+            throw new ImmutableRecordConflictError('production analysis actor', input.analysisRunId)
+          }
           if (existing.availability_state !== 'active') {
             throw new ProductionAnalysisAvailabilityError(
               existing.analysis_run_id,
@@ -722,6 +796,17 @@ export class PostgresProductionAnalysisRepository {
           if (existing.state === 'completed') return existing
           if (['failed', 'canceled'].includes(existing.state)) {
             throw new ProductionAnalysisStateError(existing.analysis_run_id, existing.state)
+          }
+          if (requestedBy.actorType === 'user') {
+            assertProductionAnalysisAdmissionConsumed(
+              await consumeProductionAnalysisAdmissionInTransaction(
+                client,
+                input.workspaceId,
+                input.idempotencyKey,
+                workflowInputHash,
+                requestedBy.actorId
+              )
+            )
           }
           await assertCollectionAndPolicyLineage(client, input)
           await assertEvidenceLineage(client, input)
@@ -750,6 +835,16 @@ export class PostgresProductionAnalysisRepository {
             AND state IN ('queued', 'running', 'partial')`,
         [input.workspaceId, input.analysisRunId, code, summary.slice(0, 500)]
       )
+      const requestedBy = requestedByForInput(input)
+      if (requestedBy.actorType === 'user') {
+        await releaseProductionAnalysisAdmissionInTransaction(
+          client,
+          input.workspaceId,
+          input.idempotencyKey,
+          workflowInputHashForUser(input),
+          requestedBy.actorId
+        )
+      }
     })
   }
 
@@ -1272,6 +1367,17 @@ export class PostgresProductionAnalysisRepository {
             ]
           )
 
+          const requestedBy = requestedByForInput(parsed)
+          if (requestedBy.actorType === 'user') {
+            await releaseProductionAnalysisAdmissionInTransaction(
+              client,
+              parsed.workspaceId,
+              parsed.idempotencyKey,
+              workflowInputHashForUser(parsed),
+              requestedBy.actorId
+            )
+          }
+
           await client.query(
             `INSERT INTO appsea.audit_events
              (workspace_id, audit_event_id, actor_type, actor_id, action, target_type,
@@ -1286,7 +1392,8 @@ export class PostgresProductionAnalysisRepository {
               JSON.stringify({
                 inputHash,
                 synthetic: false,
-                collectionRunId: parsed.collectionRunId
+                collectionRunId: parsed.collectionRunId,
+                requestedBy: requestedByForInput(parsed)
               }),
               completedAt
             ]

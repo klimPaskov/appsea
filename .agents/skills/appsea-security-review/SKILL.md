@@ -29,6 +29,11 @@ description: Use before merging AppSea work that touches sources, authentication
 5. Check logs, fixtures, and generated packages for sensitive data.
 6. Review approval gates for source activation and self-modification.
 7. Record findings by severity, evidence, owner, and fix status.
+8. For workflow ingress, verify a workspace-scoped digest-only admission is
+   reserved before the remote workflow call, consumed transactionally during
+   initialization, bounded by rate/concurrency limits, and bound to an
+   immutable authenticated actor. Ensure source and downstream-analysis
+   admissions cannot authorize each other.
 
 Do not approve a feature because it is fixture-only if the same contract will later handle real content.
 

@@ -12,6 +12,7 @@ import {
 import type {
   PostgresAuthRepository,
   PostgresDeletionPropagationRepository,
+  PostgresProductionAnalysisAdmissionRepository,
   PostgresProductionWorkflowAdmissionRepository,
   PostgresSourceCollectionLeaseRepository,
   PostgresSourceQuotaRepository
@@ -30,6 +31,8 @@ export interface SourceMaintenanceDependencies {
     Pick<PostgresDeletionPropagationRepository, 'enqueueExpired'>
   /** Production entry points provide this; legacy fixture test doubles may omit it. */
   admission?: Pick<PostgresProductionWorkflowAdmissionRepository, 'purge'>
+  /** Production entry points provide this; legacy fixture test doubles may omit it. */
+  analysisAdmission?: Pick<PostgresProductionAnalysisAdmissionRepository, 'purge'>
   /** Production entry points provide this; legacy fixture test doubles may omit it. */
   leases?: Pick<PostgresSourceCollectionLeaseRepository, 'purge'>
 }
@@ -106,6 +109,7 @@ export async function runSourceMaintenance(
   let deletionOpportunitiesInvalidated = 0
   let recomputationJobsQueued = 0
   let productionWorkflowAdmissionsPurged = 0
+  let productionAnalysisAdmissionsPurged = 0
   let sourceCollectionLeasesPurged = 0
   let retentionTombstonesQueued = 0
   if (dependencies.admission) {
@@ -118,6 +122,18 @@ export async function runSourceMaintenance(
         remaining
       )
       productionWorkflowAdmissionsPurged += purged
+    }
+  }
+  if (dependencies.analysisAdmission) {
+    for (const workspaceId of deletionWorkspaceIds) {
+      if (productionAnalysisAdmissionsPurged >= parsed.retentionBatchSize) break
+      const remaining = parsed.retentionBatchSize - productionAnalysisAdmissionsPurged
+      const purged = countWithin(
+        await dependencies.analysisAdmission.purge(workspaceId, before, remaining),
+        'productionAnalysisAdmissionsPurged',
+        remaining
+      )
+      productionAnalysisAdmissionsPurged += purged
     }
   }
   if (dependencies.leases) {
@@ -176,6 +192,7 @@ export async function runSourceMaintenance(
     quotaReservationsExpired,
     quotaReservationsPurged,
     productionWorkflowAdmissionsPurged,
+    productionAnalysisAdmissionsPurged,
     sourceCollectionLeasesPurged,
     retentionTombstonesQueued,
     deletionTombstonesProcessed,
