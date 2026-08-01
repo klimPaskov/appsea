@@ -235,9 +235,11 @@ for that pre-context authorization lookup.
   report or plan output.
 - Activity errors are converted to fixed retryable/non-retryable failure types;
   imported content cannot choose a retry policy, execute code, or edit guidance.
-- The local Temporal endpoint is loopback-only and the worker refuses production
-  mode. Production requires TLS/mTLS, namespace and task-queue authorization,
-  retention/encryption, HA, backups, worker identity, and monitoring before use.
+- The fixture Temporal endpoint is loopback-only and unauthenticated. The
+  long-lived worker and web client share a fail-closed endpoint contract:
+  production requires a non-loopback address, namespace, API key, and pinned
+  CA. Namespace/task-queue authorization, retention/encryption, HA, backups,
+  worker identity, and monitoring still require deployment proof before use.
 - PostgreSQL terminal transitions and composite lineage constraints remain the
   commit authority. The non-cancellable persistence safe point and reconciliation
   path prevent cancellation or response loss from creating a false success or a

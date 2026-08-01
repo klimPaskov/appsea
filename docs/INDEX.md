@@ -102,3 +102,4 @@
 - [`status/production-collection-cost-completion-report-2026-08-01.md`](status/production-collection-cost-completion-report-2026-08-01.md)
 - [`status/production-object-storage-completion-report-2026-08-01.md`](status/production-object-storage-completion-report-2026-08-01.md)
 - [`status/operational-health-completion-report-2026-08-01.md`](status/operational-health-completion-report-2026-08-01.md)
+- [`status/temporal-worker-configuration-completion-report-2026-08-01.md`](status/temporal-worker-configuration-completion-report-2026-08-01.md)

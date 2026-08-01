@@ -3,8 +3,11 @@ import { Connection, WorkflowClient } from '@temporalio/client'
 import { NativeConnection, Worker } from '@temporalio/worker'
 import { createDatabasePool, databaseConfigFromEnv } from '@appsea/db'
 import { objectStoreFromEnv } from '@appsea/object-store'
-import { fixtureResearchTaskQueue } from '@appsea/workflows'
-import { localTemporalAddressFromEnv } from './temporal-local'
+import {
+  fixtureResearchTaskQueue,
+  temporalClientConfigFromEnv,
+  temporalConnectionOptions
+} from '@appsea/workflows'
 import { createFixtureResearchActivities } from './workflow-activities'
 import { createProductionCollectionActivities } from './production-workflow-activities'
 import { createProductionAnalysisActivities } from './production-analysis-activities'
@@ -14,12 +17,13 @@ import { emitWorkerEvent, startWorkerHeartbeat } from './observability'
 
 const pool = createDatabasePool(databaseConfigFromEnv())
 const objectStore = objectStoreFromEnv(process.env)
-const temporalAddress = localTemporalAddressFromEnv()
-const workerConnection = await NativeConnection.connect({ address: temporalAddress })
-const clientConnection = await Connection.connect({ address: temporalAddress })
+const temporalConfig = temporalClientConfigFromEnv()
+const temporalOptions = temporalConnectionOptions(temporalConfig)
+const workerConnection = await NativeConnection.connect(temporalOptions)
+const clientConnection = await Connection.connect(temporalOptions)
 const workflowClient = new WorkflowClient({
   connection: clientConnection,
-  namespace: process.env.APPSEA_TEMPORAL_NAMESPACE?.trim() || 'default'
+  namespace: temporalConfig.namespace
 })
 const handoffDispatcher = createProductionAnalysisHandoffDispatcher(pool, workflowClient)
 const recomputeDispatcher = createProductionAnalysisRecomputeDispatcher(pool, workflowClient)

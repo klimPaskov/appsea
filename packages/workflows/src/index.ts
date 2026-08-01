@@ -34,3 +34,9 @@ export type {
   TerminateFixtureResearchActivityResult,
   TerminateProductionCollectionActivityResult
 } from './activity-contracts'
+export {
+  temporalClientConfigFromEnv,
+  temporalConnectionOptions,
+  TemporalConfigurationError,
+  type TemporalClientConfig
+} from './temporal-config'

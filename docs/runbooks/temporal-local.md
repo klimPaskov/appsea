@@ -45,9 +45,10 @@ To run one fixture request after the services and migrations are ready:
 pnpm worker:workflow:fixture
 ```
 
-The worker accepts `APPSEA_TEMPORAL_ADDRESS` only when it is a loopback host and
-an explicit valid port. It refuses to start with `NODE_ENV=production` because
-the local endpoint has no TLS or application authorization.
+The fixture command accepts `APPSEA_TEMPORAL_ADDRESS` only when it is a
+loopback host and an explicit valid port. The long-lived durable worker uses the
+shared endpoint contract instead: local loopback remains unauthenticated, while
+production requires a non-loopback address, namespace, API key, and pinned CA.
 
 ## What is covered
 
@@ -83,7 +84,8 @@ idempotency key is an error.
 ## Production boundary
 
 Do not expose this Compose Temporal server, SQLite history, local credentials, or
-unauthenticated UI to a network. A production runbook must be written after
-choosing the hosted/self-managed Temporal topology and must specify TLS/mTLS,
-namespace authorization, retention, encryption, HA, backups, restore tests,
+unauthenticated UI to a network. The worker/client configuration is now
+production-shaped, but a production runbook is still required after choosing
+the hosted/self-managed topology. It must specify TLS/mTLS, namespace and
+task-queue authorization, retention, encryption, HA, backups, restore tests,
 worker deployment, metrics, alerts, and incident response.

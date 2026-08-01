@@ -9,9 +9,11 @@ No live social platform is enabled. Fixture data cannot estimate market size, co
 The PostgreSQL schema, repository, migrations, RLS, local role bootstrap, and CI integration suite exist. Production role provisioning, secrets, verified TLS, backups, high availability, deployment, and migration approval automation do not.
 
 The fixture and production-collection workflow boundaries are durable locally
-and in CI, but there is no production Temporal topology, TLS/authentication,
-namespace authorization, HA, backup/restore policy, worker deployment, or
-alerting. Production billing and deployment configuration are also absent.
+and in CI. Web and worker clients now fail closed and support a non-loopback
+Temporal endpoint with namespace, API-key, and pinned-CA settings, but there is
+no production Temporal topology, namespace/task-queue authorization, HA,
+backup/restore policy, worker deployment, or alerting. Production billing and
+deployment configuration are also absent.
 
 Private workspace authentication is implemented for the web boundary with durable
 hashed sessions, PostgreSQL-backed login/signup throttling, bounded session

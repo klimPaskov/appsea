@@ -63,6 +63,13 @@ error details. The long-lived worker emits a secret-free `worker_heartbeat`
 every 30 seconds. These are deployment probes/signals, not scheduler,
 durable-metrics, alert-routing, or cloud deployment proof.
 
+The shared `@appsea/workflows` Temporal endpoint contract now serves both web
+and durable-worker connections. Loopback remains unauthenticated for fixture
+mode; production requires a non-loopback address, namespace, API key, and
+pinned CA for both the native activity connection and client connection.
+Topology, namespace/task-queue authorization, HA, retention, and deployment
+proof remain open.
+
 ## Validated commands
 
 - `pnpm verify` passed 2026-08-01: packages, samples, smoke, and repo checks.

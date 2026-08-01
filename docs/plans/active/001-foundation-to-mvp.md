@@ -144,8 +144,8 @@ Implemented:
   payloads.
 
 Remaining production work: legacy v1 history drain/retention for the analysis
-workflow, authenticated/TLS-protected Temporal, HA,
-provider object-store/backups retention and purge, deployment, metrics, alerts, deployed
+workflow, deployed Temporal topology and namespace/task-queue authorization,
+HA, provider object-store/backups retention and purge, deployment, metrics, alerts, deployed
 snapshot scheduler ownership, and worker crash fault-injection proof. Migration `0037` now queues deletion-triggered
 active-evidence repairs and the dispatcher reclaims stale dispatch claims with
 bounded terminal failure; deployed scheduling, alerting, and production
