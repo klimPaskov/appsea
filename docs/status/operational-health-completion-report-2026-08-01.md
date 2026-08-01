@@ -8,7 +8,8 @@ for deployment integration:
 - `GET /api/health/live` is dependency-free process liveness.
 - `GET /api/health/ready` checks PostgreSQL, authenticated Temporal, and the
   configured object-store adapter concurrently with a two-second per-check
-  deadline and returns `503` unless all checks pass.
+  deadline and returns `503` unless all checks pass. The object-store check is
+  configuration-only; it does not issue a remote read/write.
 - The long-lived worker emits `worker_heartbeat` every 30 seconds after
   startup and stops the timer during graceful shutdown.
 
@@ -39,4 +40,5 @@ This slice does not provide a deployed scheduler, durable cross-instance
 metrics, alert routing, production Temporal topology, provider backup/purge
 controls, source-policy approval, or identity-provider approval. Heartbeats and
 readiness are deployment contracts, not evidence that those external controls
-have been provisioned.
+have been provisioned; object-store provider reachability still needs a
+separate deployment monitor.
