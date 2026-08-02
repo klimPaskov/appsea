@@ -20,6 +20,7 @@ import type {
   PostgresSourceCollectionLeaseRepository,
   PostgresSourceQuotaRepository
 } from '@appsea/db'
+import type { CampaignRefreshResult } from './campaign-refresh-runner'
 
 const millisecondsPerDay = 24 * 60 * 60 * 1_000
 const maximumWorkspaceCount = 10_000
@@ -49,6 +50,8 @@ export interface SourceMaintenanceDependencies {
   snapshotReconciliation?: (
     workspaceId: string
   ) => Promise<SourceSnapshotReconciliationReadModel | null>
+  /** Dispatch bounded, policy-gated refreshes for private production campaigns. */
+  campaignRefresh?: () => Promise<CampaignRefreshResult>
 }
 
 export interface AuthRetentionDependencies {
@@ -144,6 +147,10 @@ export async function runSourceMaintenance(
   let sourceSnapshotReconciliationsRetried = 0
   let sourceSnapshotCoverageGaps = 0
   let retentionTombstonesQueued = 0
+  let campaignRefreshClaims = 0
+  let campaignRefreshDispatched = 0
+  let campaignRefreshFailed = 0
+  let campaignRefreshPolicyDenied = 0
   if (dependencies.admission) {
     for (const workspaceId of deletionWorkspaceIds) {
       if (productionWorkflowAdmissionsPurged >= parsed.retentionBatchSize) break
@@ -268,6 +275,19 @@ export async function runSourceMaintenance(
     }
   }
 
+  if (dependencies.campaignRefresh && parsed.campaignRefreshBatchSize > 0) {
+    await assertLease()
+    const refresh = await dependencies.campaignRefresh()
+    campaignRefreshClaims = countWithin(refresh.claims, 'campaignRefreshClaims', 100)
+    campaignRefreshDispatched = countWithin(refresh.dispatched, 'campaignRefreshDispatched', 100)
+    campaignRefreshFailed = countWithin(refresh.failed, 'campaignRefreshFailed', 100)
+    campaignRefreshPolicyDenied = countWithin(
+      refresh.policyDenied,
+      'campaignRefreshPolicyDenied',
+      100
+    )
+  }
+
   return sourceMaintenanceResultSchema.parse({
     jobId: parsed.jobId,
     quotaWorkspacesScanned: quotaWorkspaceIds.length,
@@ -284,6 +304,10 @@ export async function runSourceMaintenance(
     sourceSnapshotReconciliationsFailed,
     sourceSnapshotReconciliationsRetried,
     sourceSnapshotCoverageGaps,
+    campaignRefreshClaims,
+    campaignRefreshDispatched,
+    campaignRefreshFailed,
+    campaignRefreshPolicyDenied,
     retentionTombstonesQueued,
     deletionTombstonesProcessed,
     deletionObjectsAffected,

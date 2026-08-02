@@ -67,7 +67,12 @@ export {
   ResearchCampaignConflictError,
   ResearchCampaignPermissionError,
   ResearchCampaignSourceError,
-  ResearchCampaignStateError
+  ResearchCampaignStateError,
+  ResearchCampaignRefreshClaimLostError,
+  type ResearchCampaignRefreshClaim,
+  type ResearchCampaignRefreshDispatch,
+  type ResearchCampaignRefreshFailure,
+  type ResearchCampaignRefreshRequestBinding
 } from './research-campaign-repository'
 export { PostgresProductionCollectionWorkflowRepository } from './production-collection-workflow-repository'
 export {

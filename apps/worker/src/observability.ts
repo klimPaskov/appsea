@@ -35,6 +35,10 @@ export interface WorkerEvent {
   sourceSnapshotReconciliationsFailed?: number
   sourceSnapshotReconciliationsRetried?: number
   sourceSnapshotCoverageGaps?: number
+  campaignRefreshClaims?: number
+  campaignRefreshDispatched?: number
+  campaignRefreshFailed?: number
+  campaignRefreshPolicyDenied?: number
   retentionTombstonesQueued?: number
   deletionTombstonesProcessed?: number
   deletionObjectsAffected?: number
@@ -199,6 +203,18 @@ export function emitWorkerEvent(event: WorkerEvent): void {
       : {}),
     ...(finiteInteger(event.sourceSnapshotCoverageGaps) !== undefined
       ? { sourceSnapshotCoverageGaps: finiteInteger(event.sourceSnapshotCoverageGaps) }
+      : {}),
+    ...(finiteInteger(event.campaignRefreshClaims) !== undefined
+      ? { campaignRefreshClaims: finiteInteger(event.campaignRefreshClaims) }
+      : {}),
+    ...(finiteInteger(event.campaignRefreshDispatched) !== undefined
+      ? { campaignRefreshDispatched: finiteInteger(event.campaignRefreshDispatched) }
+      : {}),
+    ...(finiteInteger(event.campaignRefreshFailed) !== undefined
+      ? { campaignRefreshFailed: finiteInteger(event.campaignRefreshFailed) }
+      : {}),
+    ...(finiteInteger(event.campaignRefreshPolicyDenied) !== undefined
+      ? { campaignRefreshPolicyDenied: finiteInteger(event.campaignRefreshPolicyDenied) }
       : {}),
     ...(finiteInteger(event.retentionTombstonesQueued) !== undefined
       ? { retentionTombstonesQueued: finiteInteger(event.retentionTombstonesQueued) }

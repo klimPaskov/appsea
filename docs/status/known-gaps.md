@@ -9,8 +9,11 @@ visible. Owners/editors can start a bounded one-source run from the campaign
 page; the route derives collection inputs from the stored campaign and admits
 the idempotency digest before Temporal. Owners/editors can now replace draft
 intent through a validated PATCH boundary, and DELETE archives without
-removing run or evidence lineage. Pagination, scheduled refresh, multi-source
-orchestration, and a source-picker control are not implemented. The read-only source registry now exposes policy readiness,
+removing run or evidence lineage. Pagination, multi-source orchestration, and
+a source-picker control are not implemented. Scheduled refresh now has a
+durable campaign claim/dispatch boundary in the existing lease-backed source
+maintenance worker; deployment-level scheduler ownership and Temporal remain
+open. The read-only source registry now exposes policy readiness,
 quotas, deletion duties, and coverage notes, but it cannot activate a source.
 The page now lists the latest 100 production run projections and
 links completed runs to evidence inspection without exposing hashes or source
@@ -26,8 +29,8 @@ analysis run and the worker keeps it outside the idempotency hash; migration
 `0056` adds at most ten server-clock attempt rows with stage heartbeats,
 duration, and fixed terminal failure codes. Queued and running fallback rows
 expose observed attempts without source content. The start action is still
-manual and approved-seed-only. Periodic deployment alerting, automatic
-scheduling, and production Temporal availability remain open.
+manual and approved-seed-only. Periodic deployment alerting, production
+Temporal availability, and production scheduler ownership remain open.
 
 Source-policy approval integrity is now database-bound: new approvals require a
 canonical reviewer identity, an independent legal/privacy/security role, and an

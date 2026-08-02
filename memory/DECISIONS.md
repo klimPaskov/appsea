@@ -337,13 +337,6 @@ reconstructs collection inputs from the authenticated campaign, rechecks
 policy, and commits admission before Temporal. The first boundary is one
 non-synthetic source; fan-out, scheduling, and activation remain reviewed work.
 
-## 2026-08-02: Keep campaign run history safe and projection-backed
-
-Campaign history reuses the authenticated production workflow projection,
-bounded to 100 rows. It exposes state, checkpoint, source/policy IDs, counters,
-and timestamps only; hashes, actor details, and payloads stay private. Completed
-runs link to the existing policy-filtered evidence page.
-
 ## 2026-08-02: Make reviewed analysis handoff explicit and safe
 
 Collection completion is not analysis. The private collection page
@@ -356,3 +349,10 @@ failure summary, and timestamps. Hashes, object references, source payloads,
 and seed content stay out of the read contract. Migration `0055` persists the
 activity attempt outside the idempotency hash, while `0056` adds ten
 server-clock attempt rows with stage heartbeat and fixed failure codes.
+
+## 2026-08-02: Reuse the maintenance lease for campaign refresh dispatch
+
+Migration `0058` stores due time, claim token, workflow identity, pending
+request, attempts, and fixed failure state. Source maintenance claims due
+non-fixture campaigns, rechecks policy, binds before admission, and starts an
+idempotent workflow; stale claims reclaim; denied sources inactive.

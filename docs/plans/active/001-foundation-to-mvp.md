@@ -25,7 +25,7 @@ Status: production-shaped foundation implemented and validated locally; producti
 
 Implemented:
 
-- PostgreSQL 18 schema and fifty-seven forward, checksummed migrations
+- PostgreSQL 18 schema and fifty-eight forward, checksummed migrations
 - normalized source, evidence, complaint, cluster, competitor, opportunity, score, report, plan, audit, cost, deletion, outbox, and lineage tables
 - no-login owner, separate migrator, and least-privilege runtime role contract
 - forced workspace RLS and transaction-scoped workspace context
@@ -153,13 +153,21 @@ lifecycle state and narrowly grants user-editable name/purpose columns;
 connector activation and workflow admission remain separate reviewed
 boundaries.
 
+Migration `0058_campaign_refresh_scheduler.sql` adds server-owned due times,
+crash-recoverable claim tokens, pending source-policy-bound request lineage,
+bounded attempts, and fixed failure state to the campaign aggregate. The
+existing lease-backed source-maintenance worker claims and dispatches due
+non-fixture campaigns through the same policy and production admission gates
+as manual starts; archive and draft edits clear pending claims. Deployment
+Temporal, scheduler ownership, and external CFPB approval remain open.
+
 The campaign run boundary now consumes that persisted intent through the
 authenticated `POST /api/workspaces/:workspaceId/campaigns/:campaignId/run`
 route. It is intentionally one-source for this tranche: the route rechecks
 the current approved policy, purpose, display mode, expiry, budget, and any
 approved seed review, derives all collection inputs server-side, and commits
 the existing idempotent admission before starting Temporal. Multi-source
-orchestration and scheduling remain open. Campaign edits now replace draft
+orchestration remains open. Campaign edits now replace draft
 intent through a validated PATCH boundary, while DELETE archives without
 deleting run/evidence lineage. The private
 campaign surface now lists the latest 100 production workflow projections and
@@ -171,7 +179,8 @@ validates workflow workspace prefixes, and excludes hashes, object references,
 source payloads, and seed content. Migration `0055` records the highest
 bounded Temporal activity attempt on the run without changing input idempotency;
 `0056` now supplies bounded attempt timing and heartbeat history. Periodic
-deployment alerting, scheduling, and production Temporal remain open.
+deployment alerting, deployed scheduler ownership, and production Temporal
+remain open; repository-level campaign refresh dispatch is implemented.
 
 The source coverage tranche adds a strict `workspaceSourceReadModel` and an
 authenticated read-only registry at `/workspace/:workspaceId/sources` plus

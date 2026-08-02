@@ -129,3 +129,4 @@
 - [`status/production-analysis-attempt-telemetry-completion-report-2026-08-02.md`](status/production-analysis-attempt-telemetry-completion-report-2026-08-02.md)
 - [`status/production-analysis-attempt-history-completion-report-2026-08-02.md`](status/production-analysis-attempt-history-completion-report-2026-08-02.md)
 - [`status/research-campaign-lifecycle-completion-report-2026-08-02.md`](status/research-campaign-lifecycle-completion-report-2026-08-02.md)
+- [`status/research-campaign-refresh-scheduler-completion-report-2026-08-02.md`](status/research-campaign-refresh-scheduler-completion-report-2026-08-02.md)

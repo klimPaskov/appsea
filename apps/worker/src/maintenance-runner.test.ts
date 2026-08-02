@@ -134,6 +134,10 @@ describe('maintenance runners', () => {
       sourceSnapshotReconciliationsFailed: 0,
       sourceSnapshotReconciliationsRetried: 0,
       sourceSnapshotCoverageGaps: 0,
+      campaignRefreshClaims: 0,
+      campaignRefreshDispatched: 0,
+      campaignRefreshFailed: 0,
+      campaignRefreshPolicyDenied: 0,
       retentionTombstonesQueued: 0,
       deletionTombstonesProcessed: 2,
       deletionObjectsAffected: 8,
@@ -529,6 +533,54 @@ describe('maintenance runners', () => {
         }
       )
     ).rejects.toThrow('quotaReservationsExpired')
+  })
+
+  it('runs the bounded campaign refresh callback only when configured', async () => {
+    let calls = 0
+    const result = await runSourceMaintenance(
+      {
+        jobId: 'maintenance:source:campaign-refresh',
+        occurredAt,
+        quotaBatchSize: 1,
+        deletionBatchSize: 1,
+        retentionBatchSize: 1,
+        snapshotReconciliationBatchSize: 0,
+        campaignRefreshBatchSize: 1,
+        quotaRetentionDays: 7,
+        workspaceId: null
+      },
+      {
+        quota: {
+          async listActiveWorkspaceIds() {
+            return []
+          },
+          async expireStale() {
+            return 0
+          },
+          async purgeSettled() {
+            return 0
+          }
+        },
+        deletion: {
+          async listActiveWorkspaceIds() {
+            return []
+          },
+          async enqueueExpired() {
+            return 0
+          },
+          async processNext() {
+            return null
+          }
+        },
+        campaignRefresh: async () => {
+          calls += 1
+          return { workspacesScanned: 2, claims: 1, dispatched: 1, failed: 0, policyDenied: 0 }
+        }
+      }
+    )
+
+    expect(calls).toBe(1)
+    expect(result).toMatchObject({ campaignRefreshClaims: 1, campaignRefreshDispatched: 1 })
   })
 
   it('rejects an unbounded workspace enumeration before doing maintenance work', async () => {

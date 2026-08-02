@@ -106,6 +106,17 @@ export default async function ResearchCampaignsPage({
                           .join(' · ')
                       : 'not registered'}
                   </p>
+                  {campaign.refreshSchedule ? (
+                    <p className="muted-note">
+                      Refresh: {campaign.refreshSchedule.state}
+                      {campaign.refreshSchedule.nextDueAt
+                        ? ` · next ${campaign.refreshSchedule.nextDueAt}`
+                        : ''}
+                      {campaign.refreshSchedule.failureSummary
+                        ? ` · ${campaign.refreshSchedule.failureSummary}`
+                        : ''}
+                    </p>
+                  ) : null}
                   <ResearchCampaignRunAction
                     workspaceId={parsedWorkspaceId.data}
                     campaignId={campaign.campaignId}

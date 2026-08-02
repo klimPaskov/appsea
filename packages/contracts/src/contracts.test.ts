@@ -45,6 +45,7 @@ import {
   researchCampaignCreateInputSchema,
   researchCampaignReadModelSchema,
   researchCampaignUpdateInputSchema,
+  researchCampaignRefreshScheduleReadModelSchema,
   researchCampaignRunInputSchema,
   researchCampaignRunReadModelSchema,
   sourcePolicySchema,
@@ -683,6 +684,10 @@ describe('contracts', () => {
         sourceSnapshotReconciliationsFailed: 0,
         sourceSnapshotReconciliationsRetried: 1,
         sourceSnapshotCoverageGaps: 3,
+        campaignRefreshClaims: 1,
+        campaignRefreshDispatched: 1,
+        campaignRefreshFailed: 0,
+        campaignRefreshPolicyDenied: 0,
         retentionTombstonesQueued: 5,
         deletionTombstonesProcessed: 6,
         deletionObjectsAffected: 7,
@@ -710,6 +715,10 @@ describe('contracts', () => {
         sourceSnapshotReconciliationsFailed: 0,
         sourceSnapshotReconciliationsRetried: 1,
         sourceSnapshotCoverageGaps: 3,
+        campaignRefreshClaims: 1,
+        campaignRefreshDispatched: 1,
+        campaignRefreshFailed: 0,
+        campaignRefreshPolicyDenied: 0,
         retentionTombstonesQueued: 5,
         deletionTombstonesProcessed: 5,
         deletionObjectsAffected: 10_000_001,
@@ -1369,6 +1378,30 @@ describe('contracts', () => {
         updatedAt: now
       })
     ).toMatchObject({ state: 'draft', sources: [{ enabled: false }] })
+    expect(
+      researchCampaignRefreshScheduleReadModelSchema.parse({
+        state: 'scheduled',
+        refreshPolicy: 'weekly',
+        nextDueAt: now,
+        lastRunId: null,
+        lastWorkflowId: null,
+        lastStartedAt: null,
+        failureCode: null,
+        failureSummary: null
+      })
+    ).toMatchObject({ state: 'scheduled', refreshPolicy: 'weekly' })
+    expect(
+      researchCampaignRefreshScheduleReadModelSchema.safeParse({
+        state: 'scheduled',
+        refreshPolicy: 'manual',
+        nextDueAt: now,
+        lastRunId: null,
+        lastWorkflowId: null,
+        lastStartedAt: null,
+        failureCode: 'APPSEA_REFRESH_NOT_A_REAL_CODE',
+        failureSummary: null
+      }).success
+    ).toBe(false)
     expect(
       researchCampaignRunInputSchema.safeParse({
         runId: 'run:billing',

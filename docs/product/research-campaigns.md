@@ -80,8 +80,22 @@ budget, and verifies any optional seed review is approved for the workspace.
 The digest-only admission ledger is committed before Temporal is contacted, so
 rate, concurrency, and idempotency failures do not start a workflow. A pending
 or mismatched policy remains a visible coverage gap and returns a bounded
-validation error. Multi-source orchestration, scheduling, and connector
-activation remain separate reviewed work.
+validation error. Multi-source orchestration and connector activation remain
+separate reviewed work. Non-manual refresh policies are dispatched by the
+existing lease-backed source-maintenance worker, not by a browser request.
+
+## Scheduled refresh
+
+`daily`, `weekly`, and `monthly` policies persist a server-owned due timestamp
+on the campaign. The maintenance worker claims one due campaign at a time with
+a bounded lease, derives the source-policy-bound production request, stores its
+idempotency/input digests, and admits it through the same per-workspace gate as
+manual starts before contacting Temporal. A stale claim can be reclaimed; a
+policy denial, unsupported source, admission limit, or Temporal failure clears
+or retries the pending request with a fixed code and bounded delay. The private
+campaign read model exposes `manual`, `scheduled`, `dispatching`, or `failed`
+state and any visible failure summary. The scheduler never activates a source,
+uses fixture data as production evidence, or hides a coverage gap.
 
 ## Run history and inspection
 

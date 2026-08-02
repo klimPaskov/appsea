@@ -122,6 +122,16 @@ alerting; the direct resume command remains useful for targeted recovery.
 Deployed scheduler ownership, service-role separation/secret rotation, and
 legal/privacy/security activation remain release gates.
 
+Migration `0058_campaign_refresh_scheduler.sql` adds the same bounded pass's
+campaign refresh dispatch. For each active workspace it claims at most one due
+non-fixture campaign, persists a deterministic production run/workflow
+identity, binds the source-policy-derived request, and admits it through the
+existing production workflow ledger before Temporal. A stale claim is
+reclaimable. Policy denial or unsupported-source failures clear the pending
+request; admission and Temporal failures retain it for a bounded retry. The
+campaign page exposes the resulting state and failure summary. This path never
+activates a source or treats a fixture as market evidence.
+
 The direct filtered collection command uses the same service-principal
 boundary. Migration `0051` makes `pnpm worker:source:cfpb` reserve and consume
 the shared production workflow admission ledger immediately before the CFPB
@@ -159,6 +169,7 @@ Configuration is bounded by the command:
 - `APPSEA_DELETION_BATCH_SIZE` (1-1,000, default 100)
 - `APPSEA_RETENTION_BATCH_SIZE` (1-1,000, default 100)
 - `APPSEA_SOURCE_SNAPSHOT_RECONCILIATION_BATCH_SIZE` (0-100, default 1)
+- `APPSEA_CAMPAIGN_REFRESH_BATCH_SIZE` (0-100, default 1)
 - `APPSEA_SOURCE_QUOTA_RETENTION_DAYS` (1-3,650, default 30)
 - `APPSEA_DELETION_WORKSPACE_ID` (optional persistence-safe workspace ID)
 - `APPSEA_OBJECT_STORE_ROOT` (required absolute object-store adapter root)
@@ -173,7 +184,8 @@ Configuration is bounded by the command:
 The worker emits secret-free quota expiry/purge, production collection and
 analysis admission purge, source-collection-lease purge, snapshot
 reconciliation state/coverage counters, retention enqueue, deletion
-propagation, output-object purge, and failure events. Snapshot counters never
+propagation, output-object purge, campaign refresh dispatch, and failure
+events. Snapshot and campaign counters never
 include raw source content or caller idempotency keys.
 `sourceMaintenanceInputSchema` validates the configuration
 before repository work, and `runSourceMaintenance` returns bounded counters

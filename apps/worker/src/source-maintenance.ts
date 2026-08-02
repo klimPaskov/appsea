@@ -1,3 +1,4 @@
+import { Connection, WorkflowClient } from '@temporalio/client'
 import { sourceMaintenanceInputSchema, type SourceMaintenanceResult } from '@appsea/contracts'
 import { objectStoreFromEnv } from '@appsea/object-store'
 import {
@@ -7,6 +8,8 @@ import {
   PostgresProductionAnalysisAdmissionRepository,
   PostgresProductionAnalysisObjectPurgeRepository,
   PostgresProductionWorkflowAdmissionRepository,
+  PostgresResearchCampaignRepository,
+  PostgresSourcePolicyRepository,
   PostgresMaintenanceSchedulerLeaseRepository,
   PostgresMaintenanceSchedulerRunRepository,
   PostgresSourceCollectionLeaseRepository,
@@ -27,6 +30,12 @@ import {
   defaultSourceSnapshotReconciliationDependencies,
   runNextProductionCfpbSnapshotReconciliation
 } from './production-cfpb-reconciliation'
+import { runCampaignRefresh } from './campaign-refresh-runner'
+import {
+  startProductionCollectionWorkflow,
+  temporalClientConfigFromEnv,
+  temporalConnectionOptions
+} from '@appsea/workflows'
 
 const taskQueue = 'appsea-source-maintenance-v1'
 const quotaBatchSize = Number(process.env.APPSEA_SOURCE_QUOTA_EXPIRY_BATCH_SIZE ?? '1000')
@@ -35,6 +44,7 @@ const retentionBatchSize = Number(process.env.APPSEA_RETENTION_BATCH_SIZE ?? '10
 const snapshotReconciliationBatchSize = Number(
   process.env.APPSEA_SOURCE_SNAPSHOT_RECONCILIATION_BATCH_SIZE ?? '1'
 )
+const campaignRefreshBatchSize = Number(process.env.APPSEA_CAMPAIGN_REFRESH_BATCH_SIZE ?? '1')
 const quotaRetentionDays = Number(process.env.APPSEA_SOURCE_QUOTA_RETENTION_DAYS ?? '30')
 const input = {
   jobId:
@@ -45,6 +55,7 @@ const input = {
   deletionBatchSize,
   retentionBatchSize,
   snapshotReconciliationBatchSize,
+  campaignRefreshBatchSize,
   quotaRetentionDays,
   workspaceId: process.env.APPSEA_DELETION_WORKSPACE_ID ?? null
 }
@@ -54,6 +65,8 @@ const validatedJobId = sourceMaintenanceInputSchema.safeParse(input).success
 const objectStore = objectStoreFromEnv(process.env)
 const pool = createDatabasePool(databaseConfigFromEnv())
 let maintenancePool: ReturnType<typeof createDatabasePool> | undefined
+let temporalConnection: Connection | undefined
+let temporalClient: WorkflowClient | undefined
 
 try {
   maintenancePool = createDatabasePool(maintenanceDatabaseConfigFromEnv())
@@ -91,7 +104,11 @@ try {
           deletionTombstonesProcessed: result.deletionTombstonesProcessed,
           deletionObjectsAffected: result.deletionObjectsAffected,
           deletionOpportunitiesInvalidated: result.deletionOpportunitiesInvalidated,
-          recomputationJobsQueued: result.recomputationJobsQueued
+          recomputationJobsQueued: result.recomputationJobsQueued,
+          campaignRefreshClaims: result.campaignRefreshClaims,
+          campaignRefreshDispatched: result.campaignRefreshDispatched,
+          campaignRefreshFailed: result.campaignRefreshFailed,
+          campaignRefreshPolicyDenied: result.campaignRefreshPolicyDenied
         })
       }
     },
@@ -100,6 +117,8 @@ try {
       const quotaRepository = new PostgresSourceQuotaRepository(pool)
       const deletionRepository = new PostgresDeletionPropagationRepository(pool)
       const admissionRepository = new PostgresProductionWorkflowAdmissionRepository(pool)
+      const campaignRepository = new PostgresResearchCampaignRepository(pool)
+      const policyRepository = new PostgresSourcePolicyRepository(pool)
       const analysisAdmissionRepository = new PostgresProductionAnalysisAdmissionRepository(pool)
       const objectPurgeRepository = new PostgresProductionAnalysisObjectPurgeRepository(
         pool,
@@ -120,6 +139,35 @@ try {
           await assertLease()
           return runNextProductionCfpbSnapshotReconciliation(workspaceId, snapshotDependencies)
         },
+        campaignRefresh: async () =>
+          runCampaignRefresh(
+            {
+              batchSize: input.campaignRefreshBatchSize,
+              claimOwner: ownerId,
+              claimLeaseSeconds: leaseSeconds,
+              retryAfterSeconds: 300,
+              occurredAt: input.occurredAt,
+              assertLease,
+              fence
+            },
+            {
+              campaigns: campaignRepository,
+              policies: policyRepository,
+              admission: admissionRepository,
+              startWorkflow: async (request) => {
+                if (!temporalClient) {
+                  const config = temporalClientConfigFromEnv()
+                  temporalConnection = await Connection.connect(temporalConnectionOptions(config))
+                  temporalClient = new WorkflowClient({
+                    connection: temporalConnection,
+                    namespace: config.namespace
+                  })
+                }
+                const handle = await startProductionCollectionWorkflow(temporalClient, request)
+                return { workflowId: handle.workflowId }
+              }
+            }
+          ),
         assertLease
       })
     }
@@ -141,8 +189,23 @@ try {
       quotaReservationsPurged: result.quotaReservationsPurged,
       productionWorkflowAdmissionsPurged: result.productionWorkflowAdmissionsPurged,
       productionAnalysisAdmissionsPurged: result.productionAnalysisAdmissionsPurged,
-      sourceCollectionLeasesPurged: result.sourceCollectionLeasesPurged
+      sourceCollectionLeasesPurged: result.sourceCollectionLeasesPurged,
+      campaignRefreshClaims: result.campaignRefreshClaims,
+      campaignRefreshDispatched: result.campaignRefreshDispatched,
+      campaignRefreshFailed: result.campaignRefreshFailed,
+      campaignRefreshPolicyDenied: result.campaignRefreshPolicyDenied
     })
+    if (result.campaignRefreshClaims > 0) {
+      emitWorkerEvent({
+        event: 'campaign_refresh_batch_finished',
+        taskQueue,
+        jobId: result.jobId,
+        campaignRefreshClaims: result.campaignRefreshClaims,
+        campaignRefreshDispatched: result.campaignRefreshDispatched,
+        campaignRefreshFailed: result.campaignRefreshFailed,
+        campaignRefreshPolicyDenied: result.campaignRefreshPolicyDenied
+      })
+    }
     if (result.sourceSnapshotReconciliationsProcessed > 0) {
       emitWorkerEvent({
         event: 'source_snapshot_reconciliation_batch_finished',
@@ -200,6 +263,10 @@ try {
       sourceSnapshotReconciliationsFailed: result.sourceSnapshotReconciliationsFailed,
       sourceSnapshotReconciliationsRetried: result.sourceSnapshotReconciliationsRetried,
       sourceSnapshotCoverageGaps: result.sourceSnapshotCoverageGaps,
+      campaignRefreshClaims: result.campaignRefreshClaims,
+      campaignRefreshDispatched: result.campaignRefreshDispatched,
+      campaignRefreshFailed: result.campaignRefreshFailed,
+      campaignRefreshPolicyDenied: result.campaignRefreshPolicyDenied,
       retentionTombstonesQueued: result.retentionTombstonesQueued,
       deletionTombstonesProcessed: result.deletionTombstonesProcessed,
       deletionObjectsAffected: result.deletionObjectsAffected,
@@ -218,4 +285,5 @@ try {
 } finally {
   await pool.end()
   if (maintenancePool) await maintenancePool.end()
+  if (temporalConnection) await temporalConnection.close()
 }

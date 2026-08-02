@@ -1277,6 +1277,8 @@ export const researchCampaignStateSchema = z.enum([
   'archived'
 ])
 
+export const researchCampaignRefreshPolicySchema = z.enum(['manual', 'daily', 'weekly', 'monthly'])
+
 export const researchCampaignConfigurationSchema = z
   .object({
     schemaVersion: z.literal('campaign-v1'),
@@ -1294,7 +1296,7 @@ export const researchCampaignConfigurationSchema = z
       .strict(),
     exclusions: z.array(z.string().min(1).max(240)).max(100),
     maxEvidenceCount: z.number().int().min(1).max(5_000),
-    refreshPolicy: z.enum(['manual', 'daily', 'weekly', 'monthly']),
+    refreshPolicy: researchCampaignRefreshPolicySchema,
     sensitiveTopicPolicy: z.enum(['exclude', 'review']),
     requestedDisplayMode: z.enum(['excerpt', 'metadata-only', 'aggregate-only'])
   })
@@ -1343,6 +1345,42 @@ export const researchCampaignUpdateInputSchema = z
   })
   .strict()
 
+export const researchCampaignRefreshScheduleStateSchema = z.enum([
+  'manual',
+  'scheduled',
+  'dispatching',
+  'failed'
+])
+
+export const researchCampaignRefreshFailureCodeSchema = z.enum([
+  'APPSEA_REFRESH_POLICY_DENIED',
+  'APPSEA_REFRESH_SOURCE_UNSUPPORTED',
+  'APPSEA_REFRESH_INPUT_INVALID',
+  'APPSEA_REFRESH_ADMISSION_RATE_LIMITED',
+  'APPSEA_REFRESH_ADMISSION_CONCURRENCY_LIMITED',
+  'APPSEA_REFRESH_TEMPORAL_UNAVAILABLE',
+  'APPSEA_REFRESH_CLAIM_LOST',
+  'APPSEA_REFRESH_FAILED'
+])
+
+export const researchCampaignRefreshScheduleReadModelSchema = z
+  .object({
+    state: researchCampaignRefreshScheduleStateSchema,
+    refreshPolicy: researchCampaignRefreshPolicySchema,
+    nextDueAt: z.string().datetime().nullable(),
+    lastRunId: appseaIdentifierSchema.nullable(),
+    lastWorkflowId: z
+      .string()
+      .min(3)
+      .max(240)
+      .regex(/^[a-z][a-z0-9_:-]*$/)
+      .nullable(),
+    lastStartedAt: z.string().datetime().nullable(),
+    failureCode: researchCampaignRefreshFailureCodeSchema.nullable(),
+    failureSummary: z.string().max(240).nullable()
+  })
+  .strict()
+
 export const researchCampaignSourceReadModelSchema = z
   .object({
     sourceId: appseaIdentifierSchema,
@@ -1375,6 +1413,7 @@ export const researchCampaignReadModelSchema = z
     budget: z.union([researchJobBudgetSchema, legacyResearchCampaignBudgetSchema]),
     synthetic: z.boolean(),
     sources: z.array(researchCampaignSourceReadModelSchema).max(16),
+    refreshSchedule: researchCampaignRefreshScheduleReadModelSchema.nullable().optional(),
     createdAt: z.string().datetime(),
     updatedAt: z.string().datetime()
   })
@@ -2889,6 +2928,8 @@ export const sourceMaintenanceInputSchema = z
     retentionBatchSize: z.number().int().min(1).max(1_000),
     /** Maximum number of due snapshot jobs to resume across this pass. */
     snapshotReconciliationBatchSize: z.number().int().min(0).max(100),
+    /** Maximum number of due private campaign refreshes to dispatch. */
+    campaignRefreshBatchSize: z.number().int().min(0).max(100).default(0),
     quotaRetentionDays: z.number().int().min(1).max(3_650),
     workspaceId: appseaIdentifierSchema.nullable()
   })
@@ -2911,6 +2952,10 @@ export const sourceMaintenanceResultSchema = z
     sourceSnapshotReconciliationsFailed: z.number().int().nonnegative().max(100),
     sourceSnapshotReconciliationsRetried: z.number().int().nonnegative().max(100),
     sourceSnapshotCoverageGaps: z.number().int().nonnegative().max(5_000),
+    campaignRefreshClaims: z.number().int().nonnegative().max(100),
+    campaignRefreshDispatched: z.number().int().nonnegative().max(100),
+    campaignRefreshFailed: z.number().int().nonnegative().max(100),
+    campaignRefreshPolicyDenied: z.number().int().nonnegative().max(100),
     retentionTombstonesQueued: z.number().int().nonnegative().max(1_000),
     deletionTombstonesProcessed: z.number().int().nonnegative().max(1_000),
     deletionObjectsAffected: z.number().int().nonnegative().max(10_000_000),
@@ -3576,9 +3621,19 @@ export type ScoreFactors = z.infer<typeof scoreFactorsSchema>
 export type ScoreSnapshot = z.infer<typeof scoreSnapshotSchema>
 export type Opportunity = z.infer<typeof opportunitySchema>
 export type ResearchCampaignState = z.infer<typeof researchCampaignStateSchema>
+export type ResearchCampaignRefreshPolicy = z.infer<typeof researchCampaignRefreshPolicySchema>
 export type ResearchCampaignConfiguration = z.infer<typeof researchCampaignConfigurationSchema>
 export type ResearchCampaignCreateInput = z.infer<typeof researchCampaignCreateInputSchema>
 export type ResearchCampaignUpdateInput = z.infer<typeof researchCampaignUpdateInputSchema>
+export type ResearchCampaignRefreshScheduleState = z.infer<
+  typeof researchCampaignRefreshScheduleStateSchema
+>
+export type ResearchCampaignRefreshFailureCode = z.infer<
+  typeof researchCampaignRefreshFailureCodeSchema
+>
+export type ResearchCampaignRefreshScheduleReadModel = z.infer<
+  typeof researchCampaignRefreshScheduleReadModelSchema
+>
 export type ResearchCampaignRunInput = z.infer<typeof researchCampaignRunInputSchema>
 export type ResearchCampaignSourceReadModel = z.infer<typeof researchCampaignSourceReadModelSchema>
 export type ResearchCampaignReadModel = z.infer<typeof researchCampaignReadModelSchema>
@@ -3789,7 +3844,7 @@ export type MaintenanceSchedulerRunPurgeInput = z.infer<
 export type MaintenanceSchedulerRunReadModel = z.infer<
   typeof maintenanceSchedulerRunReadModelSchema
 >
-export type SourceMaintenanceInput = z.infer<typeof sourceMaintenanceInputSchema>
+export type SourceMaintenanceInput = z.input<typeof sourceMaintenanceInputSchema>
 export type SourceMaintenanceResult = z.infer<typeof sourceMaintenanceResultSchema>
 export type AuthRetentionInput = z.infer<typeof authRetentionInputSchema>
 export type AuthRetentionResult = z.infer<typeof authRetentionResultSchema>

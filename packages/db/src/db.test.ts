@@ -70,7 +70,8 @@ describe('database foundation', () => {
       '0054',
       '0055',
       '0056',
-      '0057'
+      '0057',
+      '0058'
     ])
     expect(migrations[0]?.checksum).toMatch(/^[a-f0-9]{64}$/)
     expect(migrations[0]?.sql).toContain('CREATE TABLE appsea.evidence_records')
@@ -165,6 +166,9 @@ describe('database foundation', () => {
     )
     const researchCampaignLifecycleMigration = migrations.find(
       (migration) => migration.version === '0057'
+    )
+    const researchCampaignRefreshMigration = migrations.find(
+      (migration) => migration.version === '0058'
     )
     expect(authMigration?.sql).toContain('CREATE TABLE appsea.users')
     expect(authMigration?.sql).toContain('CREATE TABLE appsea.auth_sessions')
@@ -535,6 +539,8 @@ describe('database foundation', () => {
       'ALTER TABLE appsea.research_campaigns'
     )
     expect(researchCampaignLifecycleMigration?.sql).toContain("'archived'")
+    expect(researchCampaignRefreshMigration?.sql).toContain('refresh_claim_token')
+    expect(researchCampaignRefreshMigration?.sql).toContain('refresh_pending_request')
   })
 
   it('requires verified TLS for production database connections', () => {

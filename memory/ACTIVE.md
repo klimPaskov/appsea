@@ -5,7 +5,7 @@
 The fixture product, PostgreSQL persistence, durable workflows, policy-gated
 CFPB collection checkpoint, authenticated private workspaces, report/plan
 approval/export, recovery, and invitations are implemented. Migrations
-`0027`-`0057` add policy evidence, collection checkpoints, deletion repair,
+`0027`-`0058` add policy evidence, collection checkpoints, deletion repair,
 leases, snapshot reconciliation, workflow admissions, source-reconciliation
 admission, retryable tombstones, maintenance-run telemetry, and a durable
 source-quota reconciliation case ledger. Migration `0050` adds explicit,
@@ -37,13 +37,6 @@ the immutable collection snapshot/result, Temporal checkpoints, and
 audit/outbox metadata. The reviewed CFPB policy declares zero API cost; the
 runner rejects known cost overages before lease acquisition.
 
-The object-store boundary includes a signed S3-compatible adapter and one
-environment factory used by web, durable worker, and source maintenance. It
-uses conditional content-addressed body/sidecar writes, ETag-guarded deletion,
-bounded hash-checked reads, and the retention purge queue. Provider
-encryption/versioning, backup deletion, credential rotation, and deployed cloud
-proof remain open; local filesystem fallback is not a production claim.
-
 Production analysis read models now include the linked report and plan approval
 states from their PostgreSQL governance projections. The private opportunity
 mapper uses those states, so a later report/plan approval transition is visible
@@ -74,8 +67,8 @@ matching tombstone.
 
 - `pnpm verify` passed 2026-08-02; affected contract/database/worker checks and
   guidance, formatting, memory, and docs checks pass.
-- PostgreSQL integration is staged but Docker-blocked because the Docker Desktop
-  Linux engine pipe is unavailable.
+- PostgreSQL and Temporal integration are staged but Docker-blocked because the
+  Docker Desktop Linux engine pipe is unavailable.
 
 On 2026-08-01, migrations `0053` and `0054` added deterministic complaint
 analysis snapshots and identity/independence-bound source approvals. The CFPB
@@ -93,9 +86,11 @@ derives collection inputs from persisted intent, rechecks approved policy,
 purpose, expiry, and optional seed review, then commits admission before
 Temporal. History exposes only state, checkpoint, counters, IDs, and times;
 hashes/payloads stay hidden. Migration `0057` adds validated draft edits and a
-soft archive state with run/evidence lineage preserved. Multi-source,
-scheduling, source picker, live activation, and Docker PostgreSQL proof remain
-open; CFPB is disabled.
+soft archive state with run/evidence lineage preserved. Migration `0058` adds
+durable daily/weekly/monthly refresh claims, pending request lineage, bounded
+retry state, and source-maintenance dispatch through the same policy/admission
+gates. Multi-source, source picker, live activation, deployed scheduler/
+Temporal, and Docker PostgreSQL proof remain open; CFPB is disabled.
 
 The follow-on 2026-08-02 analysis tranche adds the missing reviewed handoff:
 owner/editor members choose an approved seed on the completed collection page,
@@ -105,8 +100,8 @@ PostgreSQL projection. Workflow prefixes are workspace-bound; hashes, object
 references, source payloads, and seed content stay outside the read contract.
 Migration `0056` adds at most ten server-clock attempt rows with stage
 heartbeats, duration, and fixed failure codes; status reads merge this safe
-history without hashes or source content. Automatic scheduling, production
-Temporal availability, and periodic alerting remain open.
+history without hashes or source content. Deployed scheduler ownership,
+production Temporal availability, and periodic alerting remain open.
 
 The 2026-08-02 source-coverage tranche adds a private read-only registry/API
 over existing policy tables. It derives production collectibility from the
@@ -133,6 +128,6 @@ keeping payloads, hashes, reviewer identities, and activation controls out.
 - Recovery/invitations await provider, DPA/retention, key-rotation, monitoring,
   and failure-drill approval.
 - Deletion retries and explicit one-record recollection exist; workspace/export
-  purge, cloud storage, recomputation alerts, deployed scheduling, and quota
+  purge, cloud storage, recomputation alerts, deployed scheduler ownership, and quota
   case alert ownership remain open.
 - Windows/macOS packaging remains open.

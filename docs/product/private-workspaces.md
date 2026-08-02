@@ -51,8 +51,10 @@ its lifecycle/policy state, permitted purpose, synthetic flag, review/expiry
 timestamps, and coverage notes. A pending or unavailable policy is shown as a
 gap. Draft creation writes identifier-only audit/outbox receipts but never
 starts a workflow or activates a connector; collection admission rechecks
-policy, quota, deletion, and budget constraints. Existing fixture/workflow
-campaign JSON remains readable through a legacy compatibility shape.
+policy, quota, deletion, and budget constraints. The private read model also
+shows the next due time, durable claim/dispatch state, and bounded failure
+summary for non-manual refresh policies. Existing fixture/workflow campaign
+JSON remains readable through a legacy compatibility shape.
 
 The workspace home links to a read-only source registry at
 `/workspace/:workspaceId/sources` with the corresponding private API. Members
@@ -66,7 +68,10 @@ page or `POST /api/workspaces/:workspaceId/campaigns/:campaignId/run`. The
 server derives all collection inputs from the stored campaign, checks approved
 purpose/display mode and any approved seed review, and admits the digest before
 contacting Temporal. Pending policy remains a visible gap; multi-source runs
-and scheduled refresh are not yet implemented.
+remain separate reviewed work. Automatic refresh is dispatched only by the
+lease-backed source-maintenance worker after the current source policy is
+approved and collectible. Deployment-level Temporal, scheduler ownership, and
+CFPB approval remain open.
 
 Private members can inspect the latest 100 production runs for a campaign at
 `GET /api/workspaces/:workspaceId/campaigns/:campaignId/runs` or through the
