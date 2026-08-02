@@ -37,16 +37,15 @@ unexpired policy, requires allowed/restricted commercial use, and rechecks
 confirmed redacted evidence before linking outputs. Collection initialization
 fails closed without a consumed admission reservation.
 
-Collection persistence locks and rechecks the source lease in its write
-transaction. Settled source-request cost travels from `CfpbConnector` through
-the immutable collection snapshot/result, Temporal checkpoints, and
-audit/outbox metadata. The reviewed CFPB policy declares zero API cost; the
-runner rejects known cost overages before lease acquisition.
+Connectors preflight the lease before each request; denial releases quota and
+makes no HTTP call. Persistence still locks/rechecks the lease in its write
+transaction. Settled cost travels from `CfpbConnector` through the snapshot,
+workflow, and audit/outbox metadata. CFPB cost is zero; known overages are
+rejected before lease acquisition. The preflight/socket window is not atomic.
 
-Production analysis read models include the linked report and plan approval
-states from their PostgreSQL governance projections. The private opportunity
-mapper uses those states, so a later report/plan approval transition is visible
-without inferring `draft` or `unreviewed` from an immutable object payload.
+Read models include linked report/plan approval states from PostgreSQL; the
+private opportunity mapper reflects later transitions without inferring state
+from immutable object payloads.
 
 Operational monitoring includes `/api/health/live`, `/api/health/ready`, and a
 secret-free worker heartbeat every 30 seconds. Web and durable worker share a

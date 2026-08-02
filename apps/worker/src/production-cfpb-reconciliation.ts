@@ -1,5 +1,6 @@
 import {
   CfpbConnector,
+  SourceCollectionPreflightDeniedError,
   SourceQuotaReservationReplayError,
   type SourceQuotaLedger
 } from '@appsea/connectors'
@@ -48,7 +49,10 @@ type SnapshotJobRepository = Pick<
   'enqueue' | 'read' | 'claimById' | 'claimNext' | 'appendPage' | 'finish' | 'reschedule' | 'fail'
 >
 type SnapshotPolicyRepository = Pick<PostgresSourcePolicyRepository, 'readCollectible'>
-type SnapshotLeaseRepository = Pick<PostgresSourceCollectionLeaseRepository, 'acquire' | 'release'>
+type SnapshotLeaseRepository = Pick<
+  PostgresSourceCollectionLeaseRepository,
+  'acquire' | 'assertActive' | 'release'
+>
 type SnapshotConnector = Pick<CfpbConnector, 'collectSnapshotPage'>
 
 export interface SourceSnapshotReconciliationDependencies {
@@ -280,7 +284,13 @@ export async function runProductionCfpbSnapshotReconciliation(
           workspaceId: parsed.workspaceId,
           reconciliationId: parsed.reconciliationId,
           policyVersion: parsed.policyVersion,
-          idempotencyKey: pageIdempotencyKey(current, current.nextOffset)
+          idempotencyKey: pageIdempotencyKey(current, current.nextOffset),
+          beforeRequest: () =>
+            dependencies.leases.assertActive(
+              parsed.workspaceId,
+              sourceLease.leaseId,
+              sourceLease.inputHash
+            )
         })
       )
       phase = 'persistence'
@@ -350,6 +360,13 @@ export async function runProductionCfpbSnapshotReconciliation(
       )
       throw new SourceSnapshotReconciliationRunnerError(
         `Snapshot reconciliation entered ${failed.state} after an unsettled quota replay`,
+        { cause: error }
+      )
+    }
+    if (error instanceof SourceCollectionPreflightDeniedError) {
+      const failed = await failTerminal('reconciliation_failed', policyDeniedSummary())
+      throw new SourceSnapshotReconciliationRunnerError(
+        `Snapshot reconciliation entered ${failed.state} after source policy preflight denial`,
         { cause: error }
       )
     }

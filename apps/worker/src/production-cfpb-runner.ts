@@ -2,6 +2,7 @@ import {
   CfpbConnector,
   isProductionConnectorSourceId,
   SourceQuotaReservationReplayError,
+  SourceCollectionPreflightDeniedError,
   StackExchangeConnector
 } from '@appsea/connectors'
 import type { SourceQuotaLedger } from '@appsea/connectors'
@@ -27,8 +28,8 @@ import {
 import type { Pool } from 'pg'
 
 export class ProductionCollectionPolicyDeniedError extends Error {
-  constructor(message: string) {
-    super(message)
+  constructor(message: string, options?: ErrorOptions) {
+    super(message, options)
     this.name = 'ProductionCollectionPolicyDeniedError'
   }
 }
@@ -253,6 +254,8 @@ export async function runProductionCollection(
       runId: effectiveRequest.runId,
       policyVersion: effectiveRequest.policyVersion,
       idempotencyKey: effectiveRequest.idempotencyKey,
+      beforeRequest: () =>
+        leaseRepository.assertActive(effectiveRequest.workspaceId, leaseId, requestHash),
       ...(recollectionTarget ? { sourceRecordId: recollectionTarget.sourceRecordId } : {})
     })
     let persisted: ProductionCollectionResult
@@ -293,6 +296,27 @@ export async function runProductionCollection(
       if (replayed) return { ...replayed.result, replayed: true }
       throw new ProductionCollectionReconciliationError(
         'Source quota was already settled but no completed collection result exists; operator reconciliation is required before retry',
+        { cause: error }
+      )
+    }
+    if (error instanceof SourceCollectionPreflightDeniedError) {
+      try {
+        const released = await leaseRepository.release(
+          effectiveRequest.workspaceId,
+          leaseId,
+          requestHash
+        )
+        if (!released) {
+          throw new Error('source collection lease release returned false', { cause: error })
+        }
+      } catch (releaseError) {
+        throw new ProductionCollectionReconciliationError(
+          'Source policy preflight was denied and its lease could not be released; operator reconciliation is required',
+          { cause: releaseError }
+        )
+      }
+      throw new ProductionCollectionPolicyDeniedError(
+        'The source policy lease was revoked or expired before the external request',
         { cause: error }
       )
     }

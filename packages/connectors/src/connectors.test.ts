@@ -3,6 +3,7 @@ import { sourcePolicySchema } from '@appsea/contracts'
 import {
   CfpbConnector,
   FixtureConnector,
+  SourceCollectionPreflightDeniedError,
   SourceQuotaExceededError,
   SourceQuotaReservationReplayError,
   SourceResponseTooLargeError,
@@ -206,9 +207,11 @@ describe('connector policy gate', () => {
 
   it('collects only a bounded official Stack Exchange query and exposes coverage limits', async () => {
     let requestedUrl: URL | undefined
+    const events: string[] = []
     const connector = new StackExchangeConnector({
       policy: approvedStackExchangePolicy,
       fetchImpl: async (url) => {
+        events.push('http')
         requestedUrl = new URL(String(url))
         return new Response(JSON.stringify({ items: [stackExchangeQuestion], has_more: false }), {
           status: 200,
@@ -221,7 +224,11 @@ describe('connector policy gate', () => {
       query: 'handoff history',
       limit: 5,
       purpose: 'competitor-research',
-      requestedDisplayMode: 'excerpt'
+      requestedDisplayMode: 'excerpt',
+      beforeRequest: async () => {
+        events.push('preflight')
+        return true
+      }
     })
     expect(requestedUrl?.origin).toBe('https://api.stackexchange.com')
     expect(requestedUrl?.pathname).toBe('/2.3/search/advanced')
@@ -230,6 +237,7 @@ describe('connector policy gate', () => {
     expect(requestedUrl?.searchParams.get('q')).toBe('handoff history')
     expect(result.complaints).toHaveLength(1)
     expect(result.deletions).toEqual([])
+    expect(events).toEqual(['preflight', 'http'])
     expect(result.warnings).toContain(
       'Filtered Stack Exchange search cannot establish deletion absence; no deletion tombstones were emitted.'
     )
@@ -281,6 +289,86 @@ describe('connector policy gate', () => {
     expect(result.warnings).toContain(
       'This exact source-record re-collection used the official complaint-by-ID route and emitted no deletion tombstones.'
     )
+  })
+
+  it('runs the lease preflight before CFPB HTTP and releases denied quota', async () => {
+    const events: string[] = []
+    let released = false
+    let requestCount = 0
+    const connector = new CfpbConnector({
+      policy: approvedCfpbPolicy,
+      quotaLedger: {
+        async reserve(input) {
+          return {
+            reservationId: input.reservationId,
+            status: 'reserved' as const,
+            replayed: false,
+            requestedRecords: input.requestedRecords,
+            requestedCostMicros: input.requestedCostMicros
+          }
+        },
+        async commit() {
+          throw new Error('denied preflight must not settle quota')
+        },
+        async release() {
+          events.push('quota-release')
+          released = true
+        }
+      },
+      fetchImpl: async () => {
+        requestCount += 1
+        return new Response(JSON.stringify([cfpbRecord]), { status: 200 })
+      },
+      now: () => '2026-07-24T00:00:00.000Z'
+    })
+
+    await expect(
+      connector.collect({
+        query: 'card',
+        limit: 1,
+        purpose: 'testing',
+        requestedDisplayMode: 'excerpt',
+        workspaceId: 'workspace:one',
+        runId: 'run-cfpb-preflight',
+        policyVersion: 'cfpb-policy-v1',
+        idempotencyKey: 'preflight-key',
+        beforeRequest: async () => {
+          events.push('preflight')
+          return false
+        }
+      })
+    ).rejects.toBeInstanceOf(SourceCollectionPreflightDeniedError)
+    expect(events).toEqual(['preflight', 'quota-release'])
+    expect(released).toBe(true)
+    expect(requestCount).toBe(0)
+  })
+
+  it('runs the lease preflight before an identifier-only CFPB snapshot request', async () => {
+    const events: string[] = []
+    let requestCount = 0
+    const connector = new CfpbConnector({
+      policy: approvedCfpbPolicy,
+      fetchImpl: async () => {
+        events.push('http')
+        requestCount += 1
+        return new Response(JSON.stringify([cfpbRecord]), { status: 200 })
+      },
+      now: () => '2026-07-24T00:00:00.000Z'
+    })
+    const result = await connector.collectSnapshotPage({
+      offset: 0,
+      limit: 2,
+      purpose: 'deletion-reconciliation',
+      requestedDisplayMode: 'excerpt',
+      reconciliationId: 'reconciliation:source:preflight',
+      beforeRequest: async () => {
+        events.push('preflight')
+        return true
+      }
+    })
+    expect(result.completeSnapshot).toBe(true)
+    expect(events).toEqual(['preflight', 'http'])
+    expect(requestCount).toBe(1)
   })
 
   it('enforces request and per-run quotas before making a request', async () => {

@@ -55,6 +55,13 @@ full-snapshot deletion reconciliation is a separate durable maintenance job;
 see [`source-reconciliation.md`](source-reconciliation.md). A
 repeated request with a different input is an idempotency conflict.
 
+The connector invokes a worker-owned lease preflight immediately before each
+CFPB HTTP request. If the policy has been revoked or the lease has expired, the
+request fails closed without contacting CFPB and the durable quota reservation
+is released. The preflight is a defense-in-depth fence, not an atomic lock over
+the subsequent provider socket call; a deployment still needs revocation
+drills and provider/network monitoring.
+
 The persistence repository asserts the lease and current policy inside the same
 transaction as the collection write and locks the lease row through commit. An
 expired or revoked lease is terminal and fails closed; the lease is released

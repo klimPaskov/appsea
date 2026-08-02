@@ -61,9 +61,13 @@ admission with fixed rate/concurrency limits, digest-only replay identity, and
 bounded terminal/expired-row purge.
 Migration `0039` adds a forced-RLS, digest-only source collection lease. It
 requires a matching operator-approved policy review, preserves one observed
-collection timestamp across retries, rechecks/locks policy and lease inside the
-collection persistence transaction, and exposes only bounded terminal-lease
-purge to maintenance.
+collection timestamp across retries, and exposes only bounded terminal-lease
+purge to maintenance. The connector accepts a worker-owned preflight assertion
+and invokes it immediately before each external request; denial releases the
+reserved quota and produces no HTTP call. Persistence independently
+rechecks/locks policy and lease inside the collection transaction. The
+preflight-to-provider call remains a small non-atomic network window and needs
+deployment-level revocation drills.
 Migrations `0040` and `0041` add a forced-RLS, policy-gated full-snapshot
 reconciliation projection. The worker stores only source identifiers, page
 hashes, bounded warnings, and server-observed checkpoints; a scheduler can

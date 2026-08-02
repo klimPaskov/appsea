@@ -298,12 +298,15 @@ field-level redaction that preserves derived payloads is not implemented.
 Migration `0039` adds a workspace-scoped, digest-only source collection lease.
 The lease binds acquisition to the current active policy and matching operator
 approval review, stores one observed collection timestamp for retry replay, and
-is asserted and row-locked inside the same transaction as persistence. The
-persistence snapshot uses that observed timestamp while `requestedAt` remains
+is asserted by the connector immediately before each external request and is
+also asserted and row-locked inside the same transaction as persistence. A
+denied preflight releases its durable quota reservation before any HTTP call;
+the persistence snapshot uses that observed timestamp while `requestedAt` remains
 caller/idempotency metadata. Terminal or expired leases are bounded by source
 maintenance. This closes the repository-level policy read/fetch and
-assert-to-persist race, but production deployment still needs lease-revocation
-drills, scheduler ownership, Temporal namespace authorization, and Docker-backed
+assert-to-persist races, but the database assertion and provider socket call
+are not one atomic transaction; production still needs lease-revocation drills,
+scheduler ownership, Temporal namespace authorization, and Docker-backed
 crash/retry evidence. A quota settled without
 a persisted result now creates a durable operator-reconciliation case; the
 worker does not release or re-fetch optimistically. Case alert ownership,

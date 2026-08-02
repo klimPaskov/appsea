@@ -66,6 +66,7 @@ function makeDependencies(
   dependencies: SourceSnapshotReconciliationDependencies
   calls: {
     connector: number
+    preflight: number
     finish: unknown[]
     fail: unknown[]
     reschedule: unknown[]
@@ -74,6 +75,7 @@ function makeDependencies(
 } {
   const calls = {
     connector: 0,
+    preflight: 0,
     finish: [] as unknown[],
     fail: [] as unknown[],
     reschedule: [] as unknown[],
@@ -162,6 +164,10 @@ function makeDependencies(
           expiresAt: '2026-07-24T00:30:00.000Z'
         }
       },
+      async assertActive() {
+        calls.preflight += 1
+        return true
+      },
       async release() {
         calls.release += 1
         return true
@@ -181,7 +187,10 @@ function makeDependencies(
       async release() {}
     },
     connectorFactory: () => ({
-      async collectSnapshotPage() {
+      async collectSnapshotPage(request) {
+        if (request.beforeRequest && !(await request.beforeRequest())) {
+          throw new Error('snapshot lease preflight denied')
+        }
         calls.connector += 1
         const page = pages.shift()
         if (!page) throw new Error('unexpected extra connector page')
@@ -208,6 +217,7 @@ describe('production CFPB snapshot reconciliation runner', () => {
     const result = await runProductionCfpbSnapshotReconciliation(input, dependencies)
     expect(result.state).toBe('completed')
     expect(calls.connector).toBe(1)
+    expect(calls.preflight).toBe(1)
     expect(calls.finish[0]).toMatchObject({ fullSnapshot: true })
     expect(calls.release).toBe(1)
   })

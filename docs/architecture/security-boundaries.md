@@ -355,6 +355,13 @@ for that pre-context authorization lookup.
   policy, requires allowed or restricted commercial use, and verifies confirmed,
   redacted evidence plus the policy display representation before linking any
   report or plan output.
+- Production source connectors receive a worker-owned lease preflight callback
+  and invoke it immediately before each CFPB or Stack Exchange request. A
+  denied callback fails closed, releases the durable quota reservation, and
+  sends no source request. The persistence transaction still locks and
+  rechecks the lease; the preflight and provider socket call are not one atomic
+  transaction, so deployment must prove revocation handling and network failure
+  recovery.
 - Activity errors are converted to fixed retryable/non-retryable failure types;
   imported content cannot choose a retry policy, execute code, or edit guidance.
 - The fixture Temporal endpoint is loopback-only and unauthenticated. The

@@ -24,6 +24,14 @@ export class SourceQuotaReservationReplayError extends Error {
   }
 }
 
+/** A policy/lease check denied the request before any source HTTP call. */
+export class SourceCollectionPreflightDeniedError extends Error {
+  constructor() {
+    super('Source collection preflight denied the external request')
+    this.name = 'SourceCollectionPreflightDeniedError'
+  }
+}
+
 export class SourceRecordMalformedError extends Error {
   constructor() {
     super('Source record was malformed or lacked a permitted public narrative')
@@ -52,6 +60,12 @@ export interface CollectionRequest {
   idempotencyKey?: string
   /** Identifier-only exact lookup used by an approved source re-collection. */
   sourceRecordId?: string
+  /**
+   * Worker-owned policy/lease assertion invoked immediately before the
+   * external request. A false result fails closed without spending the source
+   * request or settling the reserved quota.
+   */
+  beforeRequest?: () => Promise<boolean>
 }
 
 export interface SourceQuotaReservationInput {
@@ -688,6 +702,24 @@ export class StackExchangeConnector implements SourceConnector {
     }
   }
 
+  private async releaseReservedQuota(
+    request: CollectionRequest,
+    reservation: SourceQuotaReservation | undefined
+  ): Promise<void> {
+    if (!reservation || !this.quotaLedger || !request.workspaceId) return
+    try {
+      await this.quotaLedger.release({
+        workspaceId: request.workspaceId,
+        reservationId: reservation.reservationId,
+        occurredAt: asIsoDate(this.now())
+      })
+    } catch {
+      throw new Error(
+        'Stack Exchange quota preflight release failed; operator reconciliation is required'
+      )
+    }
+  }
+
   async collect(request: CollectionRequest): Promise<ConnectorResult> {
     assertPolicyAllowsCollection(this.policy, request)
     if (!request.sourceRecordId && !request.query.trim()) {
@@ -710,6 +742,15 @@ export class StackExchangeConnector implements SourceConnector {
       url.searchParams.set('pagesize', String(request.limit))
     }
     if (this.apiKey) url.searchParams.set('key', this.apiKey)
+
+    try {
+      if (request.beforeRequest && !(await request.beforeRequest())) {
+        throw new SourceCollectionPreflightDeniedError()
+      }
+    } catch (error) {
+      await this.releaseReservedQuota(request, reservation)
+      throw error
+    }
 
     let response: Response
     const abortController = new AbortController()
@@ -935,6 +976,8 @@ export interface CfpbSnapshotPageRequest {
   reconciliationId?: string
   policyVersion?: string
   idempotencyKey?: string
+  /** Worker-owned policy/lease assertion invoked immediately before HTTP. */
+  beforeRequest?: () => Promise<boolean>
 }
 
 export interface CfpbSnapshotPageResult {
@@ -1100,6 +1143,22 @@ export class CfpbConnector implements SourceConnector {
     }
   }
 
+  private async releaseReservedQuota(
+    request: CollectionRequest,
+    reservation: SourceQuotaReservation | undefined
+  ): Promise<void> {
+    if (!reservation || !this.quotaLedger || !request.workspaceId) return
+    try {
+      await this.quotaLedger.release({
+        workspaceId: request.workspaceId,
+        reservationId: reservation.reservationId,
+        occurredAt: asIsoDate(this.now())
+      })
+    } catch {
+      throw new Error('CFPB quota preflight release failed; operator reconciliation is required')
+    }
+  }
+
   private consumeQuota(request: CollectionRequest): void {
     const now = Date.now()
     while (this.requestTimestamps[0] !== undefined && now - this.requestTimestamps[0] >= 60_000) {
@@ -1136,6 +1195,15 @@ export class CfpbConnector implements SourceConnector {
       url.searchParams.set('frm', '0')
       url.searchParams.set('size', String(request.limit))
       url.searchParams.set('format', 'json')
+    }
+
+    try {
+      if (request.beforeRequest && !(await request.beforeRequest())) {
+        throw new SourceCollectionPreflightDeniedError()
+      }
+    } catch (error) {
+      await this.releaseReservedQuota(request, reservation)
+      throw error
     }
 
     let response: Response
@@ -1236,7 +1304,8 @@ export class CfpbConnector implements SourceConnector {
       ...(request.workspaceId ? { workspaceId: request.workspaceId } : {}),
       ...(request.reconciliationId ? { runId: request.reconciliationId } : {}),
       ...(request.policyVersion ? { policyVersion: request.policyVersion } : {}),
-      ...(request.idempotencyKey ? { idempotencyKey: request.idempotencyKey } : {})
+      ...(request.idempotencyKey ? { idempotencyKey: request.idempotencyKey } : {}),
+      ...(request.beforeRequest ? { beforeRequest: request.beforeRequest } : {})
     }
     assertPolicyAllowsCollection(this.policy, collectionRequest)
     const reservation = await this.reserveDurableQuota(collectionRequest)
@@ -1245,6 +1314,15 @@ export class CfpbConnector implements SourceConnector {
     url.searchParams.set('frm', String(request.offset))
     url.searchParams.set('size', String(request.limit))
     url.searchParams.set('format', 'json')
+
+    try {
+      if (request.beforeRequest && !(await request.beforeRequest())) {
+        throw new SourceCollectionPreflightDeniedError()
+      }
+    } catch (error) {
+      await this.releaseReservedQuota(collectionRequest, reservation)
+      throw error
+    }
 
     let response: Response
     const abortController = new AbortController()

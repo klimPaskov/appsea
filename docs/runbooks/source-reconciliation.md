@@ -39,7 +39,12 @@ pnpm worker:source:cfpb:reconcile
 The job ID is deterministic for the workspace/source/key tuple. Identical
 service input replays the existing row; a conflicting input is rejected. The
 worker acquires a digest-only source lease before the first page and uses the
-lease's server-observed timestamp for every page.
+lease's server-observed timestamp for every page. Before every identifier-only
+CFPB page request, the connector calls the worker-owned lease preflight. A
+revoked or expired lease therefore fails closed without HTTP, releases that
+page's durable quota reservation, and ends the job as a policy failure. This is
+not an atomic transaction with the provider socket call; deployment-level
+revocation and network failure drills remain required.
 
 ## Resume due work
 

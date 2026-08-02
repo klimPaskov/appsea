@@ -21,11 +21,20 @@ const state = vi.hoisted(() => ({
   serviceAdmissionInput: undefined as unknown,
   serviceAdmissionConsumed: true,
   connectorKind: undefined as string | undefined,
+  preflightAsserted: false,
+  leaseActive: true,
   asserted: false,
   released: false
 }))
 
 vi.mock('@appsea/connectors', () => {
+  class SourceCollectionPreflightDeniedError extends Error {
+    constructor() {
+      super('Source collection preflight denied the external request')
+      this.name = 'SourceCollectionPreflightDeniedError'
+    }
+  }
+
   class MockConnector {
     private readonly now: () => string
     private readonly kind: string
@@ -36,6 +45,10 @@ vi.mock('@appsea/connectors', () => {
     }
 
     async collect(request: unknown) {
+      const beforeRequest = (request as { beforeRequest?: () => Promise<boolean> }).beforeRequest
+      if (beforeRequest && !(await beforeRequest())) {
+        throw new SourceCollectionPreflightDeniedError()
+      }
       state.connectorObservedAt = this.now()
       state.connectorRequest = request
       state.connectorKind = this.kind
@@ -84,7 +97,8 @@ vi.mock('@appsea/connectors', () => {
         super(options, 'stackexchange')
       }
     },
-    SourceQuotaReservationReplayError: class extends Error {}
+    SourceQuotaReservationReplayError: class extends Error {},
+    SourceCollectionPreflightDeniedError
   }
 })
 
@@ -165,6 +179,11 @@ vi.mock('@appsea/db', () => ({
       return state.lease
     }
 
+    async assertActive() {
+      state.preflightAsserted = true
+      return state.leaseActive
+    }
+
     async release() {
       state.released = true
       return true
@@ -229,6 +248,8 @@ describe('production CFPB runner lease lifecycle', () => {
     state.persistenceLease = undefined
     state.persistError = undefined
     state.asserted = false
+    state.preflightAsserted = false
+    state.leaseActive = true
     state.released = false
 
     await runProductionCfpbCollection({} as never, request, {
@@ -248,7 +269,27 @@ describe('production CFPB runner lease lifecycle', () => {
       inputHash: 'a'.repeat(64)
     })
     expect(state.asserted).toBe(true)
+    expect(state.preflightAsserted).toBe(true)
     expect(state.released).toBe(true)
+  })
+
+  it('fails closed when the source lease is revoked before the connector request', async () => {
+    state.leaseActive = false
+    state.preflightAsserted = false
+    state.connectorRequest = undefined
+    state.persistInput = undefined
+    state.released = false
+
+    await expect(
+      runProductionCfpbCollection({} as never, request, {
+        observedAt: '2026-07-10T00:00:00.000Z'
+      })
+    ).rejects.toMatchObject({ name: 'ProductionCollectionPolicyDeniedError' })
+    expect(state.preflightAsserted).toBe(true)
+    expect(state.connectorRequest).toBeUndefined()
+    expect(state.persistInput).toBeUndefined()
+    expect(state.released).toBe(true)
+    state.leaseActive = true
   })
 
   it('reserves and consumes a service admission before a direct source request', async () => {

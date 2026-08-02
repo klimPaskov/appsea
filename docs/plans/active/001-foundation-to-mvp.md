@@ -271,8 +271,12 @@ Implemented:
   authenticated PostgreSQL projection without exposing hashes or object refs
 - the production runner acquires a digest-only source lease before the fetch,
   supplies its immutable observed timestamp to complaint/quota provenance, and
-  passes the lease into a same-transaction persistence assertion; the lease is
-  released only after commit
+  passes a worker-owned lease assertion into the connector immediately before
+  each external request; a denied preflight releases the reserved quota and
+  fails closed without HTTP. Persistence also receives the lease for a
+  same-transaction assertion and releases it only after commit. The preflight
+  check and provider socket call are not an atomic database transaction, so
+  deployment-level revocation drills remain required
 - explicit tombstone-bound re-collection uses completed deletion lineage,
   exact source-native lookup, active-row uniqueness, and fail-closed mismatch
   handling; no maintenance or quota-reconciliation path triggers it

@@ -154,10 +154,15 @@ authorization, and Docker-backed concurrency proof remain open. The reviewed
 route reserves a digest/input hash before Temporal, binds an immutable user
 actor, and consumes/releases that reservation with run persistence; duplicate
 consumed/released digests replay without another slot.
-Production collection persistence now locks and rechecks its source lease in the
-same transaction as the collection write; lease revocation cannot win between
-the assertion and commit. The settled source-request cost now travels from the
-quota reservation through the immutable collection snapshot/result, workflow
+Production connectors now invoke a worker-owned source-lease preflight
+immediately before each CFPB or Stack Exchange request. A denied preflight
+fails closed without HTTP and releases its durable quota reservation; the
+runner/reconciliation path turns the denial into a terminal policy result and
+releases the source lease. Persistence still locks and rechecks the lease in the
+same transaction as the collection write; the preflight and provider socket
+call cannot be one atomic database transaction, so deployment-level revocation
+drills remain open. The settled source-request cost now travels from the quota
+reservation through the immutable collection snapshot/result, workflow
 checkpoint, and audit/outbox metadata; the reviewed CFPB policy still declares
 zero request cost. A known policy-cost overage is rejected before source lease
 acquisition and returns a bounded workflow budget rejection.
