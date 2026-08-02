@@ -65,6 +65,8 @@ import {
   workspaceOpportunityReadModelSchema,
   workspaceOpportunityDetailReadModelSchema,
   competitiveResearchReadModelSchema,
+  competitiveResearchObservationCreateInputSchema,
+  competitiveResearchObservationReviewInputSchema,
   composeCompetitiveResearchReadModel,
   workspaceReportApprovalInputSchema,
   workspaceReportExportReadModelSchema,
@@ -885,12 +887,37 @@ describe('contracts', () => {
   })
 
   it('keeps competitive research provenance and coverage state explicit', () => {
+    const observation = {
+      observationId: 'observation:competitor-one',
+      opportunityId: 'opportunity:one',
+      competitorId: 'competitor:one',
+      sourceId: 'source:directory',
+      sourceRecordId: 'record-1',
+      sourceItemId: 'source-item:one',
+      evidenceId: 'evidence:competitor',
+      claimType: 'feature' as const,
+      claim: 'The competitor lacks a reliable export workflow.',
+      observedAt: now,
+      capturedAt: now,
+      publishedAt: null,
+      confidence: 0.8,
+      reviewState: 'confirmed' as const,
+      synthetic: false,
+      allowedRepresentation: 'excerpt' as const,
+      canonicalLocator: 'https://example.com/record-1',
+      createdBy: 'user:editor',
+      reviewedBy: 'user:owner',
+      reviewedAt: now,
+      createdAt: now,
+      updatedAt: now
+    }
     expect(
       competitiveResearchReadModelSchema.safeParse({
         status: 'source-backed',
         observedAt: now,
         sourceIds: ['source:directory'],
         evidenceIds: ['evidence:competitor'],
+        observations: [observation],
         coverageGaps: [],
         seedReview: null,
         synthetic: false
@@ -908,6 +935,38 @@ describe('contracts', () => {
       }).success
     ).toBe(false)
 
+    expect(
+      competitiveResearchReadModelSchema.safeParse({
+        status: 'source-backed',
+        observedAt: now,
+        sourceIds: ['source:directory'],
+        evidenceIds: ['evidence:competitor'],
+        observations: [{ ...observation, reviewState: 'unreviewed' }],
+        coverageGaps: [],
+        seedReview: null,
+        synthetic: false
+      }).success
+    ).toBe(false)
+
+    expect(
+      competitiveResearchObservationCreateInputSchema.safeParse({
+        observationId: observation.observationId,
+        competitorId: observation.competitorId,
+        sourceItemId: observation.sourceItemId,
+        evidenceId: observation.evidenceId,
+        claimType: observation.claimType,
+        claim: observation.claim,
+        observedAt: observation.observedAt,
+        confidence: observation.confidence
+      }).success
+    ).toBe(true)
+    expect(
+      competitiveResearchObservationReviewInputSchema.safeParse({ action: 'confirmed' }).success
+    ).toBe(true)
+    expect(
+      competitiveResearchObservationReviewInputSchema.safeParse({ action: 'reviewed' }).success
+    ).toBe(false)
+
     const seedOnly = composeCompetitiveResearchReadModel({
       synthetic: false,
       coverageGaps: [],
@@ -921,6 +980,22 @@ describe('contracts', () => {
     })
     expect(seedOnly.status).toBe('reviewed-seed-only')
     expect(seedOnly.coverageGaps[0]).toContain('not market research')
+
+    const unreviewed = composeCompetitiveResearchReadModel({
+      synthetic: false,
+      coverageGaps: [],
+      observations: [{ ...observation, reviewState: 'unreviewed' }]
+    })
+    expect(unreviewed.status).toBe('unresolved')
+
+    const sourceBacked = composeCompetitiveResearchReadModel({
+      synthetic: false,
+      coverageGaps: [],
+      observations: [observation]
+    })
+    expect(sourceBacked.status).toBe('source-backed')
+    expect(sourceBacked.sourceIds).toEqual(['source:directory'])
+    expect(sourceBacked.evidenceIds).toEqual(['evidence:competitor'])
   })
 
   it('keeps report approval actions strict and export hashes bounded', () => {

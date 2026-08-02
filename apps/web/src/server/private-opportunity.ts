@@ -8,10 +8,12 @@ import {
   workspacePlanReadModelSchema,
   workspaceReportReadModelSchema,
   type AuthSessionReadModel,
+  type CompetitiveResearchObservation,
   type ProductionAnalysisReadModel,
   type WorkspaceOpportunityDetailReadModel,
   type WorkspaceMembershipReadModel
 } from '@appsea/contracts'
+import { PostgresCompetitiveResearchRepository } from '@appsea/db/competitive-research'
 import { PostgresProductionAnalysisRepository } from '@appsea/db/production-analysis'
 import { authRepository, readSession } from './auth-session'
 import { getDatabasePool } from './database'
@@ -25,7 +27,8 @@ export interface PrivateOpportunityContext {
 
 /** Map a validated production analysis into the private opportunity read model. */
 export function mapProductionAnalysisToOpportunityDetail(
-  model: ProductionAnalysisReadModel
+  model: ProductionAnalysisReadModel,
+  observations: CompetitiveResearchObservation[] = []
 ): WorkspaceOpportunityDetailReadModel {
   const { artifact, result, report, planPackage } = model
   const opportunity = artifact.opportunity
@@ -72,6 +75,7 @@ export function mapProductionAnalysisToOpportunityDetail(
     competitiveResearch: composeCompetitiveResearchReadModel({
       synthetic: false,
       coverageGaps: artifact.coverageGaps,
+      observations,
       seedReview: {
         reviewId: artifact.opportunitySeedReview.reviewId,
         seedVersion: artifact.opportunitySeedReview.seedVersion,
@@ -119,12 +123,24 @@ export async function readPrivateOpportunityContext(
     await repository.listWorkspaceOpportunities(session.user.userId, parsedWorkspaceId.data)
   ).find((opportunity) => opportunity.slug === parsedSlug.data)
   if (listed && !listed.synthetic) {
+    const competitiveResearchRepository = new PostgresCompetitiveResearchRepository(
+      getDatabasePool()
+    )
     const production = await new PostgresProductionAnalysisRepository(
       getDatabasePool(),
       getObjectStore()
     ).readLatestForOpportunityForUser(session.user.userId, parsedWorkspaceId.data, parsedSlug.data)
     if (production) {
-      return { session, workspace, detail: mapProductionAnalysisToOpportunityDetail(production) }
+      const observations = await competitiveResearchRepository.listForUser(
+        session.user.userId,
+        parsedWorkspaceId.data,
+        production.artifact.opportunity.id
+      )
+      return {
+        session,
+        workspace,
+        detail: mapProductionAnalysisToOpportunityDetail(production, observations)
+      }
     }
   }
   const detail = await repository.readWorkspaceOpportunity(
@@ -133,5 +149,24 @@ export async function readPrivateOpportunityContext(
     parsedSlug.data
   )
   if (!detail) return null
-  return { session, workspace, detail }
+  const observations = await new PostgresCompetitiveResearchRepository(
+    getDatabasePool()
+  ).listForUser(session.user.userId, parsedWorkspaceId.data, detail.opportunity.id)
+  const competitiveResearch = composeCompetitiveResearchReadModel({
+    synthetic: detail.competitiveResearch.synthetic,
+    coverageGaps: detail.competitiveResearch.coverageGaps,
+    seedReview: detail.competitiveResearch.seedReview,
+    observedAt: detail.competitiveResearch.observedAt,
+    sourceIds: detail.competitiveResearch.sourceIds,
+    evidenceIds: detail.competitiveResearch.evidenceIds,
+    observations
+  })
+  return {
+    session,
+    workspace,
+    detail: workspaceOpportunityDetailReadModelSchema.parse({
+      ...detail,
+      competitiveResearch
+    })
+  }
 }

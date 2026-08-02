@@ -5,7 +5,7 @@
 The fixture product, PostgreSQL persistence, durable workflows, policy-gated
 CFPB collection checkpoint, authenticated private workspaces, report/plan
 approval/export, recovery, and invitations are implemented. Migrations
-`0027`-`0058` add policy evidence, collection checkpoints, deletion repair,
+`0027`-`0059` add policy evidence, collection checkpoints, deletion repair,
 leases, snapshot reconciliation, workflow admissions, source-reconciliation
 admission, retryable tombstones, maintenance-run telemetry, and a durable
 source-quota reconciliation case ledger. Migration `0050` adds explicit,
@@ -83,8 +83,10 @@ source remains disabled pending external review.
 Private opportunity details now expose `competitiveResearch` and a separate
 competitors/contrary-signals page: fixture records are synthetic/unresolved,
 production seeds are reviewed-seed-only with provenance, and source-backed
-status requires permitted source IDs, retained evidence IDs, and an observation
-time. Per-competitor observations and feature matrices remain open.
+status requires a confirmed non-synthetic observation with permitted source/
+evidence IDs and an observation time. Migration `0059` persists bounded
+per-claim provenance and owner/editor review; no approved competitor source is
+connected, and feature matrices remain open.
 
 The 2026-08-02 campaign tranche adds a private one-source run route plus
 bounded history/status reads on the strict `campaign-v1` boundary. The server
@@ -98,16 +100,13 @@ retry state, and source-maintenance dispatch through the same policy/admission
 gates. Multi-source, source picker, live activation, deployed scheduler/
 Temporal, and Docker PostgreSQL proof remain open; CFPB is disabled.
 
-The follow-on 2026-08-02 analysis tranche adds the missing reviewed handoff:
-owner/editor members choose an approved seed on the completed collection page,
-the existing analysis admission route starts `production-analysis-v2`, and a
-private status page/API reconciles a safe Temporal response with the durable
-PostgreSQL projection. Workflow prefixes are workspace-bound; hashes, object
-references, source payloads, and seed content stay outside the read contract.
-Migration `0056` adds at most ten server-clock attempt rows with stage
-heartbeats, duration, and fixed failure codes; status reads merge this safe
-history without hashes or source content. Deployed scheduler ownership,
-production Temporal availability, and periodic alerting remain open.
+The 2026-08-02 analysis tranche adds a reviewed seed handoff: owner/editor
+members choose an approved seed, the admission route starts
+`production-analysis-v2`, and a private status API reconciles safe Temporal
+state with PostgreSQL. Workflow prefixes are workspace-bound; hashes, object
+references, source payloads, and seed content stay hidden. Migration `0056`
+adds bounded server-clock attempt history with fixed failures. Deployed
+scheduler ownership, production Temporal, and periodic alerting remain open.
 
 The 2026-08-02 source-coverage tranche adds a private read-only registry/API
 over existing policy tables. It derives production collectibility from the
@@ -122,9 +121,9 @@ keeping payloads, hashes, reviewer identities, and activation controls out.
    recollection operations.
 4. Monitoring, scheduler ownership, pricing/billing controls, and security
    review.
-5. Connect a separately reviewed competitor/contrary-signal source and extend
-   the read model with per-record provenance before treating competitive output
-   as source-backed.
+5. Supply a separately reviewed competitor/contrary-signal source under the
+   `competitor-research` purpose before treating any competitive output as
+   source-backed; the per-record provenance boundary is now implemented.
 
 ## Current blockers
 

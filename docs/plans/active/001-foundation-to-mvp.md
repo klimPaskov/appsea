@@ -125,7 +125,12 @@ upgrades historical run snapshots without changing source evidence. The private
 opportunity read model now makes competitive-research state explicit: fixture
 records are unresolved/synthetic, reviewed seeds are seed-only, and missing
 permitted competitor evidence remains a visible gap. Live competitor and
-substitute research remains unresolved.
+substitute research remains unresolved. Migration
+`0059_competitor_research_observations.sql` adds a separate bounded claim table:
+non-synthetic rows must reference an active source item/evidence pair collected
+under an independently approved `competitor-research` purpose, and an
+editor/owner must confirm the row before it can make the read model
+source-backed. No connector is activated by this migration.
 
 Migration `0054_source_policy_review_integrity.sql` binds new source-policy
 approvals to a lowercase reviewer identity, an independent review role, and an
@@ -370,8 +375,10 @@ The report contract keeps retained observations and their derived analysis,
 deterministic score inference,
 contrary evidence, recommendation, source coverage, and coverage gaps separate.
 Private opportunity reads now expose a separate competitive-research coverage
-record and competitors/contrary-signals route; it does not promote reviewed
-seed assumptions to source-backed market evidence.
+record, per-claim provenance observations, and a competitors/contrary-signals
+route; it does not promote reviewed seed assumptions to source-backed market
+evidence. Observation creation/review is private and policy-gated through
+`/api/workspaces/:workspaceId/opportunities/:slug/competitor-observations`.
 Reports are versioned in `report_versions` and linked to their plan package. Reads
 exclude inactive source rows and non-redacted non-fixture evidence.
 Approval transitions are role-checked in the private API and guarded by migration

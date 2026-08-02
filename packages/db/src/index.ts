@@ -108,6 +108,13 @@ export {
   WorkspaceCostSummaryQueryError
 } from './workspace-cost-repository'
 export {
+  PostgresCompetitiveResearchRepository,
+  CompetitiveResearchObservationConflictError,
+  CompetitiveResearchObservationNotFoundError,
+  CompetitiveResearchObservationPermissionError,
+  CompetitiveResearchObservationPolicyError
+} from './competitive-research-repository'
+export {
   PostgresSourceSnapshotReconciliationRepository,
   SourceSnapshotReconciliationAdmissionDeniedError,
   SourceSnapshotReconciliationClaimError,

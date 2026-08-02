@@ -37,6 +37,7 @@ import {
   PostgresMaintenanceSchedulerLeaseRepository,
   PostgresMaintenanceSchedulerRunRepository,
   PostgresWorkspaceCostRepository,
+  PostgresCompetitiveResearchRepository,
   PostgresSourceCollectionLeaseRepository,
   PostgresSourceQuotaRepository,
   PostgresSourceSnapshotReconciliationRepository,
@@ -476,7 +477,10 @@ describe.sequential('PostgreSQL fixture persistence lifecycle', () => {
       '0053',
       '0054',
       '0055',
-      '0056'
+      '0056',
+      '0057',
+      '0058',
+      '0059'
     ])
     expect(secondMigrationResult.applied).toEqual([])
     expect(secondMigrationResult.alreadyApplied).toEqual([
@@ -535,7 +539,10 @@ describe.sequential('PostgreSQL fixture persistence lifecycle', () => {
       '0053',
       '0054',
       '0055',
-      '0056'
+      '0056',
+      '0057',
+      '0058',
+      '0059'
     ])
   })
 
@@ -2364,6 +2371,113 @@ describe.sequential('PostgreSQL fixture persistence lifecycle', () => {
     expect(provenance.source_policy_version).toMatch(/^fixture-[a-f0-9]{12}$/)
     expect(provenance.source_hash).toMatch(/^[a-f0-9]{64}$/)
     expect(provenance.evidence_hash).toMatch(/^[a-f0-9]{64}$/)
+  })
+
+  it('keeps competitive observation provenance policy-gated and reviewable', async () => {
+    const input = await fixtureInput()
+    const persisted = await repository.persist(input)
+    const userId = 'user:competitor-observation'
+    const observationId = 'observation:fixture'
+    await withOwnerClient(async (client) => {
+      await client.query(
+        `INSERT INTO appsea.users
+           (user_id, email, display_name, password_hash, created_at, updated_at)
+         VALUES ($1, $2, 'Competitive reviewer', repeat('x', 64), $3, $3)
+         ON CONFLICT (user_id) DO NOTHING`,
+        [userId, 'competitor-observation@example.test', latestAt]
+      )
+      await client.query(
+        `INSERT INTO appsea.workspace_memberships
+           (workspace_id, user_id, role, created_at, updated_at)
+         VALUES ($1, $2, 'owner', $3, $3)
+         ON CONFLICT (workspace_id, user_id) DO NOTHING`,
+        [input.workspaceId, userId, latestAt]
+      )
+    })
+
+    const references = await withWorkspaceTransaction(
+      servicePool,
+      input.workspaceId,
+      async (client) => {
+        const competitor = await client.query<{ competitor_id: string }>(
+          `SELECT competitor_id
+             FROM appsea.opportunity_competitors
+            WHERE workspace_id = $1 AND opportunity_id = $2
+            ORDER BY competitor_id LIMIT 1`,
+          [input.workspaceId, persisted.opportunityId]
+        )
+        const evidence = await client.query<{ source_item_id: string; evidence_id: string }>(
+          `SELECT evidence.source_item_id, evidence.evidence_id
+             FROM appsea.research_run_source_items run_item
+             JOIN appsea.evidence_records evidence
+               ON evidence.workspace_id = run_item.workspace_id
+              AND evidence.source_item_id = run_item.source_item_id
+            WHERE run_item.workspace_id = $1 AND run_item.run_id = $2
+            ORDER BY evidence.evidence_id LIMIT 1`,
+          [input.workspaceId, input.runId]
+        )
+        return {
+          competitorId: competitor.rows[0]?.competitor_id,
+          sourceItemId: evidence.rows[0]?.source_item_id,
+          evidenceId: evidence.rows[0]?.evidence_id
+        }
+      },
+      { readOnly: true }
+    )
+    expect(references.competitorId).toBeTruthy()
+    expect(references.sourceItemId).toBeTruthy()
+    expect(references.evidenceId).toBeTruthy()
+
+    const competitiveRepository = new PostgresCompetitiveResearchRepository(servicePool)
+    const created = await competitiveRepository.create(
+      userId,
+      input.workspaceId,
+      persisted.opportunityId,
+      {
+        observationId,
+        competitorId: references.competitorId!,
+        sourceItemId: references.sourceItemId!,
+        evidenceId: references.evidenceId!,
+        claimType: 'feature',
+        claim: 'Synthetic fixture claim requiring explicit review.',
+        observedAt: fixedAt,
+        confidence: 0.5
+      }
+    )
+    expect(created).toMatchObject({
+      observationId,
+      reviewState: 'unreviewed',
+      synthetic: true,
+      allowedRepresentation: 'fixture'
+    })
+
+    const confirmed = await competitiveRepository.updateReview(
+      userId,
+      input.workspaceId,
+      persisted.opportunityId,
+      observationId,
+      { action: 'confirmed' }
+    )
+    expect(confirmed.reviewState).toBe('confirmed')
+    const listed = await competitiveRepository.listForUser(
+      userId,
+      input.workspaceId,
+      persisted.opportunityId
+    )
+    expect(listed).toHaveLength(1)
+    expect(listed[0]).toMatchObject({ observationId, sourceId: expect.any(String) })
+
+    await withOwnerClient(async (client) => {
+      await client.query(
+        'DELETE FROM appsea.competitor_research_observations WHERE workspace_id = $1 AND observation_id = $2',
+        [input.workspaceId, observationId]
+      )
+      await client.query(
+        'DELETE FROM appsea.workspace_memberships WHERE workspace_id = $1 AND user_id = $2',
+        [input.workspaceId, userId]
+      )
+      await client.query('DELETE FROM appsea.users WHERE user_id = $1', [userId])
+    })
   })
 
   it('persists an idempotent workflow projection, checkpoints, lineage, and terminal ledger', async () => {

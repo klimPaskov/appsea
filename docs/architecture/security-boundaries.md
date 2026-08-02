@@ -87,8 +87,13 @@ for that pre-context authorization lookup.
 - The private competitors/contrary-signals read model records competitive
   research state and seed-review provenance separately from complaint evidence.
   It cannot label a synthetic or reviewed-seed-only record source-backed;
-  source-backed status requires retained source and evidence identifiers plus
-  an observation time.
+  source-backed status requires a confirmed non-synthetic observation with
+  retained source/evidence identifiers plus an observation time. Migration
+  `0059` forces each non-synthetic observation through an active source item,
+  matching retained evidence, an independently approved `competitor-research`
+  purpose, and an editor/owner review guard. The read model exposes only the
+  bounded paraphrase and provenance metadata; raw provider payloads remain
+  outside the table and web contract.
 - Migration `0033` makes opportunity-seed assumptions an explicit workspace
   boundary. Seed content is validated before insertion, immutable after create,
   and transitions through `unreviewed` -> `reviewed` -> `approved` only through

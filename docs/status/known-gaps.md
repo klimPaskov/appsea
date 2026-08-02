@@ -45,10 +45,12 @@ leave substitute/competitor resolution unresolved until separately reviewed
 permitted research is available. Private opportunity reads now expose a
 competitive-research status and provenance record, and a private competitors /
 contrary-signals page keeps reviewed seed values separate from source-backed
-research. No permitted competitor source is connected yet, so production
-competitive research remains `reviewed-seed-only` and its coverage gap is
-visible. Human correction is persisted only as review state in this slice;
-richer corrected field editing remains open.
+research. Migration `0059` adds a policy-gated, human-reviewable observation
+boundary that retains source-item/evidence identifiers per competitive claim;
+no approved competitor-purpose source is connected yet, so production research
+remains `reviewed-seed-only` until confirmed non-synthetic observations exist.
+Human correction is persisted only as review state in this slice; richer
+corrected field editing and a full competitor feature matrix remain open.
 
 ## Infrastructure
 

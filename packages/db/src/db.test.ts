@@ -71,7 +71,8 @@ describe('database foundation', () => {
       '0055',
       '0056',
       '0057',
-      '0058'
+      '0058',
+      '0059'
     ])
     expect(migrations[0]?.checksum).toMatch(/^[a-f0-9]{64}$/)
     expect(migrations[0]?.sql).toContain('CREATE TABLE appsea.evidence_records')
@@ -169,6 +170,9 @@ describe('database foundation', () => {
     )
     const researchCampaignRefreshMigration = migrations.find(
       (migration) => migration.version === '0058'
+    )
+    const competitorResearchObservationMigration = migrations.find(
+      (migration) => migration.version === '0059'
     )
     expect(authMigration?.sql).toContain('CREATE TABLE appsea.users')
     expect(authMigration?.sql).toContain('CREATE TABLE appsea.auth_sessions')
@@ -541,6 +545,14 @@ describe('database foundation', () => {
     expect(researchCampaignLifecycleMigration?.sql).toContain("'archived'")
     expect(researchCampaignRefreshMigration?.sql).toContain('refresh_claim_token')
     expect(researchCampaignRefreshMigration?.sql).toContain('refresh_pending_request')
+    expect(competitorResearchObservationMigration?.sql).toContain(
+      'CREATE TABLE appsea.competitor_research_observations'
+    )
+    expect(competitorResearchObservationMigration?.sql).toContain('competitor-research')
+    expect(competitorResearchObservationMigration?.sql).toContain('FORCE ROW LEVEL SECURITY')
+    expect(competitorResearchObservationMigration?.sql).toContain(
+      'competitor_research_observation_review_guard'
+    )
   })
 
   it('requires verified TLS for production database connections', () => {

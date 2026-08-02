@@ -123,6 +123,13 @@ codes. The worker writes only operational metadata, so retries become visible
 in private status reads without changing the content hash or exposing workflow
 payloads.
 
+Migration `0059` adds a separate forced-RLS competitive-observation table.
+Each row attaches one bounded claim to an existing opportunity/competitor
+relationship and source-item/evidence pair. Non-synthetic rows require an
+independently approved `competitor-research` purpose, and editor/owner review
+is required before the private read model can report source-backed research.
+The migration retains provenance metadata only and activates no connector.
+
 The source-maintenance worker also exposes a supervised `maintenance:loop`
 entrypoint. It starts one existing lease-backed pass at a time, applies a
 bounded interval or failure backoff, forwards shutdown to the child, and emits

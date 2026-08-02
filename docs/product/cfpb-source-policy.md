@@ -49,7 +49,10 @@ The typed record is `cfpbSourcePolicy` in
 `packages/connectors/src/index.ts`.
 
 - Purpose: opportunity research, identifier-only deletion reconciliation,
-  development, and testing after approval.
+  development, and testing after approval. It does not currently authorize the
+  `competitor-research` purpose; CFPB records cannot be attached to a
+  non-synthetic competitor observation until a separately reviewed policy
+  version explicitly lists that purpose.
 - Commercial-use state: `allowed` as an engineering reading of the public-data
   statement; counsel must confirm the intended commercial product use.
 - Display: `excerpt`, and only for narratives returned through the public API.

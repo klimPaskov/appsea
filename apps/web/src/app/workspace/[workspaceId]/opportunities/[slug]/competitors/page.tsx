@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { notFound, redirect } from 'next/navigation'
 import { readSession } from '../../../../../../server/auth-session'
 import { readPrivateOpportunityContext } from '../../../../../../server/private-opportunity'
+import { CompetitorObservationActions } from '../../../../competitor-observation-actions'
 
 export const dynamic = 'force-dynamic'
 
@@ -17,7 +18,7 @@ const statusDescriptions = {
   'reviewed-seed-only':
     'The records below are explicit, human-reviewed seed assumptions. No permitted competitor source evidence is attached, so they are not market research.',
   'source-backed':
-    'The records below are linked to retained evidence from permitted sources. Coverage gaps remain visible below.'
+    'The records below include confirmed claims linked to retained evidence from permitted sources. Coverage gaps remain visible below.'
 } as const
 
 export default async function PrivateCompetitorsPage({
@@ -141,6 +142,76 @@ export default async function PrivateCompetitorsPage({
             ))}
           </ul>
         </div>
+      </section>
+
+      <section className="workspace-section" aria-labelledby="competitive-observations-heading">
+        <div className="section-intro">
+          <h2 id="competitive-observations-heading">Evidence observations</h2>
+          <p>
+            Each claim keeps its source record, retained evidence, observation time, and human
+            review state visible. Unreviewed claims do not make this research source-backed.
+          </p>
+        </div>
+        {research.observations.length > 0 ? (
+          <div className="observation-list">
+            {research.observations.map((observation) => (
+              <article key={observation.observationId}>
+                <div className="observation-heading">
+                  <div>
+                    <p className="label">{observation.claimType.replaceAll('_', ' ')}</p>
+                    <h3>{observation.claim}</h3>
+                  </div>
+                  <span className={`observation-state ${observation.reviewState}`}>
+                    {observation.reviewState}
+                  </span>
+                </div>
+                <dl className="detail-grid">
+                  <div>
+                    <dt className="label">Source record</dt>
+                    <dd>
+                      <code>{observation.sourceId}</code> ·{' '}
+                      <code>{observation.sourceRecordId}</code>
+                    </dd>
+                  </div>
+                  <div>
+                    <dt className="label">Retained evidence</dt>
+                    <dd>
+                      {observation.evidenceId ? (
+                        <code>{observation.evidenceId}</code>
+                      ) : (
+                        'Not attached'
+                      )}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt className="label">Observed</dt>
+                    <dd>{observation.observedAt}</dd>
+                  </div>
+                  <div>
+                    <dt className="label">Captured</dt>
+                    <dd>{observation.capturedAt}</dd>
+                  </div>
+                </dl>
+                {observation.synthetic ? (
+                  <p className="fixture-note">
+                    Synthetic fixture observation — not verified market evidence.
+                  </p>
+                ) : null}
+                <CompetitorObservationActions
+                  workspaceId={workspaceId}
+                  slug={slug}
+                  observationId={observation.observationId}
+                  initialState={observation.reviewState}
+                />
+              </article>
+            ))}
+          </div>
+        ) : (
+          <p className="empty-state">
+            No source-backed competitor observations are attached. Reviewed seed assumptions remain
+            separate from market evidence.
+          </p>
+        )}
       </section>
 
       <section className="workspace-section" aria-labelledby="competitor-list-heading">

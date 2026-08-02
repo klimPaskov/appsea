@@ -41,3 +41,12 @@ classification type, severity, recurrence and switching signals, entity
 confidence, and unresolved competitor/substitute dimensions. These values are
 inference with explicit confidence and review state; they do not replace
 provenance or turn missing source access into a market conclusion.
+
+Competitive claims use a separate provenance boundary. A non-synthetic
+competitor or contrary-signal observation must reference an active source item
+and matching retained evidence collected under an approved `competitor-research`
+purpose. Editors or owners confirm or reject the bounded paraphrase; only a
+confirmed observation can contribute to source-backed competitive status. The
+observation record retains identifiers, capture/observation times, display
+representation, and review state, not a copied raw source payload. If no
+approved source supplies that purpose, the private page keeps the gap visible.

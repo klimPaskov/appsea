@@ -414,11 +414,84 @@ export const competitiveResearchSeedReadModelSchema = z
   })
   .strict()
 
+export const competitiveResearchObservationClaimTypeSchema = z.enum([
+  'positioning',
+  'feature',
+  'pricing',
+  'weakness',
+  'contrary_signal',
+  'availability',
+  'recent_change'
+])
+
+export const competitiveResearchObservationReviewStateSchema = z.enum([
+  'unreviewed',
+  'confirmed',
+  'rejected'
+])
+
+const competitiveResearchObservationClaimSchema = z
+  .string()
+  .min(1)
+  .max(2_000)
+  .refine((value) => !hasUnsupportedPostgresText(value), 'Observation claim contains invalid text')
+
+/**
+ * A bounded, provenance-only competitive claim. The source and evidence IDs
+ * must already exist in the workspace; this contract never accepts raw source
+ * payloads or caller-supplied source policy metadata.
+ */
+export const competitiveResearchObservationSchema = z
+  .object({
+    observationId: appseaIdentifierSchema,
+    opportunityId: appseaIdentifierSchema,
+    competitorId: appseaIdentifierSchema,
+    sourceId: appseaIdentifierSchema,
+    sourceRecordId: z.string().min(1).max(240),
+    sourceItemId: appseaIdentifierSchema,
+    evidenceId: appseaIdentifierSchema.nullable(),
+    claimType: competitiveResearchObservationClaimTypeSchema,
+    claim: competitiveResearchObservationClaimSchema,
+    observedAt: z.string().datetime(),
+    capturedAt: z.string().datetime(),
+    publishedAt: z.string().datetime().nullable(),
+    confidence: z.number().min(0).max(1),
+    reviewState: competitiveResearchObservationReviewStateSchema,
+    synthetic: z.boolean(),
+    allowedRepresentation: z.enum(['excerpt', 'metadata-only', 'aggregate-only', 'fixture']),
+    canonicalLocator: z.string().max(2_000).nullable(),
+    createdBy: appseaIdentifierSchema,
+    reviewedBy: appseaIdentifierSchema.nullable(),
+    reviewedAt: z.string().datetime().nullable(),
+    createdAt: z.string().datetime(),
+    updatedAt: z.string().datetime()
+  })
+  .strict()
+
+export const competitiveResearchObservationCreateInputSchema = z
+  .object({
+    observationId: appseaIdentifierSchema,
+    competitorId: appseaIdentifierSchema,
+    sourceItemId: appseaIdentifierSchema,
+    evidenceId: appseaIdentifierSchema.nullable().default(null),
+    claimType: competitiveResearchObservationClaimTypeSchema,
+    claim: competitiveResearchObservationClaimSchema,
+    observedAt: z.string().datetime(),
+    confidence: z.number().min(0).max(1)
+  })
+  .strict()
+
+export const competitiveResearchObservationReviewInputSchema = z
+  .object({
+    action: z.enum(['confirmed', 'rejected'])
+  })
+  .strict()
+
 /**
  * Competitive records are useful only when their research state is visible.
  * A reviewed seed is an auditable human assumption, not source-backed market
- * research. Source-backed status requires both permitted source identifiers
- * and retained evidence identifiers.
+ * research. Source-backed status requires a confirmed non-synthetic
+ * observation plus permitted source and retained evidence identifiers.
  */
 export const competitiveResearchReadModelSchema = z
   .object({
@@ -426,6 +499,7 @@ export const competitiveResearchReadModelSchema = z
     observedAt: z.string().datetime().nullable(),
     sourceIds: z.array(appseaIdentifierSchema).max(100),
     evidenceIds: z.array(appseaIdentifierSchema).max(500),
+    observations: z.array(competitiveResearchObservationSchema).max(500).default([]),
     coverageGaps: z.array(z.string().min(1).max(500)).max(100),
     seedReview: competitiveResearchSeedReadModelSchema.nullable(),
     synthetic: z.boolean()
@@ -437,6 +511,13 @@ export const competitiveResearchReadModelSchema = z
         code: 'custom',
         path: ['status'],
         message: 'Synthetic competitive records must remain unresolved'
+      })
+    }
+    if (value.synthetic && value.observations.some((observation) => !observation.synthetic)) {
+      context.addIssue({
+        code: 'custom',
+        path: ['observations'],
+        message: 'Synthetic competitive records cannot contain non-synthetic observations'
       })
     }
     if (value.status === 'source-backed') {
@@ -468,6 +549,17 @@ export const competitiveResearchReadModelSchema = z
           message: 'Source-backed competitive research requires an observation time'
         })
       }
+      if (
+        !value.observations.some(
+          (observation) => !observation.synthetic && observation.reviewState === 'confirmed'
+        )
+      ) {
+        context.addIssue({
+          code: 'custom',
+          path: ['observations'],
+          message: 'Source-backed competitive research requires a confirmed observation'
+        })
+      }
     }
     if (value.status === 'reviewed-seed-only' && value.seedReview === null) {
       context.addIssue({
@@ -491,15 +583,41 @@ export function composeCompetitiveResearchReadModel(input: {
   observedAt?: string | null
   sourceIds?: string[]
   evidenceIds?: string[]
+  observations?: CompetitiveResearchObservation[]
 }): CompetitiveResearchReadModel {
-  const sourceIds = input.sourceIds ?? []
-  const evidenceIds = input.evidenceIds ?? []
+  const observations = input.observations ?? []
+  const confirmedObservations = observations.filter(
+    (observation) => !observation.synthetic && observation.reviewState === 'confirmed'
+  )
+  const sourceIds = [
+    ...new Set([
+      ...(input.sourceIds ?? []),
+      ...confirmedObservations.map((observation) => observation.sourceId)
+    ])
+  ]
+  const evidenceIds = [
+    ...new Set([
+      ...(input.evidenceIds ?? []),
+      ...confirmedObservations.flatMap((observation) =>
+        observation.evidenceId === null ? [] : [observation.evidenceId]
+      )
+    ])
+  ]
   const seedReview = input.seedReview ?? null
+  const observedAt =
+    input.observedAt ??
+    (confirmedObservations.length > 0
+      ? (confirmedObservations
+          .map((observation) => observation.observedAt)
+          .sort()
+          .at(-1) ?? null)
+      : null)
   const sourceBacked =
     !input.synthetic &&
+    confirmedObservations.length > 0 &&
     sourceIds.length > 0 &&
     evidenceIds.length > 0 &&
-    (input.observedAt ?? null) !== null
+    observedAt !== null
   const status = sourceBacked
     ? 'source-backed'
     : seedReview !== null
@@ -517,9 +635,10 @@ export function composeCompetitiveResearchReadModel(input: {
   }
   return competitiveResearchReadModelSchema.parse({
     status,
-    observedAt: input.observedAt ?? null,
+    observedAt,
     sourceIds,
     evidenceIds,
+    observations,
     coverageGaps: [...new Set(relevantGaps)],
     seedReview,
     synthetic: input.synthetic
@@ -3661,6 +3780,13 @@ export type ProductionOpportunitySeedReview = z.infer<typeof productionOpportuni
 export type CompetitiveResearchStatus = z.infer<typeof competitiveResearchStatusSchema>
 export type CompetitiveResearchSeedReadModel = z.infer<
   typeof competitiveResearchSeedReadModelSchema
+>
+export type CompetitiveResearchObservation = z.infer<typeof competitiveResearchObservationSchema>
+export type CompetitiveResearchObservationCreateInput = z.infer<
+  typeof competitiveResearchObservationCreateInputSchema
+>
+export type CompetitiveResearchObservationReviewInput = z.infer<
+  typeof competitiveResearchObservationReviewInputSchema
 >
 export type CompetitiveResearchReadModel = z.infer<typeof competitiveResearchReadModelSchema>
 export type ProductionAnalysisPersistenceInput = z.infer<

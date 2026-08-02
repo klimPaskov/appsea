@@ -421,6 +421,42 @@ a:focus-visible {
   font-size: 13px;
 }
 
+.observation-list article {
+  padding: 30px 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.observation-heading {
+  display: flex;
+  justify-content: space-between;
+  gap: 24px;
+  align-items: flex-start;
+}
+
+.observation-heading h3 {
+  max-width: 760px;
+  margin: 4px 0 0;
+  font-size: 18px;
+  line-height: 1.45;
+}
+
+.observation-state {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 650;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.observation-state.confirmed {
+  color: #187c5c;
+}
+
+.observation-state.rejected {
+  color: #a23b52;
+}
+
 .risk-block {
   margin-top: 52px;
   padding: 28px 30px;
@@ -1217,6 +1253,11 @@ a:focus-visible {
   .workspace-opportunity-list a {
     align-items: flex-start;
     flex-direction: column;
+  }
+
+  .observation-heading {
+    flex-direction: column;
+    gap: 8px;
   }
 
   .workspace-toolbar .quiet-button {

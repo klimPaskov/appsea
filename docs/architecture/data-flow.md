@@ -82,10 +82,15 @@ before either status source is queried.
     score assumptions as immutable content-hashed records. Editors review them
     and owners approve them before analysis may reference the seed ID.
 13. Reviewed competitor and contrary-evidence seed values are attached without
-    inferring missing market coverage from complaint text. The private
+    inferring missing market coverage from complaint text. A separate
+    `competitor_research_observations` row may attach one bounded claim only to
+    an existing competitor relationship and an existing source item/evidence
+    pair. Migration `0059` requires an approved `competitor-research` purpose,
+    active provenance, and an editor/owner review transition. The private
     opportunity read model records whether competitive research is unresolved,
-    reviewed-seed-only, or source-backed; source-backed status requires
-    permitted source IDs, retained evidence IDs, and an observation time.
+    reviewed-seed-only, or source-backed; source-backed status requires a
+    confirmed non-synthetic observation, permitted source/evidence IDs, and an
+    observation time.
 14. Scoring calculates a versioned score only from explicit reviewed factors.
 15. A distinct post-collection analysis run rechecks the completed collection,
     approved policy review/hash, and every active complaint/evidence/source-item
