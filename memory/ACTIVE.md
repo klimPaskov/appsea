@@ -5,10 +5,11 @@
 Fixture product, PostgreSQL persistence, durable workflows, policy-gated CFPB
 collection, private workspaces, report/plan approval/export, recovery, and
 invitations are implemented. Migrations
-`0027`-`0065` add policy evidence, collection checkpoints, deletion repair,
+`0027`-`0066` add policy evidence, collection checkpoints, deletion repair,
 leases, snapshot reconciliation, workflow admissions, source-reconciliation
 admission, retryable tombstones, maintenance-run telemetry, a durable source-
-quota case ledger, recomputation alerts, and cost-threshold projection.
+quota case ledger, recomputation alerts, cost-threshold projection, and
+owner-only non-destructive workspace archival.
 Migration `0050` adds explicit one-record tombstone-bound CFPB re-collection
 with immutable lineage; it never runs automatically and the source remains
 disabled. `0051` binds direct CFPB admission to `appsea-worker`. Deployed
@@ -33,12 +34,6 @@ future timestamps are rejected. Final lineage locks the active, current,
 unexpired policy, requires allowed/restricted commercial use, and rechecks
 confirmed redacted evidence before linking outputs. Collection initialization
 fails closed without a consumed admission reservation.
-
-Connectors preflight the lease before each request; denial releases quota and
-makes no HTTP call. Persistence still locks/rechecks the lease in its write
-transaction. Settled cost travels from `CfpbConnector` through the snapshot,
-workflow, and audit/outbox metadata. CFPB cost is zero; known overages are
-rejected before lease acquisition. The preflight/socket window is not atomic.
 
 Read models include linked report/plan approval states from PostgreSQL; the
 private opportunity mapper reflects later transitions without inferring state
@@ -112,6 +107,12 @@ The 2026-08-02 alert tranches add migrations `0064`/`0065`, maintenance-only
 recomputation/cost projections, bounded lease-aware scans, fixed states,
 secret-free counters, and explicit cost thresholds. They never mutate work;
 deployment owns scheduler routing, threshold selection, billing, and response.
+
+Migration `0066` adds `appsea.archive_workspace`: owner + recent step-up,
+active durable-work blocker, campaign refresh cleanup, pending-invitation
+revocation, and identifier-only receipts. Archival retains lineage and is not
+workspace/object/export/backup purge. Web `DELETE /api/workspaces/:workspaceId`
+and the member settings control expose the strict `ARCHIVE WORKSPACE` action.
 
 Current audit: `docs/status/production-readiness-audit-2026-08-02.md`.
 

@@ -44,6 +44,7 @@ Open `http://localhost:3000` after the web server starts.
 - explicit, one-record, tombstone-bound source re-collection with immutable lineage and private review; it never runs automatically and does not activate a connector
 - direct CFPB source commands use the same bounded production admission ledger through the `appsea-worker` service principal; they cannot bypass private-workspace, fixture, or source-policy gates
 - owner-scoped invitations for existing AppSea accounts with hash-only tokens, encrypted outbox delivery, acceptance/revocation, and a production kill switch
+- owner-only, step-up-protected workspace archival that blocks active work, preserves research lineage, and records identifier-only lifecycle receipts
 - provider-neutral password recovery mechanics with hash-only reset tokens,
   encrypted outbox delivery, fragment links, and a production kill switch
 - native Codex skills and bounded subagents
@@ -60,7 +61,7 @@ Open `http://localhost:3000` after the web server starts.
   delivery approval, MFA/OIDC, and provider policy remain; owner-safe account
   closure is implemented but intentionally retains shared workspace research)
 - production database provisioning and production Temporal infrastructure (TLS/authentication, HA, backups, retention, deployment, and alerts)
-- production encrypted object-storage deployment, lifecycle/versioning rules, backup purge, and workspace-closure/export deletion wiring
+- production encrypted object-storage deployment, lifecycle/versioning rules, destructive workspace/object/backup/export purge wiring (workspace archival is implemented separately)
 - legacy production-analysis v1 history drain/retention and other deployment
   security controls
 - autonomous production deployment

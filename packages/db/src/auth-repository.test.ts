@@ -497,6 +497,48 @@ function accountClosurePool(options: { blockingWorkspaceIds?: string[] } = {}): 
   }
 }
 
+function workspaceArchivePool(options: { blocked?: boolean; forbidden?: boolean } = {}): {
+  pool: Pool
+  statements: Array<{ text: string; values: unknown[] }>
+} {
+  const statements: Array<{ text: string; values: unknown[] }> = []
+  const client = {
+    query: async (text: string, values: unknown[] = []) => {
+      statements.push({ text, values })
+      if (text.includes('FROM appsea.archive_workspace')) {
+        if (options.forbidden)
+          throw Object.assign(new Error('workspace archival requires an owner'), { code: '42501' })
+        return {
+          rows: [
+            options.blocked
+              ? {
+                  workspace_id: 'workspace:one',
+                  state: 'blocked',
+                  archived_at: null,
+                  active_work_count: 2,
+                  replayed: false
+                }
+              : {
+                  workspace_id: 'workspace:one',
+                  state: 'archived',
+                  archived_at: '2026-08-02T20:00:00.000Z',
+                  active_work_count: 0,
+                  replayed: false
+                }
+          ],
+          rowCount: 1
+        }
+      }
+      return { rows: [], rowCount: 0 }
+    },
+    release: () => undefined
+  } as unknown as PoolClient
+  return {
+    pool: { connect: async () => client } as unknown as Pool,
+    statements
+  }
+}
+
 describe('PostgresAuthRepository', () => {
   it('reads an active session and only stores token hashes in SQL parameters', async () => {
     const token = 'a'.repeat(48)
@@ -714,6 +756,53 @@ describe('PostgresAuthRepository', () => {
       name: 'AuthAccountDeletionBlockedError',
       workspaceIds: ['workspace:owned']
     } satisfies Partial<AuthAccountDeletionBlockedError>)
+  })
+
+  it('archives through the owner-only database function and exposes active-work blockers', async () => {
+    const archived = workspaceArchivePool()
+    const repository = new PostgresAuthRepository(archived.pool)
+    await expect(
+      repository.archiveWorkspace('user:owner', 'workspace:one', {
+        confirmation: 'ARCHIVE WORKSPACE'
+      })
+    ).resolves.toEqual({
+      workspaceId: 'workspace:one',
+      state: 'archived',
+      archivedAt: '2026-08-02T20:00:00.000Z',
+      activeWorkCount: 0,
+      replayed: false
+    })
+    expect(archived.statements.some((entry) => entry.text.includes('archive_workspace'))).toBe(true)
+    expect(
+      archived.statements.some(
+        (entry) =>
+          entry.text.includes("set_config('appsea.auth_user_id'") &&
+          entry.values[0] === 'user:owner'
+      )
+    ).toBe(true)
+    expect(
+      archived.statements.some(
+        (entry) =>
+          entry.text.includes("set_config('appsea.workspace_id'") &&
+          entry.values[0] === 'workspace:one'
+      )
+    ).toBe(true)
+
+    await expect(
+      new PostgresAuthRepository(workspaceArchivePool({ blocked: true }).pool).archiveWorkspace(
+        'user:owner',
+        'workspace:one',
+        { confirmation: 'ARCHIVE WORKSPACE' }
+      )
+    ).resolves.toMatchObject({ state: 'blocked', activeWorkCount: 2, archivedAt: null })
+
+    await expect(
+      new PostgresAuthRepository(workspaceArchivePool({ forbidden: true }).pool).archiveWorkspace(
+        'user:editor',
+        'workspace:one',
+        { confirmation: 'ARCHIVE WORKSPACE' }
+      )
+    ).rejects.toMatchObject({ name: 'WorkspaceArchivePermissionError' })
   })
 
   it('lists members for owners and records role/removal changes durably', async () => {

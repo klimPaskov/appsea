@@ -14,6 +14,9 @@
 
 - `/leaderboard` contains only the ranked list and small heading area.
 - Opportunity, complaints, competitors, and plan stay separate.
+- Workspace member settings may contain owner-only lifecycle controls. Keep
+  archival in the existing calm risk-block pattern, require visible step-up
+  state, and explain retained lineage versus destructive purge in text.
 - Do not repeat the full research report on every screen.
 - Desktop and mobile use the same data contract even when presentation differs.
 

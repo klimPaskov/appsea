@@ -3,6 +3,7 @@ export {
   AuthenticationConflictError,
   AuthenticationError,
   AuthAccountDeletionBlockedError,
+  WorkspaceArchivePermissionError,
   AuthPasswordResetConfigurationError,
   AuthPasswordResetError,
   WorkspaceInvitationConflictError,

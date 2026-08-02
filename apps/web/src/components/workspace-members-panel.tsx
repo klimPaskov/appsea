@@ -4,6 +4,7 @@ import { useState, type FormEvent } from 'react'
 import {
   workspaceInvitationReadModelSchema,
   workspaceInvitationRoleSchema,
+  workspaceArchiveResultSchema,
   workspaceMemberReadModelSchema,
   workspaceRoleSchema,
   type WorkspaceInvitationReadModel,
@@ -35,6 +36,7 @@ export function WorkspaceMembersPanel({
   const [reauthenticated, setReauthenticated] = useState(false)
   const [password, setPassword] = useState('')
   const [reauthenticating, setReauthenticating] = useState(false)
+  const [archiving, setArchiving] = useState(false)
 
   async function reauthenticate(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -161,6 +163,48 @@ export function WorkspaceMembersPanel({
     }
   }
 
+  async function archiveWorkspace() {
+    if (
+      !reauthenticated ||
+      !window.confirm('Archive this workspace? Research lineage will be retained.')
+    ) {
+      return
+    }
+    setArchiving(true)
+    setError(null)
+    try {
+      const response = await fetch(`/api/workspaces/${workspaceId}`, {
+        method: 'DELETE',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ confirmation: 'ARCHIVE WORKSPACE' })
+      })
+      const body = (await response.json()) as { data?: unknown; error?: unknown }
+      if (response.status === 428) {
+        setReauthenticated(false)
+        throw new Error('Verify your password before archiving this workspace')
+      }
+      if (response.status === 409) {
+        const blocked = workspaceArchiveResultSchema.safeParse(body.data)
+        const count =
+          blocked.success && blocked.data.state === 'blocked' ? blocked.data.activeWorkCount : null
+        throw new Error(
+          count === null
+            ? 'Finish active research before archiving this workspace'
+            : `Finish ${count} active research operation${count === 1 ? '' : 's'} before archiving this workspace`
+        )
+      }
+      if (!response.ok)
+        throw new Error(typeof body.error === 'string' ? body.error : 'Unable to archive workspace')
+      const archived = workspaceArchiveResultSchema.parse(body.data)
+      if (archived.state !== 'archived') throw new Error('Workspace archival did not complete')
+      window.location.assign('/workspace')
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : 'Unable to archive workspace')
+    } finally {
+      setArchiving(false)
+    }
+  }
+
   return (
     <>
       {error ? (
@@ -172,7 +216,10 @@ export function WorkspaceMembersPanel({
         <form className="workspace-step-up" onSubmit={(event) => void reauthenticate(event)}>
           <div>
             <strong>Verify owner access</strong>
-            <p>Enter your password to enable member role and removal changes for 15 minutes.</p>
+            <p>
+              Enter your password to enable member changes, invitations, and workspace archival for
+              15 minutes.
+            </p>
           </div>
           <label>
             <span className="sr-only">Account password</span>
@@ -317,6 +364,26 @@ export function WorkspaceMembersPanel({
             Only existing AppSea accounts with the invited email can accept. Delivery is
             provider-controlled and may remain disabled.
           </p>
+        </section>
+      ) : null}
+      {canManage ? (
+        <section
+          className="risk-block workspace-archival"
+          aria-labelledby="workspace-archival-heading"
+        >
+          <h2 id="workspace-archival-heading">Archive workspace</h2>
+          <p>
+            Archiving stops new research and refresh work while retaining evidence lineage, reports,
+            and plans for review. It does not purge exports, object storage, or backups.
+          </p>
+          <button
+            className="quiet-button"
+            type="button"
+            disabled={archiving || !reauthenticated}
+            onClick={() => void archiveWorkspace()}
+          >
+            {archiving ? 'Archiving…' : 'Archive workspace'}
+          </button>
         </section>
       ) : null}
     </>

@@ -25,7 +25,7 @@ Status: production-shaped foundation implemented and validated locally; producti
 
 Implemented:
 
-- PostgreSQL 18 schema and sixty-five forward, checksummed migrations
+- PostgreSQL 18 schema and sixty-six forward, checksummed migrations
 - normalized source, evidence, complaint, cluster, competitor, opportunity, score, report, plan, audit, cost, deletion, outbox, and lineage tables
 - no-login owner, separate migrator, and least-privilege runtime role contract
 - forced workspace RLS and transaction-scoped workspace context
@@ -42,8 +42,9 @@ Implemented:
   local filesystem, and signed S3-compatible adapters for production analysis
   artifact/report/plan blobs; migration `0043` now queues complete invalidated
   output references and the adapters perform retention-aware mark/purge retries;
-  provider encryption, lifecycle/versioning, workspace closure, exports, and
-  backup purge remain open
+  provider encryption, lifecycle/versioning, destructive workspace closure,
+  exports, and backup purge remain open; owner archival is implemented as a
+  separate non-destructive boundary
 - durable production-analysis run, policy/evidence/output lineage, report
   object-reference, RLS, terminal-transition, and source-deletion invalidation
   migration; idempotent repository stores redacted artifact/report/plan objects
@@ -84,9 +85,16 @@ Implemented:
   ownership, HTTPS origin, delivery switches, and trusted-proxy configuration
   without contacting dependencies or activating a source
 
+Migration `0066_workspace_archival.sql` adds an owner-only, step-up-backed
+workspace archival boundary. It blocks while durable workflow/run/handoff/
+lease/reconciliation/recomputation work is active, archives campaign refresh
+state, revokes pending invitations, and records identifier-only audit/outbox
+receipts. Research lineage and object/export/backup references remain intact;
+destructive purge is a separate reviewed retention operation.
+
 The invalidated production-analysis output queue is a deliberate narrow slice:
 it does not claim source-wide retention purge, cloud backup deletion, or
-workspace-closure deletion.
+destructive workspace-closure deletion (archival is separate).
 
 Remaining deployment work and the non-fixture object-store integration are
 tracked in `docs/status/known-gaps.md` and are not part of the completed

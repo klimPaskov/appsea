@@ -19,6 +19,8 @@ import {
   authReauthenticationInputSchema,
   authAccountDeletionInputSchema,
   authAccountDeletionResultSchema,
+  workspaceArchiveInputSchema,
+  workspaceArchiveResultSchema,
   authSessionSummaryReadModelSchema,
   authSessionReadModelSchema,
   authSignInInputSchema,
@@ -52,6 +54,8 @@ import {
   type AuthReauthenticationInput,
   type AuthAccountDeletionInput,
   type AuthAccountDeletionResult,
+  type WorkspaceArchiveInput,
+  type WorkspaceArchiveResult,
   type AuthSignInInput,
   type AuthSignInResult,
   type AuthSignUpInput,
@@ -143,6 +147,13 @@ export class AuthAccountDeletionBlockedError extends Error {
     super('Transfer workspace ownership before closing this account')
     this.name = 'AuthAccountDeletionBlockedError'
     this.workspaceIds = [...workspaceIds]
+  }
+}
+
+export class WorkspaceArchivePermissionError extends Error {
+  constructor() {
+    super('Only the workspace owner can archive this active workspace')
+    this.name = 'WorkspaceArchivePermissionError'
   }
 }
 
@@ -299,6 +310,14 @@ interface AuthSessionSummaryRow extends QueryResultRow {
 interface MembershipRow extends QueryResultRow {
   workspace_id: string
   role: 'owner' | 'editor' | 'viewer'
+}
+
+interface WorkspaceArchiveRow extends QueryResultRow {
+  workspace_id: string
+  state: 'archived' | 'blocked'
+  archived_at: Date | string | null
+  active_work_count: number | string
+  replayed: boolean
 }
 
 interface WorkspaceMemberRow extends QueryResultRow {
@@ -514,6 +533,15 @@ export function decryptPasswordResetDelivery(record: PasswordResetDeliveryRecord
 
 function isUniqueViolation(error: unknown): boolean {
   return typeof error === 'object' && error !== null && 'code' in error && error.code === '23505'
+}
+
+function isWorkspaceArchivePermissionError(error: unknown): boolean {
+  return (
+    typeof error === 'object' &&
+    error !== null &&
+    'code' in error &&
+    (error as { code?: unknown }).code === '42501'
+  )
 }
 
 function isMembershipOwnerConflict(error: unknown): boolean {
@@ -1062,6 +1090,53 @@ export class PostgresAuthRepository {
     })
     if (!parsed.closed) throw new AuthAccountDeletionBlockedError(parsed.blockingWorkspaceIds)
     return parsed
+  }
+
+  /**
+   * Archive a workspace through the owner-only security-definer boundary.
+   * Archival blocks new work and retains research lineage; destructive purge
+   * of evidence, exports, object storage, or backups is intentionally separate.
+   */
+  async archiveWorkspace(
+    userId: string,
+    workspaceId: string,
+    input: WorkspaceArchiveInput
+  ): Promise<WorkspaceArchiveResult> {
+    const parsedUserId = appseaIdentifierSchema.parse(userId)
+    const parsedWorkspaceId = appseaIdentifierSchema.parse(workspaceId)
+    workspaceArchiveInputSchema.parse(input)
+
+    try {
+      const result = await withDatabaseTransaction(
+        this.pool,
+        async (client) => {
+          await client.query("SELECT set_config('appsea.auth_user_id', $1, true)", [parsedUserId])
+          await client.query("SELECT set_config('appsea.workspace_id', $1, true)", [
+            parsedWorkspaceId
+          ])
+          return client.query<WorkspaceArchiveRow>(
+            `SELECT workspace_id, state, archived_at, active_work_count, replayed
+               FROM appsea.archive_workspace($1, $2)`,
+            [parsedWorkspaceId, parsedUserId]
+          )
+        },
+        { maxSerializationRetries: 0 }
+      )
+      const row = result.rows[0]
+      if (!row) throw new Error('Workspace archival result was not recorded')
+      return workspaceArchiveResultSchema.parse({
+        workspaceId: row.workspace_id,
+        state: row.state,
+        archivedAt: row.archived_at === null ? null : iso(row.archived_at),
+        activeWorkCount: Number(row.active_work_count),
+        replayed: row.replayed
+      })
+    } catch (error) {
+      if (isWorkspaceArchivePermissionError(error)) {
+        throw new WorkspaceArchivePermissionError()
+      }
+      throw error
+    }
   }
 
   async readAuthenticatedSession(token: string): Promise<AuthSessionReadModel | null> {

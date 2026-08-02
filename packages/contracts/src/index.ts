@@ -3438,6 +3438,40 @@ export const authAccountDeletionInputSchema = z
   })
   .strict()
 
+// Workspace archival stops new research while retaining immutable lineage.
+// Destructive workspace/object/backup purge remains a separate reviewed
+// retention operation and is never implied by this contract.
+export const workspaceArchiveInputSchema = z
+  .object({
+    confirmation: z.literal('ARCHIVE WORKSPACE')
+  })
+  .strict()
+
+const workspaceArchivedResultSchema = z
+  .object({
+    workspaceId: appseaIdentifierSchema,
+    state: z.literal('archived'),
+    archivedAt: z.string().datetime(),
+    activeWorkCount: z.literal(0),
+    replayed: z.boolean()
+  })
+  .strict()
+
+const workspaceArchiveBlockedResultSchema = z
+  .object({
+    workspaceId: appseaIdentifierSchema,
+    state: z.literal('blocked'),
+    archivedAt: z.null(),
+    activeWorkCount: z.number().int().min(1).max(2_147_483_647),
+    replayed: z.literal(false)
+  })
+  .strict()
+
+export const workspaceArchiveResultSchema = z.discriminatedUnion('state', [
+  workspaceArchivedResultSchema,
+  workspaceArchiveBlockedResultSchema
+])
+
 export const authSessionTokenSchema = z
   .string()
   .min(32)
@@ -4622,6 +4656,7 @@ export type AuthSignUpInput = z.infer<typeof authSignUpInputSchema>
 export type AuthSignInInput = z.infer<typeof authSignInInputSchema>
 export type AuthReauthenticationInput = z.infer<typeof authReauthenticationInputSchema>
 export type AuthAccountDeletionInput = z.infer<typeof authAccountDeletionInputSchema>
+export type WorkspaceArchiveInput = z.infer<typeof workspaceArchiveInputSchema>
 export type AuthPasswordResetToken = z.infer<typeof authPasswordResetTokenSchema>
 export type AuthPasswordResetRequestInput = z.infer<typeof authPasswordResetRequestInputSchema>
 export type AuthPasswordResetInput = z.infer<typeof authPasswordResetInputSchema>
@@ -4632,6 +4667,7 @@ export type AuthSessionReadModel = z.infer<typeof authSessionReadModelSchema>
 export type AuthSessionSummaryReadModel = z.infer<typeof authSessionSummaryReadModelSchema>
 export type AuthSessionListReadModel = z.infer<typeof authSessionListReadModelSchema>
 export type AuthAccountDeletionResult = z.infer<typeof authAccountDeletionResultSchema>
+export type WorkspaceArchiveResult = z.infer<typeof workspaceArchiveResultSchema>
 export type WorkspaceCostSummaryQuery = z.infer<typeof workspaceCostSummaryQuerySchema>
 export type WorkspaceCostTypeSummary = z.infer<typeof workspaceCostTypeSummarySchema>
 export type WorkspaceCurrencyCostSummary = z.infer<typeof workspaceCurrencyCostSummarySchema>

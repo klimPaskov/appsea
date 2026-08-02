@@ -283,6 +283,17 @@ for that pre-context authorization lookup.
   sessions/reset material, discarding pending reset deliveries, anonymizing
   profile fields, and emitting a fixed security event. Memberships and shared
   research remain by design; this is not an object-store or backup purge.
+- Migration `0066` adds a separate owner-only workspace archival boundary. The
+  web route requires same-origin access and recent password step-up; the
+  security-definer function repeats the authenticated owner check, locks the
+  workspace, counts active workflow/run/handoff/lease/reconciliation/
+  recomputation work, and returns a bounded blocker instead of archiving while
+  work can still mutate state. A successful archive marks campaigns archived,
+  clears refresh claims, revokes pending invitations, and records only
+  identifier-only audit/outbox receipts. Forced-RLS reads then exclude the
+  archived workspace. Evidence lineage, reports, plans, exports, object
+  references, backups, and deletion obligations remain retained; purge is a
+  separate reviewed retention boundary.
 - Report approval transitions stay inside the private workspace boundary:
   owners/editors can review drafts, only owners can approve or withdraw, and
   migration `0022` repeats the transition check in PostgreSQL while recording

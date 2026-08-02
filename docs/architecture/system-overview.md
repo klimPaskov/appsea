@@ -148,6 +148,15 @@ private competitor routes render only this normalized contract. Raw provider
 payloads remain outside the matrix; approved competitor-purpose source
 coverage is still required before source-backed entries can be populated.
 
+Migration `0066_workspace_archival.sql` adds the owner-controlled workspace
+lifecycle boundary. A security-definer function locks the workspace, verifies
+the authenticated owner, counts active durable work, and either returns a
+bounded blocker or archives the workspace idempotently. Archival cancels no
+history and deletes no evidence, reports, plans, object references, exports,
+or backups; it only stops new workspace research, archives campaign refresh
+state, revokes pending invitations, and emits identifier-only receipts.
+Destructive retention/purge remains a separately reviewed operation.
+
 The connector package now includes a disabled Stack Exchange candidate for
 bounded competitor/contrary-signal collection. It uses the official API only,
 sanitizes question excerpts, preserves an HTTPS attribution locator, and emits

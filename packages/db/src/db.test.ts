@@ -78,7 +78,8 @@ describe('database foundation', () => {
       '0062',
       '0063',
       '0064',
-      '0065'
+      '0065',
+      '0066'
     ])
     expect(migrations[0]?.checksum).toMatch(/^[a-f0-9]{64}$/)
     expect(migrations[0]?.sql).toContain('CREATE TABLE appsea.evidence_records')
@@ -194,6 +195,7 @@ describe('database foundation', () => {
     )
     const recomputeAlertMigration = migrations.find((migration) => migration.version === '0064')
     const costAlertMigration = migrations.find((migration) => migration.version === '0065')
+    const workspaceArchivalMigration = migrations.find((migration) => migration.version === '0066')
     expect(authMigration?.sql).toContain('CREATE TABLE appsea.users')
     expect(authMigration?.sql).toContain('CREATE TABLE appsea.auth_sessions')
     expect(authMigration?.sql).toContain('FORCE ROW LEVEL SECURITY')
@@ -636,6 +638,27 @@ describe('database foundation', () => {
     )
     expect(costAlertMigration?.sql).toContain(
       'GRANT EXECUTE ON FUNCTION appsea.list_workspace_cost_alerts'
+    )
+    expect(workspaceArchivalMigration?.sql).toContain('ADD COLUMN archived_at timestamptz')
+    expect(workspaceArchivalMigration?.sql).toContain('workspace_archive_state_check')
+    expect(workspaceArchivalMigration?.sql).toContain(
+      'CREATE OR REPLACE FUNCTION appsea.archive_workspace'
+    )
+    expect(workspaceArchivalMigration?.sql).toContain('active_work_count')
+    expect(workspaceArchivalMigration?.sql).toContain(
+      "workflow_execution.state IN ('queued', 'running')"
+    )
+    expect(workspaceArchivalMigration?.sql).toContain(
+      "handoff.state IN ('queued', 'dispatching', 'started')"
+    )
+    expect(workspaceArchivalMigration?.sql).toContain('workspace_invitation_deliveries')
+    expect(workspaceArchivalMigration?.sql).toContain("state IN ('pending', 'sending', 'failed')")
+    expect(workspaceArchivalMigration?.sql).toContain('researchLineage')
+    expect(workspaceArchivalMigration?.sql).toContain(
+      'REVOKE ALL ON FUNCTION appsea.archive_workspace(text, text) FROM PUBLIC'
+    )
+    expect(workspaceArchivalMigration?.sql).toContain(
+      'GRANT EXECUTE ON FUNCTION appsea.archive_workspace(text, text) TO appsea_service'
     )
   })
 

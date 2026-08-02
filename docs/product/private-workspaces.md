@@ -37,6 +37,15 @@ The public AppSea leaderboard is a sparse, synthetic fixture surface. Private re
   password step-up before creating or revoking an invitation. Invitation delivery is a separate,
   provider-neutral worker/outbox boundary and remains disabled in production until email/identity,
   provider, privacy, and security review is approved; invitations never grant owner access.
+- Owners can archive an active workspace from `/workspace/:workspaceId/members` after the same
+  password step-up and a typed `ARCHIVE WORKSPACE` confirmation. `DELETE
+/api/workspaces/:workspaceId` stops new research and refresh work, archives campaigns, revokes
+  pending invitations, and records identifier-only audit/outbox receipts. The database function
+  blocks the transition while workflow, run, handoff, lease, reconciliation, or recomputation work
+  is active and returns a bounded count for retry. Archival retains evidence, reports, plans,
+  provenance, exports, object references, and backups; destructive workspace/object/backup/export
+  purge is a separate reviewed retention operation and is not exposed by this endpoint. Repeating
+  an owner request is an idempotent read of the archived state.
 
 ## Research detail
 

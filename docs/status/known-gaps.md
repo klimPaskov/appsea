@@ -104,8 +104,10 @@ closure that anonymizes authentication material, discards reset deliveries,
 revokes sessions, and retains shared workspace research; closure is blocked
 until every owned workspace has another owner. Owner-only member listing, role changes, and removal are
 implemented through the private workspace settings route and protected by a
-15-minute password step-up window; MFA/OIDC and a production identity-provider
-control plane remain open.
+15-minute password step-up window. Owner-only workspace archival is now also
+implemented through the same route: it blocks active workflow/run/lease work,
+retains lineage, and records identifier-only receipts. MFA/OIDC and a production
+identity-provider control plane remain open.
 
 The repository refuses to auto-create fixture workspaces when `NODE_ENV` is
 `production`; deployment must provision fixture-enabled workspaces explicitly.
@@ -135,8 +137,9 @@ reviewed analysis can now re-cluster the
 remaining active evidence after deletion, but automatic recomputation
 scheduling now persists source-tombstone- or correction-bound jobs and dispatches
 through the existing analysis workflow. Automatic re-collection, object
-storage/backups, workspace-closure purge, export purge, and deployed scheduler
-alerting are not implemented.
+storage/backups, destructive workspace purge, export purge, and deployed
+scheduler alerting are not implemented. Workspace archival is a separate,
+non-destructive lifecycle boundary and does not satisfy those purge duties.
 Complaint review transitions and the
 explicit reviewed analysis-start route are implemented. Migration `0034` also
 provides an opt-in, seed-bound post-collection handoff with stale-claim
@@ -237,8 +240,9 @@ and synthetic fixture packages. `@appsea/object-store` now provides bounded
 in-memory/filesystem adapters plus a signed S3-compatible adapter wired through
 the shared environment factory. Migration `0043` adds the durable
 invalidated-output purge queue. Provider encryption, lifecycle/versioning,
-least-privilege credential deployment, backup purge, workspace-closure purge,
-and fresh Docker-backed proof remain open.
+least-privilege credential deployment, destructive workspace/object/backup
+purge, and fresh Docker-backed proof remain open. Owner workspace archival is
+implemented separately and retains the referenced data.
 
 ## Sources
 
@@ -349,7 +353,8 @@ review page; the analysis-start boundary now accepts only an approved
 handoff orchestration, private active-output reads, and source-deletion
 invalidation are implemented, with editor/owner complaint review transitions
 on the private collection surface. Cloud object storage, external retention/
-backup propagation, workspace-closure purge, and export purge remain open. Plan packages now have a separate owner/editor
+backup propagation, destructive workspace closure, and export purge remain open.
+Plan packages now have a separate owner/editor
 approval boundary and approved JSON export; both report and plan routes hydrate
 validated object-backed payloads before export. Source-item retention enqueue is
 implemented from the stored policy; invalidated analysis outputs now enqueue

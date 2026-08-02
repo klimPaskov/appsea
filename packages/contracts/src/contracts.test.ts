@@ -8,6 +8,8 @@ import {
   authReauthenticationInputSchema,
   authAccountDeletionInputSchema,
   authAccountDeletionResultSchema,
+  workspaceArchiveInputSchema,
+  workspaceArchiveResultSchema,
   authPasswordResetAcceptedReadModelSchema,
   authPasswordResetInputSchema,
   authPasswordResetRequestInputSchema,
@@ -277,6 +279,43 @@ const validFixturePersistenceInput: FixturePersistenceInput = {
 }
 
 describe('contracts', () => {
+  it('requires an explicit workspace archive confirmation and keeps purge separate', () => {
+    expect(
+      workspaceArchiveInputSchema.safeParse({ confirmation: 'ARCHIVE WORKSPACE' }).success
+    ).toBe(true)
+    expect(
+      workspaceArchiveInputSchema.safeParse({ confirmation: 'DELETE WORKSPACE' }).success
+    ).toBe(false)
+    expect(
+      workspaceArchiveResultSchema.safeParse({
+        workspaceId: 'workspace:one',
+        state: 'archived',
+        archivedAt: now,
+        activeWorkCount: 0,
+        replayed: false
+      }).success
+    ).toBe(true)
+    expect(
+      workspaceArchiveResultSchema.safeParse({
+        workspaceId: 'workspace:one',
+        state: 'archived',
+        archivedAt: now,
+        activeWorkCount: 0,
+        replayed: false,
+        purgeRequested: true
+      }).success
+    ).toBe(false)
+    expect(
+      workspaceArchiveResultSchema.safeParse({
+        workspaceId: 'workspace:one',
+        state: 'blocked',
+        archivedAt: null,
+        activeWorkCount: 2,
+        replayed: false
+      }).success
+    ).toBe(true)
+  })
+
   it('bounds full-snapshot reconciliation inputs and preserves visible incomplete state', () => {
     const base = {
       workspaceId: 'workspace-fixture',
