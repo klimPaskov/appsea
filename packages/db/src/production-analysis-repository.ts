@@ -3,6 +3,8 @@ import {
   appseaIdentifierSchema,
   objectReferenceSchema,
   productionAnalysisGovernanceSchema,
+  productionAnalysisActivityAttemptHistorySchema,
+  productionAnalysisFailureCodeSchema,
   productionAnalysisPersistenceInputSchema,
   productionAnalysisReadModelSchema,
   productionAnalysisResultSchema,
@@ -13,6 +15,8 @@ import {
   type ObjectReference,
   type ProductionAnalysisPersistenceInput,
   type ProductionAnalysisReadModel,
+  type ProductionAnalysisActivityAttemptState,
+  type ProductionAnalysisFailureCode,
   type ProductionAnalysisResult,
   type ProductionAnalysisSnapshot,
   type ProductionAnalysisStatusReadModel,
@@ -86,6 +90,19 @@ interface AnalysisStatusRow extends QueryResultRow {
   requested_at: Date | string
   started_at: Date | string
   completed_at: Date | string | null
+  activity_attempt_history?: unknown
+}
+
+export interface ProductionAnalysisActivityAttemptIdentity {
+  workspaceId: string
+  collectionRunId: string
+  analysisRunId: string
+  activityAttempt: number
+}
+
+export interface ProductionAnalysisActivityAttemptFinish extends ProductionAnalysisActivityAttemptIdentity {
+  state: Exclude<ProductionAnalysisActivityAttemptState, 'started'>
+  failureCode?: ProductionAnalysisFailureCode | undefined
 }
 
 interface CollectionLineageRow extends QueryResultRow {
@@ -181,13 +198,18 @@ function analysisCheckpointForState(
   }
 }
 
-function mapAnalysisStatus(row: AnalysisStatusRow): ProductionAnalysisStatusReadModel {
+function mapAnalysisStatus(
+  row: AnalysisStatusRow,
+  activityAttemptHistory: unknown = row.activity_attempt_history ?? []
+): ProductionAnalysisStatusReadModel {
   return productionAnalysisStatusReadModelSchema.parse({
     analysisRunId: row.analysis_run_id,
     collectionRunId: row.collection_run_id,
     state: row.state,
     checkpoint: analysisCheckpointForState(row.state),
     activityAttempts: row.activity_attempts,
+    activityAttemptHistory:
+      productionAnalysisActivityAttemptHistorySchema.parse(activityAttemptHistory),
     availabilityState: row.availability_state,
     opportunityId: row.opportunity_id,
     opportunitySlug: row.opportunity_slug,
@@ -680,6 +702,169 @@ export class PostgresProductionAnalysisRepository {
     private readonly pool: Pool,
     private readonly objectStore: ObjectStore
   ) {}
+
+  private async assertActivityAttemptLineage(
+    client: PoolClient,
+    input: ProductionAnalysisActivityAttemptIdentity
+  ): Promise<void> {
+    if (!(await workspaceIsProduction(client, input.workspaceId))) {
+      throw new ProductionAnalysisLineageError(
+        'Production analysis activity requires an active private non-fixture workspace'
+      )
+    }
+    const collection = await client.query(
+      `SELECT 1
+         FROM appsea.research_runs
+        WHERE workspace_id = $1
+          AND run_id = $2
+          AND mode = 'production'
+          AND state = 'completed'`,
+      [input.workspaceId, input.collectionRunId]
+    )
+    if (collection.rowCount !== 1) {
+      throw new ProductionAnalysisLineageError(
+        'Production analysis activity requires a completed production collection run'
+      )
+    }
+  }
+
+  private parseActivityAttemptIdentity(
+    input: ProductionAnalysisActivityAttemptIdentity
+  ): ProductionAnalysisActivityAttemptIdentity {
+    return {
+      workspaceId: appseaIdentifierSchema.parse(input.workspaceId),
+      collectionRunId: appseaIdentifierSchema.parse(input.collectionRunId),
+      analysisRunId: appseaIdentifierSchema.parse(input.analysisRunId),
+      activityAttempt: validatedActivityAttempt(input.activityAttempt)
+    }
+  }
+
+  async recordActivityAttemptStarted(
+    rawInput: ProductionAnalysisActivityAttemptIdentity
+  ): Promise<void> {
+    const input = this.parseActivityAttemptIdentity(rawInput)
+    await withWorkspaceTransaction(this.pool, input.workspaceId, async (client) => {
+      await this.assertActivityAttemptLineage(client, input)
+      await client.query(
+        `INSERT INTO appsea.production_analysis_activity_attempts
+           (workspace_id, analysis_run_id, collection_run_id, activity_attempt, state,
+            started_at, last_heartbeat_at, heartbeat_count, updated_at)
+         VALUES ($1, $2, $3, $4, 'started', clock_timestamp(), clock_timestamp(), 1,
+                 clock_timestamp())
+         ON CONFLICT (workspace_id, analysis_run_id, activity_attempt) DO UPDATE
+           SET last_heartbeat_at = CASE
+                 WHEN appsea.production_analysis_activity_attempts.state = 'started'
+                   THEN GREATEST(appsea.production_analysis_activity_attempts.last_heartbeat_at,
+                                 clock_timestamp())
+                 ELSE appsea.production_analysis_activity_attempts.last_heartbeat_at
+               END,
+               heartbeat_count = CASE
+                 WHEN appsea.production_analysis_activity_attempts.state = 'started'
+                   THEN LEAST(10000, appsea.production_analysis_activity_attempts.heartbeat_count + 1)
+                 ELSE appsea.production_analysis_activity_attempts.heartbeat_count
+               END,
+               updated_at = CASE
+                 WHEN appsea.production_analysis_activity_attempts.state = 'started'
+                   THEN clock_timestamp()
+                 ELSE appsea.production_analysis_activity_attempts.updated_at
+               END`,
+        [input.workspaceId, input.analysisRunId, input.collectionRunId, input.activityAttempt]
+      )
+    })
+  }
+
+  async recordActivityAttemptHeartbeat(
+    rawInput: ProductionAnalysisActivityAttemptIdentity
+  ): Promise<void> {
+    const input = this.parseActivityAttemptIdentity(rawInput)
+    await withWorkspaceTransaction(this.pool, input.workspaceId, async (client) => {
+      await client.query(
+        `UPDATE appsea.production_analysis_activity_attempts
+            SET last_heartbeat_at = GREATEST(last_heartbeat_at, clock_timestamp()),
+                heartbeat_count = LEAST(10000, heartbeat_count + 1),
+                updated_at = clock_timestamp()
+          WHERE workspace_id = $1
+            AND analysis_run_id = $2
+            AND activity_attempt = $3
+            AND state = 'started'`,
+        [input.workspaceId, input.analysisRunId, input.activityAttempt]
+      )
+    })
+  }
+
+  async recordActivityAttemptFinished(
+    rawInput: ProductionAnalysisActivityAttemptFinish
+  ): Promise<void> {
+    const input = this.parseActivityAttemptIdentity(rawInput)
+    const failureCode =
+      rawInput.state === 'failed'
+        ? productionAnalysisFailureCodeSchema.parse(rawInput.failureCode)
+        : null
+    if (rawInput.state === 'completed' && rawInput.failureCode !== undefined) {
+      throw new Error('A completed production analysis activity cannot carry a failure code')
+    }
+    await withWorkspaceTransaction(this.pool, input.workspaceId, async (client) => {
+      await this.assertActivityAttemptLineage(client, input)
+      await client.query(
+        `INSERT INTO appsea.production_analysis_activity_attempts
+           (workspace_id, analysis_run_id, collection_run_id, activity_attempt, state,
+            started_at, last_heartbeat_at, heartbeat_count, finished_at, duration_ms,
+            failure_code, updated_at)
+         VALUES ($1, $2, $3, $4, $5, clock_timestamp(), clock_timestamp(), 1,
+                 clock_timestamp(), 0, $6, clock_timestamp())
+         ON CONFLICT (workspace_id, analysis_run_id, activity_attempt) DO UPDATE
+           SET state = CASE
+                 WHEN appsea.production_analysis_activity_attempts.state = 'started'
+                   THEN EXCLUDED.state
+                 ELSE appsea.production_analysis_activity_attempts.state
+               END,
+               last_heartbeat_at = CASE
+                 WHEN appsea.production_analysis_activity_attempts.state = 'started'
+                   THEN GREATEST(appsea.production_analysis_activity_attempts.last_heartbeat_at,
+                                 clock_timestamp())
+                 ELSE appsea.production_analysis_activity_attempts.last_heartbeat_at
+               END,
+               heartbeat_count = CASE
+                 WHEN appsea.production_analysis_activity_attempts.state = 'started'
+                   THEN LEAST(10000, appsea.production_analysis_activity_attempts.heartbeat_count + 1)
+                 ELSE appsea.production_analysis_activity_attempts.heartbeat_count
+               END,
+               finished_at = CASE
+                 WHEN appsea.production_analysis_activity_attempts.state = 'started'
+                   THEN GREATEST(appsea.production_analysis_activity_attempts.started_at,
+                                 clock_timestamp())
+                 ELSE appsea.production_analysis_activity_attempts.finished_at
+               END,
+               duration_ms = CASE
+                 WHEN appsea.production_analysis_activity_attempts.state = 'started'
+                   THEN LEAST(86400000, GREATEST(0, floor(extract(epoch FROM (
+                     GREATEST(appsea.production_analysis_activity_attempts.started_at,
+                              clock_timestamp())
+                     - appsea.production_analysis_activity_attempts.started_at
+                   )) * 1000)::integer))
+                 ELSE appsea.production_analysis_activity_attempts.duration_ms
+               END,
+               failure_code = CASE
+                 WHEN appsea.production_analysis_activity_attempts.state = 'started'
+                   THEN EXCLUDED.failure_code
+                 ELSE appsea.production_analysis_activity_attempts.failure_code
+               END,
+               updated_at = CASE
+                 WHEN appsea.production_analysis_activity_attempts.state = 'started'
+                   THEN clock_timestamp()
+                 ELSE appsea.production_analysis_activity_attempts.updated_at
+               END`,
+        [
+          input.workspaceId,
+          input.analysisRunId,
+          input.collectionRunId,
+          input.activityAttempt,
+          rawInput.state,
+          failureCode
+        ]
+      )
+    })
+  }
 
   private async prepareRun(
     input: ProductionAnalysisPersistenceInput,
@@ -1713,7 +1898,33 @@ export class PostgresProductionAnalysisRepository {
                   analysis.activity_attempts,
                   analysis.opportunity_id, opportunity.slug AS opportunity_slug,
                   analysis.failure_code, analysis.failure_summary,
-                  analysis.requested_at, analysis.started_at, analysis.completed_at
+                  analysis.requested_at, analysis.started_at, analysis.completed_at,
+                  (
+                    SELECT COALESCE(
+                      jsonb_agg(
+                        jsonb_build_object(
+                          'activityAttempt', attempt.activity_attempt,
+                          'state', attempt.state,
+                          'startedAt', attempt.started_at,
+                          'lastHeartbeatAt', attempt.last_heartbeat_at,
+                          'heartbeatCount', attempt.heartbeat_count,
+                          'finishedAt', attempt.finished_at,
+                          'durationMs', attempt.duration_ms,
+                          'failureCode', attempt.failure_code
+                        ) ORDER BY attempt.activity_attempt
+                      ),
+                      '[]'::jsonb
+                    )
+                    FROM (
+                      SELECT activity_attempt, state, started_at, last_heartbeat_at,
+                             heartbeat_count, finished_at, duration_ms, failure_code
+                        FROM appsea.production_analysis_activity_attempts
+                       WHERE workspace_id = analysis.workspace_id
+                         AND analysis_run_id = analysis.analysis_run_id
+                       ORDER BY activity_attempt
+                       LIMIT 10
+                    ) attempt
+                  ) AS activity_attempt_history
              FROM appsea.production_analysis_runs analysis
              LEFT JOIN appsea.opportunities opportunity
                ON opportunity.workspace_id = analysis.workspace_id

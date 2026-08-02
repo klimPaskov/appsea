@@ -101,19 +101,19 @@ the existing analysis admission route starts `production-analysis-v2`, and a
 private status page/API reconciles a safe Temporal response with the durable
 PostgreSQL projection. Workflow prefixes are workspace-bound; hashes, object
 references, source payloads, and seed content stay outside the read contract.
-Queued/running DB rows currently report zero activity attempts because the
-existing run table has no attempt-history column. Automatic scheduling,
-production Temporal availability, and richer attempt telemetry remain open.
+Migration `0056` adds at most ten server-clock attempt rows with stage
+heartbeats, duration, and fixed failure codes; status reads merge this safe
+history without hashes or source content. Automatic scheduling, production
+Temporal availability, and periodic alerting remain open.
 
 The 2026-08-02 source-coverage tranche adds a private read-only registry/API
 over existing policy tables. It derives production collectibility from the
 independent approval gate and exposes quotas, deletion duties, and gaps while
 keeping payloads, hashes, reviewer identities, and activation controls out.
 
-Migration `0055` now persists the highest bounded production-analysis activity
-attempt without changing idempotency hashes; fallback status reads expose it.
-Event-level timings, heartbeats, scheduling, and production infrastructure
-remain open.
+Migration `0055` persists the highest bounded attempt without changing
+idempotency hashes; `0056` adds the bounded event history. Scheduling,
+production infrastructure, and deployment alerting remain open.
 
 ## Next production tranche
 

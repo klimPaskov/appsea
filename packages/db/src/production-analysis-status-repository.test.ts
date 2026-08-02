@@ -43,6 +43,18 @@ describe('production analysis status projection', () => {
           requested_at: at,
           started_at: at,
           completed_at: null,
+          activity_attempt_history: [
+            {
+              activityAttempt: 1,
+              state: 'failed',
+              startedAt: at,
+              lastHeartbeatAt: at,
+              heartbeatCount: 2,
+              finishedAt: at,
+              durationMs: 42,
+              failureCode: 'analysis_activity_failed'
+            }
+          ],
           input_hash: 'a'.repeat(64),
           artifact_object_ref: { uri: 'appsea-object://workspace:one/workflow-artifact/hash' }
         }
@@ -64,6 +76,18 @@ describe('production analysis status projection', () => {
       state: 'running',
       checkpoint: 'persisting',
       activityAttempts: 3,
+      activityAttemptHistory: [
+        {
+          activityAttempt: 1,
+          state: 'failed',
+          startedAt: at,
+          lastHeartbeatAt: at,
+          heartbeatCount: 2,
+          finishedAt: at,
+          durationMs: 42,
+          failureCode: 'analysis_activity_failed'
+        }
+      ],
       availabilityState: 'active',
       opportunityId: null,
       opportunitySlug: null,
@@ -78,5 +102,6 @@ describe('production analysis status projection', () => {
     expect(mocks.authenticatedCalls).toEqual([{ userId: 'user:one', workspaceId: 'workspace:one' }])
     expect(mocks.query.mock.calls[0]?.[0]).toContain("workspace.visibility = 'private'")
     expect(mocks.query.mock.calls[0]?.[0]).toContain('analysis.activity_attempts')
+    expect(mocks.query.mock.calls[0]?.[0]).toContain('production_analysis_activity_attempts')
   })
 })

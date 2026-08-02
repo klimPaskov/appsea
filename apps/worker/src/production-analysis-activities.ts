@@ -3,10 +3,12 @@ import {
   persistProductionAnalysisWorkflowActivityInputSchema,
   productionAnalysisWorkflowPersistenceActivityResultSchema
 } from '@appsea/contracts'
+import type { ProductionAnalysisFailureCode } from '@appsea/contracts'
 import {
   IdempotencyConflictError,
   ImmutableRecordConflictError,
   PostgresProductionAnalysisRepository,
+  type ProductionAnalysisActivityAttemptIdentity,
   ProductionAnalysisAvailabilityError,
   ProductionAnalysisAdmissionRequiredError,
   ProductionAnalysisLineageError,
@@ -66,17 +68,18 @@ function sanitizedFailure(error: unknown): ApplicationFailure {
   })
 }
 
-async function runSanitized<T>(operation: () => Promise<T>): Promise<T> {
-  try {
-    return await operation()
-  } catch (error) {
-    const failure = sanitizedFailure(error)
-    emitWorkerEvent({
-      event: 'production_analysis_activity_failed',
-      taskQueue: fixtureResearchTaskQueue,
-      failureCode: failure.type ?? 'APPSEA_ACTIVITY_FAILED'
-    })
-    throw failure
+function failureCodeFor(error: ApplicationFailure): ProductionAnalysisFailureCode {
+  switch (error.type) {
+    case 'APPSEA_INPUT_INVALID':
+      return 'analysis_input_invalid'
+    case 'APPSEA_POLICY_DENIED':
+      return 'analysis_policy_denied'
+    case 'APPSEA_BUDGET_EXCEEDED':
+      return 'analysis_budget_exceeded'
+    case 'APPSEA_RECONCILIATION_REQUIRED':
+      return 'analysis_reconciliation_required'
+    default:
+      return 'analysis_activity_failed'
   }
 }
 
@@ -86,10 +89,18 @@ export function createProductionAnalysisActivities(
 ): ProductionAnalysisActivities {
   const repository = new PostgresProductionAnalysisRepository(pool, objectStore)
   return {
-    persistProductionAnalysis: (input) =>
-      runSanitized(async () => {
-        const parsed = persistProductionAnalysisWorkflowActivityInputSchema.parse(input)
-        const attempt = Context.current().info.attempt
+    persistProductionAnalysis: async (input) => {
+      const parsed = persistProductionAnalysisWorkflowActivityInputSchema.parse(input)
+      const attempt = Context.current().info.attempt
+      const activityIdentity: ProductionAnalysisActivityAttemptIdentity = {
+        workspaceId: parsed.input.workspaceId,
+        collectionRunId: parsed.input.collectionRunId,
+        analysisRunId: parsed.input.analysisRunId,
+        activityAttempt: attempt
+      }
+      await repository.recordActivityAttemptStarted(activityIdentity)
+      try {
+        Context.current().heartbeat({ activityAttempt: attempt, phase: 'reconstructing' })
         const artifact = await reconstructProductionAnalysisArtifact(pool, {
           workspaceId: parsed.input.workspaceId,
           collectionRunId: parsed.input.collectionRunId,
@@ -97,6 +108,8 @@ export function createProductionAnalysisActivities(
           seedReviewId: parsed.input.seedReviewId,
           analysisAt: parsed.occurredAt
         })
+        await repository.recordActivityAttemptHeartbeat(activityIdentity)
+        Context.current().heartbeat({ activityAttempt: attempt, phase: 'persisting' })
         const persistence = await repository.persist(
           {
             workspaceId: parsed.input.workspaceId,
@@ -110,6 +123,11 @@ export function createProductionAnalysisActivities(
           },
           attempt
         )
+        Context.current().heartbeat({ activityAttempt: attempt, phase: 'completed' })
+        await repository.recordActivityAttemptFinished({
+          ...activityIdentity,
+          state: 'completed'
+        })
         const result = productionAnalysisWorkflowPersistenceActivityResultSchema.parse({
           persistence,
           activityAttempt: attempt
@@ -122,6 +140,20 @@ export function createProductionAnalysisActivities(
           attempt
         })
         return result
-      })
+      } catch (error) {
+        const failure = sanitizedFailure(error)
+        await repository.recordActivityAttemptFinished({
+          ...activityIdentity,
+          state: 'failed',
+          failureCode: failureCodeFor(failure)
+        })
+        emitWorkerEvent({
+          event: 'production_analysis_activity_failed',
+          taskQueue: fixtureResearchTaskQueue,
+          failureCode: failure.type ?? 'APPSEA_ACTIVITY_FAILED'
+        })
+        throw failure
+      }
+    }
   }
 }

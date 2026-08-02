@@ -1743,6 +1743,28 @@ export const productionAnalysisFailureCodeSchema = z.enum([
   'analysis_reconciliation_required'
 ])
 
+export const productionAnalysisActivityAttemptStateSchema = z.enum([
+  'started',
+  'completed',
+  'failed'
+])
+
+export const productionAnalysisActivityAttemptReadModelSchema = z
+  .object({
+    activityAttempt: z.number().int().positive().max(10),
+    state: productionAnalysisActivityAttemptStateSchema,
+    startedAt: z.string().datetime(),
+    lastHeartbeatAt: z.string().datetime(),
+    heartbeatCount: z.number().int().positive().max(10_000),
+    finishedAt: z.string().datetime().nullable(),
+    durationMs: z.number().int().nonnegative().max(86_400_000).nullable(),
+    failureCode: productionAnalysisFailureCodeSchema.nullable()
+  })
+  .strict()
+
+export const productionAnalysisActivityAttemptHistorySchema =
+  productionAnalysisActivityAttemptReadModelSchema.array().max(10)
+
 export const productionAnalysisPersistenceInputSchema = z
   .object({
     workspaceId: appseaIdentifierSchema,
@@ -2072,6 +2094,7 @@ export const productionAnalysisStatusReadModelSchema = z
     state: productionAnalysisRunStateSchema,
     checkpoint: workflowJobCheckpointSchema,
     activityAttempts: z.number().int().nonnegative().max(10),
+    activityAttemptHistory: productionAnalysisActivityAttemptHistorySchema.default([]),
     availabilityState: productionAnalysisAvailabilitySchema,
     opportunityId: appseaIdentifierSchema.nullable(),
     opportunitySlug: opportunitySlugSchema.nullable(),
@@ -3582,6 +3605,15 @@ export type ProductionAnalysisGovernance = z.infer<typeof productionAnalysisGove
 export type ProductionAnalysisReadModel = z.infer<typeof productionAnalysisReadModelSchema>
 export type ProductionAnalysisRunState = z.infer<typeof productionAnalysisRunStateSchema>
 export type ProductionAnalysisFailureCode = z.infer<typeof productionAnalysisFailureCodeSchema>
+export type ProductionAnalysisActivityAttemptState = z.infer<
+  typeof productionAnalysisActivityAttemptStateSchema
+>
+export type ProductionAnalysisActivityAttemptReadModel = z.infer<
+  typeof productionAnalysisActivityAttemptReadModelSchema
+>
+export type ProductionAnalysisActivityAttemptHistory = z.infer<
+  typeof productionAnalysisActivityAttemptHistorySchema
+>
 export type ProductionAnalysisStatusReadModel = z.infer<
   typeof productionAnalysisStatusReadModelSchema
 >

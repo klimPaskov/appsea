@@ -354,5 +354,5 @@ prefix, and maps Temporal or PostgreSQL to a strict
 projection of state, checkpoint, bounded attempts, availability, identifiers,
 failure summary, and timestamps. Hashes, object references, source payloads,
 and seed content stay out of the read contract. Migration `0055` persists the
-activity attempt outside the idempotency hash, so fallback rows expose
-observed attempts; event timing and heartbeat history remain separate.
+activity attempt outside the idempotency hash, while `0056` adds ten
+server-clock attempt rows with stage heartbeat and fixed failure codes.

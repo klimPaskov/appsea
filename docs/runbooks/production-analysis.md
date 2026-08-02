@@ -114,9 +114,12 @@ passes it separately from the validated persistence input. The repository
 updates the projection with `GREATEST`, including idempotent replays and
 completion/failure transitions; the attempt is not included in the input hash.
 Private PostgreSQL fallback status therefore reports observed attempts for
-queued, running, and completed runs without exposing workflow payloads. Event
-timings, heartbeat history, and production scheduler ownership remain
-separate operational controls.
+queued, running, and completed runs without exposing workflow payloads.
+Migration `0056` adds at most ten per-attempt rows with server-clock timing,
+stage heartbeats, duration, and fixed failure codes. The web boundary merges
+that history into a successful Temporal read when available; it remains a
+safe private projection. Periodic deployment alerting and production
+scheduler ownership remain separate operational controls.
 
 Private opportunity pages prefer the latest active production analysis for a
 slug and otherwise retain the fixture read path. The public leaderboard remains

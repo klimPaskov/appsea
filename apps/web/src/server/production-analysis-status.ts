@@ -54,6 +54,7 @@ export function mapProductionAnalysisWorkflowStatus(
       state: 'completed',
       checkpoint: 'completed',
       activityAttempts: status.activityAttempts,
+      activityAttemptHistory: [],
       availabilityState: result.persistence.availabilityState,
       opportunityId: result.persistence.opportunityId,
       opportunitySlug: null,
@@ -73,6 +74,7 @@ export function mapProductionAnalysisWorkflowStatus(
     state,
     checkpoint: checkpointForTemporalStatus(status),
     activityAttempts: status.activityAttempts,
+    activityAttemptHistory: [],
     availabilityState: 'pending',
     opportunityId: null,
     opportunitySlug: null,
@@ -93,6 +95,7 @@ export async function readPrivateProductionAnalysisStatus(input: {
   const parsedUserId = appseaIdentifierSchema.parse(input.userId)
   const parsedWorkspaceId = appseaIdentifierSchema.parse(input.workspaceId)
   const parsedAnalysisRunId = appseaIdentifierSchema.parse(input.analysisRunId)
+  const repository = new PostgresProductionAnalysisRepository(getDatabasePool(), getObjectStore())
   let temporalFailed = false
 
   if (input.workflowId) {
@@ -104,17 +107,31 @@ export async function readPrivateProductionAnalysisStatus(input: {
         await getTemporalWorkflowClient(),
         input.workflowId
       )
-      return mapProductionAnalysisWorkflowStatus(temporalStatus, parsedAnalysisRunId)
+      const mapped = mapProductionAnalysisWorkflowStatus(temporalStatus, parsedAnalysisRunId)
+      try {
+        const stored = await repository.readStatusForUser(
+          parsedUserId,
+          parsedWorkspaceId,
+          parsedAnalysisRunId
+        )
+        if (stored && stored.activityAttemptHistory.length > 0) {
+          return { ...mapped, activityAttemptHistory: stored.activityAttemptHistory }
+        }
+      } catch {
+        // Temporal remains the freshest safe projection when the database is unavailable.
+      }
+      return mapped
     } catch (error) {
       if (error instanceof ProductionAnalysisStatusMismatchError) throw error
       temporalFailed = true
     }
   }
 
-  const storedStatus = await new PostgresProductionAnalysisRepository(
-    getDatabasePool(),
-    getObjectStore()
-  ).readStatusForUser(parsedUserId, parsedWorkspaceId, parsedAnalysisRunId)
+  const storedStatus = await repository.readStatusForUser(
+    parsedUserId,
+    parsedWorkspaceId,
+    parsedAnalysisRunId
+  )
   if (storedStatus) return storedStatus
   if (temporalFailed) throw new ProductionAnalysisStatusUnavailableError()
   return undefined

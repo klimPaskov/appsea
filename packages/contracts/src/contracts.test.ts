@@ -1490,7 +1490,19 @@ describe('contracts', () => {
       failureSummary: null,
       requestedAt: now,
       startedAt: now,
-      completedAt: now
+      completedAt: now,
+      activityAttemptHistory: [
+        {
+          activityAttempt: 1,
+          state: 'completed',
+          startedAt: now,
+          lastHeartbeatAt: now,
+          heartbeatCount: 2,
+          finishedAt: now,
+          durationMs: 120,
+          failureCode: null
+        }
+      ]
     })
     expect(status.opportunitySlug).toBe('reviewed-opportunity')
     expect(
@@ -1498,6 +1510,21 @@ describe('contracts', () => {
         ...status,
         inputHash: 'a'.repeat(64),
         artifactObjectRef: { uri: 'appsea-object://private/workflow-artifact/hash' }
+      }).success
+    ).toBe(false)
+    expect(
+      productionAnalysisStatusReadModelSchema.safeParse({
+        ...status,
+        activityAttemptHistory: Array.from({ length: 11 }, (_, index) => ({
+          activityAttempt: index + 1,
+          state: 'started',
+          startedAt: now,
+          lastHeartbeatAt: now,
+          heartbeatCount: 1,
+          finishedAt: null,
+          durationMs: null,
+          failureCode: null
+        }))
       }).success
     ).toBe(false)
   })

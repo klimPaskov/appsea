@@ -25,7 +25,7 @@ Status: production-shaped foundation implemented and validated locally; producti
 
 Implemented:
 
-- PostgreSQL 18 schema and fifty-five forward, checksummed migrations
+- PostgreSQL 18 schema and fifty-six forward, checksummed migrations
 - normalized source, evidence, complaint, cluster, competitor, opportunity, score, report, plan, audit, cost, deletion, outbox, and lineage tables
 - no-login owner, separate migrator, and least-privilege runtime role contract
 - forced workspace RLS and transaction-scoped workspace context
@@ -136,9 +136,11 @@ activated by this migration.
 Migration `0055_production_analysis_attempt_telemetry.sql` adds a bounded,
 monotonic activity-attempt projection to production-analysis runs. The worker
 passes the Temporal attempt as execution metadata, while the idempotency hash
-continues to cover only the validated research input. Private fallback status
-reads now expose observed attempts; event-level timings and failure heartbeat
-history remain separate operational work.
+continues to cover only the validated research input. Migration
+`0056_production_analysis_attempt_history.sql` adds at most ten server-clock
+attempt rows with stage heartbeats, duration, and fixed terminal failure codes;
+the private status projection merges that history without exposing source
+content, hashes, or object references.
 
 The private campaign configuration slice now uses the existing
 `research_campaigns` JSONB columns with a strict `campaign-v1` write contract
@@ -165,8 +167,8 @@ status page/API reconciles safe Temporal state with a PostgreSQL projection,
 validates workflow workspace prefixes, and excludes hashes, object references,
 source payloads, and seed content. Migration `0055` records the highest
 bounded Temporal activity attempt on the run without changing input idempotency;
-event-level timings, failure heartbeats, scheduling, and production Temporal
-remain open.
+`0056` now supplies bounded attempt timing and heartbeat history. Periodic
+deployment alerting, scheduling, and production Temporal remain open.
 
 The source coverage tranche adds a strict `workspaceSourceReadModel` and an
 authenticated read-only registry at `/workspace/:workspaceId/sources` plus

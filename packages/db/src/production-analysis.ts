@@ -4,5 +4,7 @@ export {
   ProductionAnalysisLineageError,
   ProductionAnalysisStateError,
   buildProductionAnalysisSnapshot,
-  sanitizeProductionArtifact
+  sanitizeProductionArtifact,
+  type ProductionAnalysisActivityAttemptFinish,
+  type ProductionAnalysisActivityAttemptIdentity
 } from './production-analysis-repository'

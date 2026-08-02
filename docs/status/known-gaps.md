@@ -21,10 +21,12 @@ Completed collections now have an explicit owner/editor handoff to a reviewed
 production-analysis run. The status route falls back from Temporal to a safe
 PostgreSQL projection and fails closed for foreign workflow identifiers.
 Migration `0055` persists the highest bounded Temporal activity attempt on the
-analysis run and the worker keeps it outside the idempotency hash; queued and
-running fallback rows now expose observed attempts. The start action is still
-manual and approved-seed-only. Automatic scheduling, event-level timings,
-failure-heartbeats, and production Temporal availability remain open.
+analysis run and the worker keeps it outside the idempotency hash; migration
+`0056` adds at most ten server-clock attempt rows with stage heartbeats,
+duration, and fixed terminal failure codes. Queued and running fallback rows
+expose observed attempts without source content. The start action is still
+manual and approved-seed-only. Periodic deployment alerting, automatic
+scheduling, and production Temporal availability remain open.
 
 Source-policy approval integrity is now database-bound: new approvals require a
 canonical reviewer identity, an independent legal/privacy/security role, and an

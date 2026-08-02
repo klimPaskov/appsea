@@ -68,7 +68,8 @@ describe('database foundation', () => {
       '0052',
       '0053',
       '0054',
-      '0055'
+      '0055',
+      '0056'
     ])
     expect(migrations[0]?.checksum).toMatch(/^[a-f0-9]{64}$/)
     expect(migrations[0]?.sql).toContain('CREATE TABLE appsea.evidence_records')
@@ -157,6 +158,9 @@ describe('database foundation', () => {
     )
     const productionAnalysisAttemptMigration = migrations.find(
       (migration) => migration.version === '0055'
+    )
+    const productionAnalysisAttemptHistoryMigration = migrations.find(
+      (migration) => migration.version === '0056'
     )
     expect(authMigration?.sql).toContain('CREATE TABLE appsea.users')
     expect(authMigration?.sql).toContain('CREATE TABLE appsea.auth_sessions')
@@ -275,6 +279,18 @@ describe('database foundation', () => {
     )
     expect(productionAnalysisAttemptMigration?.sql).toContain(
       'GRANT UPDATE (activity_attempts) ON appsea.production_analysis_runs'
+    )
+    expect(productionAnalysisAttemptHistoryMigration?.sql).toContain(
+      'CREATE TABLE appsea.production_analysis_activity_attempts'
+    )
+    expect(productionAnalysisAttemptHistoryMigration?.sql).toContain(
+      'production analysis activity heartbeat count cannot decrease'
+    )
+    expect(productionAnalysisAttemptHistoryMigration?.sql).toContain(
+      'ALTER TABLE appsea.production_analysis_activity_attempts FORCE ROW LEVEL SECURITY'
+    )
+    expect(productionAnalysisAttemptHistoryMigration?.sql).toContain(
+      'GRANT UPDATE (\n  state, last_heartbeat_at, heartbeat_count'
     )
     expect(productionWorkflowMigration?.sql).toContain(
       'CREATE TABLE appsea.production_collection_workflow_jobs'

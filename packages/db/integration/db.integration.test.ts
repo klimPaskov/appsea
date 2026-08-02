@@ -30,6 +30,7 @@ import {
   PostgresAuthRepository,
   PostgresDeletionPropagationRepository,
   PostgresProductionAnalysisAdmissionRepository,
+  PostgresProductionAnalysisRepository,
   PostgresProductionAnalysisRecomputeRepository,
   PostgresOpportunitySeedReviewRepository,
   PostgresProductionWorkflowAdmissionRepository,
@@ -470,7 +471,12 @@ describe.sequential('PostgreSQL fixture persistence lifecycle', () => {
       '0048',
       '0049',
       '0050',
-      '0051'
+      '0051',
+      '0052',
+      '0053',
+      '0054',
+      '0055',
+      '0056'
     ])
     expect(secondMigrationResult.applied).toEqual([])
     expect(secondMigrationResult.alreadyApplied).toEqual([
@@ -524,7 +530,12 @@ describe.sequential('PostgreSQL fixture persistence lifecycle', () => {
       '0048',
       '0049',
       '0050',
-      '0051'
+      '0051',
+      '0052',
+      '0053',
+      '0054',
+      '0055',
+      '0056'
     ])
   })
 
@@ -1890,6 +1901,7 @@ describe.sequential('PostgreSQL fixture persistence lifecycle', () => {
     const campaignId = 'campaign-analysis-attempts'
     const runId = 'run-analysis-attempts'
     const analysisRunId = 'analysis-run-attempts'
+    const analysisRepository = new PostgresProductionAnalysisRepository(servicePool, {} as never)
 
     try {
       await withOwnerClient(async (client) => {
@@ -1934,6 +1946,40 @@ describe.sequential('PostgreSQL fixture persistence lifecycle', () => {
         }
       })
 
+      await analysisRepository.recordActivityAttemptStarted({
+        workspaceId,
+        collectionRunId: runId,
+        analysisRunId,
+        activityAttempt: 1
+      })
+      await analysisRepository.recordActivityAttemptHeartbeat({
+        workspaceId,
+        collectionRunId: runId,
+        analysisRunId,
+        activityAttempt: 1
+      })
+      await analysisRepository.recordActivityAttemptFinished({
+        workspaceId,
+        collectionRunId: runId,
+        analysisRunId,
+        activityAttempt: 1,
+        state: 'failed',
+        failureCode: 'analysis_activity_failed'
+      })
+      await analysisRepository.recordActivityAttemptStarted({
+        workspaceId,
+        collectionRunId: runId,
+        analysisRunId,
+        activityAttempt: 2
+      })
+      await analysisRepository.recordActivityAttemptFinished({
+        workspaceId,
+        collectionRunId: runId,
+        analysisRunId,
+        activityAttempt: 2,
+        state: 'completed'
+      })
+
       await withWorkspaceTransaction(servicePool, workspaceId, (client) =>
         client.query(
           `UPDATE appsea.production_analysis_runs
@@ -1946,8 +1992,24 @@ describe.sequential('PostgreSQL fixture persistence lifecycle', () => {
         servicePool,
         workspaceId,
         (client) =>
-          client.query<{ activity_attempts: number }>(
-            `SELECT activity_attempts
+          client.query<{
+            activity_attempts: number
+            attempt_history: Array<{
+              activityAttempt: number
+              state: string
+              heartbeatCount: number
+              failureCode: string | null
+            }>
+          }>(
+            `SELECT activity_attempts,
+                    (SELECT jsonb_agg(jsonb_build_object(
+                              'activityAttempt', activity_attempt,
+                              'state', state,
+                              'heartbeatCount', heartbeat_count,
+                              'failureCode', failure_code
+                            ) ORDER BY activity_attempt)
+                       FROM appsea.production_analysis_activity_attempts
+                      WHERE workspace_id = $1 AND analysis_run_id = $2) AS attempt_history
                FROM appsea.production_analysis_runs
               WHERE workspace_id = $1 AND analysis_run_id = $2`,
             [workspaceId, analysisRunId]
@@ -1955,6 +2017,56 @@ describe.sequential('PostgreSQL fixture persistence lifecycle', () => {
         { readOnly: true }
       )
       expect(stored.rows[0]?.activity_attempts).toBe(3)
+      expect(stored.rows[0]?.attempt_history).toEqual([
+        {
+          activityAttempt: 1,
+          state: 'failed',
+          heartbeatCount: 3,
+          failureCode: 'analysis_activity_failed'
+        },
+        {
+          activityAttempt: 2,
+          state: 'completed',
+          heartbeatCount: 2,
+          failureCode: null
+        }
+      ])
+      await analysisRepository.recordActivityAttemptStarted({
+        workspaceId,
+        collectionRunId: runId,
+        analysisRunId,
+        activityAttempt: 3
+      })
+      await analysisRepository.recordActivityAttemptStarted({
+        workspaceId,
+        collectionRunId: runId,
+        analysisRunId,
+        activityAttempt: 3
+      })
+      await expect(
+        withWorkspaceTransaction(servicePool, workspaceId, (client) =>
+          client.query(
+            `UPDATE appsea.production_analysis_activity_attempts
+                SET heartbeat_count = 1
+              WHERE workspace_id = $1
+                AND analysis_run_id = $2
+                AND activity_attempt = 3`,
+            [workspaceId, analysisRunId]
+          )
+        )
+      ).rejects.toMatchObject({ code: '23514' })
+      await expect(
+        withWorkspaceTransaction(servicePool, workspaceId, (client) =>
+          client.query(
+            `UPDATE appsea.production_analysis_activity_attempts
+                SET state = 'started'
+              WHERE workspace_id = $1
+                AND analysis_run_id = $2
+                AND activity_attempt = 1`,
+            [workspaceId, analysisRunId]
+          )
+        )
+      ).rejects.toMatchObject({ code: '42501' })
       await expect(
         withWorkspaceTransaction(servicePool, workspaceId, (client) =>
           client.query(
@@ -1969,6 +2081,10 @@ describe.sequential('PostgreSQL fixture persistence lifecycle', () => {
       await withOwnerClient(async (client) => {
         await client.query('BEGIN')
         try {
+          await client.query(
+            'DELETE FROM appsea.production_analysis_activity_attempts WHERE workspace_id = $1',
+            [workspaceId]
+          )
           await client.query(
             'DELETE FROM appsea.production_analysis_runs WHERE workspace_id = $1',
             [workspaceId]

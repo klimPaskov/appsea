@@ -31,11 +31,12 @@ timestamp, and an idempotency key. The authenticated route rechecks the
 workspace, collection, seed approval, policy lineage, and analysis admission
 before starting `production-analysis-v2`. The analysis-status API/page maps
 Temporal or the durable PostgreSQL projection to state, checkpoint, bounded
-attempts, availability, failure summary, and timestamps; workflow hashes,
+attempts, bounded attempt history, availability, failure summary, and timestamps; workflow hashes,
 object references, and source payloads are never part of this read contract.
 The worker forwards the Temporal activity attempt only as execution metadata;
 migration `0055` stores the highest observed value with a database monotonicity
-guard, while the research input hash remains unchanged for idempotent replay.
+guard and `0056` stores server-clock start/finish/duration and stage heartbeat
+rows, while the research input hash remains unchanged for idempotent replay.
 The optional workflow identifier is validated against the workspace prefix
 before either status source is queried.
 
