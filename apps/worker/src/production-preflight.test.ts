@@ -26,7 +26,10 @@ function baseEnvironment(): NodeJS.ProcessEnv {
     APPSEA_PUBLIC_ORIGIN: 'https://appsea.example',
     APPSEA_AUTH_RECOVERY_ENABLED: 'false',
     APPSEA_AUTH_INVITATIONS_ENABLED: 'false',
-    APPSEA_SCHEDULER_OWNER_ID: 'scheduler:production:one'
+    APPSEA_SCHEDULER_OWNER_ID: 'scheduler:production:one',
+    APPSEA_COST_ALERT_CURRENCY: 'USD',
+    APPSEA_COST_ALERT_ACTUAL_THRESHOLD_MICROS: '1000000',
+    APPSEA_COST_ALERT_ESTIMATED_THRESHOLD_MICROS: '2000000'
   }
 }
 
@@ -89,6 +92,24 @@ describe('production deployment configuration preflight', () => {
     expect(check(report, 'databaseAndRoleSeparation').status).toBe('failed')
     expect(check(report, 'authDelivery').status).toBe('failed')
     expect(check(report, 'trustedProxy').status).toBe('failed')
+  })
+
+  it('requires exact cost alert thresholds and a comparison currency', () => {
+    const environment = baseEnvironment()
+    delete environment.APPSEA_COST_ALERT_CURRENCY
+    const missing = validateProductionEnvironment(environment)
+    expect(check(missing, 'costAlert')).toMatchObject({
+      status: 'failed',
+      failureCode: 'APPSEA_PREFLIGHT_COST_ALERT'
+    })
+
+    environment.APPSEA_COST_ALERT_CURRENCY = 'usd'
+    environment.APPSEA_COST_ALERT_ACTUAL_THRESHOLD_MICROS = '1.2'
+    const malformed = validateProductionEnvironment(environment)
+    expect(check(malformed, 'costAlert')).toMatchObject({
+      status: 'failed',
+      failureCode: 'APPSEA_PREFLIGHT_COST_ALERT'
+    })
   })
 
   it('requires production mode even when the rest of the environment is valid', () => {

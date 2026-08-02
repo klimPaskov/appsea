@@ -18,6 +18,9 @@ import {
   authSessionSummaryReadModelSchema,
   workspaceCostSummaryQuerySchema,
   workspaceCostSummaryReadModelSchema,
+  workspaceCostAlertInputSchema,
+  workspaceCostAlertObservationSchema,
+  workspaceCostAlertResultSchema,
   sourceQuotaReconciliationCaseSchema,
   sourceQuotaReconciliationListQuerySchema,
   sourceQuotaReconciliationResolveInputSchema,
@@ -2168,6 +2171,64 @@ describe('contracts', () => {
         ]
       }).success
     ).toBe(false)
+  })
+
+  it('keeps deployment cost alerts exact and incomplete for unsupported currencies', () => {
+    const observation = {
+      currency: 'USD',
+      entryCount: 2,
+      totalCostMicros: '1250000',
+      estimatedCostMicros: '250000',
+      actualCostMicros: '1000000'
+    }
+    expect(workspaceCostAlertObservationSchema.safeParse(observation).success).toBe(true)
+    const input = {
+      observedAt: now,
+      maxWorkspaces: 20,
+      maxCurrenciesPerWorkspace: 16,
+      periodSeconds: 2_592_000,
+      thresholdCurrency: 'USD',
+      actualThresholdMicros: '1000000',
+      estimatedThresholdMicros: '500000'
+    }
+    expect(workspaceCostAlertInputSchema.safeParse(input).success).toBe(true)
+    const clear = {
+      observedAt: now,
+      periodStart: '2026-06-11T00:00:00.000Z',
+      periodEnd: now,
+      periodSeconds: 2_592_000,
+      thresholdCurrency: 'USD',
+      actualThresholdMicros: '1000000',
+      estimatedThresholdMicros: '500000',
+      workspacesScanned: 20,
+      rowsObserved: 1,
+      entriesObserved: 2,
+      targetCurrencyRows: 1,
+      unsupportedCurrencyRows: 0,
+      actualTargetCostMicros: '1000000',
+      estimatedTargetCostMicros: '250000',
+      workspacesOverActualThreshold: 0,
+      workspacesOverEstimatedThreshold: 0,
+      alerted: false,
+      truncated: false,
+      state: 'clear' as const
+    }
+    expect(workspaceCostAlertResultSchema.safeParse(clear).success).toBe(true)
+    expect(
+      workspaceCostAlertResultSchema.safeParse({
+        ...clear,
+        unsupportedCurrencyRows: 1,
+        state: 'clear'
+      }).success
+    ).toBe(false)
+    expect(
+      workspaceCostAlertResultSchema.safeParse({
+        ...clear,
+        workspacesOverActualThreshold: 1,
+        alerted: true,
+        state: 'alert'
+      }).success
+    ).toBe(true)
   })
 
   it('keeps quota reconciliation cases explicit and resolution-bound', () => {

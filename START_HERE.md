@@ -40,6 +40,7 @@ Open `http://localhost:3000` after the web server starts.
 - private visibility for settled source-quota requests that lack a completed production result, with maintenance-role-only resolution and no automatic re-fetch
 - lease-owned, read-only quota-reconciliation alert inspection with bounded alert/incomplete/clear events and visible truncated coverage
 - lease-owned, read-only production-analysis recomputation alert inspection with bounded alert/incomplete/clear events and visible truncated coverage; it never dispatches or retries a repair
+- lease-owned, read-only workspace cost-threshold inspection with exact micro-unit aggregates, explicit currency gaps, and bounded alert/incomplete/clear events; it never blocks work or performs billing
 - explicit, one-record, tombstone-bound source re-collection with immutable lineage and private review; it never runs automatically and does not activate a connector
 - direct CFPB source commands use the same bounded production admission ledger through the `appsea-worker` service principal; they cannot bypass private-workspace, fixture, or source-policy gates
 - owner-scoped invitations for existing AppSea accounts with hash-only tokens, encrypted outbox delivery, acceptance/revocation, and a production kill switch
@@ -47,7 +48,7 @@ Open `http://localhost:3000` after the web server starts.
   encrypted outbox delivery, fragment links, and a production kill switch
 - native Codex skills and bounded subagents
 - secret-free `pnpm production:preflight` configuration gate for production
-  role, TLS, Temporal, object-store, scheduler, delivery, and proxy settings
+  role, TLS, Temporal, object-store, scheduler, delivery, proxy, and cost-alert settings
 - checked-in project memory with a local search index
 - deep product specifications and machine-readable schemas
 

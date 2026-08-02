@@ -25,7 +25,7 @@ Status: production-shaped foundation implemented and validated locally; producti
 
 Implemented:
 
-- PostgreSQL 18 schema and sixty-four forward, checksummed migrations
+- PostgreSQL 18 schema and sixty-five forward, checksummed migrations
 - normalized source, evidence, complaint, cluster, competitor, opportunity, score, report, plan, audit, cost, deletion, outbox, and lineage tables
 - no-login owner, separate migrator, and least-privilege runtime role contract
 - forced workspace RLS and transaction-scoped workspace context
@@ -174,6 +174,12 @@ keeps failed, blocked, stale, age, and truncation state visible without
 claiming, retrying, resolving, dispatching, or starting Temporal work. Deployed
 scheduler ownership, event routing, and incident response remain deployment
 responsibilities.
+
+Migration `0065_cost_alert_read_boundary.sql` adds a maintenance-only,
+bounded currency aggregate for deployment cost-threshold inspection. The
+worker compares one configured currency using exact micro-unit strings;
+unsupported currencies and capped scans remain incomplete. It does not block
+admission, convert prices, or provide billing authorization.
 
 Migration `0054_source_policy_review_integrity.sql` binds new source-policy
 approvals to a lowercase reviewer identity, an independent review role, and an
@@ -472,6 +478,9 @@ numeric counters, fixed failure codes, and retention purge;
 `0048` adds an indexed, membership-authorized private workspace cost summary
 over the immutable ledger with exact micro-unit aggregates by currency and
 cost type;
+`0065` adds a lease-owned maintenance projection and cost-threshold alert
+inspection while production preflight requires explicit comparison and
+threshold settings;
 the worker also exposes a supervised `maintenance:loop` command that starts
 one lease-backed pass at a time, retries child failures with bounded backoff,
 and forwards shutdown without logging raw errors;

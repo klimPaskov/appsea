@@ -3632,6 +3632,151 @@ export const workspaceCostSummaryReadModelSchema = z
   })
   .strict()
 
+/** Bounds for read-only deployment cost-threshold inspection. */
+export const workspaceCostAlertLimits = {
+  maxWorkspaces: 10_000,
+  maxCurrenciesPerWorkspace: 16,
+  maxObservedRows: 160_000,
+  maxObservedEntries: 1_000_000_000,
+  maxPeriodSeconds: 31_536_000,
+  defaultMaxWorkspaces: 1_000,
+  defaultMaxCurrenciesPerWorkspace: 16,
+  defaultPeriodSeconds: 2_592_000
+} as const
+
+export const workspaceCostAlertObservationSchema = z
+  .object({
+    currency: currencyCodeSchema,
+    entryCount: costSummaryCountSchema,
+    totalCostMicros: costMicrosTextSchema,
+    estimatedCostMicros: costMicrosTextSchema,
+    actualCostMicros: costMicrosTextSchema
+  })
+  .strict()
+
+export const workspaceCostAlertInputSchema = z
+  .object({
+    observedAt: z.string().datetime(),
+    maxWorkspaces: z.number().int().min(1).max(workspaceCostAlertLimits.maxWorkspaces),
+    maxCurrenciesPerWorkspace: z
+      .number()
+      .int()
+      .min(1)
+      .max(workspaceCostAlertLimits.maxCurrenciesPerWorkspace),
+    periodSeconds: z.number().int().min(1).max(workspaceCostAlertLimits.maxPeriodSeconds),
+    thresholdCurrency: currencyCodeSchema,
+    actualThresholdMicros: costMicrosTextSchema,
+    estimatedThresholdMicros: costMicrosTextSchema
+  })
+  .strict()
+
+export const workspaceCostAlertResultSchema = z
+  .object({
+    observedAt: z.string().datetime(),
+    periodStart: z.string().datetime(),
+    periodEnd: z.string().datetime(),
+    periodSeconds: z.number().int().min(1).max(workspaceCostAlertLimits.maxPeriodSeconds),
+    thresholdCurrency: currencyCodeSchema,
+    actualThresholdMicros: costMicrosTextSchema,
+    estimatedThresholdMicros: costMicrosTextSchema,
+    workspacesScanned: z.number().int().nonnegative().max(workspaceCostAlertLimits.maxWorkspaces),
+    rowsObserved: z.number().int().nonnegative().max(workspaceCostAlertLimits.maxObservedRows),
+    entriesObserved: z
+      .number()
+      .int()
+      .nonnegative()
+      .max(workspaceCostAlertLimits.maxObservedEntries),
+    targetCurrencyRows: z
+      .number()
+      .int()
+      .nonnegative()
+      .max(workspaceCostAlertLimits.maxObservedRows),
+    unsupportedCurrencyRows: z
+      .number()
+      .int()
+      .nonnegative()
+      .max(workspaceCostAlertLimits.maxObservedRows),
+    actualTargetCostMicros: costMicrosTextSchema,
+    estimatedTargetCostMicros: costMicrosTextSchema,
+    workspacesOverActualThreshold: z
+      .number()
+      .int()
+      .nonnegative()
+      .max(workspaceCostAlertLimits.maxWorkspaces),
+    workspacesOverEstimatedThreshold: z
+      .number()
+      .int()
+      .nonnegative()
+      .max(workspaceCostAlertLimits.maxWorkspaces),
+    alerted: z.boolean(),
+    truncated: z.boolean(),
+    state: z.enum(['clear', 'alert', 'incomplete'])
+  })
+  .superRefine((value, context) => {
+    if (value.targetCurrencyRows + value.unsupportedCurrencyRows > value.rowsObserved) {
+      context.addIssue({
+        code: 'custom',
+        path: ['rowsObserved'],
+        message: 'Currency row counters cannot exceed observed rows'
+      })
+    }
+    if (value.workspacesOverActualThreshold > value.workspacesScanned) {
+      context.addIssue({
+        code: 'custom',
+        path: ['workspacesOverActualThreshold'],
+        message: 'Actual cost alerts cannot exceed scanned workspaces'
+      })
+    }
+    if (value.workspacesOverEstimatedThreshold > value.workspacesScanned) {
+      context.addIssue({
+        code: 'custom',
+        path: ['workspacesOverEstimatedThreshold'],
+        message: 'Estimated cost alerts cannot exceed scanned workspaces'
+      })
+    }
+    const alerted =
+      value.workspacesOverActualThreshold > 0 || value.workspacesOverEstimatedThreshold > 0
+    if (value.alerted !== alerted) {
+      context.addIssue({
+        code: 'custom',
+        path: ['alerted'],
+        message: 'Cost alert state must match threshold breaches'
+      })
+    }
+    if (value.state === 'alert' && !value.alerted) {
+      context.addIssue({
+        code: 'custom',
+        path: ['state'],
+        message: 'Alert state requires a threshold breach'
+      })
+    }
+    if (value.alerted && value.state !== 'alert') {
+      context.addIssue({
+        code: 'custom',
+        path: ['state'],
+        message: 'Threshold breaches require alert state'
+      })
+    }
+    if (
+      value.state === 'clear' &&
+      (value.alerted || value.truncated || value.unsupportedCurrencyRows > 0)
+    ) {
+      context.addIssue({
+        code: 'custom',
+        path: ['state'],
+        message: 'Clear state requires complete comparable currency coverage'
+      })
+    }
+    if (value.state === 'incomplete' && !value.truncated && value.unsupportedCurrencyRows === 0) {
+      context.addIssue({
+        code: 'custom',
+        path: ['state'],
+        message: 'Incomplete state requires truncation or unsupported currencies'
+      })
+    }
+  })
+  .strict()
+
 const sourceQuotaReservationIdSchema = z
   .string()
   .min(3)
@@ -4491,6 +4636,9 @@ export type WorkspaceCostSummaryQuery = z.infer<typeof workspaceCostSummaryQuery
 export type WorkspaceCostTypeSummary = z.infer<typeof workspaceCostTypeSummarySchema>
 export type WorkspaceCurrencyCostSummary = z.infer<typeof workspaceCurrencyCostSummarySchema>
 export type WorkspaceCostSummaryReadModel = z.infer<typeof workspaceCostSummaryReadModelSchema>
+export type WorkspaceCostAlertObservation = z.infer<typeof workspaceCostAlertObservationSchema>
+export type WorkspaceCostAlertInput = z.infer<typeof workspaceCostAlertInputSchema>
+export type WorkspaceCostAlertResult = z.infer<typeof workspaceCostAlertResultSchema>
 export type SourceQuotaReconciliationListQuery = z.infer<
   typeof sourceQuotaReconciliationListQuerySchema
 >

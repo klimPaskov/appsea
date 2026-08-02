@@ -176,7 +176,12 @@ maintenance-only CLI records an exact linked-result or explicit no-result
 resolution without changing quota or re-fetching. The repository now also
 provides `pnpm worker:source:quota:alert`, a lease-owned read-only bounded scan
 that emits fixed alert/incomplete/clear events and durable counters while
-keeping truncated coverage visible. Migration `0052` now fences selected
+keeping truncated coverage visible.
+Migration `0065` and `pnpm worker:workspace:cost:alert` add a lease-owned,
+maintenance-only cost projection and exact micro-unit threshold inspection.
+Non-target currencies and truncation keep a non-alerting scan incomplete; the
+command is observability only and does not block admission or provide billing.
+Migration `0052` now fences selected
 SQL-only maintenance mutations with the server-clock lease identity; external
 source/provider/object-store effects and snapshot reconciliation remain outside
 that atomic boundary. Deployment still lacks scheduler process ownership,
@@ -266,8 +271,9 @@ source. Collection now carries the
 settled source-request cost from the quota reservation through the immutable
 snapshot/result, workflow checkpoint, and audit/outbox metadata. CFPB currently
 records zero source cost because the reviewed policy declares zero API cost;
-non-zero billing adapters and deployment-level cost monitoring are not
-implemented. Known policy-cost overages are now rejected before a source lease
+non-zero billing adapters, provider pricing, and deployment threshold selection
+are not implemented. Migration `0065` adds repository-level cost-threshold
+inspection, but deployed routing and billing remain external. Known policy-cost overages are now rejected before a source lease
 is acquired. Retention enqueue now derives
 bounded tombstones from the stored policy and reuses deletion propagation;
 policy drafts requesting a general `purge` retention action remain rejected

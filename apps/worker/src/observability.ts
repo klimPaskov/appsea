@@ -34,6 +34,13 @@ export interface WorkerEvent {
   productionAnalysisRecomputeStale?: number
   productionAnalysisRecomputeOldestAgeSeconds?: number
   productionAnalysisRecomputeTruncated?: boolean
+  workspaceCostAlertRows?: number
+  workspaceCostAlertEntries?: number
+  workspaceCostAlertTargetRows?: number
+  workspaceCostAlertUnsupportedRows?: number
+  workspaceCostAlertWorkspacesOverActual?: number
+  workspaceCostAlertWorkspacesOverEstimated?: number
+  workspaceCostAlertTruncated?: boolean
   productionWorkflowAdmissionsPurged?: number
   productionAnalysisAdmissionsPurged?: number
   sourceCollectionLeasesPurged?: number
@@ -201,6 +208,37 @@ export function emitWorkerEvent(event: WorkerEvent): void {
       : {}),
     ...(event.productionAnalysisRecomputeTruncated !== undefined
       ? { productionAnalysisRecomputeTruncated: event.productionAnalysisRecomputeTruncated }
+      : {}),
+    ...(finiteInteger(event.workspaceCostAlertRows) !== undefined
+      ? { workspaceCostAlertRows: finiteInteger(event.workspaceCostAlertRows) }
+      : {}),
+    ...(finiteInteger(event.workspaceCostAlertEntries) !== undefined
+      ? { workspaceCostAlertEntries: finiteInteger(event.workspaceCostAlertEntries) }
+      : {}),
+    ...(finiteInteger(event.workspaceCostAlertTargetRows) !== undefined
+      ? { workspaceCostAlertTargetRows: finiteInteger(event.workspaceCostAlertTargetRows) }
+      : {}),
+    ...(finiteInteger(event.workspaceCostAlertUnsupportedRows) !== undefined
+      ? {
+          workspaceCostAlertUnsupportedRows: finiteInteger(event.workspaceCostAlertUnsupportedRows)
+        }
+      : {}),
+    ...(finiteInteger(event.workspaceCostAlertWorkspacesOverActual) !== undefined
+      ? {
+          workspaceCostAlertWorkspacesOverActual: finiteInteger(
+            event.workspaceCostAlertWorkspacesOverActual
+          )
+        }
+      : {}),
+    ...(finiteInteger(event.workspaceCostAlertWorkspacesOverEstimated) !== undefined
+      ? {
+          workspaceCostAlertWorkspacesOverEstimated: finiteInteger(
+            event.workspaceCostAlertWorkspacesOverEstimated
+          )
+        }
+      : {}),
+    ...(event.workspaceCostAlertTruncated !== undefined
+      ? { workspaceCostAlertTruncated: event.workspaceCostAlertTruncated }
       : {}),
     ...(finiteInteger(event.productionWorkflowAdmissionsPurged) !== undefined
       ? {

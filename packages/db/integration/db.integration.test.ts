@@ -37,6 +37,7 @@ import {
   PostgresMaintenanceSchedulerLeaseRepository,
   PostgresMaintenanceSchedulerRunRepository,
   PostgresWorkspaceCostRepository,
+  PostgresWorkspaceCostAlertRepository,
   PostgresCompetitiveResearchRepository,
   PostgresSourceCollectionLeaseRepository,
   PostgresSourceQuotaRepository,
@@ -894,6 +895,7 @@ describe.sequential('PostgreSQL fixture persistence lifecycle', () => {
 
     try {
       const costRepository = new PostgresWorkspaceCostRepository(servicePool)
+      const costAlertRepository = new PostgresWorkspaceCostAlertRepository(maintenancePool)
       await expect(
         costRepository.readForUser(userId, workspaceId, {
           from: fixedAt,
@@ -907,6 +909,29 @@ describe.sequential('PostgreSQL fixture persistence lifecycle', () => {
           expect.objectContaining({ currency: 'USD', totalCostMicros: '750000' })
         ]
       })
+      await expect(
+        costAlertRepository.listAlertObservations(workspaceId, fixedAt, laterAt, 16)
+      ).resolves.toEqual([
+        {
+          currency: 'EUR',
+          entryCount: 1,
+          totalCostMicros: '125000',
+          estimatedCostMicros: '0',
+          actualCostMicros: '125000'
+        },
+        {
+          currency: 'USD',
+          entryCount: 2,
+          totalCostMicros: '750000',
+          estimatedCostMicros: '250000',
+          actualCostMicros: '500000'
+        }
+      ])
+      await expect(
+        maintenancePool.query('SELECT * FROM appsea.cost_ledger_entries WHERE workspace_id = $1', [
+          workspaceId
+        ])
+      ).rejects.toMatchObject({ code: '42501' })
       const indexes = await servicePool.query<{ indexname: string }>(
         `SELECT indexname
            FROM pg_indexes

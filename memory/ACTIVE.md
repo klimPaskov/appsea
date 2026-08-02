@@ -5,10 +5,10 @@
 Fixture product, PostgreSQL persistence, durable workflows, policy-gated CFPB
 collection, private workspaces, report/plan approval/export, recovery, and
 invitations are implemented. Migrations
-`0027`-`0064` add policy evidence, collection checkpoints, deletion repair,
+`0027`-`0065` add policy evidence, collection checkpoints, deletion repair,
 leases, snapshot reconciliation, workflow admissions, source-reconciliation
 admission, retryable tombstones, maintenance-run telemetry, a durable source-
-quota case ledger, and a maintenance-only recomputation-alert projection.
+quota case ledger, recomputation alerts, and cost-threshold projection.
 Migration `0050` adds explicit one-record tombstone-bound CFPB re-collection
 with immutable lineage; it never runs automatically and the source remains
 disabled. `0051` binds direct CFPB admission to `appsea-worker`. Deployed
@@ -45,7 +45,7 @@ private opportunity mapper reflects later transitions without inferring state
 from immutable object payloads.
 
 Monitoring includes health routes, a secret-free 30-second heartbeat, and
-lease-owned quota/recomputation alert scans. `pnpm production:preflight`
+lease-owned quota/recomputation/cost scans. `pnpm production:preflight`
 validates role-separated TLS databases, authenticated Temporal, signed object
 storage, scheduler ownership, HTTPS origin, delivery switches, and proxy
 secret shape without network calls. Deployment topology, HA, retention, alert
@@ -112,10 +112,10 @@ reviewed re-analysis; the persisted corrected snapshot feeds that next
 artifact. Editor has field controls; evidence basis is read-only.
 Missing or unapproved seeds block repair.
 
-The 2026-08-02 recomputation-alert tranche adds migration `0064`, a strict
-maintenance-role projection, bounded lease-aware scan/CLI, fixed alert states,
-and secret-free counters. It never claims, retries, dispatches, or resolves a
-repair; deployment still owns scheduler routing and incident response.
+The 2026-08-02 alert tranches add migrations `0064`/`0065`, maintenance-only
+recomputation/cost projections, bounded lease-aware scans, fixed states,
+secret-free counters, and explicit cost thresholds. They never mutate work;
+deployment owns scheduler routing, threshold selection, billing, and response.
 
 ## Next production tranche
 

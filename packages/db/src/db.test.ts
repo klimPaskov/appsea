@@ -77,7 +77,8 @@ describe('database foundation', () => {
       '0061',
       '0062',
       '0063',
-      '0064'
+      '0064',
+      '0065'
     ])
     expect(migrations[0]?.checksum).toMatch(/^[a-f0-9]{64}$/)
     expect(migrations[0]?.sql).toContain('CREATE TABLE appsea.evidence_records')
@@ -192,6 +193,7 @@ describe('database foundation', () => {
       (migration) => migration.version === '0063'
     )
     const recomputeAlertMigration = migrations.find((migration) => migration.version === '0064')
+    const costAlertMigration = migrations.find((migration) => migration.version === '0065')
     expect(authMigration?.sql).toContain('CREATE TABLE appsea.users')
     expect(authMigration?.sql).toContain('CREATE TABLE appsea.auth_sessions')
     expect(authMigration?.sql).toContain('FORCE ROW LEVEL SECURITY')
@@ -624,6 +626,16 @@ describe('database foundation', () => {
     )
     expect(recomputeAlertMigration?.sql).toContain(
       'GRANT EXECUTE ON FUNCTION appsea.list_production_analysis_recompute_alerts'
+    )
+    expect(costAlertMigration?.sql).toContain(
+      'CREATE OR REPLACE FUNCTION appsea.list_workspace_cost_alerts'
+    )
+    expect(costAlertMigration?.sql).toContain("session_user <> 'appsea_maintenance'")
+    expect(costAlertMigration?.sql).toContain(
+      'REVOKE ALL ON FUNCTION appsea.list_workspace_cost_alerts'
+    )
+    expect(costAlertMigration?.sql).toContain(
+      'GRANT EXECUTE ON FUNCTION appsea.list_workspace_cost_alerts'
     )
   })
 

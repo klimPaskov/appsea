@@ -40,6 +40,7 @@
     "worker:source:quota:reconcile": "pnpm --filter @appsea/worker source:quota:reconcile",
     "worker:source:quota:alert": "pnpm --filter @appsea/worker source:quota:alert",
     "worker:production:analysis:recompute:alert": "pnpm --filter @appsea/worker production:analysis:recompute:alert",
+    "worker:workspace:cost:alert": "pnpm --filter @appsea/worker workspace:cost:alert",
     "production:preflight": "pnpm --filter @appsea/worker production:preflight",
     "worker:source:policy:cfpb": "pnpm --filter @appsea/worker source:policy:cfpb",
     "worker:source:policy:stackexchange": "pnpm --filter @appsea/worker source:policy:stackexchange",

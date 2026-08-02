@@ -33,6 +33,10 @@ shape passed; a non-zero exit means the deployment must not proceed.
 - `APPSEA_PUBLIC_ORIGIN` must be an HTTPS, non-loopback origin. The scheduler
   owner, maintenance database, lease bounds, and metrics bounds must be
   present and valid.
+- Cost inspection thresholds must be configured before scheduling
+  `pnpm worker:workspace:cost:alert`: set `APPSEA_COST_ALERT_CURRENCY`,
+  `APPSEA_COST_ALERT_ACTUAL_THRESHOLD_MICROS`, and
+  `APPSEA_COST_ALERT_ESTIMATED_THRESHOLD_MICROS` as exact micro-unit strings.
 - Recovery and invitation switches accept only `true` or `false`. Enabling
   either requires the 32-byte encryption key and HTTPS signed-delivery gateway
   configuration; leaving both disabled keeps delivery kill-switched.

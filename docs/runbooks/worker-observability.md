@@ -60,6 +60,14 @@ same lease-owned maintenance boundary for read-only inspection of deletion- or
 correction-triggered repairs. It emits only bounded counters, age, alert state,
 and truncation; deployment owns scheduling and incident routing.
 
+The worker command `pnpm worker:workspace:cost:alert` uses the same boundary to
+inspect exact micro-unit aggregates from the immutable cost ledger. Configure
+one comparison currency and separate actual/estimated thresholds through
+`APPSEA_COST_ALERT_*`. A non-target currency or truncated workspace scan keeps
+the result `incomplete`; no currency conversion, billing assertion, admission
+block, or automatic refund occurs. The command emits only bounded counts and
+fixed alert/incomplete/clear events, never ledger identifiers or source data.
+
 Migration `0046` adds a server-clock scheduler lease shared by source
 maintenance, auth retention, password-recovery delivery, and workspace-
 invitation delivery. Only the standalone `appsea_maintenance` role may call
@@ -96,9 +104,11 @@ The local fixture worker is intentionally not a production deployment.
 Production still requires a TLS-protected Temporal endpoint, durable log/metric
 retention, alert routing, secret redaction verification, and a documented
 worker replacement drill. The private workspace cost summary provides bounded
-cross-run ledger accounting, but a production scheduler, alert ownership,
-provider billing controls, external idempotency/recovery, and any stronger
-maintenance checkpoint/fencing boundary remain deployment responsibilities.
+cross-run ledger accounting; migration `0065` and the cost-alert command add
+repository-level threshold inspection, but a production scheduler, alert
+ownership, provider billing controls, external idempotency/recovery, and any
+stronger maintenance checkpoint/fencing boundary remain deployment
+responsibilities.
 Settled source-quota cases are
 inspectable at:
 

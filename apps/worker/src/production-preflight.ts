@@ -1,5 +1,6 @@
 import { fileURLToPath } from 'node:url'
 import path from 'node:path'
+import { workspaceCostAlertLimits } from '@appsea/contracts'
 import { databaseConfigFromEnv } from '@appsea/db'
 import { objectStoreFromEnv } from '@appsea/object-store'
 import { temporalClientConfigFromEnv } from '@appsea/workflows'
@@ -150,6 +151,31 @@ function assertProductionProxy(environment: NodeJS.ProcessEnv): void {
   }
 }
 
+function assertProductionCostAlert(environment: NodeJS.ProcessEnv): void {
+  const currency = requiredEnvironmentValue(environment, 'APPSEA_COST_ALERT_CURRENCY')
+  if (!/^[A-Z]{3}$/.test(currency)) throw new ProductionPreflightConfigurationError()
+  for (const name of [
+    'APPSEA_COST_ALERT_ACTUAL_THRESHOLD_MICROS',
+    'APPSEA_COST_ALERT_ESTIMATED_THRESHOLD_MICROS'
+  ]) {
+    const value = requiredEnvironmentValue(environment, name)
+    if (!/^(?:0|[1-9][0-9]{0,17})$/.test(value)) {
+      throw new ProductionPreflightConfigurationError()
+    }
+  }
+  const periodSeconds = environment.APPSEA_COST_ALERT_PERIOD_SECONDS?.trim()
+  if (periodSeconds !== undefined && periodSeconds !== '') {
+    const parsed = Number(periodSeconds)
+    if (
+      !Number.isSafeInteger(parsed) ||
+      parsed < 1 ||
+      parsed > workspaceCostAlertLimits.maxPeriodSeconds
+    ) {
+      throw new ProductionPreflightConfigurationError()
+    }
+  }
+}
+
 function check(name: string, failureCode: string, run: () => void): ProductionPreflightCheck {
   try {
     run()
@@ -189,7 +215,8 @@ export function validateProductionEnvironment(
     ),
     check('trustedProxy', 'APPSEA_PREFLIGHT_TRUSTED_PROXY', () =>
       assertProductionProxy(environment)
-    )
+    ),
+    check('costAlert', 'APPSEA_PREFLIGHT_COST_ALERT', () => assertProductionCostAlert(environment))
   ]
   return {
     status: checks.every((entry) => entry.status === 'ok') ? 'ready' : 'not_ready',

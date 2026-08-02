@@ -330,6 +330,10 @@ for that pre-context authorization lookup.
   bounded limits, returns only state/attempt/timestamp observations, and is
   executable only by `appsea_maintenance`; it does not grant direct table
   reads to the service or maintenance role and cannot claim or dispatch jobs.
+- Migration `0065` adds the same maintenance-only boundary for cost-alert
+  aggregates. It returns currency totals only for a bounded period and row
+  limit; the worker compares one explicitly configured currency without
+  exchange-rate inference, ledger identifiers, or admission mutation.
 
 ## Temporal boundary
 

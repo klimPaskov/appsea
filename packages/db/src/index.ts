@@ -41,6 +41,7 @@ export {
   type SourceQuotaReconciliationResolveInput
 } from './source-quota-repository'
 export type { ProductionAnalysisRecomputeAlertObservation } from '@appsea/contracts'
+export type { WorkspaceCostAlertObservation } from '@appsea/contracts'
 export {
   PostgresSourcePolicyRepository,
   type SourcePolicyApprovalInput,
@@ -110,6 +111,7 @@ export {
   PostgresWorkspaceCostRepository,
   WorkspaceCostSummaryQueryError
 } from './workspace-cost-repository'
+export { PostgresWorkspaceCostAlertRepository } from './workspace-cost-alert-repository'
 export {
   PostgresCompetitiveResearchRepository,
   CompetitiveResearchObservationConflictError,
