@@ -84,6 +84,7 @@ function artifact(): ProductionResearchArtifact {
     evidenceHash: 'a'.repeat(64),
     sourceId: policy.sourceId,
     sourceRecordId: 'record-one',
+    canonicalLocator: null,
     capturedAt: at,
     publishedAt: null,
     query: 'bounded query',

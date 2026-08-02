@@ -72,7 +72,8 @@ describe('database foundation', () => {
       '0056',
       '0057',
       '0058',
-      '0059'
+      '0059',
+      '0060'
     ])
     expect(migrations[0]?.checksum).toMatch(/^[a-f0-9]{64}$/)
     expect(migrations[0]?.sql).toContain('CREATE TABLE appsea.evidence_records')
@@ -173,6 +174,9 @@ describe('database foundation', () => {
     )
     const competitorResearchObservationMigration = migrations.find(
       (migration) => migration.version === '0059'
+    )
+    const sourceCanonicalLocatorMigration = migrations.find(
+      (migration) => migration.version === '0060'
     )
     expect(authMigration?.sql).toContain('CREATE TABLE appsea.users')
     expect(authMigration?.sql).toContain('CREATE TABLE appsea.auth_sessions')
@@ -552,6 +556,10 @@ describe('database foundation', () => {
     expect(competitorResearchObservationMigration?.sql).toContain('FORCE ROW LEVEL SECURITY')
     expect(competitorResearchObservationMigration?.sql).toContain(
       'competitor_research_observation_review_guard'
+    )
+    expect(sourceCanonicalLocatorMigration?.sql).toContain('source_items_canonical_locator_check')
+    expect(sourceCanonicalLocatorMigration?.sql).toContain(
+      "'^https?://[^[:space:]/]+(/[^[:space:]]*)?$'"
     )
   })
 

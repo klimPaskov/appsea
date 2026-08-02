@@ -14,6 +14,7 @@
 - [`product/opportunity-package.md`](product/opportunity-package.md)
 - [`product/source-coverage.md`](product/source-coverage.md)
 - [`product/cfpb-source-policy.md`](product/cfpb-source-policy.md)
+- [`product/stackexchange-source-policy.md`](product/stackexchange-source-policy.md)
 - [`product/private-workspaces.md`](product/private-workspaces.md)
 - [`product/research-campaigns.md`](product/research-campaigns.md)
 - [`product/account-closure.md`](product/account-closure.md)
@@ -132,3 +133,4 @@
 - [`status/research-campaign-lifecycle-completion-report-2026-08-02.md`](status/research-campaign-lifecycle-completion-report-2026-08-02.md)
 - [`status/research-campaign-refresh-scheduler-completion-report-2026-08-02.md`](status/research-campaign-refresh-scheduler-completion-report-2026-08-02.md)
 - [`status/competitive-evidence-observation-completion-report-2026-08-02.md`](status/competitive-evidence-observation-completion-report-2026-08-02.md)
+- [`status/stackexchange-attribution-completion-report-2026-08-02.md`](status/stackexchange-attribution-completion-report-2026-08-02.md)

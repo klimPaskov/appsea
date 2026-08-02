@@ -5,7 +5,7 @@
 The fixture product, PostgreSQL persistence, durable workflows, policy-gated
 CFPB collection checkpoint, authenticated private workspaces, report/plan
 approval/export, recovery, and invitations are implemented. Migrations
-`0027`-`0059` add policy evidence, collection checkpoints, deletion repair,
+`0027`-`0060` add policy evidence, collection checkpoints, deletion repair,
 leases, snapshot reconciliation, workflow admissions, source-reconciliation
 admission, retryable tombstones, maintenance-run telemetry, and a durable
 source-quota reconciliation case ledger. Migration `0050` adds explicit,
@@ -48,33 +48,21 @@ fail-closed Temporal endpoint contract: production requires non-loopback
 address, namespace, API key, and pinned CA. Deployment topology, authorization,
 HA, retention, and failure drills remain open.
 
-Migration `0046_maintenance_scheduler_leases.sql` adds a global server-clock
-lease per fixed scheduler name. Only standalone, non-inheriting
-`appsea_maintenance` can call acquire/renew/release; runtime table access and
-`appsea_service` function execution are revoked. Acquisitions have fresh
-tokens. Source maintenance, auth retention, recovery, and invitation delivery
-renew during bounded passes, guard mutations, skip contention, and emit fixed
-lease-loss/release failures.
-
-Scheduler leases and transaction fencing now protect selected maintenance SQL
-mutations; maintenance-run metrics, cost summaries, and quota-reconciliation
-cases are durable and private. External source/provider/object-store effects,
-deployed scheduler alert routing, and reconciliation resolution remain separate
-operations. The worker now exposes `maintenance:loop`, which supervises the
-existing one-shot lease-backed pass with bounded interval/backoff and
-signal-safe child shutdown; a production process supervisor and alert policy
-are required. Explicit re-collection requires a completed
-matching tombstone.
+Migration `0046`/`0052` leases and fences protect maintenance mutations;
+metrics, cost summaries, and quota cases are durable/private. The worker's
+bounded, signal-safe `maintenance:loop` remains deployment-owned, and explicit
+re-collection requires a completed matching tombstone.
 
 ## Validated commands
 
-- `pnpm verify` passed 2026-08-02; affected contract/database/worker checks and
-  guidance, formatting, memory, and docs checks pass.
+- `pnpm verify` passed 2026-08-02 after the source tranche; 56 Turbo tasks,
+  fixture/plan/analysis samples, web smoke, formatting, and repository checks
+  pass.
 - PostgreSQL and Temporal integration are staged but Docker-blocked because the
   Docker Desktop Linux engine pipe is unavailable.
 
-- Maintenance loop tests pass; no deployed scheduler, Temporal, or source
-  policy activation claim.
+- Maintenance loop tests pass; no deployed scheduler, Temporal, or source policy
+  activation claim.
 
 On 2026-08-01, migrations `0053` and `0054` added deterministic complaint
 analysis snapshots and identity/independence-bound source approvals. The CFPB
@@ -86,7 +74,11 @@ production seeds are reviewed-seed-only with provenance, and source-backed
 status requires a confirmed non-synthetic observation with permitted source/
 evidence IDs and an observation time. Migration `0059` persists bounded
 per-claim provenance and owner/editor review; no approved competitor source is
-connected, and feature matrices remain open.
+connected, and feature matrices remain open. Complaint/source-item provenance
+now carries an HTTPS canonical locator for attribution; a disabled,
+fixture-tested Stack Exchange candidate remains pending independent review.
+Migration `0060` adds a database-level HTTP(S) host/path check for those
+locators, while policy still controls whether a locator may be displayed.
 
 The 2026-08-02 campaign tranche adds a private one-source run route plus
 bounded history/status reads on the strict `campaign-v1` boundary. The server
@@ -123,7 +115,7 @@ keeping payloads, hashes, reviewer identities, and activation controls out.
    review.
 5. Supply a separately reviewed competitor/contrary-signal source under the
    `competitor-research` purpose before treating any competitive output as
-   source-backed; the per-record provenance boundary is now implemented.
+   source-backed; the Stack Exchange candidate is not registered or active.
 
 ## Current blockers
 

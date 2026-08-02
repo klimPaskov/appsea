@@ -130,6 +130,12 @@ independently approved `competitor-research` purpose, and editor/owner review
 is required before the private read model can report source-backed research.
 The migration retains provenance metadata only and activates no connector.
 
+The connector package now includes a disabled Stack Exchange candidate for
+bounded competitor/contrary-signal collection. It uses the official API only,
+sanitizes question excerpts, preserves an HTTPS attribution locator, and emits
+no deletion tombstones from filtered search. The source remains pending
+independent review and is not registered or callable as a production source.
+
 The source-maintenance worker also exposes a supervised `maintenance:loop`
 entrypoint. It starts one existing lease-backed pass at a time, applies a
 bounded interval or failure backoff, forwards shutdown to the child, and emits

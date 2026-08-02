@@ -25,7 +25,7 @@ Status: production-shaped foundation implemented and validated locally; producti
 
 Implemented:
 
-- PostgreSQL 18 schema and fifty-eight forward, checksummed migrations
+- PostgreSQL 18 schema and sixty forward, checksummed migrations
 - normalized source, evidence, complaint, cluster, competitor, opportunity, score, report, plan, audit, cost, deletion, outbox, and lineage tables
 - no-login owner, separate migrator, and least-privilege runtime role contract
 - forced workspace RLS and transaction-scoped workspace context
@@ -131,6 +131,11 @@ non-synthetic rows must reference an active source item/evidence pair collected
 under an independently approved `competitor-research` purpose, and an
 editor/owner must confirm the row before it can make the read model
 source-backed. No connector is activated by this migration.
+
+Migration `0060_source_canonical_locator_integrity.sql` adds a database-level
+HTTP(S) host/path check for persisted attribution locators. The TypeScript
+contract remains the primary validator, while the constraint is defense in
+depth for direct database writers.
 
 Migration `0054_source_policy_review_integrity.sql` binds new source-policy
 approvals to a lowercase reviewer identity, an independent review role, and an
@@ -298,6 +303,11 @@ Implemented:
   route, preserves the deleted predecessor, and emits no deletion tombstone;
   the connector remains disabled pending review
 - source-policy record at `docs/product/cfpb-source-policy.md`
+- disabled Stack Exchange candidate at `packages/connectors/src/index.ts`,
+  with official API origin pinning, bounded sanitized excerpts, HTTPS
+  attribution locators, optional secret-bound API key, quotas, and explicit
+  no-tombstone coverage warnings; see
+  `docs/product/stackexchange-source-policy.md`
 
 Remaining: assign legal/privacy/security owners, confirm intended commercial use
 and retention/display terms, approve a policy version, then activate only through
@@ -327,7 +337,10 @@ recovery analysis from that active evidence and waits for an approved immutable
 seed before dispatch. The private
 review-start route now reconstructs the confirmed collection subset and starts
 the durable workflow explicitly; the local adapter does not
-authorize a production source activation.
+authorize a production source activation. Stack Exchange remains unregistered
+and pending independent attribution, privacy, deletion, and commercial-use
+review; its connector is fixture-tested only and is not wired into the
+production source runner yet.
 
 ### 4. Workspaces and authentication
 

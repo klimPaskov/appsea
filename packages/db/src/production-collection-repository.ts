@@ -588,6 +588,7 @@ export class PostgresProductionCollectionRepository {
         evidence_hash: string
         source_item_id: string
         source_record_id: string
+        canonical_locator: string | null
         normalized_text: string
         language: string
         product_candidate: string
@@ -604,7 +605,8 @@ export class PostgresProductionCollectionRepository {
     >(
       `SELECT complaint.complaint_id, evidence.evidence_id,
                   evidence.content_hash AS evidence_hash, evidence.source_item_id,
-                  source_item.source_record_id, evidence.normalized_text,
+                  source_item.source_record_id, source_item.canonical_locator,
+                  evidence.normalized_text,
                   evidence.language, evidence.product_candidate,
                   evidence.company_candidate, evidence.feature_candidate,
                   evidence.category_candidate, evidence.allowed_representation,
@@ -681,6 +683,7 @@ export class PostgresProductionCollectionRepository {
         id: row.complaint_id,
         sourceId: snapshot.sourceId,
         sourceRecordId: row.source_record_id,
+        canonicalLocator: row.canonical_locator,
         capturedAt: asIso(row.captured_at),
         publishedAt: row.published_at === null ? null : asIso(row.published_at),
         query: snapshot.query || 'reviewed collection',
@@ -959,6 +962,7 @@ export class PostgresProductionCollectionRepository {
               capturedAt: complaint.capturedAt,
               publishedAt: complaint.publishedAt,
               query: complaint.query,
+              canonicalLocator: complaint.canonicalLocator,
               product: complaint.product,
               company: complaint.company,
               feature: complaint.feature,
@@ -969,10 +973,11 @@ export class PostgresProductionCollectionRepository {
             await client.query(
               `INSERT INTO appsea.source_items
                (workspace_id, source_item_id, source_id, source_policy_version,
-                source_record_id, query_route, content_hash, captured_at, published_at,
-                synthetic, created_at, collection_purpose, requested_display_mode,
+                source_record_id, canonical_locator, query_route, content_hash,
+                captured_at, published_at, synthetic, created_at, collection_purpose,
+                requested_display_mode,
                 recollection_tombstone_id)
-             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, false, $8, $10, $11, $12)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, false, $9, $11, $12, $13)
              ON CONFLICT (workspace_id, source_id, source_record_id)
                WHERE deletion_state = 'active' DO NOTHING`,
               [
@@ -981,6 +986,7 @@ export class PostgresProductionCollectionRepository {
                 complaint.sourceId,
                 parsed.request.policyVersion,
                 complaint.sourceRecordId,
+                complaint.canonicalLocator,
                 complaint.query,
                 sourceItemHash,
                 complaint.capturedAt,
@@ -994,6 +1000,7 @@ export class PostgresProductionCollectionRepository {
               QueryResultRow & {
                 source_item_id: string
                 content_hash: string
+                canonical_locator: string | null
                 source_policy_version: string
                 collection_purpose: string
                 requested_display_mode: string
@@ -1001,7 +1008,7 @@ export class PostgresProductionCollectionRepository {
                 recollection_tombstone_id: string | null
               }
             >(
-              `SELECT source_item_id, content_hash, source_policy_version,
+              `SELECT source_item_id, content_hash, canonical_locator, source_policy_version,
                       collection_purpose, requested_display_mode, deletion_state,
                       recollection_tombstone_id
                  FROM appsea.source_items
@@ -1014,6 +1021,7 @@ export class PostgresProductionCollectionRepository {
             if (
               !storedSourceItemRow ||
               storedSourceItemRow.content_hash !== sourceItemHash ||
+              storedSourceItemRow.canonical_locator !== complaint.canonicalLocator ||
               storedSourceItemRow.source_policy_version !== parsed.request.policyVersion ||
               storedSourceItemRow.collection_purpose !== parsed.request.purpose ||
               storedSourceItemRow.requested_display_mode !== parsed.request.requestedDisplayMode ||
@@ -1364,6 +1372,7 @@ export class PostgresProductionCollectionRepository {
         review_state: 'unreviewed' | 'confirmed' | 'corrected' | 'rejected'
         source_item_id: string
         source_record_id: string
+        canonical_locator: string | null
         normalized_text: string
         language: string
         product_candidate: string
@@ -1379,7 +1388,8 @@ export class PostgresProductionCollectionRepository {
     >(
       `SELECT evidence.evidence_id, complaint.complaint_id, complaint.review_state,
                   evidence.source_item_id,
-                  source_item.source_record_id, evidence.normalized_text,
+                  source_item.source_record_id, source_item.canonical_locator,
+                  evidence.normalized_text,
                   evidence.language, evidence.product_candidate,
                   evidence.company_candidate, evidence.feature_candidate,
                   evidence.category_candidate, evidence.allowed_representation,
@@ -1487,6 +1497,7 @@ export class PostgresProductionCollectionRepository {
         reviewState: row.review_state,
         sourceItemId: row.source_item_id,
         sourceRecordId: row.source_record_id,
+        canonicalLocator: row.canonical_locator,
         text: row.allowed_representation === 'excerpt' ? row.normalized_text : null,
         language: row.language,
         product: row.product_candidate,

@@ -142,6 +142,7 @@ function input(overrides: Partial<ProductionAnalysisInput> = {}): ProductionAnal
         evidenceHash: 'b'.repeat(64),
         sourceId: 'cfpb-consumer-complaints',
         sourceRecordId: '1001',
+        canonicalLocator: null,
         capturedAt: now,
         publishedAt: null,
         query: 'shared inbox',

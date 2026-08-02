@@ -264,6 +264,13 @@ here. Migration `0033` now persists immutable workspace seed reviews with
 editor/owner review and approval transitions; analysis start accepts only an
 approved seed-review identifier and the persistence repository rechecks its
 stored content hash and version.
+
+The Stack Exchange connector is now a second policy-drafted candidate for
+`competitor-research` and `contrary-evidence`. It is disabled and unregistered:
+the API terms/CC BY-SA attribution path, 14-day excerpt retention, deletion
+behavior, and restricted commercial use still require independent review. Its
+filtered search path emits no deletion tombstones and cannot be used to infer
+absence.
 In this tranche, `redact` and
 `tombstone` intentionally share the same source-deletion propagation path;
 field-level redaction that preserves derived payloads is not implemented.

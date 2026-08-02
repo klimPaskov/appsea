@@ -50,3 +50,11 @@ confirmed observation can contribute to source-backed competitive status. The
 observation record retains identifiers, capture/observation times, display
 representation, and review state, not a copied raw source payload. If no
 approved source supplies that purpose, the private page keeps the gap visible.
+
+The Stack Exchange connector is a disabled source candidate for those
+purposes. It uses only the official Stack Exchange API, retains sanitized
+bounded question excerpts with an HTTPS attribution locator, and emits no
+deletion tombstones because filtered search cannot establish absence. Its
+draft policy is `restricted` commercial use with a 14-day retention window;
+independent legal/privacy/security review and source-registry approval are
+still required.

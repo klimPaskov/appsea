@@ -77,6 +77,19 @@ const policyDocumentRefSchema = z
     return protocol === 'http:' || protocol === 'https:'
   }, 'Policy document references must use HTTP(S)')
 
+const canonicalLocatorSchema = z
+  .string()
+  .url()
+  .max(2_000)
+  .refine((value) => {
+    try {
+      const protocol = new URL(value).protocol
+      return protocol === 'http:' || protocol === 'https:'
+    } catch {
+      return false
+    }
+  }, 'Canonical source locators must use HTTP(S)')
+
 export const sourcePolicySchema = z.object({
   sourceId: z.string().min(1),
   displayName: z.string().min(1),
@@ -124,6 +137,8 @@ export const complaintSchema = z.object({
   id: z.string().min(1),
   sourceId: z.string().min(1),
   sourceRecordId: z.string().min(1),
+  /** Stable source URL used for attribution and operator inspection. */
+  canonicalLocator: canonicalLocatorSchema.nullable().default(null),
   capturedAt: z.string().datetime(),
   publishedAt: z.string().datetime().nullable(),
   query: z.string().min(1),
@@ -459,7 +474,7 @@ export const competitiveResearchObservationSchema = z
     reviewState: competitiveResearchObservationReviewStateSchema,
     synthetic: z.boolean(),
     allowedRepresentation: z.enum(['excerpt', 'metadata-only', 'aggregate-only', 'fixture']),
-    canonicalLocator: z.string().max(2_000).nullable(),
+    canonicalLocator: canonicalLocatorSchema.nullable(),
     createdBy: appseaIdentifierSchema,
     reviewedBy: appseaIdentifierSchema.nullable(),
     reviewedAt: z.string().datetime().nullable(),
@@ -1130,6 +1145,7 @@ export const opportunityReportObservationSchema = z
   .object({
     evidenceId: appseaIdentifierSchema,
     sourceRecordId: z.string().min(1).max(240),
+    canonicalLocator: canonicalLocatorSchema.nullable().default(null),
     sourceId: appseaIdentifierSchema,
     query: z.string().max(500),
     product: z.string().min(1),
@@ -3624,6 +3640,7 @@ export const workspaceEvidenceReadModelSchema = z
   .object({
     id: appseaIdentifierSchema,
     sourceItemId: z.string().min(1),
+    canonicalLocator: canonicalLocatorSchema.nullable().default(null),
     text: z.string().min(1).max(20_000),
     language: z.string().min(2).max(16),
     product: z.string().min(1),

@@ -142,6 +142,7 @@ const validFixturePersistenceInput: FixturePersistenceInput = {
         id: 'complaint-fixture',
         sourceId: 'fixture-source',
         sourceRecordId: 'fixture-record',
+        canonicalLocator: null,
         capturedAt: now,
         publishedAt: null,
         query: 'fixture query',
@@ -1073,6 +1074,34 @@ describe('contracts', () => {
       allowedRepresentation: 'fixture'
     })
     expect(result.success).toBe(false)
+  })
+
+  it('retains an optional canonical source locator for attribution', () => {
+    const complaint = complaintSchema.parse({
+      id: 'c-locator',
+      sourceId: 'source:public-api',
+      sourceRecordId: 'record-1',
+      canonicalLocator: 'https://example.com/records/1',
+      capturedAt: now,
+      publishedAt: null,
+      query: 'query',
+      product: 'Example product',
+      company: 'Example company',
+      feature: 'Example feature',
+      category: 'workflow gap',
+      text: 'A redacted public observation',
+      language: 'en',
+      synthetic: false,
+      redacted: true,
+      allowedRepresentation: 'excerpt'
+    })
+    expect(complaint.canonicalLocator).toBe('https://example.com/records/1')
+    expect(complaintSchema.safeParse({ ...complaint, canonicalLocator: 'not-a-url' }).success).toBe(
+      false
+    )
+    expect(
+      complaintSchema.safeParse({ ...complaint, canonicalLocator: 'javascript:alert(1)' }).success
+    ).toBe(false)
   })
 
   it('rejects opportunity scores above 100', () => {

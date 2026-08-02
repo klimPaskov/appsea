@@ -6,11 +6,14 @@ import {
   SourceQuotaExceededError,
   SourceQuotaReservationReplayError,
   SourceResponseTooLargeError,
+  StackExchangeConnector,
   type SourceQuotaLedger,
   assertPolicyAllowsCollection,
   cfpbSourcePolicy,
   fixtureSourcePolicy,
+  mapStackExchangeQuestion,
   mapCfpbRecord,
+  stackExchangeSourcePolicy,
   syncCfpbDeletions
 } from './index'
 
@@ -30,6 +33,22 @@ const cfpbRecord = {
   sub_issue: 'Deposits and withdrawals',
   company: 'Synthetic Bank',
   complaint_what_happened: 'Synthetic redacted narrative used only for connector tests.'
+}
+
+const approvedStackExchangePolicy = sourcePolicySchema.parse({
+  ...stackExchangeSourcePolicy,
+  enabled: true,
+  policyState: 'approved',
+  expiresAt: null
+})
+
+const stackExchangeQuestion = {
+  question_id: 42,
+  creation_date: 1763856000,
+  title: 'How do I preserve handoff history?',
+  body: '<p>I lose the <strong>handoff history</strong> when a teammate takes over.</p><script>alert(1)</script>',
+  tags: ['workflow', 'collaboration'],
+  link: 'https://stackoverflow.com/questions/42/how-do-i-preserve-handoff-history'
 }
 
 describe('connector policy gate', () => {
@@ -128,6 +147,101 @@ describe('connector policy gate', () => {
       allowedRepresentation: 'excerpt'
     })
     expect(complaint.text).not.toContain('complaint_id')
+    expect(complaint.canonicalLocator).toContain('consumerfinance.gov')
+  })
+
+  it('keeps Stack Exchange disabled until its independent source review is complete', () => {
+    expect(() =>
+      assertPolicyAllowsCollection(stackExchangeSourcePolicy, {
+        query: 'handoff history',
+        limit: 1,
+        purpose: 'competitor-research',
+        requestedDisplayMode: 'excerpt'
+      })
+    ).toThrow(/disabled/)
+  })
+
+  it('pins Stack Exchange requests to the exact official API version path', () => {
+    expect(
+      () =>
+        new StackExchangeConnector({
+          baseUrl: 'https://api.stackexchange.com/2.3.evil/',
+          policy: approvedStackExchangePolicy
+        })
+    ).toThrow(/official HTTPS API origin/)
+  })
+
+  it('maps a Stack Overflow question to a sanitized, attributed complaint', () => {
+    const complaint = mapStackExchangeQuestion(
+      stackExchangeQuestion,
+      '2026-08-02T00:00:00.000Z',
+      'handoff history'
+    )
+    expect(complaint).toMatchObject({
+      id: 'stackexchange-question-42',
+      sourceId: stackExchangeSourcePolicy.sourceId,
+      sourceRecordId: 'stackoverflow:42',
+      canonicalLocator: stackExchangeQuestion.link,
+      synthetic: false,
+      redacted: true,
+      allowedRepresentation: 'excerpt'
+    })
+    expect(complaint.text).toContain('How do I preserve handoff history?')
+    expect(complaint.text).toContain('I lose the handoff history')
+    expect(complaint.text).not.toContain('<strong>')
+    expect(complaint.text).not.toContain('alert(1)')
+  })
+
+  it('collects only a bounded official Stack Exchange query and exposes coverage limits', async () => {
+    let requestedUrl: URL | undefined
+    const connector = new StackExchangeConnector({
+      policy: approvedStackExchangePolicy,
+      fetchImpl: async (url) => {
+        requestedUrl = new URL(String(url))
+        return new Response(JSON.stringify({ items: [stackExchangeQuestion], has_more: false }), {
+          status: 200,
+          headers: { 'content-type': 'application/json' }
+        })
+      },
+      now: () => '2026-08-02T00:00:00.000Z'
+    })
+    const result = await connector.collect({
+      query: 'handoff history',
+      limit: 5,
+      purpose: 'competitor-research',
+      requestedDisplayMode: 'excerpt'
+    })
+    expect(requestedUrl?.origin).toBe('https://api.stackexchange.com')
+    expect(requestedUrl?.pathname).toBe('/2.3/search/advanced')
+    expect(requestedUrl?.searchParams.get('site')).toBe('stackoverflow')
+    expect(requestedUrl?.searchParams.get('filter')).toBe('withbody')
+    expect(requestedUrl?.searchParams.get('q')).toBe('handoff history')
+    expect(result.complaints).toHaveLength(1)
+    expect(result.deletions).toEqual([])
+    expect(result.warnings).toContain(
+      'Filtered Stack Exchange search cannot establish deletion absence; no deletion tombstones were emitted.'
+    )
+  })
+
+  it('uses the exact Stack Exchange question route for reviewed re-collection', async () => {
+    let requestedUrl: URL | undefined
+    const connector = new StackExchangeConnector({
+      policy: approvedStackExchangePolicy,
+      fetchImpl: async (url) => {
+        requestedUrl = new URL(String(url))
+        return new Response(JSON.stringify({ items: [stackExchangeQuestion] }), { status: 200 })
+      },
+      now: () => '2026-08-02T00:00:00.000Z'
+    })
+    await connector.collect({
+      query: 'ignored for exact lookup',
+      limit: 1,
+      purpose: 'contrary-evidence',
+      requestedDisplayMode: 'excerpt',
+      sourceRecordId: 'stackoverflow:42'
+    })
+    expect(requestedUrl?.pathname).toBe('/2.3/questions/42')
+    expect(requestedUrl?.searchParams.get('site')).toBe('stackoverflow')
   })
 
   it('uses the exact complaint route for an explicit tombstone re-collection', async () => {

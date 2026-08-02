@@ -268,6 +268,518 @@ const cfpbSourcePolicy = freezePolicy(
 
 export { cfpbSourcePolicy }
 
+/**
+ * Stack Exchange is a source candidate for competitor and contrary-signal
+ * research, not an activated production source. Public contributions carry
+ * CC BY-SA obligations and the API terms require visible Stack Exchange
+ * attribution, so the policy deliberately remains disabled until an
+ * independent legal/privacy/security review records the exact commercial
+ * display and retention decision.
+ */
+const stackExchangeSourcePolicy = freezePolicy(
+  sourcePolicySchema.parse({
+    sourceId: 'stackexchange-stackoverflow',
+    displayName: 'Stack Overflow public questions',
+    sourceType: 'api',
+    enabled: false,
+    policyState: 'pending_review',
+    permittedPurposes: ['competitor-research', 'contrary-evidence', 'development', 'testing'],
+    commercialUse: 'restricted',
+    accessMethod:
+      'Official Stack Exchange API v2.3 search/advanced endpoint; no scraping; optional application key supplied only through runtime configuration',
+    retentionDays: 14,
+    deletionRequired: true,
+    attributionRequired: true,
+    displayMode: 'excerpt',
+    coverageNotes: [
+      'Engineering policy draft: independent legal, privacy, and security approval is still required.',
+      'Coverage is limited to Stack Overflow questions matching an explicit bounded query; it is not a census of developer experience.',
+      'Public contributions carry time-dependent CC BY-SA terms and API responses require visible Stack Exchange attribution.',
+      'Question bodies are sanitized and retained only as bounded excerpts; answers, comments, user profiles, and private data are not collected.',
+      'Deleted or withheld questions may disappear without a tombstone feed; filtered search never establishes deletion absence.'
+    ],
+    reviewedAt: '2026-08-02T00:00:00.000Z',
+    policyOwner: 'AppSea source-policy review queue',
+    policyDocumentRef: 'https://engineering.stackexchange.com/legal/api-terms-of-use',
+    expiresAt: '2026-11-02T00:00:00.000Z',
+    quota: {
+      requestsPerMinute: 30,
+      maxRecordsPerRequest: 100,
+      maxRecordsPerRun: 1_000,
+      costPerRequestMicros: 0
+    },
+    deletion: {
+      sourceRecordIdField: 'question_id',
+      supportsTombstones: false,
+      deletionPollIntervalHours: 24,
+      retentionAction: 'redact'
+    }
+  })
+)
+
+export { stackExchangeSourcePolicy }
+
+const STACKEXCHANGE_API_BASE_URL = 'https://api.stackexchange.com/2.3/'
+const STACKEXCHANGE_REQUEST_TIMEOUT_MS = 30_000
+const STACKEXCHANGE_MAX_RESPONSE_BYTES = 8 * 1024 * 1024
+const STACKEXCHANGE_SITE = 'stackoverflow'
+
+type StackExchangeRecord = Record<string, unknown>
+
+function stackExchangeRecord(value: unknown): StackExchangeRecord | null {
+  return value && typeof value === 'object' && !Array.isArray(value)
+    ? (value as StackExchangeRecord)
+    : null
+}
+
+function stackExchangeQuestionId(record: StackExchangeRecord): string {
+  const value = record.question_id
+  const id =
+    typeof value === 'number' && Number.isSafeInteger(value) && value > 0
+      ? String(value)
+      : typeof value === 'string' && /^[1-9][0-9]{0,30}$/.test(value)
+        ? value
+        : null
+  if (!id) throw new SourceRecordMalformedError()
+  return id
+}
+
+function stackExchangeTimestamp(value: unknown): string {
+  const seconds =
+    typeof value === 'number' && Number.isSafeInteger(value)
+      ? value
+      : typeof value === 'string' && /^[0-9]{1,12}$/.test(value)
+        ? Number(value)
+        : Number.NaN
+  if (!Number.isSafeInteger(seconds) || seconds <= 0) throw new SourceRecordMalformedError()
+  const date = new Date(seconds * 1_000)
+  if (!Number.isFinite(date.getTime())) throw new SourceRecordMalformedError()
+  return date.toISOString()
+}
+
+function stackExchangeLocator(record: StackExchangeRecord, questionId: string): string {
+  const fallback = `https://stackoverflow.com/questions/${questionId}`
+  const candidate = typeof record.link === 'string' ? record.link : null
+  if (!candidate) return fallback
+  try {
+    const url = new URL(candidate)
+    if (
+      url.protocol !== 'https:' ||
+      url.hostname !== 'stackoverflow.com' ||
+      (url.port !== '' && url.port !== '443') ||
+      url.username !== '' ||
+      url.password !== ''
+    ) {
+      return fallback
+    }
+    const questionPath = `/questions/${questionId}`
+    if (url.pathname !== questionPath && !url.pathname.startsWith(`${questionPath}/`)) {
+      return fallback
+    }
+    return `${url.origin}${url.pathname}`
+  } catch {
+    return fallback
+  }
+}
+
+function stackExchangeTags(record: StackExchangeRecord): string[] {
+  if (!Array.isArray(record.tags)) return []
+  return record.tags
+    .filter((tag): tag is string => typeof tag === 'string' && tag.length > 0)
+    .slice(0, 20)
+}
+
+function decodeHtmlEntities(value: string): string {
+  return value
+    .replace(/&nbsp;/gi, ' ')
+    .replace(/&amp;/gi, '&')
+    .replace(/&lt;/gi, '<')
+    .replace(/&gt;/gi, '>')
+    .replace(/&quot;/gi, '"')
+    .replace(/&#39;/gi, "'")
+    .replace(/&#x27;/gi, "'")
+    .replace(/&#(\d+);/g, (_match, code: string) => {
+      const point = Number(code)
+      return Number.isSafeInteger(point) &&
+        point >= 0 &&
+        point <= 0x10ffff &&
+        !(point >= 0xd800 && point <= 0xdfff)
+        ? String.fromCodePoint(Math.min(point, 0x10ffff))
+        : ' '
+    })
+}
+
+function stackExchangeExcerpt(value: unknown): string {
+  if (typeof value !== 'string') return ''
+  const text = decodeHtmlEntities(
+    value
+      .replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, ' ')
+      .replace(/<style\b[^>]*>[\s\S]*?<\/style>/gi, ' ')
+      .replace(/<[^>]+>/g, ' ')
+      .replace(/\0/g, ' ')
+  )
+    .replace(/\s+/g, ' ')
+    .trim()
+  return text.length > 20_000 ? `${text.slice(0, 19_997)}...` : text
+}
+
+/** Map one Stack Overflow question to a minimized, attribution-bound complaint. */
+export function mapStackExchangeQuestion(
+  record: unknown,
+  capturedAt: string,
+  query: string
+): Complaint {
+  const value = stackExchangeRecord(record)
+  if (!value) throw new SourceRecordMalformedError()
+  const questionId = stackExchangeQuestionId(value)
+  const title = typeof value.title === 'string' ? stackExchangeExcerpt(value.title) : ''
+  const body = stackExchangeExcerpt(value.body)
+  const text = [title, body].filter(Boolean).join(' — ')
+  if (!text) throw new SourceRecordMalformedError()
+  const tags = stackExchangeTags(value)
+  const feature = tags[0] ?? 'general workflow'
+  return complaintSchema.parse({
+    id: `stackexchange-question-${questionId}`,
+    sourceId: stackExchangeSourcePolicy.sourceId,
+    sourceRecordId: `${STACKEXCHANGE_SITE}:${questionId}`,
+    canonicalLocator: stackExchangeLocator(value, questionId),
+    capturedAt: asIsoDate(capturedAt),
+    publishedAt: stackExchangeTimestamp(value.creation_date),
+    query: query.trim() || `source-record:${questionId}`,
+    product: 'Stack Overflow community',
+    company: 'Community contributors',
+    feature,
+    category: 'community signal',
+    text,
+    language: 'en',
+    synthetic: false,
+    redacted: true,
+    allowedRepresentation: 'excerpt'
+  })
+}
+
+function extractStackExchangeRecords(payload: unknown): { items: unknown[]; backoff: number } {
+  const root = stackExchangeRecord(payload)
+  if (!root || !Array.isArray(root.items)) throw new SourceRecordMalformedError()
+  if (typeof root.error_id === 'number' || typeof root.error_name === 'string') {
+    throw new SourceRecordMalformedError()
+  }
+  const backoff =
+    typeof root.backoff === 'number' && Number.isFinite(root.backoff)
+      ? Math.max(0, root.backoff)
+      : 0
+  return { items: root.items, backoff }
+}
+
+async function readStackExchangeJson(response: Response): Promise<unknown> {
+  const declaredLength = response.headers?.get('content-length')
+  if (declaredLength && Number.isFinite(Number(declaredLength))) {
+    if (Number(declaredLength) > STACKEXCHANGE_MAX_RESPONSE_BYTES) {
+      throw new SourceResponseTooLargeError()
+    }
+  }
+  const reader = response.body?.getReader()
+  if (!reader) {
+    const payload = (await response.json()) as unknown
+    if (
+      new TextEncoder().encode(JSON.stringify(payload)).byteLength >
+      STACKEXCHANGE_MAX_RESPONSE_BYTES
+    ) {
+      throw new SourceResponseTooLargeError()
+    }
+    return payload
+  }
+  const chunks: Uint8Array[] = []
+  let total = 0
+  try {
+    while (true) {
+      const { done, value } = await reader.read()
+      if (done) break
+      total += value.byteLength
+      if (total > STACKEXCHANGE_MAX_RESPONSE_BYTES) throw new SourceResponseTooLargeError()
+      chunks.push(value)
+    }
+  } finally {
+    reader.releaseLock()
+  }
+  const bytes = new Uint8Array(total)
+  let offset = 0
+  for (const chunk of chunks) {
+    bytes.set(chunk, offset)
+    offset += chunk.byteLength
+  }
+  return JSON.parse(new TextDecoder().decode(bytes)) as unknown
+}
+
+function stackExchangeSourceRecordId(value: string): string {
+  const match = /^(?:stackoverflow:)?([1-9][0-9]{0,30})$/.exec(value)
+  if (!match) throw new SourceRecordMalformedError()
+  return match[1]!
+}
+
+export interface StackExchangeConnectorOptions {
+  fetchImpl?: typeof fetch
+  baseUrl?: string
+  policy?: SourcePolicy
+  now?: () => string
+  quotaLedger?: SourceQuotaLedger
+  /** Optional API key supplied by a deployment secret; never persisted or logged. */
+  apiKey?: string
+}
+
+export class StackExchangeConnector implements SourceConnector {
+  readonly sourceId = stackExchangeSourcePolicy.sourceId
+  readonly policy: SourcePolicy
+  private readonly fetchImpl: typeof fetch
+  private readonly baseUrl: string
+  private readonly now: () => string
+  private readonly quotaLedger: SourceQuotaLedger | undefined
+  private readonly apiKey: string | undefined
+  private readonly requestTimestamps: number[] = []
+  private readonly runRecordCounts = new Map<string, { count: number; touchedAt: number }>()
+
+  constructor(options: StackExchangeConnectorOptions = {}) {
+    if (
+      options.policy &&
+      process.env.NODE_ENV !== 'test' &&
+      (!options.policy.enabled || options.policy.policyState !== 'approved')
+    ) {
+      throw new Error(
+        'Stack Exchange runtime policy must be enabled and approved by the source registry'
+      )
+    }
+    const policy = options.policy ?? stackExchangeSourcePolicy
+    if (
+      policy.sourceId !== stackExchangeSourcePolicy.sourceId ||
+      policy.sourceType !== stackExchangeSourcePolicy.sourceType ||
+      policy.displayMode !== stackExchangeSourcePolicy.displayMode
+    ) {
+      throw new Error('Stack Exchange connector policy identity does not match the reviewed source')
+    }
+    if (process.env.NODE_ENV !== 'test' && !options.quotaLedger) {
+      throw new Error('Stack Exchange connector requires a durable quota ledger outside tests')
+    }
+    this.policy = policy
+    this.fetchImpl = options.fetchImpl ?? fetch
+    this.baseUrl = options.baseUrl ?? STACKEXCHANGE_API_BASE_URL
+    const baseUrl = new URL(this.baseUrl)
+    const officialUrl = new URL(STACKEXCHANGE_API_BASE_URL)
+    if (
+      baseUrl.protocol !== 'https:' ||
+      baseUrl.origin !== officialUrl.origin ||
+      baseUrl.pathname !== officialUrl.pathname ||
+      baseUrl.search !== '' ||
+      baseUrl.hash !== '' ||
+      baseUrl.username !== '' ||
+      baseUrl.password !== ''
+    ) {
+      throw new Error('Stack Exchange connector URL must remain on the official HTTPS API origin')
+    }
+    this.now = options.now ?? (() => new Date().toISOString())
+    this.quotaLedger = options.quotaLedger
+    this.apiKey = options.apiKey?.trim() || undefined
+  }
+
+  private consumeQuota(request: CollectionRequest): void {
+    const now = Date.now()
+    while (this.requestTimestamps[0] !== undefined && now - this.requestTimestamps[0] >= 60_000) {
+      this.requestTimestamps.shift()
+    }
+    if (this.requestTimestamps.length >= this.policy.quota.requestsPerMinute) {
+      throw new SourceQuotaExceededError('Stack Exchange connector request quota exceeded')
+    }
+    const runKey = request.runId ?? '__unscoped__'
+    const previous = this.runRecordCounts.get(runKey)
+    const used = previous?.count ?? 0
+    if (used + request.limit > this.policy.quota.maxRecordsPerRun) {
+      throw new SourceQuotaExceededError('Stack Exchange connector per-run record quota exceeded')
+    }
+    this.requestTimestamps.push(now)
+    this.runRecordCounts.set(runKey, { count: used + request.limit, touchedAt: now })
+    if (this.runRecordCounts.size > 10_000) {
+      const oldest = [...this.runRecordCounts.entries()]
+        .sort((left, right) => left[1].touchedAt - right[1].touchedAt)
+        .slice(0, this.runRecordCounts.size - 10_000)
+      for (const [key] of oldest) this.runRecordCounts.delete(key)
+    }
+  }
+
+  private async reserveQuota(
+    request: CollectionRequest
+  ): Promise<SourceQuotaReservation | undefined> {
+    if (!this.quotaLedger) {
+      this.consumeQuota(request)
+      return undefined
+    }
+    if (!request.workspaceId || !request.runId || !request.policyVersion) {
+      throw new Error(
+        'Durable Stack Exchange collection requires workspaceId, runId, and policyVersion at the boundary'
+      )
+    }
+    const occurredAt = asIsoDate(this.now())
+    const digest = createHash('sha256')
+      .update(
+        JSON.stringify({
+          sourceId: this.sourceId,
+          policyVersion: request.policyVersion,
+          workspaceId: request.workspaceId,
+          runId: request.runId,
+          idempotencyMaterial: request.idempotencyKey ?? '',
+          request: {
+            query: request.query,
+            limit: request.limit,
+            purpose: request.purpose,
+            requestedDisplayMode: request.requestedDisplayMode,
+            sourceRecordId: request.sourceRecordId ?? null
+          }
+        })
+      )
+      .digest('hex')
+    const reservation = await this.quotaLedger.reserve({
+      workspaceId: request.workspaceId,
+      sourceId: this.sourceId,
+      policyVersion: request.policyVersion,
+      runId: request.runId,
+      idempotencyKey: `quota-key:${digest}`,
+      reservationId: `quota:${this.sourceId}:${digest.slice(0, 48)}`,
+      requestedRecords: request.limit,
+      requestedCostMicros: this.policy.quota.costPerRequestMicros,
+      expiresAt: new Date(Date.parse(occurredAt) + 10 * 60_000).toISOString(),
+      occurredAt
+    })
+    if (reservation.replayed || reservation.status === 'committed') {
+      throw new SourceQuotaReservationReplayError()
+    }
+    if (reservation.status !== 'reserved') throw new Error('Source quota reservation is not active')
+    return reservation
+  }
+
+  private async settleQuota(
+    request: CollectionRequest,
+    reservation: SourceQuotaReservation | undefined,
+    actualRecords: number
+  ): Promise<number> {
+    if (!reservation || !this.quotaLedger || !request.workspaceId) {
+      return this.policy.quota.costPerRequestMicros
+    }
+    try {
+      await this.quotaLedger.commit({
+        workspaceId: request.workspaceId,
+        reservationId: reservation.reservationId,
+        actualRecords: Math.max(0, Math.min(actualRecords, reservation.requestedRecords)),
+        actualCostMicros: reservation.requestedCostMicros,
+        occurredAt: asIsoDate(this.now())
+      })
+      return reservation.requestedCostMicros
+    } catch {
+      throw new Error('Stack Exchange quota settlement failed; collection result is not trusted')
+    }
+  }
+
+  async collect(request: CollectionRequest): Promise<ConnectorResult> {
+    assertPolicyAllowsCollection(this.policy, request)
+    if (!request.sourceRecordId && !request.query.trim()) {
+      throw new Error('Stack Exchange search requires a non-empty query')
+    }
+    const reservation = await this.reserveQuota(request)
+    const questionId = request.sourceRecordId
+      ? stackExchangeSourceRecordId(request.sourceRecordId)
+      : undefined
+    const url = questionId
+      ? new URL(`questions/${encodeURIComponent(questionId)}`, this.baseUrl)
+      : new URL('search/advanced', this.baseUrl)
+    url.searchParams.set('site', STACKEXCHANGE_SITE)
+    url.searchParams.set('filter', 'withbody')
+    if (questionId) {
+      url.searchParams.set('pagesize', '1')
+    } else {
+      url.searchParams.set('q', request.query.trim())
+      url.searchParams.set('sort', 'relevance')
+      url.searchParams.set('pagesize', String(request.limit))
+    }
+    if (this.apiKey) url.searchParams.set('key', this.apiKey)
+
+    let response: Response
+    const abortController = new AbortController()
+    const timeout = setTimeout(() => abortController.abort(), STACKEXCHANGE_REQUEST_TIMEOUT_MS)
+    try {
+      response = await this.fetchImpl(url, {
+        headers: { accept: 'application/json', 'user-agent': 'AppSea-source-connector' },
+        signal: abortController.signal,
+        redirect: 'error'
+      })
+    } catch {
+      clearTimeout(timeout)
+      await this.settleQuota(request, reservation, 0)
+      throw new Error('Stack Exchange connector request failed before a response was received')
+    }
+    if (!response.ok) {
+      clearTimeout(timeout)
+      await this.settleQuota(request, reservation, 0)
+      if (response.status === 429)
+        throw new SourceQuotaExceededError('Stack Exchange API throttled the request')
+      throw new Error('Stack Exchange API returned a non-success response')
+    }
+    let payload: unknown
+    try {
+      payload = await readStackExchangeJson(response)
+    } catch (error) {
+      clearTimeout(timeout)
+      await this.settleQuota(request, reservation, 0)
+      if (error instanceof SourceResponseTooLargeError) throw error
+      throw new SourceRecordMalformedError()
+    }
+    clearTimeout(timeout)
+    let extracted: { items: unknown[]; backoff: number }
+    try {
+      extracted = extractStackExchangeRecords(payload)
+    } catch (error) {
+      await this.settleQuota(request, reservation, 0)
+      throw error
+    }
+    if (extracted.backoff > 0) {
+      await this.settleQuota(request, reservation, extracted.items.length)
+      throw new SourceQuotaExceededError('Stack Exchange API requested a bounded backoff')
+    }
+    if (
+      extracted.items.length > request.limit ||
+      extracted.items.length > this.policy.quota.maxRecordsPerRequest
+    ) {
+      await this.settleQuota(request, reservation, request.limit)
+      throw new SourceQuotaExceededError(
+        'Stack Exchange response exceeded the approved record quota'
+      )
+    }
+    const complaints: Complaint[] = []
+    let malformedCount = 0
+    for (const item of extracted.items) {
+      try {
+        complaints.push(mapStackExchangeQuestion(item, this.now(), request.query))
+      } catch (error) {
+        if (!(error instanceof SourceRecordMalformedError)) throw error
+        malformedCount += 1
+      }
+    }
+    const warnings = [
+      'Stack Exchange coverage is limited to bounded Stack Overflow questions matching the requested query.',
+      'The API response is minimized to sanitized question excerpts and source links; answers, comments, and user profiles are not collected.',
+      'Filtered Stack Exchange search cannot establish deletion absence; no deletion tombstones were emitted.'
+    ]
+    if (malformedCount > 0) {
+      warnings.push(
+        `${malformedCount} Stack Exchange records were skipped because required public fields were invalid.`
+      )
+    }
+    if (questionId) {
+      warnings.push(
+        'This exact source-record re-collection used the official question-by-ID route and emitted no deletion tombstones.'
+      )
+    }
+    const costMicros = await this.settleQuota(request, reservation, extracted.items.length)
+    return { policy: this.policy, complaints, deletions: [], warnings, costMicros }
+  }
+}
+
 type CfpbRecord = Record<string, unknown>
 
 function asRecord(value: unknown): CfpbRecord | null {
@@ -318,6 +830,7 @@ export function mapCfpbRecord(record: unknown, capturedAt: string, query: string
     id: `cfpb-complaint-${sourceRecordId}`,
     sourceId: cfpbSourcePolicy.sourceId,
     sourceRecordId,
+    canonicalLocator: `https://www.consumerfinance.gov/data-research/consumer-complaints/search/api/v1/${encodeURIComponent(sourceRecordId)}/`,
     capturedAt: asIsoDate(capturedAt),
     // CFPB's date_received is an intake date, not a publication timestamp.
     // Keep it out of publishedAt until the contract has a dedicated receivedAt field.

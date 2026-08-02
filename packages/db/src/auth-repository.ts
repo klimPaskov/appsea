@@ -359,6 +359,7 @@ interface OpportunityRow extends QueryResultRow {
 interface EvidenceRow extends QueryResultRow {
   evidence_id: string
   source_item_id: string
+  canonical_locator: string | null
   normalized_text: string
   language: string
   product_candidate: string
@@ -2149,7 +2150,8 @@ export class PostgresAuthRepository {
     runId: string
   ): Promise<WorkspaceEvidenceReadModel[]> {
     const rows = await client.query<EvidenceRow>(
-      `SELECT evidence.evidence_id, evidence.source_item_id, evidence.normalized_text,
+      `SELECT evidence.evidence_id, evidence.source_item_id, source_item.canonical_locator,
+              evidence.normalized_text,
               evidence.language, evidence.product_candidate, evidence.company_candidate,
               evidence.feature_candidate, evidence.category_candidate, evidence.synthetic,
               evidence.redacted, evidence.allowed_representation, source_item.captured_at,
@@ -2176,6 +2178,7 @@ export class PostgresAuthRepository {
       workspaceEvidenceReadModelSchema.parse({
         id: row.evidence_id,
         sourceItemId: row.source_item_id,
+        canonicalLocator: row.canonical_locator,
         text: row.normalized_text,
         language: row.language,
         product: row.product_candidate,

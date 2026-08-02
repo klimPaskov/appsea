@@ -50,6 +50,7 @@ export function mapProductionAnalysisToOpportunityDetail(
     workspaceEvidenceReadModelSchema.parse({
       id: complaint.evidenceId,
       sourceItemId: complaint.sourceItemId,
+      canonicalLocator: complaint.canonicalLocator,
       text: complaint.text,
       language: complaint.language,
       product: complaint.product,

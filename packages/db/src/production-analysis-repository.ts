@@ -138,6 +138,7 @@ interface EvidenceLineageRow extends QueryResultRow {
   source_item_id: string
   evidence_content_hash: string
   source_record_id: string
+  canonical_locator: string | null
   review_state: string
   allowed_representation: string
   redacted: boolean
@@ -608,6 +609,7 @@ async function assertEvidenceLineage(
             evidence.allowed_representation,
             evidence.redacted,
             source_item.source_record_id,
+            source_item.canonical_locator,
             evidence.deletion_state AS evidence_deletion_state,
             source_item.deletion_state AS source_item_deletion_state
        FROM appsea.research_run_complaints run_complaint
@@ -639,6 +641,7 @@ async function assertEvidenceLineage(
       row.source_item_id !== complaint.sourceItemId ||
       row.evidence_content_hash !== complaint.evidenceHash ||
       row.source_record_id !== complaint.sourceRecordId ||
+      row.canonical_locator !== complaint.canonicalLocator ||
       row.review_state !== 'confirmed' ||
       row.allowed_representation !== 'excerpt' ||
       row.allowed_representation !== complaint.allowedRepresentation ||

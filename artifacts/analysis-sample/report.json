@@ -21,6 +21,7 @@
       {
         "evidenceId": "evidence:cfpb-sample-1001",
         "sourceRecordId": "1001",
+        "canonicalLocator": null,
         "sourceId": "cfpb-consumer-complaints",
         "query": "shared inbox handoff",
         "product": "Example Inbox",
@@ -102,6 +103,7 @@
       {
         "evidenceId": "evidence:cfpb-sample-1002",
         "sourceRecordId": "1002",
+        "canonicalLocator": null,
         "sourceId": "cfpb-consumer-complaints",
         "query": "shared inbox handoff",
         "product": "Example Inbox",
@@ -183,6 +185,7 @@
       {
         "evidenceId": "evidence:cfpb-sample-1003",
         "sourceRecordId": "1003",
+        "canonicalLocator": null,
         "sourceId": "cfpb-consumer-complaints",
         "query": "shared inbox handoff",
         "product": "Example Inbox",

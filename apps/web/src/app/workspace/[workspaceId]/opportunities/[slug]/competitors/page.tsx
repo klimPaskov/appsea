@@ -191,6 +191,16 @@ export default async function PrivateCompetitorsPage({
                     <dt className="label">Captured</dt>
                     <dd>{observation.capturedAt}</dd>
                   </div>
+                  {observation.canonicalLocator ? (
+                    <div>
+                      <dt className="label">Attribution</dt>
+                      <dd>
+                        <a href={observation.canonicalLocator} target="_blank" rel="noreferrer">
+                          Open source record (attribution)
+                        </a>
+                      </dd>
+                    </div>
+                  ) : null}
                 </dl>
                 {observation.synthetic ? (
                   <p className="fixture-note">

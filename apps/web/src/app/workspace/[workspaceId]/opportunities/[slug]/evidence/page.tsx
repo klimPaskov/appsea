@@ -89,6 +89,13 @@ export default async function PrivateEvidencePage({
                 <span>Severity {evidence.analysis.severity}/5</span>
               </div>
               <p>{evidence.text}</p>
+              {evidence.canonicalLocator ? (
+                <p className="complaint-meta">
+                  <a href={evidence.canonicalLocator} target="_blank" rel="noreferrer">
+                    Open source record (attribution)
+                  </a>
+                </p>
+              ) : null}
               <p className="complaint-meta">
                 Classification {evidence.analysis.classificationConfidence.toFixed(2)}; entities{' '}
                 {evidence.analysis.entityConfidence.toFixed(2)}. Unresolved:{' '}

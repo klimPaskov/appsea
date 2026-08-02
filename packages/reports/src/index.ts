@@ -47,6 +47,7 @@ export function generateOpportunityReport(
   const observations = artifact.complaints.map((complaint) => ({
     evidenceId: 'evidenceId' in complaint ? complaint.evidenceId : `evidence:${complaint.id}`,
     sourceRecordId: complaint.sourceRecordId,
+    canonicalLocator: complaint.canonicalLocator,
     sourceId: complaint.sourceId,
     query: complaint.query,
     product: complaint.product,
