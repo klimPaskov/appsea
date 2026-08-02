@@ -6,21 +6,27 @@ import { Worker } from '@temporalio/worker'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import type {
   FixtureResearchPersistenceActivityResult,
-  ProductionCollectionWorkflowPersistenceActivityResult
+  ProductionAnalysisResult,
+  ProductionAnalysisWorkflowPersistenceActivityResult,
+  ProductionCollectionWorkflowPersistenceActivityResult,
+  ObjectReference
 } from '@appsea/contracts'
 import type {
+  ProductionAnalysisActivities,
   FixtureResearchActivities,
   ProductionCollectionActivities,
   TerminateFixtureResearchActivityResult
 } from './activity-contracts'
 import {
   prepareFixtureResearchWorkflowStart,
+  prepareProductionAnalysisWorkflowStart,
   prepareProductionCollectionWorkflowStart,
   startFixtureResearchWorkflow
 } from './client'
 import {
   fixtureResearchStatusQueryName,
   fixtureResearchTaskQueue,
+  productionAnalysisStatusQueryName,
   productionCollectionStatusQueryName
 } from './constants'
 
@@ -106,6 +112,65 @@ const productionPersistenceResult: ProductionCollectionWorkflowPersistenceActivi
   },
   sourceItemsProcessed: 4,
   costMicros: 17,
+  activityAttempt: 1
+}
+
+const productionAnalysisNow = '2026-07-10T00:00:00.000Z'
+
+function analysisObjectReference(
+  workspaceId: string,
+  kind: ObjectReference['kind'],
+  contentHash: string
+): ObjectReference {
+  return {
+    version: 1,
+    uri: `appsea-object://${workspaceId}/${kind}/${contentHash}`,
+    workspaceId,
+    kind,
+    contentHash,
+    byteLength: 1,
+    contentType: 'application/json',
+    createdAt: productionAnalysisNow,
+    retentionUntil: productionAnalysisNow,
+    deletionState: 'active',
+    deletedAt: null,
+    deletionReason: null
+  }
+}
+
+const productionAnalysisResult: ProductionAnalysisResult = {
+  workspaceId: 'workspace-analysis-workflow-test',
+  collectionRunId: 'run-analysis-workflow-test',
+  analysisRunId: 'analysis-analysis-workflow-test',
+  artifactId: 'artifact-analysis-workflow-test',
+  inputHash: 'a'.repeat(64),
+  opportunityId: 'opportunity-analysis-workflow-test',
+  scoreSnapshotId: 'score-analysis-workflow-test',
+  reportId: 'report-analysis-workflow-test',
+  planPackageId: 'plan-analysis-workflow-test',
+  artifactObjectRef: analysisObjectReference(
+    'workspace-analysis-workflow-test',
+    'workflow-artifact',
+    'b'.repeat(64)
+  ),
+  reportObjectRef: analysisObjectReference(
+    'workspace-analysis-workflow-test',
+    'report-json',
+    'c'.repeat(64)
+  ),
+  planObjectRef: analysisObjectReference(
+    'workspace-analysis-workflow-test',
+    'plan-package',
+    'd'.repeat(64)
+  ),
+  state: 'completed',
+  availabilityState: 'active',
+  completedAt: productionAnalysisNow,
+  replayed: false
+}
+
+const productionAnalysisPersistenceResult: ProductionAnalysisWorkflowPersistenceActivityResult = {
+  persistence: productionAnalysisResult,
   activityAttempt: 1
 }
 
@@ -608,5 +673,71 @@ describe.sequential('production collection Temporal workflow', () => {
     })
     expect(termination?.failureCode).toBe('activity_failed')
     expect(termination?.failureSummary).toMatch(/operator reconciliation/i)
+  })
+})
+
+describe.sequential('production analysis Temporal workflow', () => {
+  let testEnvironment: TestWorkflowEnvironment
+
+  beforeAll(async () => {
+    testEnvironment = await TestWorkflowEnvironment.createTimeSkipping()
+  }, 60_000)
+
+  afterAll(async () => {
+    await testEnvironment?.teardown()
+  })
+
+  it('projects the durable activity attempt returned by a retried persistence activity', async () => {
+    let attempts = 0
+    const activities: ProductionAnalysisActivities = {
+      persistProductionAnalysis: async () => {
+        attempts += 1
+        if (attempts < 3) {
+          throw ApplicationFailure.create({
+            message: 'sanitized transient failure',
+            type: 'APPSEA_ACTIVITY_FAILED',
+            nonRetryable: false
+          })
+        }
+        return {
+          ...productionAnalysisPersistenceResult,
+          activityAttempt: attempts
+        }
+      }
+    }
+    const prepared = prepareProductionAnalysisWorkflowStart({
+      workspaceId: 'workspace-analysis-workflow-test',
+      collectionRunId: 'run-analysis-workflow-test',
+      analysisRunId: 'analysis-analysis-workflow-test',
+      idempotencyKey: 'analysis-workflow-test-idempotency-key',
+      workflowVersion: 'production-analysis-v2',
+      requestedAt: productionAnalysisNow,
+      seedReviewId: 'seed-review-analysis-test',
+      requestedBy: { actorType: 'service', actorId: 'appsea-worker' }
+    })
+    const worker = await Worker.create({
+      connection: testEnvironment.nativeConnection,
+      taskQueue: fixtureResearchTaskQueue,
+      workflowsPath,
+      activities
+    })
+
+    await worker.runUntil(async () => {
+      const handle = await testEnvironment.client.workflow.start('productionAnalysisWorkflow', {
+        taskQueue: fixtureResearchTaskQueue,
+        workflowId: prepared.workflowId,
+        args: [prepared.input]
+      })
+      await expect(handle.result()).resolves.toMatchObject({
+        state: 'completed',
+        activityAttempts: 3,
+        persistence: { replayed: false }
+      })
+      await expect(handle.query(productionAnalysisStatusQueryName)).resolves.toMatchObject({
+        state: 'completed',
+        activityAttempts: 3
+      })
+    })
+    expect(attempts).toBe(3)
   })
 })

@@ -10,7 +10,7 @@ import type {
 } from '@appsea/contracts'
 import type {
   PersistProductionAnalysisWorkflowActivityInput,
-  ProductionAnalysisResult
+  ProductionAnalysisWorkflowPersistenceActivityResult
 } from '@appsea/contracts'
 import type {
   PersistProductionCollectionWorkflowActivityInput,
@@ -65,5 +65,5 @@ export interface ProductionCollectionActivities {
 export interface ProductionAnalysisActivities {
   persistProductionAnalysis(
     input: PersistProductionAnalysisWorkflowActivityInput
-  ): Promise<ProductionAnalysisResult>
+  ): Promise<ProductionAnalysisWorkflowPersistenceActivityResult>
 }

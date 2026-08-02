@@ -18,7 +18,6 @@ import type {
 } from '@appsea/contracts'
 import {
   productionAnalysisWorkflowInputSchema,
-  type ProductionAnalysisResult,
   type ProductionAnalysisWorkflowInput,
   type ProductionAnalysisWorkflowResult,
   type ProductionAnalysisWorkflowStatus,
@@ -867,7 +866,7 @@ export async function productionAnalysisWorkflow(
 
   try {
     status = { ...status, state: 'running', checkpoint: 'persisting' }
-    const persistence: ProductionAnalysisResult = await activities.persistProductionAnalysis({
+    const activityResult = await activities.persistProductionAnalysis({
       execution,
       input,
       occurredAt: occurredAt()
@@ -876,10 +875,16 @@ export async function productionAnalysisWorkflow(
       state: 'completed',
       workflowId: execution.workflowId,
       temporalFirstExecutionRunId: execution.temporalFirstExecutionRunId,
-      persistence,
-      activityAttempts: 1
+      persistence: activityResult.persistence,
+      activityAttempts: activityResult.activityAttempt
     }
-    status = { ...status, state: 'completed', checkpoint: 'completed', activityAttempts: 1, result }
+    status = {
+      ...status,
+      state: 'completed',
+      checkpoint: 'completed',
+      activityAttempts: activityResult.activityAttempt,
+      result
+    }
     return result
   } catch (error) {
     const failureCode = productionAnalysisFailureCode(error)

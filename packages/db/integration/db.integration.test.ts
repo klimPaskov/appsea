@@ -1885,6 +1885,110 @@ describe.sequential('PostgreSQL fixture persistence lifecycle', () => {
     )
   })
 
+  it('persists monotonic production-analysis activity attempts through the service role', async () => {
+    const workspaceId = 'workspace-analysis-attempts'
+    const campaignId = 'campaign-analysis-attempts'
+    const runId = 'run-analysis-attempts'
+    const analysisRunId = 'analysis-run-attempts'
+
+    try {
+      await withOwnerClient(async (client) => {
+        await client.query('BEGIN')
+        try {
+          await client.query(
+            `INSERT INTO appsea.workspaces
+               (workspace_id, slug, display_name, visibility, fixture_only, status, created_at, updated_at)
+             VALUES ($1, $1, 'Analysis attempts workspace', 'private', false, 'active', $2, $2)`,
+            [workspaceId, fixedAt]
+          )
+          await client.query(
+            `INSERT INTO appsea.research_campaigns
+               (workspace_id, campaign_id, name, purpose, state, configuration, budget, synthetic,
+                created_at, updated_at)
+             VALUES ($1, $2, 'Analysis attempts campaign', 'opportunity-research', 'completed',
+                     '{}'::jsonb, '{}'::jsonb, false, $3, $3)`,
+            [workspaceId, campaignId, fixedAt]
+          )
+          await client.query(
+            `INSERT INTO appsea.research_runs
+               (workspace_id, run_id, campaign_id, idempotency_key, mode, state, artifact_id,
+                input_hash, artifact_snapshot, requested_at, started_at, completed_at)
+             VALUES ($1, $2, $3, 'analysis-attempts-collection-key', 'production', 'completed',
+                     'artifact-analysis-attempts', repeat('a', 64), '{}'::jsonb, $4, $4, $4)`,
+            [workspaceId, runId, campaignId, fixedAt]
+          )
+          await client.query(
+            `INSERT INTO appsea.production_analysis_runs
+               (workspace_id, analysis_run_id, collection_run_id, idempotency_key,
+                analysis_version, input_hash, artifact_id, artifact_snapshot, state,
+                availability_state, seed_review_id, seed_content_hash, requested_at, started_at)
+             VALUES ($1, $2, $3, 'analysis-attempts-analysis-key', 'production-analysis-v1',
+                     repeat('b', 64), 'artifact-analysis-attempts-output', '{}'::jsonb,
+                     'running', 'active', 'seed-analysis-attempts', repeat('c', 64), $4, $4)`,
+            [workspaceId, analysisRunId, runId, fixedAt]
+          )
+          await client.query('COMMIT')
+        } catch (error) {
+          await client.query('ROLLBACK')
+          throw error
+        }
+      })
+
+      await withWorkspaceTransaction(servicePool, workspaceId, (client) =>
+        client.query(
+          `UPDATE appsea.production_analysis_runs
+              SET activity_attempts = 3
+            WHERE workspace_id = $1 AND analysis_run_id = $2`,
+          [workspaceId, analysisRunId]
+        )
+      )
+      const stored = await withWorkspaceTransaction(
+        servicePool,
+        workspaceId,
+        (client) =>
+          client.query<{ activity_attempts: number }>(
+            `SELECT activity_attempts
+               FROM appsea.production_analysis_runs
+              WHERE workspace_id = $1 AND analysis_run_id = $2`,
+            [workspaceId, analysisRunId]
+          ),
+        { readOnly: true }
+      )
+      expect(stored.rows[0]?.activity_attempts).toBe(3)
+      await expect(
+        withWorkspaceTransaction(servicePool, workspaceId, (client) =>
+          client.query(
+            `UPDATE appsea.production_analysis_runs
+                SET activity_attempts = 2
+              WHERE workspace_id = $1 AND analysis_run_id = $2`,
+            [workspaceId, analysisRunId]
+          )
+        )
+      ).rejects.toMatchObject({ code: '23514' })
+    } finally {
+      await withOwnerClient(async (client) => {
+        await client.query('BEGIN')
+        try {
+          await client.query(
+            'DELETE FROM appsea.production_analysis_runs WHERE workspace_id = $1',
+            [workspaceId]
+          )
+          await client.query('DELETE FROM appsea.research_runs WHERE workspace_id = $1', [
+            workspaceId
+          ])
+          await client.query('DELETE FROM appsea.research_campaigns WHERE workspace_id = $1', [
+            workspaceId
+          ])
+          await client.query('DELETE FROM appsea.workspaces WHERE workspace_id = $1', [workspaceId])
+          await client.query('COMMIT')
+        } catch (error) {
+          await client.query('ROLLBACK')
+          throw error
+        }
+      })
+    }
+  })
+
   it('persists, replays, and proves normalized synthetic provenance', async () => {
     const input = await fixtureInput()
     const first = await repository.persist(input)

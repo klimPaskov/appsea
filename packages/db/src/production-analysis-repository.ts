@@ -44,6 +44,7 @@ const clusterVersion = 'production-cluster-v1'
 const planVersion = 'production-plan-v1'
 const normalizerRedactionMarker = '[Content withheld by source policy]'
 const MAX_FUTURE_TIMESTAMP_SKEW_MS = 5 * 60 * 1_000
+const MAX_ACTIVITY_ATTEMPTS = 10
 
 interface AnalysisRunRow extends QueryResultRow {
   workspace_id: string
@@ -57,6 +58,7 @@ interface AnalysisRunRow extends QueryResultRow {
   report_object_ref: unknown
   plan_object_ref: unknown
   state: string
+  activity_attempts: number
   availability_state: string
   opportunity_id: string | null
   score_snapshot_id: string | null
@@ -80,6 +82,7 @@ interface AnalysisStatusRow extends QueryResultRow {
   opportunity_slug: string | null
   failure_code: string | null
   failure_summary: string | null
+  activity_attempts: number
   requested_at: Date | string
   started_at: Date | string
   completed_at: Date | string | null
@@ -184,7 +187,7 @@ function mapAnalysisStatus(row: AnalysisStatusRow): ProductionAnalysisStatusRead
     collectionRunId: row.collection_run_id,
     state: row.state,
     checkpoint: analysisCheckpointForState(row.state),
-    activityAttempts: row.state === 'completed' ? 1 : 0,
+    activityAttempts: row.activity_attempts,
     availabilityState: row.availability_state,
     opportunityId: row.opportunity_id,
     opportunitySlug: row.opportunity_slug,
@@ -383,6 +386,15 @@ function requestedByForInput(input: ProductionAnalysisPersistenceInput): Workflo
   return input.requestedBy ?? { actorType: 'service', actorId: 'appsea-worker' }
 }
 
+function validatedActivityAttempt(value: number): number {
+  if (!Number.isInteger(value) || value < 1 || value > MAX_ACTIVITY_ATTEMPTS) {
+    throw new Error(
+      `Production analysis activity attempt must be between 1 and ${MAX_ACTIVITY_ATTEMPTS}`
+    )
+  }
+  return value
+}
+
 function workflowInputHashForUser(input: ProductionAnalysisPersistenceInput): string {
   if (!input.workflowInputHash) {
     throw new ProductionAnalysisAdmissionRequiredError()
@@ -401,6 +413,7 @@ async function readRun(
             analysis.idempotency_key,
             input_hash, artifact_id, artifact_snapshot, artifact_object_ref,
             report_object_ref, plan_object_ref, state, availability_state,
+            analysis.activity_attempts,
             opportunity_id, score_snapshot_id, report_id, plan_package_id,
             (SELECT report.approval_state
                FROM appsea.report_versions report
@@ -431,7 +444,8 @@ async function readRunByIdempotency(
             analysis.idempotency_key, analysis.input_hash, analysis.artifact_id,
             analysis.artifact_snapshot, analysis.artifact_object_ref,
             analysis.report_object_ref, analysis.plan_object_ref, analysis.state,
-            analysis.availability_state, analysis.opportunity_id,
+            analysis.availability_state, analysis.activity_attempts,
+            analysis.opportunity_id,
             analysis.score_snapshot_id, analysis.report_id, analysis.plan_package_id,
             (SELECT report.approval_state
                FROM appsea.report_versions report
@@ -669,7 +683,8 @@ export class PostgresProductionAnalysisRepository {
 
   private async prepareRun(
     input: ProductionAnalysisPersistenceInput,
-    inputHash: string
+    inputHash: string,
+    activityAttempt: number
   ): Promise<AnalysisRunRow> {
     const requestedBy = requestedByForInput(input)
     const workflowInputHash =
@@ -713,7 +728,22 @@ export class PostgresProductionAnalysisRepository {
                 existing.availability_state
               )
             }
-            if (existing.state === 'completed') return existing
+            if (existing.state === 'completed') {
+              await client.query(
+                `UPDATE appsea.production_analysis_runs
+                    SET activity_attempts = GREATEST(activity_attempts, $3)
+                  WHERE workspace_id = $1 AND analysis_run_id = $2`,
+                [input.workspaceId, existing.analysis_run_id, activityAttempt]
+              )
+              const replayed = await readRun(
+                client,
+                input.workspaceId,
+                existing.analysis_run_id,
+                true
+              )
+              if (!replayed) throw new Error('Production analysis run disappeared while replaying')
+              return replayed
+            }
             if (['failed', 'canceled'].includes(existing.state)) {
               throw new ProductionAnalysisStateError(existing.analysis_run_id, existing.state)
             }
@@ -732,9 +762,11 @@ export class PostgresProductionAnalysisRepository {
             await assertEvidenceLineage(client, input)
             await client.query(
               `UPDATE appsea.production_analysis_runs
-                  SET state = 'running', failure_code = NULL, failure_summary = NULL
+                  SET state = 'running',
+                      activity_attempts = GREATEST(activity_attempts, $3),
+                      failure_code = NULL, failure_summary = NULL
                 WHERE workspace_id = $1 AND analysis_run_id = $2`,
-              [input.workspaceId, existing.analysis_run_id]
+              [input.workspaceId, existing.analysis_run_id, activityAttempt]
             )
             const resumed = await readRun(client, input.workspaceId, existing.analysis_run_id, true)
             if (!resumed) throw new Error('Production analysis run disappeared while resuming')
@@ -796,10 +828,10 @@ export class PostgresProductionAnalysisRepository {
              (workspace_id, analysis_run_id, collection_run_id, idempotency_key,
              analysis_version, input_hash, artifact_id, artifact_snapshot, state,
               availability_state, seed_review_id, seed_content_hash, coverage_gaps,
-              warnings, requested_by_actor_type, requested_by_actor_id,
-              requested_at, started_at)
+              warnings, activity_attempts, requested_by_actor_type,
+              requested_by_actor_id, requested_at, started_at)
            VALUES ($1, $2, $3, $4, $5, $6, $7, $8::jsonb, 'running', 'active',
-                   $9, $10, $11, $12, $13, $14, $15, $15)`,
+                   $9, $10, $11, $12, $13, $14, $15, $16, $16)`,
             [
               input.workspaceId,
               input.analysisRunId,
@@ -813,6 +845,7 @@ export class PostgresProductionAnalysisRepository {
               input.artifact.opportunitySeedReview.contentHash,
               input.artifact.coverageGaps,
               input.artifact.warnings,
+              activityAttempt,
               requestedBy.actorType,
               requestedBy.actorId,
               input.requestedAt
@@ -853,13 +886,45 @@ export class PostgresProductionAnalysisRepository {
                 existingById.availability_state
               )
             }
+            if (existingById.state === 'completed') {
+              await client.query(
+                `UPDATE appsea.production_analysis_runs
+                    SET activity_attempts = GREATEST(activity_attempts, $3)
+                  WHERE workspace_id = $1 AND analysis_run_id = $2`,
+                [input.workspaceId, existingById.analysis_run_id, activityAttempt]
+              )
+              const replayedById = await readRun(
+                client,
+                input.workspaceId,
+                existingById.analysis_run_id,
+                true
+              )
+              if (!replayedById)
+                throw new Error('Production analysis run disappeared while replaying')
+              return replayedById
+            }
             if (['failed', 'canceled'].includes(existingById.state)) {
               throw new ProductionAnalysisStateError(
                 existingById.analysis_run_id,
                 existingById.state
               )
             }
-            return existingById
+            await client.query(
+              `UPDATE appsea.production_analysis_runs
+                  SET activity_attempts = GREATEST(activity_attempts, $3)
+                WHERE workspace_id = $1 AND analysis_run_id = $2
+                  AND state IN ('queued', 'running', 'partial')`,
+              [input.workspaceId, existingById.analysis_run_id, activityAttempt]
+            )
+            const refreshedById = await readRun(
+              client,
+              input.workspaceId,
+              existingById.analysis_run_id,
+              true
+            )
+            if (!refreshedById)
+              throw new Error('Production analysis run disappeared while replaying')
+            return refreshedById
           }
           const existing = await readRunByIdempotency(
             client,
@@ -883,7 +948,22 @@ export class PostgresProductionAnalysisRepository {
               existing.availability_state
             )
           }
-          if (existing.state === 'completed') return existing
+          if (existing.state === 'completed') {
+            await client.query(
+              `UPDATE appsea.production_analysis_runs
+                  SET activity_attempts = GREATEST(activity_attempts, $3)
+                WHERE workspace_id = $1 AND analysis_run_id = $2`,
+              [input.workspaceId, existing.analysis_run_id, activityAttempt]
+            )
+            const replayed = await readRun(
+              client,
+              input.workspaceId,
+              existing.analysis_run_id,
+              true
+            )
+            if (!replayed) throw new Error('Production analysis run disappeared while replaying')
+            return replayed
+          }
           if (['failed', 'canceled'].includes(existing.state)) {
             throw new ProductionAnalysisStateError(existing.analysis_run_id, existing.state)
           }
@@ -900,7 +980,16 @@ export class PostgresProductionAnalysisRepository {
           }
           await assertCollectionAndPolicyLineage(client, input)
           await assertEvidenceLineage(client, input)
-          return existing
+          await client.query(
+            `UPDATE appsea.production_analysis_runs
+                SET activity_attempts = GREATEST(activity_attempts, $3)
+              WHERE workspace_id = $1 AND analysis_run_id = $2
+                AND state IN ('queued', 'running', 'partial')`,
+            [input.workspaceId, existing.analysis_run_id, activityAttempt]
+          )
+          const refreshed = await readRun(client, input.workspaceId, existing.analysis_run_id, true)
+          if (!refreshed) throw new Error('Production analysis run disappeared while replaying')
+          return refreshed
         },
         { isolationLevel: 'READ COMMITTED' }
       )
@@ -909,6 +998,7 @@ export class PostgresProductionAnalysisRepository {
 
   private async markFailed(
     input: ProductionAnalysisPersistenceInput,
+    activityAttempt: number,
     code:
       | 'analysis_input_invalid'
       | 'analysis_policy_denied'
@@ -920,10 +1010,12 @@ export class PostgresProductionAnalysisRepository {
     await withWorkspaceTransaction(this.pool, input.workspaceId, async (client) => {
       await client.query(
         `UPDATE appsea.production_analysis_runs
-            SET state = 'failed', failure_code = $3, failure_summary = $4
+            SET state = 'failed',
+                activity_attempts = GREATEST(activity_attempts, $3),
+                failure_code = $4, failure_summary = $5
           WHERE workspace_id = $1 AND analysis_run_id = $2
             AND state IN ('queued', 'running', 'partial')`,
-        [input.workspaceId, input.analysisRunId, code, summary.slice(0, 500)]
+        [input.workspaceId, input.analysisRunId, activityAttempt, code, summary.slice(0, 500)]
       )
       const requestedBy = requestedByForInput(input)
       if (requestedBy.actorType === 'user') {
@@ -938,12 +1030,16 @@ export class PostgresProductionAnalysisRepository {
     })
   }
 
-  async persist(input: ProductionAnalysisPersistenceInput): Promise<ProductionAnalysisResult> {
+  async persist(
+    input: ProductionAnalysisPersistenceInput,
+    activityAttempt = 1
+  ): Promise<ProductionAnalysisResult> {
     const parsed = productionAnalysisPersistenceInputSchema.parse(input)
+    const validatedAttempt = validatedActivityAttempt(activityAttempt)
     assertProductionAnalysisTimestamps(parsed)
     assertDeterministicScoreSnapshot(parsed.artifact.opportunity.scoreSnapshot)
     const inputHash = contentHash(parsed)
-    const run = await this.prepareRun(parsed, inputHash)
+    const run = await this.prepareRun(parsed, inputHash, validatedAttempt)
     if (run.state === 'completed') {
       const result = rowResult(run, true)
       await Promise.all([
@@ -1023,6 +1119,7 @@ export class PostgresProductionAnalysisRepository {
     } catch (error) {
       await this.markFailed(
         parsed,
+        validatedAttempt,
         'analysis_activity_failed',
         error instanceof Error ? error.message : 'Object storage write failed'
       )
@@ -1438,7 +1535,9 @@ export class PostgresProductionAnalysisRepository {
                     state = 'completed', availability_state = 'active',
                     opportunity_id = $7, score_snapshot_id = $8, report_id = $9,
                     plan_package_id = $10, coverage_gaps = $11, warnings = $12,
-                    completed_at = $13, failure_code = NULL, failure_summary = NULL
+                    completed_at = $13,
+                    activity_attempts = GREATEST(activity_attempts, $14),
+                    failure_code = NULL, failure_summary = NULL
               WHERE workspace_id = $1 AND analysis_run_id = $2`,
             [
               parsed.workspaceId,
@@ -1453,7 +1552,8 @@ export class PostgresProductionAnalysisRepository {
               planPackageId,
               parsed.artifact.coverageGaps,
               parsed.artifact.warnings,
-              completedAt
+              completedAt,
+              validatedAttempt
             ]
           )
 
@@ -1518,7 +1618,7 @@ export class PostgresProductionAnalysisRepository {
       )
     } catch (error) {
       if (error instanceof ProductionAnalysisLineageError) {
-        await this.markFailed(parsed, 'analysis_policy_denied', error.message)
+        await this.markFailed(parsed, validatedAttempt, 'analysis_policy_denied', error.message)
       }
       throw error
     }
@@ -1610,6 +1710,7 @@ export class PostgresProductionAnalysisRepository {
         const result = await client.query<AnalysisStatusRow>(
           `SELECT analysis.analysis_run_id, analysis.collection_run_id,
                   analysis.state, analysis.availability_state,
+                  analysis.activity_attempts,
                   analysis.opportunity_id, opportunity.slug AS opportunity_slug,
                   analysis.failure_code, analysis.failure_summary,
                   analysis.requested_at, analysis.started_at, analysis.completed_at
@@ -1649,6 +1750,7 @@ export class PostgresProductionAnalysisRepository {
                   analysis.input_hash, analysis.artifact_id, analysis.artifact_snapshot,
                   analysis.artifact_object_ref, analysis.report_object_ref,
                   analysis.plan_object_ref, analysis.state, analysis.availability_state,
+                  analysis.activity_attempts,
                   analysis.opportunity_id, analysis.score_snapshot_id, analysis.report_id,
                   analysis.plan_package_id,
                   (SELECT report.approval_state

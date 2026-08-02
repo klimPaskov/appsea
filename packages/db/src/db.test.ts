@@ -67,7 +67,8 @@ describe('database foundation', () => {
       '0051',
       '0052',
       '0053',
-      '0054'
+      '0054',
+      '0055'
     ])
     expect(migrations[0]?.checksum).toMatch(/^[a-f0-9]{64}$/)
     expect(migrations[0]?.sql).toContain('CREATE TABLE appsea.evidence_records')
@@ -153,6 +154,9 @@ describe('database foundation', () => {
     )
     const sourcePolicyIntegrityMigration = migrations.find(
       (migration) => migration.version === '0054'
+    )
+    const productionAnalysisAttemptMigration = migrations.find(
+      (migration) => migration.version === '0055'
     )
     expect(authMigration?.sql).toContain('CREATE TABLE appsea.users')
     expect(authMigration?.sql).toContain('CREATE TABLE appsea.auth_sessions')
@@ -259,6 +263,18 @@ describe('database foundation', () => {
     expect(sourcePolicyIntegrityMigration?.sql).toContain('independence_attested')
     expect(sourcePolicyIntegrityMigration?.sql).toContain(
       'source policy owner cannot approve its own policy'
+    )
+    expect(productionAnalysisAttemptMigration?.sql).toContain(
+      'ADD COLUMN activity_attempts integer NOT NULL DEFAULT 0'
+    )
+    expect(productionAnalysisAttemptMigration?.sql).toContain(
+      'production analysis activity attempts cannot decrease'
+    )
+    expect(productionAnalysisAttemptMigration?.sql).toContain(
+      "state IN ('completed', 'partial', 'failed', 'canceled')"
+    )
+    expect(productionAnalysisAttemptMigration?.sql).toContain(
+      'GRANT UPDATE (activity_attempts) ON appsea.production_analysis_runs'
     )
     expect(productionWorkflowMigration?.sql).toContain(
       'CREATE TABLE appsea.production_collection_workflow_jobs'

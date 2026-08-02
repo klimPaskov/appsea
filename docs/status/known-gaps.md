@@ -19,11 +19,12 @@ remains disabled pending external legal, privacy, and security approval.
 
 Completed collections now have an explicit owner/editor handoff to a reviewed
 production-analysis run. The status route falls back from Temporal to a safe
-PostgreSQL projection and fails closed for foreign workflow identifiers. The
-projection intentionally maps activity attempts to zero for queued/running
-rows until the run table gains durable attempt history; the start action is
-manual and approved-seed-only. Automatic analysis scheduling, richer attempt
-telemetry, and production Temporal availability remain open.
+PostgreSQL projection and fails closed for foreign workflow identifiers.
+Migration `0055` persists the highest bounded Temporal activity attempt on the
+analysis run and the worker keeps it outside the idempotency hash; queued and
+running fallback rows now expose observed attempts. The start action is still
+manual and approved-seed-only. Automatic scheduling, event-level timings,
+failure-heartbeats, and production Temporal availability remain open.
 
 Source-policy approval integrity is now database-bound: new approvals require a
 canonical reviewer identity, an independent legal/privacy/security role, and an

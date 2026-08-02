@@ -105,6 +105,19 @@ artifact export: hashes, object references, source payloads, and seed content
 are intentionally absent. A completed status can link to the private
 opportunity package, whose report and plan approval gates still apply.
 
+## Activity-attempt telemetry
+
+Migration `0055_production_analysis_attempt_telemetry.sql` adds
+`production_analysis_runs.activity_attempts`, bounded to ten and guarded so
+the value cannot decrease. The worker reads the Temporal activity attempt and
+passes it separately from the validated persistence input. The repository
+updates the projection with `GREATEST`, including idempotent replays and
+completion/failure transitions; the attempt is not included in the input hash.
+Private PostgreSQL fallback status therefore reports observed attempts for
+queued, running, and completed runs without exposing workflow payloads. Event
+timings, heartbeat history, and production scheduler ownership remain
+separate operational controls.
+
 Private opportunity pages prefer the latest active production analysis for a
 slug and otherwise retain the fixture read path. The public leaderboard remains
 fixture-only and never displays production rows.

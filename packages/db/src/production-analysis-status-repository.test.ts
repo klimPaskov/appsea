@@ -35,6 +35,7 @@ describe('production analysis status projection', () => {
           collection_run_id: 'run:one',
           state: 'running',
           availability_state: 'active',
+          activity_attempts: 3,
           opportunity_id: null,
           opportunity_slug: null,
           failure_code: null,
@@ -62,7 +63,7 @@ describe('production analysis status projection', () => {
       collectionRunId: 'run:one',
       state: 'running',
       checkpoint: 'persisting',
-      activityAttempts: 0,
+      activityAttempts: 3,
       availabilityState: 'active',
       opportunityId: null,
       opportunitySlug: null,
@@ -76,5 +77,6 @@ describe('production analysis status projection', () => {
     expect(status).not.toHaveProperty('artifactObjectRef')
     expect(mocks.authenticatedCalls).toEqual([{ userId: 'user:one', workspaceId: 'workspace:one' }])
     expect(mocks.query.mock.calls[0]?.[0]).toContain("workspace.visibility = 'private'")
+    expect(mocks.query.mock.calls[0]?.[0]).toContain('analysis.activity_attempts')
   })
 })

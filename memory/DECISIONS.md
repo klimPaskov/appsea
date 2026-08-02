@@ -353,6 +353,6 @@ The status API/page validates any workflow identifier against its workspace
 prefix, and maps Temporal or PostgreSQL to a strict
 projection of state, checkpoint, bounded attempts, availability, identifiers,
 failure summary, and timestamps. Hashes, object references, source payloads,
-and seed content stay out of the read contract. The current run table does not
-persist activity-attempt history, so queued/running database fallback rows
-report zero attempts until a later migration adds that telemetry.
+and seed content stay out of the read contract. Migration `0055` persists the
+activity attempt outside the idempotency hash, so fallback rows expose
+observed attempts; event timing and heartbeat history remain separate.

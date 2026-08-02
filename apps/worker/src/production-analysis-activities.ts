@@ -1,7 +1,7 @@
 import { ApplicationFailure, Context } from '@temporalio/activity'
 import {
   persistProductionAnalysisWorkflowActivityInputSchema,
-  type ProductionAnalysisResult
+  productionAnalysisWorkflowPersistenceActivityResultSchema
 } from '@appsea/contracts'
 import {
   IdempotencyConflictError,
@@ -87,7 +87,7 @@ export function createProductionAnalysisActivities(
   const repository = new PostgresProductionAnalysisRepository(pool, objectStore)
   return {
     persistProductionAnalysis: (input) =>
-      runSanitized(async (): Promise<ProductionAnalysisResult> => {
+      runSanitized(async () => {
         const parsed = persistProductionAnalysisWorkflowActivityInputSchema.parse(input)
         const attempt = Context.current().info.attempt
         const artifact = await reconstructProductionAnalysisArtifact(pool, {
@@ -97,21 +97,28 @@ export function createProductionAnalysisActivities(
           seedReviewId: parsed.input.seedReviewId,
           analysisAt: parsed.occurredAt
         })
-        const result = await repository.persist({
-          workspaceId: parsed.input.workspaceId,
-          collectionRunId: parsed.input.collectionRunId,
-          analysisRunId: parsed.input.analysisRunId,
-          idempotencyKey: parsed.input.idempotencyDigest,
-          requestedAt: parsed.occurredAt,
-          workflowInputHash: parsed.input.inputHash,
-          requestedBy: parsed.input.requestedBy,
-          artifact
+        const persistence = await repository.persist(
+          {
+            workspaceId: parsed.input.workspaceId,
+            collectionRunId: parsed.input.collectionRunId,
+            analysisRunId: parsed.input.analysisRunId,
+            idempotencyKey: parsed.input.idempotencyDigest,
+            requestedAt: parsed.occurredAt,
+            workflowInputHash: parsed.input.inputHash,
+            requestedBy: parsed.input.requestedBy,
+            artifact
+          },
+          attempt
+        )
+        const result = productionAnalysisWorkflowPersistenceActivityResultSchema.parse({
+          persistence,
+          activityAttempt: attempt
         })
         emitWorkerEvent({
           event: 'production_analysis_activity_finished',
           taskQueue: fixtureResearchTaskQueue,
           workflowId: parsed.execution.workflowId,
-          state: result.state,
+          state: result.persistence.state,
           attempt
         })
         return result

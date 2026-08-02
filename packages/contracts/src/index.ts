@@ -2510,6 +2510,18 @@ export const persistProductionAnalysisWorkflowActivityInputSchema = z
   })
   .strict()
 
+/**
+ * The analysis activity returns its durable persistence result together with
+ * the Temporal activity attempt that produced it. The attempt is operational
+ * metadata, not part of the idempotency input hash.
+ */
+export const productionAnalysisWorkflowPersistenceActivityResultSchema = z
+  .object({
+    persistence: productionAnalysisResultSchema,
+    activityAttempt: z.number().int().positive().max(10)
+  })
+  .strict()
+
 export const fixtureResearchWorkflowInputSchema = z
   .object({
     workspaceId: appseaIdentifierSchema,
@@ -3693,6 +3705,9 @@ export type ProductionAnalysisWorkflowStatus = z.infer<
 >
 export type PersistProductionAnalysisWorkflowActivityInput = z.infer<
   typeof persistProductionAnalysisWorkflowActivityInputSchema
+>
+export type ProductionAnalysisWorkflowPersistenceActivityResult = z.infer<
+  typeof productionAnalysisWorkflowPersistenceActivityResultSchema
 >
 export type WorkflowExecutionMetadata = z.infer<typeof workflowExecutionMetadataSchema>
 export type FixtureResearchInspection = z.infer<typeof fixtureResearchInspectionSchema>

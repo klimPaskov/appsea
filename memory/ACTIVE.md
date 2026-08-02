@@ -110,6 +110,11 @@ over existing policy tables. It derives production collectibility from the
 independent approval gate and exposes quotas, deletion duties, and gaps while
 keeping payloads, hashes, reviewer identities, and activation controls out.
 
+Migration `0055` now persists the highest bounded production-analysis activity
+attempt without changing idempotency hashes; fallback status reads expose it.
+Event-level timings, heartbeats, scheduling, and production infrastructure
+remain open.
+
 ## Next production tranche
 
 1. Legal/privacy/security approval and CFPB policy activation.

@@ -116,6 +116,10 @@ workspace/collection/analysis/seed identifiers and immutable digests cross
 Temporal, while the worker rebuilds the evidence-backed artifact inside its
 activity. This keeps complaint text and source payloads out of new workflow
 histories; legacy v1 executions require a controlled drain/retention plan.
+Migration `0055` adds a bounded, monotonic activity-attempt projection to the
+analysis run. It is written by the worker persistence boundary as operational
+metadata only, so retries become visible in private status reads without
+changing the content hash or exposing workflow payloads.
 
 Production evolution still requires authenticated/TLS-protected Temporal,
 production identity/recovery policy and scheduled/distributed validation of the

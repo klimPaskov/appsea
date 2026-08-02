@@ -29,6 +29,7 @@ import {
   productionAnalysisHandoffReadModelSchema,
   productionAnalysisGovernanceSchema,
   productionAnalysisStatusReadModelSchema,
+  productionAnalysisWorkflowPersistenceActivityResultSchema,
   productionCollectionRequestSchema,
   productionCollectionPersistenceInputSchema,
   productionCollectionResultSchema,
@@ -1497,6 +1498,76 @@ describe('contracts', () => {
         ...status,
         inputHash: 'a'.repeat(64),
         artifactObjectRef: { uri: 'appsea-object://private/workflow-artifact/hash' }
+      }).success
+    ).toBe(false)
+  })
+
+  it('keeps analysis activity attempts bounded and outside the idempotency payload', () => {
+    const result = productionAnalysisWorkflowPersistenceActivityResultSchema.safeParse({
+      persistence: {
+        workspaceId: 'workspace:one',
+        collectionRunId: 'run:one',
+        analysisRunId: 'analysis:one',
+        artifactId: 'artifact:one',
+        inputHash: 'a'.repeat(64),
+        opportunityId: 'opportunity:one',
+        scoreSnapshotId: 'score:one',
+        reportId: 'report:one',
+        planPackageId: 'plan:one',
+        artifactObjectRef: {
+          version: 1,
+          uri: 'appsea-object://workspace:one/workflow-artifact/' + 'b'.repeat(64),
+          workspaceId: 'workspace:one',
+          kind: 'workflow-artifact',
+          contentHash: 'b'.repeat(64),
+          byteLength: 1,
+          contentType: 'application/json',
+          createdAt: now,
+          retentionUntil: now,
+          deletionState: 'active',
+          deletedAt: null,
+          deletionReason: null
+        },
+        reportObjectRef: {
+          version: 1,
+          uri: 'appsea-object://workspace:one/report-json/' + 'c'.repeat(64),
+          workspaceId: 'workspace:one',
+          kind: 'report-json',
+          contentHash: 'c'.repeat(64),
+          byteLength: 1,
+          contentType: 'application/json',
+          createdAt: now,
+          retentionUntil: now,
+          deletionState: 'active',
+          deletedAt: null,
+          deletionReason: null
+        },
+        planObjectRef: {
+          version: 1,
+          uri: 'appsea-object://workspace:one/plan-package/' + 'd'.repeat(64),
+          workspaceId: 'workspace:one',
+          kind: 'plan-package',
+          contentHash: 'd'.repeat(64),
+          byteLength: 1,
+          contentType: 'application/json',
+          createdAt: now,
+          retentionUntil: now,
+          deletionState: 'active',
+          deletedAt: null,
+          deletionReason: null
+        },
+        state: 'completed',
+        availabilityState: 'active',
+        completedAt: now,
+        replayed: false
+      },
+      activityAttempt: 3
+    })
+    expect(result.success).toBe(true)
+    expect(
+      productionAnalysisWorkflowPersistenceActivityResultSchema.safeParse({
+        ...(result.success ? result.data : {}),
+        activityAttempt: 11
       }).success
     ).toBe(false)
   })
