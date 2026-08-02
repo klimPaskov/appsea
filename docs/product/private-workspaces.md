@@ -53,6 +53,12 @@ gap. Draft creation writes identifier-only audit/outbox receipts but never
 starts a workflow or activates a connector; collection admission rechecks
 policy, quota, deletion, and budget constraints. Existing fixture/workflow
 campaign JSON remains readable through a legacy compatibility shape.
+Owners and editors can start a one-source production collection from the same
+page or `POST /api/workspaces/:workspaceId/campaigns/:campaignId/run`. The
+server derives all collection inputs from the stored campaign, checks approved
+purpose/display mode and any approved seed review, and admits the digest before
+contacting Temporal. Pending policy remains a visible gap; multi-source runs
+and scheduled refresh are not yet implemented.
 
 Workspace members can inspect bounded cross-run operational cost accounting at
 `GET /api/workspaces/:workspaceId/costs`. The read model keeps currencies and

@@ -36,6 +36,7 @@ const sourceRow = {
   policy_version: 'cfpb-v1',
   policy_state: 'pending_review' as 'approved' | 'pending_review' | 'expired' | 'revoked',
   permitted_purposes: ['opportunity-research'],
+  display_mode: 'excerpt' as const,
   policy_enabled: false,
   coverage_notes: ['Pending review'],
   reviewed_at: null,
@@ -140,6 +141,7 @@ describe('research campaign repository', () => {
       expect.objectContaining({
         sourceId: 'source:cfpb',
         policyState: 'pending_review',
+        displayMode: 'excerpt',
         enabled: false
       })
     ])

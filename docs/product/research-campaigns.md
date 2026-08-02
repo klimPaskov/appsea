@@ -46,3 +46,22 @@ marks a connector enabled. A later collection job must re-check the current
 source policy, quota, deletion obligations, and campaign budget at its own
 admission and persistence boundaries. Live source activation remains an
 explicitly reviewed operator action.
+
+## Starting a collection run
+
+An authenticated owner or editor can start a run from the campaign page or the
+same-origin `POST /api/workspaces/:workspaceId/campaigns/:campaignId/run`
+route. The request contains only a run identifier, idempotency key, timestamp,
+and an optional approved seed-review identifier. The server derives the source,
+query, purpose, display mode, evidence limit, and budget from the persisted
+campaign; callers cannot override those values.
+
+The current production workflow boundary intentionally accepts exactly one
+configured non-synthetic source. Before admission, the route re-reads source
+policy readiness, expiry, approved purpose, display mode, campaign state, and
+budget, and verifies any optional seed review is approved for the workspace.
+The digest-only admission ledger is committed before Temporal is contacted, so
+rate, concurrency, and idempotency failures do not start a workflow. A pending
+or mismatched policy remains a visible coverage gap and returns a bounded
+validation error. Multi-source orchestration, scheduling, and connector
+activation remain separate reviewed work.

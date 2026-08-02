@@ -42,6 +42,7 @@ import {
   researchCampaignConfigurationSchema,
   researchCampaignCreateInputSchema,
   researchCampaignReadModelSchema,
+  researchCampaignRunInputSchema,
   sourcePolicySchema,
   sourcePolicyApprovalInputSchema,
   sourceMaintenanceInputSchema,
@@ -1286,6 +1287,7 @@ describe('contracts', () => {
             policyVersion: 'cfpb-v1',
             policyState: 'pending_review',
             permittedPurposes: ['opportunity-research'],
+            displayMode: 'excerpt',
             enabled: false,
             synthetic: false,
             coverageNotes: ['Pending review'],
@@ -1297,6 +1299,20 @@ describe('contracts', () => {
         updatedAt: now
       })
     ).toMatchObject({ state: 'draft', sources: [{ enabled: false }] })
+    expect(
+      researchCampaignRunInputSchema.safeParse({
+        runId: 'run:billing',
+        idempotencyKey: 'campaign-run-idempotency-key',
+        requestedAt: now
+      }).success
+    ).toBe(true)
+    expect(
+      researchCampaignRunInputSchema.safeParse({
+        runId: 'run:billing',
+        idempotencyKey: 'too-short',
+        requestedAt: now
+      }).success
+    ).toBe(false)
   })
 
   it('accepts an explicit approved-seed reference for automatic analysis handoff', () => {

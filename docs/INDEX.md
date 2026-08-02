@@ -122,3 +122,4 @@
 - [`status/source-policy-review-integrity-completion-report-2026-08-01.md`](status/source-policy-review-integrity-completion-report-2026-08-01.md)
 - [`status/competitive-research-read-model-completion-report-2026-08-01.md`](status/competitive-research-read-model-completion-report-2026-08-01.md)
 - [`status/research-campaign-configuration-completion-report-2026-08-01.md`](status/research-campaign-configuration-completion-report-2026-08-01.md)
+- [`status/research-campaign-run-completion-report-2026-08-02.md`](status/research-campaign-run-completion-report-2026-08-02.md)

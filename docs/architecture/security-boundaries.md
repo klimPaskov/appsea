@@ -47,7 +47,14 @@ for that pre-context authorization lookup.
   requested purpose. Pending or unavailable policies may be recorded only as
   visible readiness gaps. Creation writes identifier-only audit/outbox
   receipts and cannot activate a connector or start a workflow; later job
-  admission must recheck policy and budgets.
+  admission must recheck policy and budgets. The authenticated campaign-run
+  route accepts only a run/idempotency envelope and derives source, query,
+  purpose, display mode, limit, and budget from the stored campaign. It
+  requires one non-synthetic source, rechecks approved purpose/display mode,
+  verifies any approved seed review, and commits the existing admission ledger
+  before Temporal. It returns private no-store errors for pending policy,
+  multi-source configuration, and admission conflicts; it cannot activate a
+  connector or fan out to an unreviewed source.
 - Migration `0032` makes complaint curation an explicit workspace boundary:
   only active workspace editors and owners can transition an active complaint
   observation from `unreviewed` to `confirmed`/`rejected` or from `confirmed`

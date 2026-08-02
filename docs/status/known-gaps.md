@@ -5,8 +5,10 @@
 No live social platform is enabled. Fixture data cannot estimate market size, complaint frequency, or current momentum.
 
 Private campaign configuration is now persisted and source-policy readiness is
-visible, but the slice is intentionally draft-only: edit/delete, pagination,
-scheduled refresh, run/queue controls, and a source-registry picker are not
+visible. Owners/editors can start a bounded one-source run from the campaign
+page; the route derives collection inputs from the stored campaign and admits
+the idempotency digest before Temporal. Edit/delete, pagination, scheduled
+refresh, multi-source orchestration, and a source-registry picker are not
 implemented. Pending policies can be named to make coverage gaps explicit;
 they cannot be collected or treated as enabled sources. The CFPB connector
 remains disabled pending external legal, privacy, and security approval.

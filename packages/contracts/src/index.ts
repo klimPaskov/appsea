@@ -1298,6 +1298,7 @@ export const researchCampaignSourceReadModelSchema = z
     policyVersion: z.string().min(1).max(80).nullable(),
     policyState: sourcePolicyStateSchema.nullable(),
     permittedPurposes: z.array(z.string().min(1).max(120)).max(100),
+    displayMode: z.enum(['excerpt', 'metadata-only', 'aggregate-only', 'fixture']).nullable(),
     enabled: z.boolean(),
     synthetic: z.boolean(),
     coverageNotes: z.array(z.string().max(500)).max(100),
@@ -1322,6 +1323,16 @@ export const researchCampaignReadModelSchema = z
     sources: z.array(researchCampaignSourceReadModelSchema).max(16),
     createdAt: z.string().datetime(),
     updatedAt: z.string().datetime()
+  })
+  .strict()
+
+/** User input for launching one source collection from a persisted campaign. */
+export const researchCampaignRunInputSchema = z
+  .object({
+    runId: appseaIdentifierSchema,
+    idempotencyKey: z.string().min(16).max(200),
+    requestedAt: z.string().datetime(),
+    analysisSeedReviewId: appseaIdentifierSchema.optional()
   })
   .strict()
 
@@ -3425,6 +3436,7 @@ export type Opportunity = z.infer<typeof opportunitySchema>
 export type ResearchCampaignState = z.infer<typeof researchCampaignStateSchema>
 export type ResearchCampaignConfiguration = z.infer<typeof researchCampaignConfigurationSchema>
 export type ResearchCampaignCreateInput = z.infer<typeof researchCampaignCreateInputSchema>
+export type ResearchCampaignRunInput = z.infer<typeof researchCampaignRunInputSchema>
 export type ResearchCampaignSourceReadModel = z.infer<typeof researchCampaignSourceReadModelSchema>
 export type ResearchCampaignReadModel = z.infer<typeof researchCampaignReadModelSchema>
 export type ResearchArtifact = z.infer<typeof researchArtifactSchema>

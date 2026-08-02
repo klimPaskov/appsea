@@ -341,3 +341,12 @@ unknown sources, fixture mixing, and approved-purpose mismatches, then writes
 identifier-only audit/outbox receipts. It never starts Temporal or activates a
 connector; workflow admission rechecks policy, quota, deletion, and budget.
 No migration was needed because the table shape is additive.
+
+## 2026-08-02: Start collection only from persisted campaign intent
+
+The private campaign run route accepts only a bounded run/idempotency envelope.
+It reconstructs source, query, purpose, display mode, limit, budget, and seed
+lineage from the authenticated stored campaign, rechecks the current approved
+policy, and commits the existing admission ledger before Temporal. The first
+production boundary is exactly one non-synthetic source; multi-source fan-out,
+scheduling, and connector activation remain explicit reviewed work.

@@ -74,6 +74,13 @@ description: Use when adding or changing AppSea worker commands, scheduled jobs,
     repository boundary; external source/provider/object-store effects remain
     outside the database fence and need idempotent recovery.
 
+18. When a private campaign starts collection, derive the workflow input from
+    the persisted campaign and current source-policy read model. Accept only a
+    bounded run/idempotency envelope from the caller; recheck approved purpose,
+    display mode, expiry, source count, and budget before admission. Keep a
+    one-source boundary explicit until a reviewed multi-source orchestration
+    contract exists, and commit admission before contacting Temporal.
+
 Do not rely on an in-memory loop for production durability. Do not hide a partial result behind a successful exit code.
 
 ## Completion

@@ -5,6 +5,7 @@ import { PostgresResearchCampaignRepository } from '@appsea/db/research-campaign
 import { readSession } from '../../../../server/auth-session'
 import { getDatabasePool } from '../../../../server/database'
 import { ResearchCampaignCreateForm } from '../../campaign-actions'
+import { ResearchCampaignRunAction } from '../../campaign-run-action'
 
 export const dynamic = 'force-dynamic'
 
@@ -75,6 +76,15 @@ export default async function ResearchCampaignsPage({
                           .join(' · ')
                       : 'not registered'}
                   </p>
+                  <ResearchCampaignRunAction
+                    workspaceId={parsedWorkspaceId.data}
+                    campaignId={campaign.campaignId}
+                    ready={
+                      campaign.sources.length === 1 &&
+                      campaign.sources[0]?.enabled === true &&
+                      campaign.sources[0]?.policyState === 'approved'
+                    }
+                  />
                   <details>
                     <summary>Configuration snapshot</summary>
                     <pre className="plan-file-preview">

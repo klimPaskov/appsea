@@ -143,6 +143,14 @@ repository. No migration was needed because the persisted columns already
 support the additive shape; connector activation and workflow admission remain
 separate reviewed boundaries.
 
+The campaign run boundary now consumes that persisted intent through the
+authenticated `POST /api/workspaces/:workspaceId/campaigns/:campaignId/run`
+route. It is intentionally one-source for this tranche: the route rechecks
+the current approved policy, purpose, display mode, expiry, budget, and any
+approved seed review, derives all collection inputs server-side, and commits
+the existing idempotent admission before starting Temporal. Multi-source
+orchestration, scheduling, and campaign edit/delete remain open.
+
 ### 2. Durable workflows
 
 Status: fixture and production-collection workflow boundaries plus an

@@ -32,6 +32,7 @@ interface SourceRow extends QueryResultRow {
   policy_version: string | null
   policy_state: 'approved' | 'pending_review' | 'expired' | 'revoked' | null
   permitted_purposes: string[] | null
+  display_mode: 'excerpt' | 'metadata-only' | 'aggregate-only' | 'fixture' | null
   coverage_notes: string[] | null
   reviewed_at: Date | string | null
   expires_at: Date | string | null
@@ -112,7 +113,7 @@ async function readSources(
   const result = await client.query<SourceRow>(
     `SELECT source.source_id, source.display_name, source.source_type,
             source.lifecycle_state, policy.policy_version, policy.policy_state,
-            policy.permitted_purposes, policy.coverage_notes,
+            policy.permitted_purposes, policy.display_mode, policy.coverage_notes,
             policy.reviewed_at, policy.expires_at
        FROM appsea.sources source
        LEFT JOIN appsea.source_policy_versions policy
@@ -132,6 +133,7 @@ async function readSources(
       policyVersion: row.policy_version,
       policyState: row.policy_state,
       permittedPurposes: row.permitted_purposes ?? [],
+      displayMode: row.display_mode,
       // The immutable draft payload's `enabled` field is intentionally false
       // before review and is not the runtime activation signal. Activation is
       // represented by the source lifecycle plus the reviewed policy state.
@@ -205,7 +207,7 @@ export class PostgresResearchCampaignRepository {
         const sourceRows = await client.query<SourceRow>(
           `SELECT source.source_id, source.display_name, source.source_type,
                   source.lifecycle_state, policy.policy_version, policy.policy_state,
-                  policy.permitted_purposes, policy.coverage_notes,
+                  policy.permitted_purposes, policy.display_mode, policy.coverage_notes,
                   policy.reviewed_at, policy.expires_at
              FROM appsea.sources source
              LEFT JOIN appsea.source_policy_versions policy

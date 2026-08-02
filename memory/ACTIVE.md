@@ -105,13 +105,14 @@ production seeds are reviewed-seed-only with provenance, and source-backed
 status requires permitted source IDs, retained evidence IDs, and an observation
 time. Per-competitor observations and feature matrices remain open.
 
-The 2026-08-01 campaign slice adds strict `campaign-v1` contracts and a
-private draft repository/API/page. Source IDs resolve to lifecycle/policy
-readiness; fixture mixing, unknown sources, and approved-purpose mismatches
-fail closed. Creation writes identifier-only audit/outbox receipts and never
-starts Temporal or activates a connector. Legacy campaign JSON remains
-readable. Edit/delete, run controls, refresh scheduling, source picker, live
-activation, and Docker PostgreSQL proof remain open.
+The 2026-08-02 campaign tranche adds a private one-source run route on the
+strict `campaign-v1` draft boundary. The server derives
+source/query/purpose/display mode/limit/budget from persisted intent, rechecks
+approved policy, purpose, expiry, and optional approved seed review,
+then commits the existing digest-only admission before Temporal. Pending
+policies and multi-source campaigns fail closed and remain visible as gaps.
+Edit/delete, refresh scheduling, source picker, live activation, and Docker
+PostgreSQL proof remain open; the CFPB connector is still disabled.
 
 ## Next production tranche
 

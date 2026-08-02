@@ -362,6 +362,58 @@ def seed_reviews_screen(width: int, height: int, mobile: bool) -> str:
     return shell(width, height, content, mobile)
 
 
+def campaigns_screen(width: int, height: int, mobile: bool) -> str:
+    margin = 24 if mobile else 220
+    top = 112 if mobile else 132
+    title_size = 38 if mobile else 56
+    content = text(margin, top, 'Private research workspace', 10, 700, MUTED, letter=1.1)
+    content += text(margin, top + 54, 'Research campaigns', title_size, 650, INK, letter=-2.5)
+    content += multiline(
+        margin,
+        top + (88 if mobile else 100),
+        'Define the question, approved source allowlist, evidence limit, and budget before collection.',
+        14 if mobile else 16,
+        43 if mobile else 72,
+        22 if mobile else 25,
+        fill=MUTED,
+    )
+    list_y = top + (182 if mobile else 174)
+    content += text(margin, list_y, 'REGISTERED CAMPAIGNS', 10, 700, MUTED, letter=1.1)
+    content += line(margin, list_y + 20, width - margin, list_y + 20, INK)
+    rows = [
+        ('Billing workflow research', 'campaign:billing', 'Ready to run'),
+        ('Support handoff signals', 'campaign:handoff', 'Pending policy'),
+    ]
+    row_height = 112 if mobile else 98
+    for index, (name, identifier, state) in enumerate(rows):
+        row_y = list_y + 20 + index * row_height
+        content += text(margin, row_y + 30, name, 18 if mobile else 21, 650)
+        content += text(margin, row_y + 55, identifier, 11, 400, MUTED)
+        content += text(width - margin, row_y + 32, state, 11, 650, INK, 'end')
+        if index == 0:
+            button_width = 126 if mobile else 138
+            button_x = width - margin - button_width
+            content += rect(button_x, row_y + 62, button_width, 32, SURFACE, 5, INK)
+            content += text(button_x + button_width / 2, row_y + 83, 'Start collection', 11, 650, INK, 'middle')
+        else:
+            content += text(margin, row_y + 82, 'Waiting for approved source policy before collection.', 12, 400, MUTED)
+        content += line(margin, row_y + row_height, width - margin, row_y + row_height)
+    form_y = list_y + 20 + row_height * len(rows) + (34 if mobile else 46)
+    form_height = 136 if mobile else 118
+    content += rect(margin, form_y, width - margin * 2, form_height, SURFACE, 6, LINE)
+    content += text(margin + 18, form_y + 28, 'CREATE A DRAFT CAMPAIGN', 10, 700, MUTED, letter=1.0)
+    content += text(margin + 18, form_y + 53, 'New drafts never activate a connector.', 13, 400, '#41444a')
+    if mobile:
+        content += rect(margin + 18, form_y + 72, width - margin * 2 - 36, 32, PAPER, 5, LINE)
+        content += text(margin + 30, form_y + 93, 'campaign-name', 12, 400, MUTED)
+    else:
+        content += rect(margin + 18, form_y + 72, 230, 32, PAPER, 5, LINE)
+        content += text(margin + 30, form_y + 93, 'campaign-name', 12, 400, MUTED)
+        content += rect(margin + 262, form_y + 72, 124, 32, INK, 5)
+        content += text(margin + 324, form_y + 93, 'Save draft', 11, 650, '#ffffff', 'middle')
+    return shell(width, height, content, mobile)
+
+
 SCREENS = {
     'leaderboard': leaderboard,
     'opportunity': opportunity_screen,
@@ -369,7 +421,8 @@ SCREENS = {
     'competitors': competitors_screen,
     'plan': plan_screen,
     'security': security_screen,
-    'seed-reviews': seed_reviews_screen
+    'seed-reviews': seed_reviews_screen,
+    'campaigns': campaigns_screen
 }
 
 

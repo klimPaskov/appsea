@@ -8,6 +8,15 @@ it does not start Temporal or activate a connector. Existing fixture/workflow
 campaign JSON remains readable, while new workflow admission rechecks the
 current policy, purpose, quota, deletion obligations, and budget.
 
+Starting from the private campaign page, the authenticated campaign-run route
+reconstructs the production request from the persisted campaign and resolved
+source read model. It accepts no caller-supplied source, query, purpose,
+display mode, limit, or budget. The current slice requires one non-synthetic
+source, checks policy readiness/purpose/display mode and optional approved seed
+review, then commits the existing digest-only admission before contacting
+Temporal. A multi-source campaign remains a visible validation gap rather than
+an implicit fan-out.
+
 1. An authorized client submits a bounded, hashed workflow request; the web
    boundary binds the authenticated user as the requesting principal, then
    migration `0038` verifies the active private non-fixture workspace and

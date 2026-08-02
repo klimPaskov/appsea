@@ -55,13 +55,18 @@ are marked `reviewed-seed-only` with seed-review provenance and an explicit gap
 until a permitted competitor source supplies retained evidence.
 
 Private campaign configuration is now available at
-`/workspace/:workspaceId/campaigns` with authenticated list/create/read APIs.
-New writes use a strict `campaign-v1` JSONB contract, resolve source registry
-and policy readiness metadata, reject unknown or purpose-incompatible sources,
-and persist only draft campaigns with identifier-only audit/outbox receipts.
-Legacy fixture/workflow campaign rows remain readable. Campaign creation does
-not start a workflow or activate the disabled CFPB connector; workflow
-admission remains the policy/quota/deletion/budget gate.
+`/workspace/:workspaceId/campaigns` with authenticated list/create/read APIs,
+and owners/editors can start a bounded one-source run through the page or
+`POST /api/workspaces/:workspaceId/campaigns/:campaignId/run`. New writes use a
+strict `campaign-v1` JSONB contract, resolve source registry and policy
+readiness metadata, reject unknown or purpose-incompatible sources, and
+persist only draft campaigns with identifier-only audit/outbox receipts. The
+run route accepts only an idempotency envelope, derives query/source/limit/
+budget from the stored campaign, rechecks policy/display mode/expiry and any
+approved seed review, and commits the existing admission ledger before
+Temporal. Legacy fixture/workflow campaign rows remain readable. The CFPB
+connector remains disabled; multi-source orchestration and scheduling remain
+open.
 
 `pnpm analysis:sample` produces a visibly `testOnly` production-shaped CFPB
 artifact, report, deterministic score, and generic coding package under

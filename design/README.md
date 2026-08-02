@@ -13,6 +13,7 @@ Version 5 combines the five dark desktop references with five matching mobile la
 | `/opportunities/:slug/plan`            | `design/references/desktop/plan.png`        | `design/references/mobile/plan.png`                | Coding-agent build plan        |
 | `/account/security`                    | `design/references/desktop/security.png`    | `design/references/mobile/security.png`            | Private session review         |
 | `/workspace/:workspaceId/seed-reviews` | `design/references/source/seed-reviews.svg` | `design/references/source/seed-reviews-mobile.svg` | Private reviewed seed registry |
+| `/workspace/:workspaceId/campaigns`    | `design/references/source/campaigns.svg`    | `design/references/source/campaigns-mobile.svg`    | Private campaign configuration |
 
 Desktop references use 1440 × 1000. Normalized mobile references use 390 × 844. Original 853 × 1844 mobile exports are under `design/references/mobile/source/`.
 
