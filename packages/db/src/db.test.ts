@@ -81,7 +81,8 @@ describe('database foundation', () => {
       '0065',
       '0066',
       '0067',
-      '0068'
+      '0068',
+      '0069'
     ])
     expect(migrations[0]?.checksum).toMatch(/^[a-f0-9]{64}$/)
     expect(migrations[0]?.sql).toContain('CREATE TABLE appsea.evidence_records')
@@ -202,6 +203,7 @@ describe('database foundation', () => {
     const campaignOrchestrationMigration = migrations.find(
       (migration) => migration.version === '0068'
     )
+    const agentAccessTokenMigration = migrations.find((migration) => migration.version === '0069')
     expect(authMigration?.sql).toContain('CREATE TABLE appsea.users')
     expect(authMigration?.sql).toContain('CREATE TABLE appsea.auth_sessions')
     expect(authMigration?.sql).toContain('FORCE ROW LEVEL SECURITY')
@@ -697,6 +699,21 @@ describe('database foundation', () => {
       'CREATE TABLE appsea.research_campaign_orchestrations'
     )
     expect(campaignOrchestrationMigration?.sql).toContain('FORCE ROW LEVEL SECURITY')
+    expect(agentAccessTokenMigration?.sql).toContain('CREATE TABLE appsea.agent_access_tokens')
+    expect(agentAccessTokenMigration?.sql).toContain('CREATE POLICY workspace_scope')
+    expect(agentAccessTokenMigration?.sql).toContain(
+      'ALTER TABLE appsea.agent_access_tokens FORCE ROW LEVEL SECURITY'
+    )
+    expect(agentAccessTokenMigration?.sql).toContain(
+      'CREATE OR REPLACE FUNCTION appsea.authenticate_agent_access_token'
+    )
+    expect(agentAccessTokenMigration?.sql).toContain(
+      "set_config('appsea.workspace_id', token_row.workspace_id, true)"
+    )
+    expect(agentAccessTokenMigration?.sql).toContain('Raw bearer tokens never enter PostgreSQL')
+    expect(agentAccessTokenMigration?.sql).toContain(
+      'GRANT EXECUTE ON FUNCTION appsea.issue_agent_access_token'
+    )
   })
 
   it('requires verified TLS for production database connections', () => {

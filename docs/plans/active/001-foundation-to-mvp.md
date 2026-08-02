@@ -25,7 +25,7 @@ Status: production-shaped foundation implemented and validated locally; producti
 
 Implemented:
 
-- PostgreSQL 18 schema and sixty-eight forward, checksummed migrations
+- PostgreSQL 18 schema and sixty-nine forward, checksummed migrations
 - normalized source, evidence, complaint, cluster, competitor, opportunity, score, report, plan, audit, cost, deletion, outbox, and lineage tables
 - no-login owner, separate migrator, and least-privilege runtime role contract
 - forced workspace RLS and transaction-scoped workspace context
@@ -273,6 +273,18 @@ rows without a migration, derives production collectibility from independent
 approval evidence, and keeps quota, deletion duties, and coverage gaps
 visible. No policy payload, reviewer identity, hash, or activation control
 crosses the private read boundary.
+
+Migration `0069_agent_access_tokens.sql` adds the first authenticated
+coding-agent access boundary. Owners of active private workspaces can issue,
+list, and revoke expiring scoped tokens after recent step-up authentication;
+only token hashes are persisted. `POST /api/mcp` accepts those bearer tokens
+and exposes workspace-bound, read-only opportunity, evidence, source-coverage,
+report, and plan reads. Scope filtering, evidence representation policy,
+coverage gaps, synthetic disclosure, and report/plan approval gates are
+enforced in the handler. Workflow starts, connector activation, policy
+changes, deletion, deployment, and credential operations remain outside MCP.
+The token lifecycle is API-only in this tranche; see
+[`mcp-agent-access.md`](../../runbooks/mcp-agent-access.md).
 
 ### 2. Durable workflows
 

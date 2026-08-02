@@ -153,31 +153,19 @@ boundary.
 
 ## 2026-07-26: Persist production analysis as a separate idempotent projection
 
-Keep acquisition ownership in `research_runs` and add migration `0030` for a
-distinct `production_analysis_runs` projection. A production analysis may start
-only from a completed production collection, the exact approved policy review
-hash in that collection, and active complaint/evidence/source-item mappings.
-Store redacted artifacts, reports, and plans through content-addressed object
-references; retain only compact snapshots, hashes, output IDs, and lineage in
-PostgreSQL. Replays return the existing result, while source deletion marks the
-analysis unavailable without erasing its provenance. The Temporal
-`productionAnalysisWorkflow` owns retry scheduling, but the repository owns
-the commit/idempotency boundary. This preserves collection/analysis separation
-and prevents a synthetic or unreviewed seed from entering production rows.
+Migration `0030` keeps acquisition and production analysis in separate
+projections. Analysis starts require a completed policy-bound collection,
+active evidence, and an approved seed; compact lineage and hashes remain in
+PostgreSQL while artifacts use content-addressed objects. Replays are
+idempotent, and deletion invalidates outputs without erasing provenance.
 
 ## 2026-07-26: Govern plan packages separately from reports
 
-Treat coding-agent plans as executable-looking private artifacts with their own
-editor/owner approval transition and export boundary. Migration `0031` keeps
-reviewed plans distinct from report approval, requires a ready package and an
-approved linked report before owner approval, and writes identifier-only
-audit/outbox receipts. Private reads and exports hydrate and validate the
-workspace-bound object before returning files; fixture inline files remain
-supported. Its URI check also accepts only the existing deletion tombstone
-marker for non-active non-synthetic rows, so source-deletion propagation remains
-compatible without weakening the active object boundary. This prevents a draft
-plan from being exported merely because its report was approved and keeps
-object-backed production payloads out of JSONB.
+Migration `0031` gives coding-agent plans their own editor/owner approval and
+export boundary. Owner approval requires a ready package and approved linked
+report; private reads hydrate workspace-bound objects, preserve deletion
+markers, and write identifier-only receipts. A draft plan cannot be exported
+just because its report was approved.
 
 ## 2026-07-26: Review complaints before downstream analysis
 
@@ -339,6 +327,15 @@ non-fixture source (two to sixteen), with deterministic identity, leases,
 bounded attempts, and fixed failures. Maintenance rechecks policy and
 reconciles child projections into parent/campaign state, preserving partial
 outcomes without treating policy denial as missing evidence.
+
+## 2026-08-03: Keep coding-agent access workspace-scoped and read-only
+
+Migration `0069` and `/api/mcp` provide the first agent-access boundary. A
+private-workspace owner issues an expiring, hash-only token after step-up;
+MCP is workspace-bound, scope-filtered, read-only, and preserves coverage,
+redaction, and approved report/plan state. Workflow, activation, policy,
+deletion, deployment, and credential tools remain outside MCP; deployment
+secret storage and rate limiting remain release work.
 
 ## 2026-08-02: Reuse the recomputation queue for complaint corrections
 

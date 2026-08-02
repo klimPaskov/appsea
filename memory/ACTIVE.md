@@ -5,20 +5,28 @@
 Fixture product, PostgreSQL persistence, durable workflows, policy-gated CFPB
 collection, private workspaces, report/plan approval/export, recovery, and
 invitations are implemented. Migrations
-`0027`-`0068` add policy evidence, collection checkpoints, deletion repair,
+`0027`-`0069` add policy evidence, collection checkpoints, deletion repair,
 leases, snapshot reconciliation, workflow admissions, source-reconciliation
 admission, retryable tombstones, maintenance-run telemetry, a durable source-
 quota case ledger, recomputation alerts, cost-threshold projection, and
 owner-only non-destructive workspace archival.
 The 2026-08-02 purge-readiness tranche adds an owner-only read-only
-`WorkspacePurgeReadiness` API/settings inventory with deterministic active-work
-and object-reference blockers. It names cloud/object/export/backup requirements
-and never deletes; see `docs/runbooks/workspace-purge-readiness.md`.
+`WorkspacePurgeReadiness` inventory with deterministic blockers; it names
+cloud/object/export/backup requirements and never deletes.
 
 The 2026-08-03 tranche adds migration `0068`: a forced-RLS parent/child queue
 for two to sixteen non-fixture sources. The authenticated route is idempotent;
 source maintenance rechecks policy, admits/starts the existing workflow, and
 reconciles safe child state. No connector was activated.
+
+The 2026-08-03 agent-access tranche adds migration `0069` and a private
+read-only MCP-over-HTTP boundary. Workspace owners issue expiring scoped
+bearers after recent step-up authentication; only token hashes are persisted.
+The handler binds every tool/resource read to the token workspace, preserves
+coverage/redaction metadata, and requires approved non-synthetic reports and
+plans. It exposes no write or workflow tools; token management is API-only.
+See `docs/runbooks/mcp-agent-access.md` and the completion report in
+`docs/status/`.
 Migration `0050` adds explicit one-record tombstone-bound CFPB re-collection
 with immutable lineage; it never runs automatically and the source remains
 disabled. `0051` binds direct CFPB admission to `appsea-worker`. Deployed
@@ -51,9 +59,9 @@ routing, and failure drills remain open.
 
 ## Validated commands
 
-- `pnpm verify` passed 2026-08-02 after the source tranche. On 2026-08-03,
-  focused contracts (82), db (119), worker (96), and web (118) suites plus
-  package typechecks/lints passed after orchestration.
+- `pnpm verify` passed 2026-08-03 after the MCP tranche. On 2026-08-03,
+  focused contracts (84), db (121), and web (126) suites plus package
+  typechecks/lints passed after the MCP tranche; worker coverage is unchanged.
 - PostgreSQL and Temporal integration are staged but Docker-blocked because the
   Docker Desktop Linux engine pipe is unavailable.
 
@@ -117,6 +125,8 @@ Current audit: `docs/status/production-readiness-audit-2026-08-02.md`.
    `competitor-research` purpose before treating any competitive output as
    source-backed; the Stack Exchange candidate is not registered or active,
    though its reviewed-policy worker path is now present.
+6. Deploy and review the read-only MCP boundary with HTTPS, secret storage,
+   rate limiting, token rotation, and provider identity controls.
 
 ## Current blockers
 

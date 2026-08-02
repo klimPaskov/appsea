@@ -182,6 +182,15 @@ claims, and failed policy checks remain visible rather than being treated as
 coverage absence. Deployed Temporal/scheduler ownership, live policy approval,
 and crash/retry integration proof remain release gates.
 
+Migration `0069_agent_access_tokens.sql` and the private `/api/mcp` route add
+the read-only coding-agent projection. Workspace owners issue expiring,
+scope-limited bearer tokens through the authenticated workspace API; the
+database stores only a hash and binds each token to one private workspace and
+user. MCP reads reuse the authenticated private opportunity/source projections,
+preserve coverage and redaction metadata, and admit non-synthetic report/plan
+artifacts only after approval. The boundary has no workflow or connector
+activation tools and does not accept browser cookies.
+
 The connector package now includes a disabled Stack Exchange candidate for
 bounded competitor/contrary-signal collection. It uses the official API only,
 sanitizes question excerpts, preserves an HTTPS attribution locator, and emits

@@ -191,6 +191,49 @@ A response includes:
 
 ## MCP server
 
+### Implemented read-only HTTP boundary
+
+The first production-shaped MCP boundary is available at
+`POST /api/mcp`. It uses JSON-RPC over HTTP with protocol version
+`2025-06-18` and requires an `Authorization: Bearer appsea_mcp_...` token.
+Browser session cookies are not accepted. Tokens are issued, listed, and
+revoked by the private owner routes:
+
+```text
+GET    /api/workspaces/{workspaceId}/agent-tokens
+POST   /api/workspaces/{workspaceId}/agent-tokens
+DELETE /api/workspaces/{workspaceId}/agent-tokens/{tokenId}
+```
+
+The issue and revoke operations require same-origin requests and recent
+reauthentication. A token is bound to one active private workspace and user,
+expires within 90 days, carries one or more read scopes, and is stored only as
+a SHA-256 hash. The raw token is returned once by the issue response.
+
+The current scope-to-capability mapping is:
+
+| Scope                | Capability                                                     |
+| -------------------- | -------------------------------------------------------------- |
+| `opportunities:read` | Search and read private opportunity summaries/details          |
+| `evidence:read`      | Read provenance-bounded evidence references                    |
+| `reports:read`       | Read approved non-synthetic or labelled synthetic reports      |
+| `plans:read`         | Read ready, approved non-synthetic or labelled synthetic plans |
+| `sources:read`       | Read source-policy coverage projections                        |
+
+The handler implements `initialize`, `ping`, `tools/list`, `tools/call`,
+`resources/list`, `resources/read`, and resource-template discovery, plus the
+`notifications/initialized` acknowledgement. It exposes only read tools and
+workspace-bound resources. It does not expose campaign starts, workflow
+control, report/plan generation, connector activation, policy changes,
+deletion, deployment, or credential operations. Non-synthetic report and plan
+reads require their persisted approval/readiness state; fixture responses carry
+an explicit synthetic marker and warning. Evidence text is returned only for
+`excerpt` or `fixture` representations, otherwise the reference remains
+metadata-only.
+
+See [`../../runbooks/mcp-agent-access.md`](../../runbooks/mcp-agent-access.md)
+for token lifecycle, rotation, and deployment responsibilities.
+
 ### Resources
 
 ```text

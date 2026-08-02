@@ -46,6 +46,8 @@ Open `http://localhost:3000` after the web server starts.
 - direct CFPB source commands use the same bounded production admission ledger through the `appsea-worker` service principal; they cannot bypass private-workspace, fixture, or source-policy gates
 - owner-scoped invitations for existing AppSea accounts with hash-only tokens, encrypted outbox delivery, acceptance/revocation, and a production kill switch
 - owner-only, step-up-protected workspace archival that blocks active work, preserves research lineage, and records identifier-only lifecycle receipts
+- owner-issued, expiring workspace-scoped agent tokens with hash-only persistence and recent-step-up create/revoke controls
+- authenticated read-only MCP-over-HTTP access to scoped private opportunities, evidence references, source coverage, and approved report/plan artifacts
 - provider-neutral password recovery mechanics with hash-only reset tokens,
   encrypted outbox delivery, fragment links, and a production kill switch
 - native Codex skills and bounded subagents
@@ -70,5 +72,6 @@ Open `http://localhost:3000` after the web server starts.
 - automatic activation of generated skills or connectors
 - deployed scheduler ownership, incident routing, and live alert delivery for quota-reconciliation and production-analysis recomputation cases
 - automatic source re-collection, downstream analysis, and report/plan generation after a re-collection
+- deployed MCP secret storage, HTTPS/rate limiting, token-rotation automation, and MFA/OIDC controls
 
 Read `GOAL_PROMPT.md` to start the next implementation goal.

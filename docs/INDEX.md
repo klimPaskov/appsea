@@ -62,6 +62,7 @@
 - [`runbooks/ui-reference-loop.md`](runbooks/ui-reference-loop.md)
 - [`runbooks/guidance-checkpoint.md`](runbooks/guidance-checkpoint.md)
 - [`runbooks/completion-proof.md`](runbooks/completion-proof.md)
+- [`runbooks/mcp-agent-access.md`](runbooks/mcp-agent-access.md)
 
 ## Decisions
 
@@ -151,6 +152,7 @@
 - [`status/complaint-correction-recompute-completion-report-2026-08-02.md`](status/complaint-correction-recompute-completion-report-2026-08-02.md)
 - [`status/research-campaign-source-picker-completion-report-2026-08-02.md`](status/research-campaign-source-picker-completion-report-2026-08-02.md)
 - [`status/research-campaign-orchestration-completion-report-2026-08-03.md`](status/research-campaign-orchestration-completion-report-2026-08-03.md)
+- [`status/mcp-readonly-agent-access-completion-report-2026-08-03.md`](status/mcp-readonly-agent-access-completion-report-2026-08-03.md)
 - [`status/competitor-feature-matrix-completion-report-2026-08-02.md`](status/competitor-feature-matrix-completion-report-2026-08-02.md)
 - [`status/workspace-archival-completion-report-2026-08-02.md`](status/workspace-archival-completion-report-2026-08-02.md)
 - [`status/workspace-purge-readiness-completion-report-2026-08-02.md`](status/workspace-purge-readiness-completion-report-2026-08-02.md)

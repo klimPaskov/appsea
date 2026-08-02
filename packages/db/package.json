@@ -20,7 +20,8 @@
     "./research-campaign-orchestration": "./src/research-campaign-orchestration.ts",
     "./source-policy": "./src/source-policy.ts",
     "./competitive-research": "./src/competitive-research.ts",
-    "./evidence-redaction": "./src/evidence-redaction-repository.ts"
+    "./evidence-redaction": "./src/evidence-redaction-repository.ts",
+    "./agent-access-token": "./src/agent-access-token.ts"
   },
   "scripts": {
     "build": "tsc --noEmit",

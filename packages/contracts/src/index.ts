@@ -3814,6 +3814,97 @@ export const authSessionTokenSchema = z
   .max(256)
   .regex(/^[A-Za-z0-9_-]+$/)
 
+export const agentAccessTokenSchema = z
+  .string()
+  .min(40)
+  .max(256)
+  .regex(/^appsea_mcp_[A-Za-z0-9_-]+$/)
+
+export const agentAccessTokenScopeSchema = z.enum([
+  'opportunities:read',
+  'evidence:read',
+  'reports:read',
+  'plans:read',
+  'sources:read'
+])
+
+export const agentAccessTokenCreateInputSchema = z
+  .object({
+    label: z.string().trim().min(1).max(120),
+    scopes: z.array(agentAccessTokenScopeSchema).min(1).max(5),
+    expiresInDays: z.number().int().min(1).max(90)
+  })
+  .strict()
+  .superRefine((value, context) => {
+    if (new Set(value.scopes).size !== value.scopes.length) {
+      context.addIssue({
+        code: 'custom',
+        path: ['scopes'],
+        message: 'Agent access token scopes must be unique'
+      })
+    }
+  })
+
+export const agentAccessTokenCreateResultSchema = z
+  .object({
+    tokenId: appseaIdentifierSchema,
+    label: z.string().min(1).max(120),
+    scopes: z.array(agentAccessTokenScopeSchema).min(1).max(5),
+    expiresAt: z.string().datetime(),
+    token: agentAccessTokenSchema
+  })
+  .strict()
+
+export const agentAccessTokenReadModelSchema = z
+  .object({
+    tokenId: appseaIdentifierSchema,
+    label: z.string().min(1).max(120),
+    scopes: z.array(agentAccessTokenScopeSchema).min(1).max(5),
+    createdAt: z.string().datetime(),
+    expiresAt: z.string().datetime(),
+    revokedAt: z.string().datetime().nullable(),
+    lastUsedAt: z.string().datetime().nullable()
+  })
+  .strict()
+
+export const agentAccessTokenAuthenticationSchema = z
+  .object({
+    tokenId: appseaIdentifierSchema,
+    workspaceId: appseaIdentifierSchema,
+    userId: appseaIdentifierSchema,
+    scopes: z.array(agentAccessTokenScopeSchema).min(1).max(5)
+  })
+  .strict()
+
+export const mcpJsonRpcIdSchema = z.union([
+  z.string().min(1).max(200),
+  z.number().int().safe(),
+  z.null()
+])
+
+export const mcpJsonRpcRequestSchema = z
+  .object({
+    jsonrpc: z.literal('2.0'),
+    id: mcpJsonRpcIdSchema.optional(),
+    method: z.string().min(1).max(100),
+    params: z.record(z.string(), z.unknown()).optional()
+  })
+  .strict()
+
+export const mcpToolCallInputSchema = z
+  .object({
+    name: z.string().min(1).max(100),
+    arguments: z.record(z.string(), z.unknown()).default({})
+  })
+  .strict()
+
+export const mcpToolTextContentSchema = z
+  .object({
+    type: z.literal('text'),
+    text: z.string().max(200_000)
+  })
+  .strict()
+
 // Password-reset tokens are accepted only at the reset boundary. They are
 // never stored or returned in read models; the database keeps only a hash.
 export const authPasswordResetTokenSchema = authSessionTokenSchema
@@ -5297,6 +5388,16 @@ export type WorkspacePurgeExternalRequirement = z.infer<
 >
 export type WorkspacePurgeReadiness = z.infer<typeof workspacePurgeReadinessSchema>
 export type AuthPasswordResetToken = z.infer<typeof authPasswordResetTokenSchema>
+export type AgentAccessToken = z.infer<typeof agentAccessTokenSchema>
+export type AgentAccessTokenScope = z.infer<typeof agentAccessTokenScopeSchema>
+export type AgentAccessTokenCreateInput = z.infer<typeof agentAccessTokenCreateInputSchema>
+export type AgentAccessTokenCreateResult = z.infer<typeof agentAccessTokenCreateResultSchema>
+export type AgentAccessTokenReadModel = z.infer<typeof agentAccessTokenReadModelSchema>
+export type AgentAccessTokenAuthentication = z.infer<typeof agentAccessTokenAuthenticationSchema>
+export type McpJsonRpcId = z.infer<typeof mcpJsonRpcIdSchema>
+export type McpJsonRpcRequest = z.infer<typeof mcpJsonRpcRequestSchema>
+export type McpToolCallInput = z.infer<typeof mcpToolCallInputSchema>
+export type McpToolTextContent = z.infer<typeof mcpToolTextContentSchema>
 export type AuthPasswordResetRequestInput = z.infer<typeof authPasswordResetRequestInputSchema>
 export type AuthPasswordResetInput = z.infer<typeof authPasswordResetInputSchema>
 export type AuthPasswordResetAcceptedReadModel = z.infer<

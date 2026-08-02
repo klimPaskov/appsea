@@ -106,6 +106,57 @@ export function mapProductionAnalysisToOpportunityDetail(
   })
 }
 
+/** Read one workspace-bound opportunity without relying on browser cookies. */
+export async function readPrivateOpportunityDetailForUser(
+  userId: string,
+  workspaceId: string,
+  slug: string
+): Promise<WorkspaceOpportunityDetailReadModel | null> {
+  const parsedWorkspaceId = appseaIdentifierSchema.safeParse(workspaceId)
+  const parsedSlug = opportunitySlugSchema.safeParse(slug)
+  if (!parsedWorkspaceId.success || !parsedSlug.success) return null
+  const repository = authRepository()
+  const listed = (await repository.listWorkspaceOpportunities(userId, parsedWorkspaceId.data)).find(
+    (opportunity) => opportunity.slug === parsedSlug.data
+  )
+  if (listed && !listed.synthetic) {
+    const competitiveResearchRepository = new PostgresCompetitiveResearchRepository(
+      getDatabasePool()
+    )
+    const production = await new PostgresProductionAnalysisRepository(
+      getDatabasePool(),
+      getObjectStore()
+    ).readLatestForOpportunityForUser(userId, parsedWorkspaceId.data, parsedSlug.data)
+    if (production) {
+      const observations = await competitiveResearchRepository.listForUser(
+        userId,
+        parsedWorkspaceId.data,
+        production.artifact.opportunity.id
+      )
+      return mapProductionAnalysisToOpportunityDetail(production, observations)
+    }
+  }
+  const detail = await repository.readWorkspaceOpportunity(
+    userId,
+    parsedWorkspaceId.data,
+    parsedSlug.data
+  )
+  if (!detail) return null
+  const observations = await new PostgresCompetitiveResearchRepository(
+    getDatabasePool()
+  ).listForUser(userId, parsedWorkspaceId.data, detail.opportunity.id)
+  const competitiveResearch = composeCompetitiveResearchReadModel({
+    synthetic: detail.competitiveResearch.synthetic,
+    coverageGaps: detail.competitiveResearch.coverageGaps,
+    seedReview: detail.competitiveResearch.seedReview,
+    observedAt: detail.competitiveResearch.observedAt,
+    sourceIds: detail.competitiveResearch.sourceIds,
+    evidenceIds: detail.competitiveResearch.evidenceIds,
+    observations
+  })
+  return workspaceOpportunityDetailReadModelSchema.parse({ ...detail, competitiveResearch })
+}
+
 export async function readPrivateOpportunityContext(
   workspaceId: string,
   slug: string
@@ -119,55 +170,11 @@ export async function readPrivateOpportunityContext(
     (candidate) => candidate.workspaceId === parsedWorkspaceId.data
   )
   if (!workspace) return null
-  const repository = authRepository()
-  const listed = (
-    await repository.listWorkspaceOpportunities(session.user.userId, parsedWorkspaceId.data)
-  ).find((opportunity) => opportunity.slug === parsedSlug.data)
-  if (listed && !listed.synthetic) {
-    const competitiveResearchRepository = new PostgresCompetitiveResearchRepository(
-      getDatabasePool()
-    )
-    const production = await new PostgresProductionAnalysisRepository(
-      getDatabasePool(),
-      getObjectStore()
-    ).readLatestForOpportunityForUser(session.user.userId, parsedWorkspaceId.data, parsedSlug.data)
-    if (production) {
-      const observations = await competitiveResearchRepository.listForUser(
-        session.user.userId,
-        parsedWorkspaceId.data,
-        production.artifact.opportunity.id
-      )
-      return {
-        session,
-        workspace,
-        detail: mapProductionAnalysisToOpportunityDetail(production, observations)
-      }
-    }
-  }
-  const detail = await repository.readWorkspaceOpportunity(
+  const detail = await readPrivateOpportunityDetailForUser(
     session.user.userId,
     parsedWorkspaceId.data,
     parsedSlug.data
   )
   if (!detail) return null
-  const observations = await new PostgresCompetitiveResearchRepository(
-    getDatabasePool()
-  ).listForUser(session.user.userId, parsedWorkspaceId.data, detail.opportunity.id)
-  const competitiveResearch = composeCompetitiveResearchReadModel({
-    synthetic: detail.competitiveResearch.synthetic,
-    coverageGaps: detail.competitiveResearch.coverageGaps,
-    seedReview: detail.competitiveResearch.seedReview,
-    observedAt: detail.competitiveResearch.observedAt,
-    sourceIds: detail.competitiveResearch.sourceIds,
-    evidenceIds: detail.competitiveResearch.evidenceIds,
-    observations
-  })
-  return {
-    session,
-    workspace,
-    detail: workspaceOpportunityDetailReadModelSchema.parse({
-      ...detail,
-      competitiveResearch
-    })
-  }
+  return { session, workspace, detail }
 }

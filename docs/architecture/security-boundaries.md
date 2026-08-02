@@ -2,6 +2,21 @@
 
 Imported evidence is data, never instruction.
 
+## Read-only agent access
+
+Migration `0069_agent_access_tokens.sql` adds the coding-agent boundary. An
+owner can issue a workspace-scoped token only for an active private workspace
+after recent step-up authentication. The token secret is returned once and
+only its SHA-256 hash is stored; forced RLS, owner checks, expiry, revocation,
+and active-user/workspace checks are enforced in PostgreSQL. The HTTP MCP
+handler accepts no browser session cookie, verifies the bearer on every
+request, requires the workspace argument/URI to match the token, and filters
+tools by one of five read scopes. It returns only policy-bounded evidence
+representations, provenance, redaction state, coverage gaps, and approved
+non-synthetic report/plan artifacts. No workflow, source activation, policy,
+deployment, credential, or other mutation tool is exposed. Token audit/outbox
+receipts contain identifiers and scope metadata only.
+
 Blocked flows:
 
 - complaint text to shell execution

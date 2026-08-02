@@ -4,6 +4,13 @@
 
 No live social platform is enabled. Fixture data cannot estimate market size, complaint frequency, or current momentum.
 
+The private `/api/mcp` boundary now supports read-only opportunity, evidence,
+source-coverage, report, and plan reads for owner-issued workspace-scoped
+tokens. It preserves policy representation, redaction, synthetic disclosure,
+and coverage gaps, but it is not a general REST/MCP write API. Token management
+is API-only, and HTTPS termination, external secret storage, rate limiting,
+MFA/OIDC, rotation automation, and deployment monitoring remain open.
+
 Private campaign configuration is now persisted and source-policy readiness is
 visible. Owners/editors can start a bounded one-source run from the campaign
 page; the route derives collection inputs from the stored campaign and admits
