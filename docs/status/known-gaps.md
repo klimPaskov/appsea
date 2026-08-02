@@ -258,7 +258,7 @@ bounded all-workspace maintenance through a migration-owner security-definer
 workspace enumerator, stale-claim recovery, and deletion propagation now exist.
 No source is currently enabled for market research, and production Temporal
 provisioning/cloud-storage deployment, scheduler-triggered re-collection,
-cloud object-store/backups purge, recomputation alerting, and
+cloud object-store/backups purge, recomputation alert routing, and
 legal/privacy/security approval remain required. Explicit one-record
 re-collection after a completed deletion tombstone is implemented behind a
 private reviewed route, but it is not automatic and does not activate the
@@ -275,10 +275,13 @@ until source/object/backups scope is approved. Invalidated analysis output
 purge is now bounded through migration `0043`; cloud object-store/backups purge
 remains open;
 automatic recomputation dispatch now exists through migrations `0037` and
-`0062`, and
+`0062`, and a separate maintenance-role read projection plus lease-owned,
+bounded alert inspection now makes failed, blocked, stale, oldest-age, and
+truncated coverage visible without dispatching or retrying a repair. The
+deployment scheduler, event routing, and incident response remain open. The
 migrations `0040`/`0041` provide a policy-gated identifier-only reconciliation
 job, page checkpoints, warning-preserving retries, and atomic tombstone
-finalization, but alerting and deployed scheduler ownership remain open. A production-shaped
+finalization. A production-shaped
 offline composition checkpoint now proves normalization, deduplication, clustering,
 explicit seeded scoring, generic report generation, and generic plan generation;
 it is test-only/in-memory and is not a live-source analysis run. The reviewed

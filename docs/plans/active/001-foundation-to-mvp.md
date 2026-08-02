@@ -25,7 +25,7 @@ Status: production-shaped foundation implemented and validated locally; producti
 
 Implemented:
 
-- PostgreSQL 18 schema and sixty-three forward, checksummed migrations
+- PostgreSQL 18 schema and sixty-four forward, checksummed migrations
 - normalized source, evidence, complaint, cluster, competitor, opportunity, score, report, plan, audit, cost, deletion, outbox, and lineage tables
 - no-login owner, separate migrator, and least-privilege runtime role contract
 - forced workspace RLS and transaction-scoped workspace context
@@ -166,6 +166,14 @@ one deterministic re-analysis request, while missing or withdrawn seeds remain
 blocked. The feature-matrix contract, migration, fixture persistence, and
 public/private read surfaces are implemented in migration `0063`; source-backed
 matrix population remains an external policy and evidence dependency.
+
+Migration `0064_recompute_alert_read_boundary.sql` adds a maintenance-only,
+bounded projection for inspecting open recomputation repairs. The worker
+command uses a scheduler lease, emits fixed alert/incomplete/clear events, and
+keeps failed, blocked, stale, age, and truncation state visible without
+claiming, retrying, resolving, dispatching, or starting Temporal work. Deployed
+scheduler ownership, event routing, and incident response remain deployment
+responsibilities.
 
 Migration `0054_source_policy_review_integrity.sql` binds new source-policy
 approvals to a lowercase reviewer identity, an independent review role, and an
@@ -309,7 +317,8 @@ aggregation/alerts, deployed
 snapshot scheduler ownership, and worker crash fault-injection proof. Migrations
 `0037` and `0062` now queue deletion- or correction-triggered
 active-evidence repairs and the dispatcher reclaims stale dispatch claims with
-bounded terminal failure; deployed scheduling, alerting, and production
+bounded terminal failure. Migration `0064` provides a separate bounded
+maintenance-role alert inspection; deployed scheduling, event routing, and production
 Temporal remain open. The repository-level collection and manual-analysis
 ingress gates are now implemented; deployed scheduler ownership,
 service-role/secret separation, and infrastructure authorization remain
@@ -370,7 +379,7 @@ Temporal activity, an opt-in approved-seed handoff queue, a deletion- or
 correction-triggered
 recomputation queue, and private active-output reads are implemented after a
 completed collection; live activation, cloud object-store deployment, deployed
-scheduling, and handoff/recomputation alerting remain open. Source deletion now
+scheduling, and handoff/recomputation alert routing remain open. Source deletion now
 invalidates/de-ranks mutable opportunity projections through migration `0035`.
 Migration `0036` allows an explicit reviewed analysis over the remaining active
 evidence to re-cluster and reactivate only after its new output is linked; it
@@ -421,7 +430,7 @@ analysis/object references, active-output private reads, and a
 production-shaped report/package composition checkpoint, and a persisted
 versioned complaint classification/entity-resolution checkpoint and derived
 correction invalidation boundary are implemented;
-cloud object storage, recomputation alerting, and export retention remain. Report and plan
+cloud object storage, recomputation alert routing, and export retention remain. Report and plan
 approval/export now hydrate validated object-backed production payloads before
 applying their separate governance boundaries. Production analysis read models
 carry the linked report/plan approval states from PostgreSQL so private

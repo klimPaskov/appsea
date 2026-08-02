@@ -76,7 +76,8 @@ describe('database foundation', () => {
       '0060',
       '0061',
       '0062',
-      '0063'
+      '0063',
+      '0064'
     ])
     expect(migrations[0]?.checksum).toMatch(/^[a-f0-9]{64}$/)
     expect(migrations[0]?.sql).toContain('CREATE TABLE appsea.evidence_records')
@@ -190,6 +191,7 @@ describe('database foundation', () => {
     const competitorFeatureMatrixMigration = migrations.find(
       (migration) => migration.version === '0063'
     )
+    const recomputeAlertMigration = migrations.find((migration) => migration.version === '0064')
     expect(authMigration?.sql).toContain('CREATE TABLE appsea.users')
     expect(authMigration?.sql).toContain('CREATE TABLE appsea.auth_sessions')
     expect(authMigration?.sql).toContain('FORCE ROW LEVEL SECURITY')
@@ -613,6 +615,16 @@ describe('database foundation', () => {
       'competitors_feature_matrix_shape_check'
     )
     expect(competitorFeatureMatrixMigration?.sql).toContain('jsonb_array_length(feature_matrix)')
+    expect(recomputeAlertMigration?.sql).toContain(
+      'CREATE OR REPLACE FUNCTION appsea.list_production_analysis_recompute_alerts'
+    )
+    expect(recomputeAlertMigration?.sql).toContain("session_user <> 'appsea_maintenance'")
+    expect(recomputeAlertMigration?.sql).toContain(
+      'REVOKE ALL ON FUNCTION appsea.list_production_analysis_recompute_alerts'
+    )
+    expect(recomputeAlertMigration?.sql).toContain(
+      'GRANT EXECUTE ON FUNCTION appsea.list_production_analysis_recompute_alerts'
+    )
   })
 
   it('requires verified TLS for production database connections', () => {

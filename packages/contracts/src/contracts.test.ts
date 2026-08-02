@@ -23,6 +23,9 @@ import {
   sourceQuotaReconciliationResolveInputSchema,
   sourceQuotaReconciliationAlertInputSchema,
   sourceQuotaReconciliationAlertResultSchema,
+  productionAnalysisRecomputeAlertInputSchema,
+  productionAnalysisRecomputeAlertObservationSchema,
+  productionAnalysisRecomputeAlertResultSchema,
   complaintSchema,
   competitorFeatureMatrixEntrySchema,
   competitorSchema,
@@ -2258,5 +2261,76 @@ describe('contracts', () => {
         state: 'incomplete'
       }).success
     ).toBe(true)
+  })
+
+  it('keeps recomputation alert observations bounded and state-consistent', () => {
+    const observation = {
+      state: 'dispatching' as const,
+      attemptCount: 2,
+      requestedAt: now,
+      nextAttemptAt: now,
+      updatedAt: now
+    }
+    expect(productionAnalysisRecomputeAlertObservationSchema.safeParse(observation).success).toBe(
+      true
+    )
+    expect(
+      productionAnalysisRecomputeAlertObservationSchema.safeParse({
+        ...observation,
+        updatedAt: '2026-07-09T00:00:00.000Z'
+      }).success
+    ).toBe(false)
+    expect(
+      productionAnalysisRecomputeAlertInputSchema.safeParse({
+        observedAt: now,
+        maxWorkspaces: 20,
+        maxJobsPerWorkspace: 10,
+        alertAfterSeconds: 900
+      }).success
+    ).toBe(true)
+
+    const clear = {
+      observedAt: now,
+      alertAfterSeconds: 900,
+      workspacesScanned: 20,
+      jobsObserved: 0,
+      failedJobs: 0,
+      blockedJobs: 0,
+      staleJobs: 0,
+      oldestOpenJobAgeSeconds: null,
+      alerted: false,
+      truncated: false,
+      state: 'clear' as const
+    }
+    expect(productionAnalysisRecomputeAlertResultSchema.safeParse(clear).success).toBe(true)
+    expect(
+      productionAnalysisRecomputeAlertResultSchema.safeParse({
+        ...clear,
+        jobsObserved: 1,
+        failedJobs: 1,
+        oldestOpenJobAgeSeconds: 60,
+        alerted: true,
+        state: 'alert'
+      }).success
+    ).toBe(true)
+    expect(
+      productionAnalysisRecomputeAlertResultSchema.safeParse({
+        ...clear,
+        jobsObserved: 1,
+        oldestOpenJobAgeSeconds: 60,
+        truncated: true,
+        state: 'incomplete'
+      }).success
+    ).toBe(true)
+    expect(
+      productionAnalysisRecomputeAlertResultSchema.safeParse({
+        ...clear,
+        jobsObserved: 1,
+        failedJobs: 2,
+        oldestOpenJobAgeSeconds: 60,
+        alerted: true,
+        state: 'alert'
+      }).success
+    ).toBe(false)
   })
 })

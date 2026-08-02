@@ -3886,6 +3886,7 @@ describe.sequential('PostgreSQL fixture persistence lifecycle', () => {
     const recomputeId = `recompute:analysis:${'a'.repeat(32)}`
     const analysisRunId = `analysis-run:${'b'.repeat(32)}`
     const recompute = new PostgresProductionAnalysisRecomputeRepository(servicePool)
+    const maintenanceRecompute = new PostgresProductionAnalysisRecomputeRepository(maintenancePool)
 
     try {
       await withOwnerClient(async (client) => {
@@ -3973,6 +3974,23 @@ describe.sequential('PostgreSQL fixture persistence lifecycle', () => {
           throw error
         }
       })
+
+      const alertObservations = await maintenanceRecompute.listAlertObservations(workspaceId, 10)
+      expect(alertObservations).toMatchObject([
+        {
+          state: 'dispatching',
+          attemptCount: 1,
+          requestedAt: fixedAt,
+          nextAttemptAt: fixedAt,
+          updatedAt: fixedAt
+        }
+      ])
+      await expect(
+        maintenancePool.query(
+          'SELECT * FROM appsea.production_analysis_recompute_jobs WHERE workspace_id = $1',
+          [workspaceId]
+        )
+      ).rejects.toMatchObject({ code: '42501' })
 
       const reclaimed = await recompute.claimNext(workspaceId)
       expect(reclaimed).toMatchObject({

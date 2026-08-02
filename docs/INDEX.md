@@ -139,6 +139,7 @@
 - [`status/source-collection-preflight-fence-completion-report-2026-08-02.md`](status/source-collection-preflight-fence-completion-report-2026-08-02.md)
 - [`status/production-preflight-completion-report-2026-08-02.md`](status/production-preflight-completion-report-2026-08-02.md)
 - [`status/source-quota-reconciliation-alert-completion-report-2026-08-02.md`](status/source-quota-reconciliation-alert-completion-report-2026-08-02.md)
+- [`status/production-analysis-recompute-alert-completion-report-2026-08-02.md`](status/production-analysis-recompute-alert-completion-report-2026-08-02.md)
 - [`status/complaint-analysis-correction-completion-report-2026-08-02.md`](status/complaint-analysis-correction-completion-report-2026-08-02.md)
 - [`status/complaint-analysis-correction-editor-completion-report-2026-08-02.md`](status/complaint-analysis-correction-editor-completion-report-2026-08-02.md)
 - [`status/complaint-correction-recompute-completion-report-2026-08-02.md`](status/complaint-correction-recompute-completion-report-2026-08-02.md)

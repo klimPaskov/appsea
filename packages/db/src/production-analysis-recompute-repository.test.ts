@@ -91,6 +91,20 @@ function fakePool(): { pool: Pool; row: typeof baseRow; statements: string[] } {
         row.finished_at = '2026-08-01T00:00:02.000Z'
         return { rows: [{ ...row }], rowCount: 1 }
       }
+      if (text.includes('list_production_analysis_recompute_alerts')) {
+        return {
+          rows: [
+            {
+              state: row.state,
+              attempt_count: row.attempt_count,
+              requested_at: row.requested_at,
+              next_attempt_at: row.next_attempt_at,
+              updated_at: row.updated_at
+            }
+          ],
+          rowCount: 1
+        }
+      }
       if (text.includes('SELECT') && text.includes('production_analysis_recompute_jobs')) {
         return { rows: [{ ...row }], rowCount: 1 }
       }
@@ -202,5 +216,26 @@ describe('production analysis recomputation repository', () => {
       sourceTombstoneId: null,
       correctionId: 'correction:analysis:one'
     })
+  })
+
+  it('reads only bounded alert observations through the maintenance function', async () => {
+    const { pool, statements } = fakePool()
+    const repository = new PostgresProductionAnalysisRecomputeRepository(pool)
+
+    await expect(repository.listAlertObservations('workspace:one', 10)).resolves.toEqual([
+      {
+        state: 'queued',
+        attemptCount: 0,
+        requestedAt: '2026-08-01T00:00:00.000Z',
+        nextAttemptAt: '2026-08-01T00:00:00.000Z',
+        updatedAt: '2026-08-01T00:00:00.000Z'
+      }
+    ])
+    expect(
+      statements.some((text) => text.includes('list_production_analysis_recompute_alerts'))
+    ).toBe(true)
+    await expect(repository.listAlertObservations('workspace:one', 0)).rejects.toThrow(
+      /between 1 and 100/
+    )
   })
 })

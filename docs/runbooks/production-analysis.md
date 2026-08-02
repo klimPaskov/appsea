@@ -156,6 +156,36 @@ is still required; a missing or withdrawn seed leaves the request blocked for
 operator inspection rather than bypassing review. Cloud object deletion,
 deployment scheduling, and alert routing remain operational follow-ups.
 
+## Bounded recomputation alert inspection
+
+The existing deletion- and correction-triggered repair queue can be inspected
+without claiming or dispatching work:
+
+```powershell
+$env:APPSEA_RECOMPUTE_ALERT_MAX_WORKSPACES = '1000'
+$env:APPSEA_RECOMPUTE_ALERT_MAX_JOBS_PER_WORKSPACE = '100'
+$env:APPSEA_RECOMPUTE_ALERT_AFTER_SECONDS = '900'
+pnpm worker:production:analysis:recompute:alert
+```
+
+The command enumerates active workspace identifiers through `DATABASE_URL`
+(`appsea_service`) and calls the narrow
+`appsea.list_production_analysis_recompute_alerts` projection through
+`APPSEA_MAINTENANCE_DATABASE_URL` (`appsea_maintenance`). A maintenance
+scheduler lease is acquired before reads and asserted throughout the scan. The
+projection returns only state, attempt count, and timestamps; output and
+metrics contain bounded job/failure/block/stale counts, age, alert state, and a
+truncation flag, never repair identifiers, failure summaries, source content,
+or lineage.
+
+Route `production_analysis_recompute_alert` to incident response when a job is
+failed, blocked, or has exceeded the age threshold. Treat
+`production_analysis_recompute_alert_incomplete` or `truncated: true` as
+unknown coverage, not clear. `production_analysis_recompute_clear` means a
+complete bounded scan observed no failed, blocked, or aged repair. It does not
+retry, resolve, start Temporal, recollect source data, or change retention;
+deployment owns scheduler supervision, routing, and operator response.
+
 ## Object storage boundary
 
 `@appsea/object-store` now provides the reviewed storage seam used by production

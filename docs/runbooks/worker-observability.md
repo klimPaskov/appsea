@@ -29,6 +29,11 @@ log sink and alert on:
 - `source_quota_reconciliation_failed` events and open-case age from the
   private reconciliation read model; these require an explicit maintenance-role
   decision and never justify an automatic re-fetch;
+- `production_analysis_recompute_alert`,
+  `production_analysis_recompute_alert_incomplete`, and
+  `production_analysis_recompute_clear` events; alert on failed/blocked/stale
+  counters, and never treat a truncated inspection as clear. The command is
+  read-only and never dispatches or retries a repair;
 - missing `worker_started`/`worker_stopped` heartbeats for the task queue;
 - database connection or migration failures from the process supervisor.
 
@@ -49,6 +54,11 @@ underlying PostgreSQL operations are idempotent, allowing a safe rerun after a
 worker interruption without creating a second workflow queue. Object purge
 claims are separately bounded and should alert when fixed retry attempts are
 exhausted; the worker never logs object URIs or exception text.
+
+The worker command `pnpm worker:production:analysis:recompute:alert` uses the
+same lease-owned maintenance boundary for read-only inspection of deletion- or
+correction-triggered repairs. It emits only bounded counters, age, alert state,
+and truncation; deployment owns scheduling and incident routing.
 
 Migration `0046` adds a server-clock scheduler lease shared by source
 maintenance, auth retention, password-recovery delivery, and workspace-

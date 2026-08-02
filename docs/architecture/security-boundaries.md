@@ -325,6 +325,11 @@ for that pre-context authorization lookup.
   exception messages. The current coordinator role is trusted across the four
   allowlisted scheduler names; production may isolate scheduler credentials
   further if a compromise of one maintenance process must not starve another.
+- Migration `0064` adds a separate `SECURITY DEFINER` projection for
+  recomputation-alert inspection. It validates active workspace context and
+  bounded limits, returns only state/attempt/timestamp observations, and is
+  executable only by `appsea_maintenance`; it does not grant direct table
+  reads to the service or maintenance role and cannot claim or dispatch jobs.
 
 ## Temporal boundary
 

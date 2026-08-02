@@ -168,6 +168,6 @@ Production evolution still requires authenticated/TLS-protected Temporal,
 production identity/recovery policy and scheduled/distributed validation of the
 new login/source maintenance jobs, approved live connectors, production
 database provisioning, encrypted cloud object storage and backup purge,
-recomputation alerting,
+deployed recomputation alert routing,
 and operational controls. The local
 fixture workflow is not a production deployment or market-research claim.

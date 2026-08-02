@@ -2,21 +2,18 @@
 
 ## State
 
-The fixture product, PostgreSQL persistence, durable workflows, policy-gated
-CFPB collection checkpoint, authenticated private workspaces, report/plan
-approval/export, recovery, and invitations are implemented. Migrations
-`0027`-`0063` add policy evidence, collection checkpoints, deletion repair,
+Fixture product, PostgreSQL persistence, durable workflows, policy-gated CFPB
+collection, private workspaces, report/plan approval/export, recovery, and
+invitations are implemented. Migrations
+`0027`-`0064` add policy evidence, collection checkpoints, deletion repair,
 leases, snapshot reconciliation, workflow admissions, source-reconciliation
-admission, retryable tombstones, maintenance-run telemetry, and a durable
-source-quota reconciliation case ledger. Migration `0050` adds explicit,
-one-record tombstone-bound re-collection with immutable workflow/run/source-item
-lineage and an exact CFPB complaint route; it never runs automatically and the
-source remains disabled. Migration `0051` requires the direct CFPB command to
-reserve and consume the shared production admission ledger through the
-`appsea-worker` service principal. Deployed Temporal/scheduler ownership, policy
-approval, role separation, non-fixture outputs, and identity-provider approval
-remain open. Collection routes are Temporal gateways; signup workspaces remain
-non-fixture by design.
+admission, retryable tombstones, maintenance-run telemetry, a durable source-
+quota case ledger, and a maintenance-only recomputation-alert projection.
+Migration `0050` adds explicit one-record tombstone-bound CFPB re-collection
+with immutable lineage; it never runs automatically and the source remains
+disabled. `0051` binds direct CFPB admission to `appsea-worker`. Deployed
+Temporal/scheduler ownership, policy approval, role separation, non-fixture
+outputs, and identity-provider approval remain open.
 
 On 2026-08-02, the production collection activity was generalized to select
 the CFPB or Stack Exchange connector only after `readCollectible` returns a
@@ -47,8 +44,8 @@ Read models include linked report/plan approval states from PostgreSQL; the
 private opportunity mapper reflects later transitions without inferring state
 from immutable object payloads.
 
-Monitoring includes health routes, a secret-free 30-second heartbeat, and a
-lease-owned quota-reconciliation alert scan. `pnpm production:preflight`
+Monitoring includes health routes, a secret-free 30-second heartbeat, and
+lease-owned quota/recomputation alert scans. `pnpm production:preflight`
 validates role-separated TLS databases, authenticated Temporal, signed object
 storage, scheduler ownership, HTTPS origin, delivery switches, and proxy
 secret shape without network calls. Deployment topology, HA, retention, alert
@@ -62,12 +59,12 @@ re-collection requires a completed matching tombstone.
 ## Validated commands
 
 - `pnpm verify` passed 2026-08-02 after the source tranche: 56 Turbo tasks,
-  samples, web smoke, formatting, and repository checks pass.
+  samples, web smoke, formatting, checks pass.
 - PostgreSQL and Temporal integration are staged but Docker-blocked because the
   Docker Desktop Linux engine pipe is unavailable.
 
-- Maintenance loop and quota-alert tests pass; no deployed scheduler, Temporal, or source
-  activation claim.
+- Maintenance loop, quota-alert, and recomputation-alert tests pass; no
+  deployed scheduler, Temporal, or source activation claim.
 
 Migrations `0053` and `0054` added deterministic complaint
 analysis snapshots and identity/independence-bound source approvals. The CFPB
@@ -101,10 +98,10 @@ references, source payloads, and seed content stay hidden. Migration `0056`
 adds bounded server-clock attempt history with fixed failures. Deployed
 scheduler ownership, production Temporal, and periodic alerting remain open.
 
-The 2026-08-02 source-coverage tranche adds a private read-only registry/API
-over existing policy tables. It derives production collectibility from the
-independent approval gate and exposes quotas, deletion duties, and gaps while
-keeping payloads, hashes, reviewer identities, and activation controls out.
+The 2026-08-02 source-coverage tranche adds a private read-only registry/API;
+it derives collectibility from independent approval and exposes quotas,
+deletion duties, and gaps without payloads, hashes, reviewer identities, or
+activation controls.
 
 2026-08-02 correction tranche adds migrations `0061` and `0062`, a strict
 derived-only editor/owner correction contract, immutable prior/next snapshot
@@ -114,6 +111,11 @@ evidence/provenance remains immutable; stale report/plan reads are hidden until
 reviewed re-analysis; the persisted corrected snapshot feeds that next
 artifact. Editor has field controls; evidence basis is read-only.
 Missing or unapproved seeds block repair.
+
+The 2026-08-02 recomputation-alert tranche adds migration `0064`, a strict
+maintenance-role projection, bounded lease-aware scan/CLI, fixed alert states,
+and secret-free counters. It never claims, retries, dispatches, or resolves a
+repair; deployment still owns scheduler routing and incident response.
 
 ## Next production tranche
 
@@ -135,6 +137,6 @@ Missing or unapproved seeds block repair.
 - Recovery/invitations await provider, DPA/retention, key rotation, monitoring,
   and failure-drill approval.
 - Deletion retries and explicit one-record recollection exist; workspace/export
-  purge, cloud storage, recomputation alerts, deployed scheduler ownership, and quota
-  case alert routing remain open.
+  purge, cloud storage, recomputation alert routing, deployed scheduler
+  ownership, and quota case routing remain open.
 - Windows/macOS release remains open.

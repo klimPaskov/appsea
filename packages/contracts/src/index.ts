@@ -3881,6 +3881,172 @@ export const sourceQuotaReconciliationAlertResultSchema = z
   })
   .strict()
 
+/** Bounds for read-only production-analysis recomputation alert inspection. */
+export const productionAnalysisRecomputeAlertLimits = {
+  maxWorkspaces: 10_000,
+  maxJobsPerWorkspace: 100,
+  maxObservedJobs: 1_000_000,
+  maxAlertAfterSeconds: 31_536_000,
+  maxAgeSeconds: 315_360_000,
+  defaultMaxWorkspaces: 1_000,
+  defaultMaxJobsPerWorkspace: 100,
+  defaultAlertAfterSeconds: 900
+} as const
+
+const productionAnalysisRecomputeAlertStateSchema = z.enum([
+  'queued',
+  'dispatching',
+  'started',
+  'blocked',
+  'failed'
+])
+
+export const productionAnalysisRecomputeAlertObservationSchema = z
+  .object({
+    state: productionAnalysisRecomputeAlertStateSchema,
+    attemptCount: z.number().int().nonnegative().max(100),
+    requestedAt: z.string().datetime(),
+    nextAttemptAt: z.string().datetime(),
+    updatedAt: z.string().datetime()
+  })
+  .superRefine((value, context) => {
+    if (Date.parse(value.updatedAt) < Date.parse(value.requestedAt)) {
+      context.addIssue({
+        code: 'custom',
+        path: ['updatedAt'],
+        message: 'Recomputation updates cannot predate the request'
+      })
+    }
+  })
+  .strict()
+
+export const productionAnalysisRecomputeAlertInputSchema = z
+  .object({
+    observedAt: z.string().datetime(),
+    maxWorkspaces: z
+      .number()
+      .int()
+      .min(1)
+      .max(productionAnalysisRecomputeAlertLimits.maxWorkspaces),
+    maxJobsPerWorkspace: z
+      .number()
+      .int()
+      .min(1)
+      .max(productionAnalysisRecomputeAlertLimits.maxJobsPerWorkspace),
+    alertAfterSeconds: z
+      .number()
+      .int()
+      .min(1)
+      .max(productionAnalysisRecomputeAlertLimits.maxAlertAfterSeconds)
+  })
+  .strict()
+
+export const productionAnalysisRecomputeAlertResultSchema = z
+  .object({
+    observedAt: z.string().datetime(),
+    alertAfterSeconds: z
+      .number()
+      .int()
+      .min(1)
+      .max(productionAnalysisRecomputeAlertLimits.maxAlertAfterSeconds),
+    workspacesScanned: z
+      .number()
+      .int()
+      .nonnegative()
+      .max(productionAnalysisRecomputeAlertLimits.maxWorkspaces),
+    jobsObserved: z
+      .number()
+      .int()
+      .nonnegative()
+      .max(productionAnalysisRecomputeAlertLimits.maxObservedJobs),
+    failedJobs: z
+      .number()
+      .int()
+      .nonnegative()
+      .max(productionAnalysisRecomputeAlertLimits.maxObservedJobs),
+    blockedJobs: z
+      .number()
+      .int()
+      .nonnegative()
+      .max(productionAnalysisRecomputeAlertLimits.maxObservedJobs),
+    staleJobs: z
+      .number()
+      .int()
+      .nonnegative()
+      .max(productionAnalysisRecomputeAlertLimits.maxObservedJobs),
+    oldestOpenJobAgeSeconds: z
+      .number()
+      .int()
+      .nonnegative()
+      .max(productionAnalysisRecomputeAlertLimits.maxAgeSeconds)
+      .nullable(),
+    alerted: z.boolean(),
+    truncated: z.boolean(),
+    state: z.enum(['clear', 'alert', 'incomplete'])
+  })
+  .superRefine((value, context) => {
+    if (value.failedJobs + value.blockedJobs + value.staleJobs > value.jobsObserved) {
+      context.addIssue({
+        code: 'custom',
+        path: ['jobsObserved'],
+        message: 'Alert counters cannot exceed observed jobs'
+      })
+    }
+    if (value.jobsObserved === 0 && value.oldestOpenJobAgeSeconds !== null) {
+      context.addIssue({
+        code: 'custom',
+        path: ['oldestOpenJobAgeSeconds'],
+        message: 'An empty scan cannot have an oldest job age'
+      })
+    }
+    if (value.jobsObserved > 0 && value.oldestOpenJobAgeSeconds === null) {
+      context.addIssue({
+        code: 'custom',
+        path: ['oldestOpenJobAgeSeconds'],
+        message: 'Observed jobs require an oldest job age'
+      })
+    }
+    const ageReachesThreshold =
+      value.oldestOpenJobAgeSeconds !== null &&
+      value.oldestOpenJobAgeSeconds >= value.alertAfterSeconds
+    if (value.alerted !== (value.failedJobs > 0 || value.blockedJobs > 0 || ageReachesThreshold)) {
+      context.addIssue({
+        code: 'custom',
+        path: ['alerted'],
+        message: 'Alert state must match failed, blocked, or aged jobs'
+      })
+    }
+    if (value.state === 'alert' && !value.alerted) {
+      context.addIssue({
+        code: 'custom',
+        path: ['state'],
+        message: 'Alert state requires an alerted result'
+      })
+    }
+    if (value.alerted && value.state !== 'alert') {
+      context.addIssue({
+        code: 'custom',
+        path: ['state'],
+        message: 'Alerted results require alert state'
+      })
+    }
+    if (value.state === 'clear' && (value.alerted || value.truncated)) {
+      context.addIssue({
+        code: 'custom',
+        path: ['state'],
+        message: 'Clear state requires a complete non-alerted result'
+      })
+    }
+    if (value.state === 'incomplete' && !value.truncated) {
+      context.addIssue({
+        code: 'custom',
+        path: ['truncated'],
+        message: 'Incomplete state requires truncated coverage'
+      })
+    }
+  })
+  .strict()
+
 export const authSignInResultSchema = z
   .object({
     token: authSessionTokenSchema,
@@ -4337,6 +4503,15 @@ export type SourceQuotaReconciliationAlertInput = z.infer<
 >
 export type SourceQuotaReconciliationAlertResult = z.infer<
   typeof sourceQuotaReconciliationAlertResultSchema
+>
+export type ProductionAnalysisRecomputeAlertObservation = z.infer<
+  typeof productionAnalysisRecomputeAlertObservationSchema
+>
+export type ProductionAnalysisRecomputeAlertInput = z.infer<
+  typeof productionAnalysisRecomputeAlertInputSchema
+>
+export type ProductionAnalysisRecomputeAlertResult = z.infer<
+  typeof productionAnalysisRecomputeAlertResultSchema
 >
 export type AuthSignInResult = z.infer<typeof authSignInResultSchema>
 export type AuthUserReadModel = z.infer<typeof authUserReadModelSchema>

@@ -1,5 +1,9 @@
 import type { Pool, PoolClient, QueryResultRow } from 'pg'
-import { appseaIdentifierSchema } from '@appsea/contracts'
+import {
+  appseaIdentifierSchema,
+  productionAnalysisRecomputeAlertObservationSchema,
+  type ProductionAnalysisRecomputeAlertObservation
+} from '@appsea/contracts'
 import { withDatabaseTransaction, withWorkspaceTransaction } from './transaction'
 
 export type ProductionAnalysisRecomputeState =
@@ -60,6 +64,14 @@ interface RecomputeRow extends QueryResultRow {
   updated_at: Date | string
 }
 
+interface RecomputeAlertRow extends QueryResultRow {
+  state: string
+  attempt_count: number | string
+  requested_at: Date | string
+  next_attempt_at: Date | string
+  updated_at: Date | string
+}
+
 export class ProductionAnalysisRecomputeStateError extends Error {
   constructor(recomputeId: string, state: string) {
     super(`Production analysis recomputation ${recomputeId} is not dispatchable (${state})`)
@@ -117,6 +129,42 @@ export class PostgresProductionAnalysisRecomputeRepository {
           `SELECT workspace_id FROM appsea.list_active_workspaces_for_maintenance()`
         )
         return result.rows.map((row) => appseaIdentifierSchema.parse(row.workspace_id))
+      },
+      { readOnly: true }
+    )
+  }
+
+  /**
+   * Read only bounded state and timestamps through the maintenance-role
+   * security-definer function. Identifiers, failure summaries, and lineage
+   * fields deliberately remain outside this alert projection.
+   */
+  async listAlertObservations(
+    workspaceId: string,
+    limit = 50
+  ): Promise<ProductionAnalysisRecomputeAlertObservation[]> {
+    const parsedWorkspaceId = appseaIdentifierSchema.parse(workspaceId)
+    if (!Number.isSafeInteger(limit) || limit < 1 || limit > 100) {
+      throw new Error('recomputation alert list limit must be between 1 and 100')
+    }
+    return withWorkspaceTransaction(
+      this.pool,
+      parsedWorkspaceId,
+      async (client) => {
+        const result = await client.query<RecomputeAlertRow>(
+          `SELECT state, attempt_count, requested_at, next_attempt_at, updated_at
+             FROM appsea.list_production_analysis_recompute_alerts($1, $2)`,
+          [parsedWorkspaceId, limit]
+        )
+        return result.rows.map((row) =>
+          productionAnalysisRecomputeAlertObservationSchema.parse({
+            state: row.state,
+            attemptCount: Number(row.attempt_count),
+            requestedAt: iso(row.requested_at),
+            nextAttemptAt: iso(row.next_attempt_at),
+            updatedAt: iso(row.updated_at)
+          })
+        )
       },
       { readOnly: true }
     )

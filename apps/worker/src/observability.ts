@@ -28,6 +28,12 @@ export interface WorkerEvent {
   sourceQuotaReconciliationOpenCases?: number
   sourceQuotaReconciliationOldestAgeSeconds?: number
   sourceQuotaReconciliationTruncated?: boolean
+  productionAnalysisRecomputeJobs?: number
+  productionAnalysisRecomputeFailed?: number
+  productionAnalysisRecomputeBlocked?: number
+  productionAnalysisRecomputeStale?: number
+  productionAnalysisRecomputeOldestAgeSeconds?: number
+  productionAnalysisRecomputeTruncated?: boolean
   productionWorkflowAdmissionsPurged?: number
   productionAnalysisAdmissionsPurged?: number
   sourceCollectionLeasesPurged?: number
@@ -167,6 +173,34 @@ export function emitWorkerEvent(event: WorkerEvent): void {
       : {}),
     ...(event.sourceQuotaReconciliationTruncated !== undefined
       ? { sourceQuotaReconciliationTruncated: event.sourceQuotaReconciliationTruncated }
+      : {}),
+    ...(finiteInteger(event.productionAnalysisRecomputeJobs) !== undefined
+      ? { productionAnalysisRecomputeJobs: finiteInteger(event.productionAnalysisRecomputeJobs) }
+      : {}),
+    ...(finiteInteger(event.productionAnalysisRecomputeFailed) !== undefined
+      ? {
+          productionAnalysisRecomputeFailed: finiteInteger(event.productionAnalysisRecomputeFailed)
+        }
+      : {}),
+    ...(finiteInteger(event.productionAnalysisRecomputeBlocked) !== undefined
+      ? {
+          productionAnalysisRecomputeBlocked: finiteInteger(
+            event.productionAnalysisRecomputeBlocked
+          )
+        }
+      : {}),
+    ...(finiteInteger(event.productionAnalysisRecomputeStale) !== undefined
+      ? { productionAnalysisRecomputeStale: finiteInteger(event.productionAnalysisRecomputeStale) }
+      : {}),
+    ...(finiteInteger(event.productionAnalysisRecomputeOldestAgeSeconds) !== undefined
+      ? {
+          productionAnalysisRecomputeOldestAgeSeconds: finiteInteger(
+            event.productionAnalysisRecomputeOldestAgeSeconds
+          )
+        }
+      : {}),
+    ...(event.productionAnalysisRecomputeTruncated !== undefined
+      ? { productionAnalysisRecomputeTruncated: event.productionAnalysisRecomputeTruncated }
       : {}),
     ...(finiteInteger(event.productionWorkflowAdmissionsPurged) !== undefined
       ? {

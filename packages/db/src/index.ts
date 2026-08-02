@@ -40,6 +40,7 @@ export {
   type SourceQuotaReconciliationListQuery,
   type SourceQuotaReconciliationResolveInput
 } from './source-quota-repository'
+export type { ProductionAnalysisRecomputeAlertObservation } from '@appsea/contracts'
 export {
   PostgresSourcePolicyRepository,
   type SourcePolicyApprovalInput,
