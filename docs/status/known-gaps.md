@@ -36,6 +36,12 @@ links completed runs to evidence inspection without exposing hashes or source
 payloads. Pending policies can be named to make coverage gaps explicit;
 they cannot be collected or treated as enabled sources. The CFPB connector
 remains disabled pending external legal, privacy, and security approval.
+Migration `0070` now adds an owner/editor cancellation intent for multi-source
+orchestrations. The private route persists the request before a best-effort
+Temporal cancel, queued children are terminalized transactionally, and the
+lease-backed worker retries started-child cancellation and reconciliation. The
+analogous one-source production run cancellation route remains open, as do
+deployed scheduler ownership, Temporal authorization, and crash-drill proof.
 
 Completed collections now have an explicit owner/editor handoff to a reviewed
 production-analysis run. The status route falls back from Temporal to a safe

@@ -122,6 +122,16 @@ These read models omit caller keys, hashes, policy-review hashes, raw source
 payloads, and imported instructions. The public leaderboard remains a ranked
 list only; research detail belongs on private campaign and opportunity routes.
 
+Owners and editors can request cancellation for a multi-source orchestration
+with same-origin `POST` to its detail route. The database commits an immutable
+cancellation intent before the server attempts Temporal cancellation. Queued
+children are stopped in the workspace transaction; a child that has already
+started remains active until its workflow reaches a safe terminal cancellation
+boundary. The lease-backed worker retries external cancellation and reconciles
+the parent, while the private page shows the pending state. Cancellation does
+not delete evidence, reports, plans, exports, objects, or backups. One-source
+production run cancellation is not yet exposed.
+
 ## Reviewed analysis handoff
 
 The collection page is also the explicit boundary between collection and

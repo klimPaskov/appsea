@@ -91,6 +91,15 @@ for that pre-context authorization lookup.
   policy-review hashes, or imported instructions. Archived/paused campaigns
   cannot receive new child claims, and the service worker must recheck the
   current approved independent policy before admission and Temporal start.
+  Migration `0070` adds an owner/editor cancellation boundary for these
+  orchestrations. The request is committed in the authenticated RLS transaction
+  before any Temporal call, bound to the immutable member identity, and retained
+  as an identifier-only audit/outbox event. Queued children are canceled in the
+  database; dispatching claims stay owned until an external workflow identity is
+  recorded; started children are canceled by the server/lease-backed worker and
+  only become terminal after safe reconciliation. A failed provider call cannot
+  erase the intent or authorize a new dispatch, and the response never returns
+  child workflow IDs.
 - The reviewed analysis handoff has a separate safe status projection. The
   owner/editor start action sends only identifiers and an idempotency envelope;
   the status API/page validates any workflow identifier against the workspace

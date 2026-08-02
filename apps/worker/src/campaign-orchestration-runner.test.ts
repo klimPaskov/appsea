@@ -54,6 +54,8 @@ function dependencies(claim: ResearchCampaignOrchestrationClaim) {
   return {
     orchestrations: {
       listWorkspaceIdsForService: vi.fn().mockResolvedValue([claim.workspaceId]),
+      listCancellationTargetsForService: vi.fn().mockResolvedValue([]),
+      prepareCancellationForService: vi.fn().mockResolvedValue(null),
       listActiveOrchestrationIdsForService: vi.fn().mockResolvedValue([]),
       claimNextSourceForService: vi.fn().mockResolvedValue(claim),
       markSourceDispatchedForService: vi.fn().mockResolvedValue(undefined),
@@ -104,7 +106,8 @@ function dependencies(claim: ResearchCampaignOrchestrationClaim) {
     },
     startWorkflow: vi.fn().mockImplementation(async (request) => ({
       workflowId: prepareProductionCollectionWorkflowStart(request).workflowId
-    }))
+    })),
+    cancelWorkflow: vi.fn().mockResolvedValue(undefined)
   }
 }
 
@@ -211,6 +214,40 @@ describe('runCampaignOrchestration', () => {
     expect(result).toMatchObject({ claims: 1, dispatched: 0, failed: 1 })
     expect(deps.orchestrations.markSourceFailedForService).toHaveBeenCalledWith(
       expect.objectContaining({ failureCode: 'source_unsupported', terminal: true })
+    )
+  })
+
+  it('retries durable cancellation intent and cancels started child workflows', async () => {
+    const claim = claimFor()
+    const deps = dependencies(claim)
+    deps.orchestrations.claimNextSourceForService.mockResolvedValue(null)
+    deps.orchestrations.listCancellationTargetsForService.mockResolvedValue([claim.orchestrationId])
+    deps.orchestrations.prepareCancellationForService.mockResolvedValue({
+      workspaceId: claim.workspaceId,
+      orchestrationId: claim.orchestrationId,
+      activeWorkflowIds: [`workflow:production:${claim.workspaceId}:${'a'.repeat(32)}`],
+      pendingSourcesCanceled: 1
+    })
+
+    const result = await runCampaignOrchestration(
+      {
+        batchSize: 1,
+        claimOwner: 'worker:host-1:123',
+        claimLeaseSeconds: 60,
+        retryAfterSeconds: 300,
+        occurredAt: now
+      },
+      deps
+    )
+
+    expect(result).toMatchObject({ claims: 0, dispatched: 0, reconciled: 1 })
+    expect(deps.cancelWorkflow).toHaveBeenCalledWith(
+      `workflow:production:${claim.workspaceId}:${'a'.repeat(32)}`
+    )
+    expect(deps.orchestrations.reconcileForService).toHaveBeenCalledWith(
+      claim.workspaceId,
+      claim.orchestrationId,
+      undefined
     )
   })
 })

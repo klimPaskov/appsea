@@ -46,7 +46,10 @@ function parentRow() {
     requested_at: now,
     started_at: null,
     updated_at: now,
-    finished_at: null
+    finished_at: null,
+    cancellation_requested_at: null,
+    cancellation_requested_by: null,
+    cancellation_request_id: null
   }
 }
 
@@ -89,11 +92,16 @@ function sourceRows() {
   }))
 }
 
-function fakePool() {
-  let created = false
+function fakePool(initialCreated = false) {
+  let created = initialCreated
   let parentInsertCount = 0
   let childInsertCount = 0
-  const parent = parentRow()
+  const parent = {
+    ...parentRow(),
+    cancellation_requested_at: null as string | null,
+    cancellation_requested_by: null as string | null,
+    cancellation_request_id: null as string | null
+  }
   const client = {
     async query(textOrConfig: unknown, values?: unknown[]) {
       const text = typeof textOrConfig === 'string' ? textOrConfig : String(textOrConfig)
@@ -139,6 +147,15 @@ function fakePool() {
         childInsertCount += 1
         return { rows: [], rowCount: 1 }
       }
+      if (text.includes('SELECT workflow_id')) {
+        return { rows: [], rowCount: 0 }
+      }
+      if (text.includes('UPDATE appsea.research_campaign_orchestrations parent')) {
+        parent.cancellation_requested_at = now
+        parent.cancellation_requested_by = 'user:one'
+        parent.cancellation_request_id = 'cancel:orchestration:test'
+        return { rows: [parent], rowCount: 1 }
+      }
       if (text.includes('FROM appsea.research_campaign_orchestration_sources')) {
         return { rows: childRows(), rowCount: 2 }
       }
@@ -181,5 +198,30 @@ describe('PostgresResearchCampaignOrchestrationRepository', () => {
     })
     expect(replay).toEqual(first)
     expect(fake.counts()).toEqual({ parentInsertCount: 1, childInsertCount: 2 })
+  })
+
+  it('records an owner cancellation intent before external workflow cancellation', async () => {
+    const fake = fakePool(true)
+    const repository = new PostgresResearchCampaignOrchestrationRepository(fake.pool as never)
+
+    const first = await repository.requestCancellationForUser(
+      'user:one',
+      'workspace:one',
+      'run:campaign:multi'
+    )
+    const replay = await repository.requestCancellationForUser(
+      'user:one',
+      'workspace:one',
+      'run:campaign:multi'
+    )
+
+    expect(first).toMatchObject({
+      orchestrationId: 'run:campaign:multi',
+      campaignId: 'campaign:one',
+      state: 'requested',
+      cancellationRequestedAt: now,
+      activeWorkflowIds: []
+    })
+    expect(replay).toEqual(first)
   })
 })

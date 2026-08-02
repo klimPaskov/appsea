@@ -34,6 +34,7 @@ import {
 import { runCampaignRefresh } from './campaign-refresh-runner'
 import { runCampaignOrchestration } from './campaign-orchestration-runner'
 import {
+  cancelProductionCollectionWorkflow,
   startProductionCollectionWorkflow,
   temporalClientConfigFromEnv,
   temporalConnectionOptions
@@ -208,6 +209,17 @@ try {
                 }
                 const handle = await startProductionCollectionWorkflow(temporalClient, request)
                 return { workflowId: handle.workflowId }
+              },
+              cancelWorkflow: async (workflowId) => {
+                if (!temporalClient) {
+                  const config = temporalClientConfigFromEnv()
+                  temporalConnection = await Connection.connect(temporalConnectionOptions(config))
+                  temporalClient = new WorkflowClient({
+                    connection: temporalConnection,
+                    namespace: config.namespace
+                  })
+                }
+                await cancelProductionCollectionWorkflow(temporalClient, workflowId)
               }
             }
           ),

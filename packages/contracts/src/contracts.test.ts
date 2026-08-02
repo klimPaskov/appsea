@@ -65,6 +65,7 @@ import {
   researchCampaignRunInputSchema,
   researchCampaignRunReadModelSchema,
   researchCampaignOrchestrationReadModelSchema,
+  researchCampaignOrchestrationCancelResultSchema,
   sourcePolicySchema,
   sourcePolicyApprovalInputSchema,
   workspaceSourceReadModelSchema,
@@ -1999,6 +2000,27 @@ describe('contracts', () => {
         updatedAt: now,
         finishedAt: null,
         sources: []
+      }).success
+    ).toBe(false)
+  })
+
+  it('validates the bounded multi-source cancellation result', () => {
+    expect(
+      researchCampaignOrchestrationCancelResultSchema.parse({
+        orchestrationId: 'run:billing:multi',
+        campaignId: 'campaign:billing',
+        state: 'requested',
+        cancellationRequestedAt: now,
+        activeWorkflowCount: 1
+      })
+    ).toMatchObject({ state: 'requested', activeWorkflowCount: 1 })
+    expect(
+      researchCampaignOrchestrationCancelResultSchema.safeParse({
+        orchestrationId: 'run:billing:multi',
+        campaignId: 'campaign:billing',
+        state: 'requested',
+        cancellationRequestedAt: now,
+        activeWorkflowCount: 17
       }).success
     ).toBe(false)
   })

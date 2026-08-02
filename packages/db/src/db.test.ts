@@ -82,11 +82,22 @@ describe('database foundation', () => {
       '0066',
       '0067',
       '0068',
-      '0069'
+      '0069',
+      '0070'
     ])
     expect(migrations[0]?.checksum).toMatch(/^[a-f0-9]{64}$/)
     expect(migrations[0]?.sql).toContain('CREATE TABLE appsea.evidence_records')
     expect(migrations[0]?.sql).toContain('ENABLE ROW LEVEL SECURITY')
+    const cancellationMigration = migrations.find((migration) => migration.version === '0070')
+    expect(cancellationMigration?.sql).toContain('cancellation_requested_at')
+    expect(cancellationMigration?.sql).toContain(
+      'enforce_research_campaign_orchestration_cancellation'
+    )
+    expect(cancellationMigration?.sql).toContain(
+      "IF TG_OP = 'UPDATE' AND OLD.cancellation_requested_at IS NOT NULL"
+    )
+    expect(cancellationMigration?.sql).toContain("current_setting('appsea.service_principal'")
+    expect(cancellationMigration?.sql).toContain('workspace.fixture_only = false')
     const authMigration = migrations.find((migration) => migration.version === '0008')
     const privacyMigration = migrations.find((migration) => migration.version === '0009')
     const retentionMigration = migrations.find((migration) => migration.version === '0010')

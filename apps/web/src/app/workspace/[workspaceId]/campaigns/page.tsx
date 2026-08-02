@@ -181,6 +181,8 @@ export default async function ResearchCampaignsPage({
                     runs={runHistoryByCampaignId.get(campaign.campaignId) ?? []}
                   />
                   <ResearchCampaignOrchestrationHistory
+                    workspaceId={parsedWorkspaceId.data}
+                    canCancel={workspace.role === 'owner' || workspace.role === 'editor'}
                     orchestrations={orchestrationHistoryByCampaignId.get(campaign.campaignId) ?? []}
                   />
                   {(workspace.role === 'owner' || workspace.role === 'editor') &&

@@ -2886,6 +2886,8 @@ export const researchCampaignOrchestrationReadModelSchema = z
     startedAt: z.string().datetime().nullable(),
     updatedAt: z.string().datetime(),
     finishedAt: z.string().datetime().nullable(),
+    /** Durable cancellation intent; terminal state follows child reconciliation. */
+    cancellationRequestedAt: z.string().datetime().nullable().default(null),
     sources: z.array(researchCampaignOrchestrationSourceReadModelSchema).min(1).max(16)
   })
   .superRefine((orchestration, context) => {
@@ -2957,6 +2959,17 @@ export const researchCampaignOrchestrationReadModelSchema = z
         message: 'Terminal non-success orchestrations require fixed failure metadata'
       })
     }
+  })
+  .strict()
+
+/** Result of an authenticated multi-source orchestration cancellation request. */
+export const researchCampaignOrchestrationCancelResultSchema = z
+  .object({
+    orchestrationId: appseaIdentifierSchema,
+    campaignId: appseaIdentifierSchema,
+    state: z.enum(['requested', 'already_terminal']),
+    cancellationRequestedAt: z.string().datetime().nullable(),
+    activeWorkflowCount: z.number().int().nonnegative().max(16)
   })
   .strict()
 
@@ -5152,6 +5165,9 @@ export type ResearchCampaignOrchestrationSourceReadModel = z.infer<
 >
 export type ResearchCampaignOrchestrationReadModel = z.infer<
   typeof researchCampaignOrchestrationReadModelSchema
+>
+export type ResearchCampaignOrchestrationCancelResult = z.infer<
+  typeof researchCampaignOrchestrationCancelResultSchema
 >
 export type ResearchCampaignSourceReadModel = z.infer<typeof researchCampaignSourceReadModelSchema>
 export type ResearchCampaignReadModel = z.infer<typeof researchCampaignReadModelSchema>

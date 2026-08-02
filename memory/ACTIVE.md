@@ -5,7 +5,7 @@
 Fixture product, PostgreSQL persistence, durable workflows, policy-gated CFPB
 collection, private workspaces, report/plan approval/export, recovery, and
 invitations are implemented. Migrations
-`0027`-`0069` add policy evidence, collection checkpoints, deletion repair,
+`0027`-`0070` add policy evidence, collection checkpoints, deletion repair,
 leases, snapshot reconciliation, workflow admissions, source-reconciliation
 admission, retryable tombstones, maintenance-run telemetry, a durable source-
 quota case ledger, recomputation alerts, cost-threshold projection, and
@@ -27,12 +27,13 @@ coverage/redaction metadata, and requires approved non-synthetic reports and
 plans. It exposes no write or workflow tools; token management is API-only.
 See `docs/runbooks/mcp-agent-access.md` and the completion report in
 `docs/status/`.
-Migration `0050` adds explicit one-record tombstone-bound CFPB re-collection
-with immutable lineage; it never runs automatically and the source remains
-disabled. `0051` binds direct CFPB admission to `appsea-worker`. Deployed
-Temporal/scheduler ownership, policy approval, role separation, non-fixture
-outputs, and identity-provider approval remain open.
-
+The 2026-08-03 cancellation tranche adds migration `0070`: owner/editor
+cancellation intent is persisted before any Temporal call, queued children are
+stopped transactionally, started children are retried through the lease-backed
+maintenance worker, and the private campaign page/API exposes the safe-boundary
+status. Dispatching claims remain claim-owned until their workflow identity is
+recorded so cancellation cannot orphan an external start. One-source run
+cancellation remains a separate gap.
 On 2026-08-01, production analysis Temporal starts were versioned to
 `production-analysis-v2`. New starts carry only workspace, collection,
 analysis, seed-review, timestamp, and digest identifiers. `apps/worker`
@@ -40,28 +41,21 @@ reconstructs the policy-validated artifact from workspace-bound rows inside the
 persistence activity, preserving the no-raw-source-in-history boundary. Legacy
 v1 executions need a drain/retention plan.
 
-Retention uses server-observed activity time rather than caller `requestedAt`;
-future timestamps are rejected. Final lineage locks the active, current,
-unexpired policy, requires allowed/restricted commercial use, and rechecks
-confirmed redacted evidence before linking outputs. Collection initialization
-fails closed without a consumed admission reservation.
+Retention uses server-observed activity time and rejects future caller times.
+Final lineage locks current policy and confirmed redacted evidence; collection
+initialization fails closed without a consumed admission reservation.
 
-Read models include linked report/plan approval states from PostgreSQL; the
-private opportunity mapper reflects later transitions without inferring state
-from immutable object payloads.
-
-Monitoring includes health routes, a secret-free 30-second heartbeat, and
-lease-owned quota/recomputation/cost scans. `pnpm production:preflight`
-validates role-separated TLS databases, authenticated Temporal, signed object
-storage, scheduler ownership, HTTPS origin, delivery switches, and proxy
-secret shape without network calls. Deployment topology, HA, retention, alert
-routing, and failure drills remain open.
+Monitoring includes health routes, a secret-free heartbeat, and lease-owned
+quota/recomputation/cost scans. `pnpm production:preflight` validates
+role-separated TLS databases, authenticated Temporal, signed object storage,
+scheduler ownership, HTTPS origin, delivery switches, and proxy secret shape.
+Deployment topology, HA, retention, alert routing, and failure drills remain.
 
 ## Validated commands
 
-- `pnpm verify` passed 2026-08-03 after the MCP tranche. On 2026-08-03,
-  focused contracts (84), db (121), and web (126) suites plus package
-  typechecks/lints passed after the MCP tranche; worker coverage is unchanged.
+- `pnpm verify` passed 2026-08-03 after the cancellation tranche. The cancellation
+  tranche also passed focused contracts (85), db (122), workflows (29), worker
+  (97), and web (128) suites plus affected package typechecks/lints.
 - PostgreSQL and Temporal integration are staged but Docker-blocked because the
   Docker Desktop Linux engine pipe is unavailable.
 
@@ -111,7 +105,7 @@ Text masking is denied while a raw source object reference exists, leaving
 source-policy deletion and cloud/backup purge as separate operations. The
 collection page exposes the small privacy-redaction control.
 
-Current audit: `docs/status/production-readiness-audit-2026-08-02.md`.
+Current audit: `docs/status/production-readiness-audit-2026-08-03.md`.
 
 ## Next production tranche
 
@@ -125,8 +119,9 @@ Current audit: `docs/status/production-readiness-audit-2026-08-02.md`.
    `competitor-research` purpose before treating any competitive output as
    source-backed; the Stack Exchange candidate is not registered or active,
    though its reviewed-policy worker path is now present.
-6. Deploy and review the read-only MCP boundary with HTTPS, secret storage,
-   rate limiting, token rotation, and provider identity controls.
+6. Deploy and review the read-only MCP and cancellation boundaries with HTTPS,
+   secret storage, rate limiting, token rotation, Temporal namespace controls,
+   and provider identity controls.
 
 ## Current blockers
 
@@ -138,4 +133,6 @@ Current audit: `docs/status/production-readiness-audit-2026-08-02.md`.
 - Deletion retries and explicit one-record recollection exist; workspace/export
   purge, cloud storage, recomputation alert routing, deployed scheduler
   ownership, and quota case routing remain open.
+- Multi-source campaign cancellation now has a durable private boundary; the
+  analogous one-source production run cancellation route remains open.
 - Windows/macOS release remains open.

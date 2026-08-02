@@ -13,6 +13,7 @@ import {
   productionCollectionWorkflowHashMaterialSchema,
   productionCollectionWorkflowInputSchema,
   productionCollectionWorkflowStartRequestSchema,
+  workflowIdSchema,
   productionAnalysisWorkflowInputSchema,
   productionAnalysisWorkflowStartRequestSchema,
   type FixtureResearchWorkflowInput,
@@ -216,6 +217,15 @@ export async function readProductionCollectionWorkflowStatus(
 ): Promise<ProductionCollectionWorkflowStatus> {
   const handle = client.getHandle<typeof productionCollectionWorkflow>(workflowId)
   return handle.query<ProductionCollectionWorkflowStatus>(productionCollectionStatusQueryName)
+}
+
+/** Request cancellation through Temporal after durable cancellation intent is stored. */
+export async function cancelProductionCollectionWorkflow(
+  client: WorkflowClient,
+  workflowId: string
+): Promise<void> {
+  const parsedWorkflowId = workflowIdSchema.parse(workflowId)
+  await client.getHandle<typeof productionCollectionWorkflow>(parsedWorkflowId).cancel()
 }
 
 export interface PreparedProductionAnalysisWorkflowStart {

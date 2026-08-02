@@ -38,12 +38,20 @@ export interface CampaignOrchestrationDependencies {
     | 'markSourceDispatchedForService'
     | 'markSourceFailedForService'
     | 'reconcileForService'
-  >
+  > &
+    Partial<
+      Pick<
+        PostgresResearchCampaignOrchestrationRepository,
+        'listCancellationTargetsForService' | 'prepareCancellationForService'
+      >
+    >
   policies: Pick<PostgresSourcePolicyRepository, 'readCollectible'>
   admission: Pick<PostgresProductionWorkflowAdmissionRepository, 'admitForService'>
   startWorkflow: (
     request: ReturnType<typeof productionCollectionWorkflowStartRequestSchema.parse>
   ) => Promise<{ workflowId: string }>
+  /** Best-effort external cancellation; the durable request remains for retry. */
+  cancelWorkflow?: (workflowId: string) => Promise<void>
 }
 
 export interface CampaignOrchestrationResult {
@@ -193,6 +201,45 @@ export async function runCampaignOrchestration(
 
   for (const workspaceId of workspaceIds) {
     const reconciledInWorkspace = new Set<string>()
+    if (
+      input.batchSize > 0 &&
+      dependencies.orchestrations.listCancellationTargetsForService &&
+      dependencies.orchestrations.prepareCancellationForService
+    ) {
+      const cancellationIds = await dependencies.orchestrations.listCancellationTargetsForService(
+        workspaceId,
+        Math.min(input.batchSize, maximumOrchestrationBatch)
+      )
+      for (const orchestrationId of cancellationIds) {
+        if (reconciled >= maximumOrchestrationBatch) break
+        await assertLease()
+        const target = await dependencies.orchestrations.prepareCancellationForService(
+          workspaceId,
+          orchestrationId,
+          input.fence
+        )
+        if (!target) continue
+        if (dependencies.cancelWorkflow) {
+          for (const workflowId of target.activeWorkflowIds) {
+            await assertLease()
+            try {
+              await dependencies.cancelWorkflow(workflowId)
+            } catch {
+              // Keep the durable request pending. The next leased pass retries
+              // the external cancellation without creating another run.
+            }
+          }
+        }
+        await assertLease()
+        await dependencies.orchestrations.reconcileForService(
+          workspaceId,
+          orchestrationId,
+          input.fence
+        )
+        reconciledInWorkspace.add(orchestrationId)
+        reconciled += 1
+      }
+    }
     if (claims < input.batchSize) {
       await assertLease()
       const claimToken = `token:campaign-orchestration:${randomUUID()}`

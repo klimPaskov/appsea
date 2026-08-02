@@ -191,6 +191,15 @@ preserve coverage and redaction metadata, and admit non-synthetic report/plan
 artifacts only after approval. The boundary has no workflow or connector
 activation tools and does not accept browser cookies.
 
+Migration `0070_research_campaign_orchestration_cancellation.sql` extends the
+multi-source boundary with an immutable owner/editor cancellation intent. The
+intent is committed before Temporal cancellation, queued children are stopped
+transactionally, and the lease-backed worker retries started-child cancellation
+and parent reconciliation. Dispatching claims remain owned until their
+workflow identity is known, preserving idempotent external effects. This is a
+safe-stop boundary, not a data purge operation; one-source cancellation remains
+separate.
+
 The connector package now includes a disabled Stack Exchange candidate for
 bounded competitor/contrary-signal collection. It uses the official API only,
 sanitizes question excerpts, preserves an HTTPS attribution locator, and emits

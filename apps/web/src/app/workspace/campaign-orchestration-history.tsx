@@ -1,9 +1,14 @@
 import type { ResearchCampaignOrchestrationReadModel } from '@appsea/contracts'
+import { ResearchCampaignOrchestrationCancelAction } from './campaign-orchestration-cancel-action'
 
 export function ResearchCampaignOrchestrationHistory({
-  orchestrations
+  orchestrations,
+  workspaceId,
+  canCancel
 }: {
   orchestrations: ResearchCampaignOrchestrationReadModel[]
+  workspaceId: string
+  canCancel: boolean
 }) {
   if (orchestrations.length === 0) return null
   return (
@@ -21,6 +26,16 @@ export function ResearchCampaignOrchestrationHistory({
               {orchestration.failedSourceCount > 0 ? (
                 <span>{orchestration.failedSourceCount} failed</span>
               ) : null}
+              <ResearchCampaignOrchestrationCancelAction
+                workspaceId={workspaceId}
+                campaignId={orchestration.campaignId}
+                orchestrationId={orchestration.orchestrationId}
+                canCancel={canCancel}
+                cancellationRequestedAt={orchestration.cancellationRequestedAt}
+                terminal={['completed', 'partial', 'failed', 'canceled'].includes(
+                  orchestration.state
+                )}
+              />
             </div>
             <ul className="complaint-list">
               {orchestration.sources.map((source) => (

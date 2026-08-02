@@ -1,10 +1,11 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import { complaintAnalysisSchema, productionResearchArtifactSchema } from '@appsea/contracts'
 import {
   prepareFixtureResearchWorkflowStart,
   prepareProductionAnalysisWorkflowStart,
   prepareProductionCollectionWorkflowStart,
-  productionCollectionIdempotencyDigest
+  productionCollectionIdempotencyDigest,
+  cancelProductionCollectionWorkflow
 } from './client'
 
 const analysisAt = '2026-07-10T00:00:00.000Z'
@@ -321,6 +322,19 @@ describe('fixture workflow client boundary', () => {
 })
 
 describe('production workflow client boundary', () => {
+  it('cancels only the requested production workflow handle', async () => {
+    const cancel = vi.fn().mockResolvedValue(undefined)
+    const client = {
+      getHandle: vi.fn().mockReturnValue({ cancel })
+    }
+    const workflowId = `workflow:production:workspace-production-test:${'a'.repeat(32)}`
+
+    await cancelProductionCollectionWorkflow(client as never, workflowId)
+
+    expect(client.getHandle).toHaveBeenCalledWith(workflowId)
+    expect(cancel).toHaveBeenCalledTimes(1)
+  })
+
   it('shares one canonical idempotency digest with worker entry points', () => {
     const productionRequest = {
       workspaceId: 'workspace-production-test',

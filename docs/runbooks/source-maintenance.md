@@ -168,6 +168,16 @@ production-shaped but not an activation mechanism: live source policy approval,
 deployed scheduler/Temporal ownership, and crash/retry integration proof remain
 required.
 
+Migration `0070` adds the cancellation pass for this queue. An owner/editor
+first persists an immutable cancellation intent through the private API. The
+maintenance worker then terminalizes queued children, leaves a dispatching
+claim owned until its external workflow identity is recorded, retries Temporal
+cancel for started children, and reconciles the parent/campaign state. A failed
+Temporal call leaves the request pending for the next leased pass; no new child
+is dispatched after the intent is visible. The pass is bounded by the existing
+`APPSEA_CAMPAIGN_ORCHESTRATION_BATCH_SIZE` and emits no source content or
+caller secrets. One-source production run cancellation is outside this path.
+
 The direct filtered collection command uses the same service-principal
 boundary. Migration `0051` makes `pnpm worker:source:cfpb` reserve and consume
 the shared production workflow admission ledger immediately before the CFPB

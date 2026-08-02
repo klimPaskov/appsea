@@ -3,7 +3,7 @@
 - Status: active
 - Owner: main coding agent
 - Started: 2026-07-10
-- Current audit: [`production-readiness-audit-2026-08-02.md`](../../status/production-readiness-audit-2026-08-02.md)
+- Current audit: [`production-readiness-audit-2026-08-03.md`](../../status/production-readiness-audit-2026-08-03.md)
 
 ## Completed foundation
 
@@ -25,7 +25,7 @@ Status: production-shaped foundation implemented and validated locally; producti
 
 Implemented:
 
-- PostgreSQL 18 schema and sixty-nine forward, checksummed migrations
+- PostgreSQL 18 schema and seventy forward, checksummed migrations
 - normalized source, evidence, complaint, cluster, competitor, opportunity, score, report, plan, audit, cost, deletion, outbox, and lineage tables
 - no-login owner, separate migrator, and least-privilege runtime role contract
 - forced workspace RLS and transaction-scoped workspace context
@@ -285,6 +285,16 @@ enforced in the handler. Workflow starts, connector activation, policy
 changes, deletion, deployment, and credential operations remain outside MCP.
 The token lifecycle is API-only in this tranche; see
 [`mcp-agent-access.md`](../../runbooks/mcp-agent-access.md).
+
+Migration `0070_research_campaign_orchestration_cancellation.sql` adds an
+immutable owner/editor cancellation intent to multi-source orchestration. The
+private cancellation route commits the intent before a best-effort Temporal
+cancel, queued children are stopped transactionally, and the lease-backed
+worker retries started-child cancellation and reconciles the parent at a safe
+terminal boundary. Dispatching claims remain claim-owned until a workflow
+identity is recorded, preventing an orphan external start. One-source run
+cancellation, deployed scheduler/Temporal authorization, and crash-drill proof
+remain open.
 
 ### 2. Durable workflows
 

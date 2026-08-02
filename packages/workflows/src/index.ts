@@ -9,6 +9,7 @@ export {
   startProductionAnalysisWorkflow,
   prepareProductionCollectionWorkflowStart,
   productionCollectionIdempotencyDigest,
+  cancelProductionCollectionWorkflow,
   readProductionCollectionWorkflowStatus,
   startProductionCollectionWorkflow,
   type PreparedProductionAnalysisWorkflowStart,

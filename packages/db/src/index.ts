@@ -86,6 +86,8 @@ export {
   ResearchCampaignOrchestrationSourceError,
   ResearchCampaignOrchestrationStateError,
   campaignSourceIdempotencyKey,
+  type ResearchCampaignOrchestrationCancellationResult,
+  type ResearchCampaignOrchestrationCancellationTarget,
   type ResearchCampaignOrchestrationClaim,
   type ResearchCampaignOrchestrationDispatch,
   type ResearchCampaignOrchestrationFailure

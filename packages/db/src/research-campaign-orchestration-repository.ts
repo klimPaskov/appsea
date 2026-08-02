@@ -43,6 +43,9 @@ interface OrchestrationRow extends QueryResultRow {
   started_at: Date | string | null
   updated_at: Date | string
   finished_at: Date | string | null
+  cancellation_requested_at: Date | string | null
+  cancellation_requested_by: string | null
+  cancellation_request_id: string | null
 }
 
 interface OrchestrationSourceRow extends QueryResultRow {
@@ -136,6 +139,21 @@ export interface ResearchCampaignOrchestrationFailure {
   fence?: MaintenanceSchedulerFence
 }
 
+export interface ResearchCampaignOrchestrationCancellationResult {
+  orchestrationId: string
+  campaignId: string
+  state: 'requested' | 'already_terminal'
+  cancellationRequestedAt: string | null
+  activeWorkflowIds: string[]
+}
+
+export interface ResearchCampaignOrchestrationCancellationTarget {
+  workspaceId: string
+  orchestrationId: string
+  activeWorkflowIds: string[]
+  pendingSourcesCanceled: number
+}
+
 export class ResearchCampaignOrchestrationPermissionError extends Error {
   constructor() {
     super('The workspace role cannot manage a research campaign orchestration')
@@ -171,8 +189,8 @@ export class ResearchCampaignOrchestrationClaimLostError extends Error {
   }
 }
 
-function asIso(value: Date | string | null): string | null {
-  return value === null
+function asIso(value: Date | string | null | undefined): string | null {
+  return value === null || value === undefined
     ? null
     : value instanceof Date
       ? value.toISOString()
@@ -294,6 +312,7 @@ async function mapParent(
     startedAt: asIso(row.started_at),
     updatedAt: asIso(row.updated_at)!,
     finishedAt: asIso(row.finished_at),
+    cancellationRequestedAt: asIso(row.cancellation_requested_at),
     sources
   })
 }
@@ -308,7 +327,8 @@ async function readParentForUpdate(
             input_hash, requested_by_actor_type, requested_by_actor_id,
             analysis_seed_review_id, state, source_count, completed_source_count,
             failed_source_count, failure_code, failure_summary, requested_at,
-            started_at, updated_at, finished_at
+            started_at, updated_at, finished_at, cancellation_requested_at,
+            cancellation_requested_by, cancellation_request_id
        FROM appsea.research_campaign_orchestrations
       WHERE workspace_id = $1 AND orchestration_id = $2
       FOR UPDATE`,
@@ -424,7 +444,8 @@ export class PostgresResearchCampaignOrchestrationRepository {
                   input_hash, requested_by_actor_type, requested_by_actor_id,
                   analysis_seed_review_id, state, source_count, completed_source_count,
                   failed_source_count, failure_code, failure_summary, requested_at,
-                  started_at, updated_at, finished_at
+                  started_at, updated_at, finished_at, cancellation_requested_at,
+                  cancellation_requested_by, cancellation_request_id
              FROM appsea.research_campaign_orchestrations
             WHERE workspace_id = $1
               AND (orchestration_id = $2 OR idempotency_digest = $3)
@@ -640,7 +661,8 @@ export class PostgresResearchCampaignOrchestrationRepository {
                   input_hash, requested_by_actor_type, requested_by_actor_id,
                   analysis_seed_review_id, state, source_count, completed_source_count,
                   failed_source_count, failure_code, failure_summary, requested_at,
-                  started_at, updated_at, finished_at
+                  started_at, updated_at, finished_at, cancellation_requested_at,
+                  cancellation_requested_by, cancellation_request_id
              FROM appsea.research_campaign_orchestrations
             WHERE workspace_id = $1 AND orchestration_id = $2`,
           [parsedWorkspaceId, parsedOrchestrationId]
@@ -669,7 +691,8 @@ export class PostgresResearchCampaignOrchestrationRepository {
                   input_hash, requested_by_actor_type, requested_by_actor_id,
                   analysis_seed_review_id, state, source_count, completed_source_count,
                   failed_source_count, failure_code, failure_summary, requested_at,
-                  started_at, updated_at, finished_at
+                  started_at, updated_at, finished_at, cancellation_requested_at,
+                  cancellation_requested_by, cancellation_request_id
              FROM appsea.research_campaign_orchestrations
             WHERE workspace_id = $1 AND campaign_id = $2
             ORDER BY requested_at DESC, orchestration_id
@@ -682,6 +705,163 @@ export class PostgresResearchCampaignOrchestrationRepository {
     )
   }
 
+  /**
+   * Persist an owner/editor cancellation intent before touching Temporal.
+   * Already-started child workflow identities are returned for best-effort
+   * immediate cancellation; the maintenance worker retries them from the
+   * durable intent when the external service is unavailable.
+   */
+  async requestCancellationForUser(
+    userId: string,
+    workspaceId: string,
+    orchestrationId: string
+  ): Promise<ResearchCampaignOrchestrationCancellationResult | null> {
+    const parsedUserId = appseaIdentifierSchema.parse(userId)
+    const parsedWorkspaceId = appseaIdentifierSchema.parse(workspaceId)
+    const parsedOrchestrationId = appseaIdentifierSchema.parse(orchestrationId)
+    return withAuthenticatedWorkspaceTransaction(
+      this.pool,
+      parsedUserId,
+      parsedWorkspaceId,
+      async (client) => {
+        const role = await actorRole(client, parsedWorkspaceId, parsedUserId)
+        if (role !== 'owner' && role !== 'editor') {
+          throw new ResearchCampaignOrchestrationPermissionError()
+        }
+        const workspace = await client.query<{
+          fixture_only: boolean
+          visibility: string
+          status: string
+        }>(
+          `SELECT fixture_only, visibility, status
+             FROM appsea.workspaces
+            WHERE workspace_id = $1
+            FOR SHARE`,
+          [parsedWorkspaceId]
+        )
+        const workspaceRow = workspace.rows[0]
+        if (
+          !workspaceRow ||
+          workspaceRow.fixture_only ||
+          workspaceRow.visibility !== 'private' ||
+          workspaceRow.status !== 'active'
+        ) {
+          throw new ResearchCampaignOrchestrationPermissionError()
+        }
+
+        const parent = await readParentForUpdate(client, parsedWorkspaceId, parsedOrchestrationId)
+        if (!parent) return null
+        const terminal = ['completed', 'partial', 'failed', 'canceled'].includes(parent.state)
+        const activeWorkflowRows = await client.query<{ workflow_id: string }>(
+          `SELECT workflow_id
+             FROM appsea.research_campaign_orchestration_sources
+            WHERE workspace_id = $1
+              AND orchestration_id = $2
+              AND state = 'started'
+              AND workflow_id IS NOT NULL
+            ORDER BY source_id`,
+          [parsedWorkspaceId, parsedOrchestrationId]
+        )
+        const activeWorkflowIds = activeWorkflowRows.rows
+          .map((row) => row.workflow_id)
+          .filter((workflowId) => /^[a-z][a-z0-9_:-]{2,239}$/.test(workflowId))
+
+        if (terminal) {
+          return {
+            orchestrationId: parsedOrchestrationId,
+            campaignId: parent.campaign_id,
+            state: 'already_terminal',
+            cancellationRequestedAt: asIso(parent.cancellation_requested_at),
+            activeWorkflowIds: []
+          }
+        }
+
+        const requestId = `cancel:orchestration:${contentHash({
+          workspaceId: parsedWorkspaceId,
+          orchestrationId: parsedOrchestrationId
+        }).slice(0, 48)}`
+        const updated = await client.query<OrchestrationRow>(
+          `WITH clock AS (SELECT clock_timestamp() AS now)
+           UPDATE appsea.research_campaign_orchestrations parent
+              SET cancellation_requested_at = COALESCE(parent.cancellation_requested_at, clock.now),
+                  cancellation_requested_by = COALESCE(parent.cancellation_requested_by, $3),
+                  cancellation_request_id = COALESCE(parent.cancellation_request_id, $4),
+                  updated_at = GREATEST(parent.updated_at, clock.now)
+             FROM clock
+            WHERE parent.workspace_id = $1
+              AND parent.orchestration_id = $2
+              AND parent.state IN ('queued', 'running')
+            RETURNING parent.workspace_id, parent.orchestration_id, parent.campaign_id,
+                      parent.idempotency_digest, parent.input_hash,
+                      parent.requested_by_actor_type, parent.requested_by_actor_id,
+                      parent.analysis_seed_review_id, parent.state,
+                      parent.source_count, parent.completed_source_count,
+                      parent.failed_source_count, parent.failure_code,
+                      parent.failure_summary, parent.requested_at, parent.started_at,
+                      parent.updated_at, parent.finished_at,
+                      parent.cancellation_requested_at,
+                      parent.cancellation_requested_by,
+                      parent.cancellation_request_id`,
+          [parsedWorkspaceId, parsedOrchestrationId, parsedUserId, requestId]
+        )
+        const updatedParent = updated.rows[0] ?? parent
+        if (!parent.cancellation_requested_at && updated.rows[0]) {
+          const metadata = JSON.stringify({
+            orchestrationId: parsedOrchestrationId,
+            campaignId: parent.campaign_id,
+            activeWorkflowCount: activeWorkflowIds.length
+          })
+          await client.query(
+            `INSERT INTO appsea.audit_events
+               (workspace_id, audit_event_id, actor_type, actor_id, action,
+                target_type, target_id, correlation_id, metadata, occurred_at)
+             VALUES ($1, $2, 'user', $3,
+                     'research.campaign_orchestration.cancellation_requested',
+                     'research_campaign_orchestration', $4, $4, $5::jsonb,
+                     $6)
+             ON CONFLICT DO NOTHING`,
+            [
+              parsedWorkspaceId,
+              `audit:campaign-orchestration-cancel:${requestId}`,
+              parsedUserId,
+              parsedOrchestrationId,
+              metadata,
+              updatedParent.cancellation_requested_at
+            ]
+          )
+          await client.query(
+            `INSERT INTO appsea.outbox_events
+               (workspace_id, outbox_event_id, event_type, aggregate_type,
+                aggregate_id, schema_version, correlation_id, payload, occurred_at)
+             VALUES ($1, $2, 'research.campaign_orchestration.cancellation_requested',
+                     'research_campaign_orchestration', $3,
+                     'campaign-orchestration-v1', $3, $4::jsonb, $5)
+             ON CONFLICT DO NOTHING`,
+            [
+              parsedWorkspaceId,
+              `outbox:campaign-orchestration-cancel:${requestId}`,
+              parsedOrchestrationId,
+              JSON.stringify({
+                workspaceId: parsedWorkspaceId,
+                campaignId: parent.campaign_id,
+                orchestrationId: parsedOrchestrationId
+              }),
+              updatedParent.cancellation_requested_at
+            ]
+          )
+        }
+        return {
+          orchestrationId: parsedOrchestrationId,
+          campaignId: updatedParent.campaign_id,
+          state: 'requested',
+          cancellationRequestedAt: asIso(updatedParent.cancellation_requested_at),
+          activeWorkflowIds
+        }
+      },
+      { isolationLevel: 'SERIALIZABLE' }
+    )
+  }
+
   async listWorkspaceIdsForService(): Promise<string[]> {
     return withDatabaseTransaction(
       this.pool,
@@ -690,6 +870,92 @@ export class PostgresResearchCampaignOrchestrationRepository {
           `SELECT workspace_id FROM appsea.list_active_workspaces_for_maintenance()`
         )
         return result.rows.map((row) => appseaIdentifierSchema.parse(row.workspace_id))
+      },
+      { readOnly: true }
+    )
+  }
+
+  /** Apply the durable cancellation intent to undispatched children. */
+  async prepareCancellationForService(
+    workspaceId: string,
+    orchestrationId: string,
+    fence?: MaintenanceSchedulerFence
+  ): Promise<ResearchCampaignOrchestrationCancellationTarget | null> {
+    const parsedWorkspaceId = appseaIdentifierSchema.parse(workspaceId)
+    const parsedOrchestrationId = appseaIdentifierSchema.parse(orchestrationId)
+    return withServiceWorkspaceTransaction(
+      this.pool,
+      parsedWorkspaceId,
+      async (client) => {
+        const parent = await readParentForUpdate(client, parsedWorkspaceId, parsedOrchestrationId)
+        if (
+          !parent ||
+          !parent.cancellation_requested_at ||
+          ['completed', 'partial', 'failed', 'canceled'].includes(parent.state)
+        ) {
+          return null
+        }
+        const pending = await client.query(
+          `WITH clock AS (SELECT clock_timestamp() AS now)
+           UPDATE appsea.research_campaign_orchestration_sources child
+              SET state = 'canceled',
+                  claim_owner = NULL,
+                  claim_token = NULL,
+                  claim_until = NULL,
+                  next_attempt_at = NULL,
+                  failure_code = 'canceled',
+                  failure_summary = 'The source collection was canceled by a workspace member.',
+                  updated_at = clock.now,
+                  finished_at = clock.now
+             FROM clock
+            WHERE child.workspace_id = $1
+              AND child.orchestration_id = $2
+              AND child.state = 'queued'`,
+          [parsedWorkspaceId, parsedOrchestrationId]
+        )
+        const active = await client.query<{ workflow_id: string }>(
+          `SELECT workflow_id
+             FROM appsea.research_campaign_orchestration_sources
+            WHERE workspace_id = $1
+              AND orchestration_id = $2
+              AND state = 'started'
+              AND workflow_id IS NOT NULL
+            ORDER BY source_id`,
+          [parsedWorkspaceId, parsedOrchestrationId]
+        )
+        return {
+          workspaceId: parsedWorkspaceId,
+          orchestrationId: parsedOrchestrationId,
+          activeWorkflowIds: active.rows
+            .map((row) => row.workflow_id)
+            .filter((workflowId) => /^[a-z][a-z0-9_:-]{2,239}$/.test(workflowId)),
+          pendingSourcesCanceled: pending.rowCount ?? 0
+        }
+      },
+      { maintenanceFence: fence }
+    )
+  }
+
+  async listCancellationTargetsForService(workspaceId: string, limit = 100): Promise<string[]> {
+    const parsedWorkspaceId = appseaIdentifierSchema.parse(workspaceId)
+    if (!Number.isSafeInteger(limit) || limit < 1 || limit > 100) {
+      throw new Error('Campaign cancellation reconciliation limit must be between 1 and 100')
+    }
+    return withServiceWorkspaceTransaction(
+      this.pool,
+      parsedWorkspaceId,
+      async (client) => {
+        const result = await client.query<{ orchestration_id: string }>(
+          `SELECT orchestration_id
+             FROM appsea.research_campaign_orchestrations
+            WHERE workspace_id = $1
+              AND cancellation_requested_at IS NOT NULL
+              AND state IN ('queued', 'running')
+            ORDER BY cancellation_requested_at, orchestration_id
+            LIMIT $2`,
+          [parsedWorkspaceId, limit]
+        )
+        return result.rows.map((row) => appseaIdentifierSchema.parse(row.orchestration_id))
       },
       { readOnly: true }
     )
@@ -793,6 +1059,7 @@ export class PostgresResearchCampaignOrchestrationRepository {
               AND child.attempt_count < 10
               AND (child.next_attempt_at IS NULL OR child.next_attempt_at <= clock_timestamp())
               AND parent.state IN ('queued', 'running')
+              AND parent.cancellation_requested_at IS NULL
               AND campaign.synthetic = false
               AND campaign.state IN ('queued', 'running')
             ORDER BY child.next_attempt_at NULLS FIRST, child.updated_at, child.source_id
@@ -1023,6 +1290,26 @@ export class PostgresResearchCampaignOrchestrationRepository {
         )
         for (const child of children.rows) {
           const workflowState = child.source_state
+          if (parent.cancellation_requested_at && child.state === 'queued') {
+            await client.query(
+              `WITH clock AS (SELECT clock_timestamp() AS now)
+               UPDATE appsea.research_campaign_orchestration_sources child
+                  SET state = 'canceled',
+                      claim_owner = NULL, claim_token = NULL, claim_until = NULL,
+                      next_attempt_at = NULL,
+                      failure_code = 'canceled',
+                      failure_summary = 'The source collection was canceled by a workspace member.',
+                      updated_at = clock.now,
+                      finished_at = clock.now
+                 FROM clock
+                WHERE child.workspace_id = $1
+                  AND child.orchestration_id = $2
+                  AND child.source_id = $3
+                  AND child.state = 'queued'`,
+              [parsedWorkspaceId, parsedOrchestrationId, child.source_id]
+            )
+            continue
+          }
           if (
             !workflowState ||
             ['completed', 'failed', 'canceled', 'budget_rejected'].includes(child.state)
@@ -1118,23 +1405,32 @@ export class PostgresResearchCampaignOrchestrationRepository {
         const active = Number(counts.rows[0]?.active_count ?? 0)
         const terminal = active === 0
         const state = terminal
-          ? failed === 0
-            ? 'completed'
-            : completed > 0
-              ? 'partial'
-              : 'failed'
+          ? parent.cancellation_requested_at
+            ? 'canceled'
+            : failed === 0
+              ? 'completed'
+              : completed > 0
+                ? 'partial'
+                : 'failed'
           : completed > 0 || failed > 0
             ? 'running'
             : parent.state === 'running'
               ? 'running'
               : 'queued'
-        const failureCode = state === 'partial' || state === 'failed' ? 'child_failed' : null
-        const failureSummary =
-          state === 'partial'
-            ? 'One or more source collections failed; completed source results remain inspectable.'
-            : state === 'failed'
-              ? 'Every source collection failed before producing a complete campaign result.'
+        const failureCode =
+          state === 'canceled'
+            ? 'canceled'
+            : state === 'partial' || state === 'failed'
+              ? 'child_failed'
               : null
+        const failureSummary =
+          state === 'canceled'
+            ? 'The campaign collection was canceled by a workspace member.'
+            : state === 'partial'
+              ? 'One or more source collections failed; completed source results remain inspectable.'
+              : state === 'failed'
+                ? 'Every source collection failed before producing a complete campaign result.'
+                : null
         await client.query(
           `WITH clock AS (SELECT clock_timestamp() AS now)
            UPDATE appsea.research_campaign_orchestrations parent

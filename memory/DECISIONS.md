@@ -337,6 +337,14 @@ redaction, and approved report/plan state. Workflow, activation, policy,
 deletion, deployment, and credential tools remain outside MCP; deployment
 secret storage and rate limiting remain release work.
 
+## 2026-08-03: Persist campaign cancellation before calling Temporal
+
+Migration `0070` records immutable owner/editor cancellation intent before
+Temporal. Queued children stop; dispatching claims stay owned until
+their workflow identity is recorded, preventing orphan starts. Started children
+retry cancellation through the leased worker, and the parent becomes terminal
+only after reconciliation. Intent remains durable when Temporal is unavailable.
+
 ## 2026-08-02: Reuse the recomputation queue for complaint corrections
 
 Correction invalidation must not create a second repair architecture or call
