@@ -21,6 +21,9 @@ description: Use when normalizing, deduplicating, classifying, clustering, or cu
     complaint before reports or opportunity scoring consume derived fields.
 12. Keep substitutes and competitors empty unless supported by explicit
     evidence; record unresolved entity types instead of inferring them.
+13. Treat editor/owner corrections as derived-only immutable revisions: hash
+    the prior and next snapshots, preserve source/provenance, invalidate stale
+    downstream outputs, and require a new reviewed analysis before publication.
 
 A cluster must not merge different jobs merely because they mention the same product. A complaint count must not count copies as independent demand.
 
@@ -34,4 +37,5 @@ unresolved states for every retained complaint.
 
 Each cluster has a clear title, summary, observation ids, unique count, source count, confidence, and unresolved ambiguity. Each retained complaint also has a
 replayable, provenance-linked analysis snapshot; synthetic fixtures remain marked
-as synthetic and unresolved entity types remain visible.
+as synthetic and unresolved entity types remain visible. Corrections have an
+immutable history and never rewrite source evidence.

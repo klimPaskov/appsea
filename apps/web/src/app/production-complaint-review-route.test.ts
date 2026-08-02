@@ -164,4 +164,52 @@ describe('production complaint review route', () => {
     )
     expect(notFound.status).toBe(404)
   })
+
+  it('accepts derived-only corrections and returns invalidation counts', async () => {
+    mocks.updateComplaintReview.mockResolvedValue({
+      complaintId: 'complaint:one',
+      reviewState: 'corrected',
+      invalidatedAnalysisCount: 1,
+      invalidatedOpportunityCount: 1
+    })
+    const response = await PATCH(
+      new Request('https://appsea.example', {
+        method: 'PATCH',
+        body: JSON.stringify({
+          action: 'corrected',
+          correctionId: 'correction:analysis:one',
+          analysisCorrection: { severity: 5 }
+        }),
+        headers: { 'content-type': 'application/json' }
+      }),
+      {
+        params: Promise.resolve({
+          workspaceId: 'workspace:one',
+          runId: 'run:one',
+          complaintId: 'complaint:one'
+        })
+      }
+    )
+
+    expect(response.status).toBe(200)
+    await expect(response.json()).resolves.toEqual({
+      data: {
+        complaintId: 'complaint:one',
+        reviewState: 'corrected',
+        invalidatedAnalysisCount: 1,
+        invalidatedOpportunityCount: 1
+      }
+    })
+    expect(mocks.updateComplaintReview).toHaveBeenCalledWith(
+      'user:owner',
+      'workspace:one',
+      'run:one',
+      'complaint:one',
+      {
+        action: 'corrected',
+        correctionId: 'correction:analysis:one',
+        analysisCorrection: { severity: 5 }
+      }
+    )
+  })
 })

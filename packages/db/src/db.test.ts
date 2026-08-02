@@ -73,7 +73,8 @@ describe('database foundation', () => {
       '0057',
       '0058',
       '0059',
-      '0060'
+      '0060',
+      '0061'
     ])
     expect(migrations[0]?.checksum).toMatch(/^[a-f0-9]{64}$/)
     expect(migrations[0]?.sql).toContain('CREATE TABLE appsea.evidence_records')
@@ -177,6 +178,9 @@ describe('database foundation', () => {
     )
     const sourceCanonicalLocatorMigration = migrations.find(
       (migration) => migration.version === '0060'
+    )
+    const complaintAnalysisCorrectionMigration = migrations.find(
+      (migration) => migration.version === '0061'
     )
     expect(authMigration?.sql).toContain('CREATE TABLE appsea.users')
     expect(authMigration?.sql).toContain('CREATE TABLE appsea.auth_sessions')
@@ -560,6 +564,25 @@ describe('database foundation', () => {
     expect(sourceCanonicalLocatorMigration?.sql).toContain('source_items_canonical_locator_check')
     expect(sourceCanonicalLocatorMigration?.sql).toContain(
       "'^https?://[^[:space:]/]+(/[^[:space:]]*)?$'"
+    )
+    expect(complaintAnalysisCorrectionMigration?.sql).toContain(
+      'CREATE TABLE appsea.complaint_analysis_corrections'
+    )
+    expect(complaintAnalysisCorrectionMigration?.sql).toContain(
+      'CREATE OR REPLACE FUNCTION appsea.apply_complaint_analysis_correction'
+    )
+    expect(complaintAnalysisCorrectionMigration?.sql).toContain(
+      'enforce_complaint_review_transition_v2'
+    )
+    expect(complaintAnalysisCorrectionMigration?.sql).toContain("NEW.review_state = 'corrected'")
+    expect(complaintAnalysisCorrectionMigration?.sql).toContain(
+      'GRANT EXECUTE ON FUNCTION appsea.apply_complaint_analysis_correction'
+    )
+    expect(complaintAnalysisCorrectionMigration?.sql).toContain(
+      "p_next_snapshot->>'reviewState' IS DISTINCT FROM 'corrected'"
+    )
+    expect(complaintAnalysisCorrectionMigration?.sql).toContain(
+      'REVOKE ALL ON appsea.complaint_analysis_corrections FROM PUBLIC, appsea_service'
     )
   })
 

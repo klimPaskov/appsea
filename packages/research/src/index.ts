@@ -275,7 +275,19 @@ export function buildProductionResearchArtifact(
   if (complaints.length === 0) {
     throw new Error('Production analysis requires at least one retained complaint')
   }
-  const analyses = analyzeComplaints(complaints)
+  const providedAnalyses = parsed.analyses ?? []
+  const providedByComplaintId = new Map(
+    providedAnalyses.map((analysis) => [analysis.complaintId, analysis])
+  )
+  const analyses = providedAnalyses.length
+    ? complaints.map((complaint) => {
+        const analysis = providedByComplaintId.get(complaint.id)
+        if (!analysis) {
+          throw new Error(`Reviewed analysis snapshot is missing for complaint ${complaint.id}`)
+        }
+        return analysis
+      })
+    : analyzeComplaints(complaints)
   const clusters = clusterComplaints(complaints, { mode: 'production' })
   const complaintIds = clusters.flatMap((cluster) => cluster.complaintIds)
   const seed = parsed.opportunitySeed.seed

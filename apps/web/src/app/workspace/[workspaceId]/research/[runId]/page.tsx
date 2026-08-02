@@ -148,6 +148,7 @@ export default async function ProductionCollectionPage({
                 runId={parsedRunId.data}
                 complaintId={evidence.complaintId}
                 initialState={evidence.reviewState}
+                analysis={evidence.analysis}
               />
             </li>
           ))}

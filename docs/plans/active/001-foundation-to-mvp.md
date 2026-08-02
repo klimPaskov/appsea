@@ -25,7 +25,7 @@ Status: production-shaped foundation implemented and validated locally; producti
 
 Implemented:
 
-- PostgreSQL 18 schema and sixty forward, checksummed migrations
+- PostgreSQL 18 schema and sixty-one forward, checksummed migrations
 - normalized source, evidence, complaint, cluster, competitor, opportunity, score, report, plan, audit, cost, deletion, outbox, and lineage tables
 - no-login owner, separate migrator, and least-privilege runtime role contract
 - forced workspace RLS and transaction-scoped workspace context
@@ -136,6 +136,15 @@ Migration `0060_source_canonical_locator_integrity.sql` adds a database-level
 HTTP(S) host/path check for persisted attribution locators. The TypeScript
 contract remains the primary validator, while the constraint is defense in
 depth for direct database writers.
+
+Migration `0061_complaint_analysis_corrections.sql` adds an immutable,
+editor/owner correction history for derived complaint analysis. The correction
+function keeps source evidence/provenance immutable, invalidates active
+analysis/opportunity projections, and requires an explicit new reviewed
+analysis before stale report/plan outputs can reappear. The private evidence
+view exposes a compact JSON correction editor; the next analysis input carries
+the corrected snapshot. A field-by-field form and automatic recomputation
+remain follow-up work.
 
 Migration `0054_source_policy_review_integrity.sql` binds new source-policy
 approvals to a lowercase reviewer identity, an independent review role, and an
@@ -339,7 +348,7 @@ evidence to re-cluster and reactivate only after its new output is linked; it
 does not automatically re-collect deleted evidence. Migration `0037` queues a
 recovery analysis from that active evidence and waits for an approved immutable
 seed before dispatch. The private
-review-start route now reconstructs the confirmed collection subset and starts
+review-start route now reconstructs the confirmed/corrected collection subset and starts
 the durable workflow explicitly; the local adapter does not
 authorize a production source activation. Stack Exchange remains unregistered
 and pending independent attribution, privacy, deletion, and commercial-use
@@ -381,7 +390,8 @@ generation, stored report/plan reads, report approval governance, approved JSON
 export, a separate approved-source collection evidence view, durable production
 analysis/object references, active-output private reads, and a
 production-shaped report/package composition checkpoint, and a persisted
-versioned complaint classification/entity-resolution checkpoint are implemented;
+versioned complaint classification/entity-resolution checkpoint and derived
+correction invalidation boundary are implemented;
 cloud object storage, recomputation alerting, and export retention remain. Report and plan
 approval/export now hydrate validated object-backed production payloads before
 applying their separate governance boundaries. Production analysis read models

@@ -367,6 +367,7 @@ interface EvidenceRow extends QueryResultRow {
   feature_candidate: string
   category_candidate: string
   analysis_snapshot: unknown
+  review_state: 'unreviewed' | 'confirmed' | 'corrected' | 'rejected'
   synthetic: boolean
   redacted: boolean
   allowed_representation: WorkspaceEvidenceReadModel['allowedRepresentation']
@@ -1776,6 +1777,7 @@ export class PostgresAuthRepository {
           const result = await client.query<WorkspaceReportRow>(
             `${workspaceReportSelect}
      WHERE report.workspace_id = $1 AND report.report_id = $2
+       AND (analysis.analysis_run_id IS NULL OR analysis.availability_state = 'active')
      FOR UPDATE OF report`,
             [parsedWorkspaceId, parsedReportId]
           )
@@ -1805,7 +1807,8 @@ export class PostgresAuthRepository {
           if (!updatedRow) throw new WorkspaceReportNotFoundError()
           const refreshed = await client.query<WorkspaceReportRow>(
             `${workspaceReportSelect}
-       WHERE report.workspace_id = $1 AND report.report_id = $2`,
+       WHERE report.workspace_id = $1 AND report.report_id = $2
+         AND (analysis.analysis_run_id IS NULL OR analysis.availability_state = 'active')`,
             [parsedWorkspaceId, parsedReportId]
           )
           const refreshedRow = refreshed.rows[0]
@@ -1838,7 +1841,8 @@ export class PostgresAuthRepository {
           `${workspaceReportSelect}
           WHERE report.workspace_id = $1
             AND report.report_id = $2
-            AND report.deletion_state = 'active'`,
+            AND report.deletion_state = 'active'
+            AND (analysis.analysis_run_id IS NULL OR analysis.availability_state = 'active')`,
           [parsedWorkspaceId, parsedReportId]
         )
         const row = result.rows[0]
@@ -1888,6 +1892,7 @@ export class PostgresAuthRepository {
           const result = await client.query<WorkspacePlanRow>(
             `${workspacePlanSelect}
      WHERE plan.workspace_id = $1 AND plan.plan_package_id = $2
+       AND (analysis.analysis_run_id IS NULL OR analysis.availability_state = 'active')
      FOR UPDATE OF plan`,
             [parsedWorkspaceId, parsedPlanPackageId]
           )
@@ -1930,7 +1935,8 @@ export class PostgresAuthRepository {
           )
           const refreshed = await client.query<WorkspacePlanRow>(
             `${workspacePlanSelect}
-       WHERE plan.workspace_id = $1 AND plan.plan_package_id = $2`,
+       WHERE plan.workspace_id = $1 AND plan.plan_package_id = $2
+         AND (analysis.analysis_run_id IS NULL OR analysis.availability_state = 'active')`,
             [parsedWorkspaceId, parsedPlanPackageId]
           )
           const refreshedRow = refreshed.rows[0]
@@ -1963,7 +1969,8 @@ export class PostgresAuthRepository {
           `${workspacePlanSelect}
           WHERE plan.workspace_id = $1
             AND plan.plan_package_id = $2
-            AND plan.deletion_state = 'active'`,
+            AND plan.deletion_state = 'active'
+            AND (analysis.analysis_run_id IS NULL OR analysis.availability_state = 'active')`,
           [parsedWorkspaceId, parsedPlanPackageId]
         )
         const row = result.rows[0]
@@ -2155,7 +2162,8 @@ export class PostgresAuthRepository {
               evidence.language, evidence.product_candidate, evidence.company_candidate,
               evidence.feature_candidate, evidence.category_candidate, evidence.synthetic,
               evidence.redacted, evidence.allowed_representation, source_item.captured_at,
-              source_item.published_at, complaint.analysis_snapshot
+              source_item.published_at, complaint.review_state,
+              complaint.analysis_snapshot
          FROM appsea.research_run_source_items run_item
          JOIN appsea.evidence_records evidence
            ON evidence.workspace_id = run_item.workspace_id
@@ -2185,7 +2193,10 @@ export class PostgresAuthRepository {
         company: row.company_candidate,
         feature: row.feature_candidate,
         category: row.category_candidate,
-        analysis: complaintAnalysisSchema.parse(row.analysis_snapshot),
+        analysis: complaintAnalysisSchema.parse({
+          ...complaintAnalysisSchema.parse(row.analysis_snapshot),
+          reviewState: row.review_state
+        }),
         synthetic: row.synthetic,
         redacted: row.redacted,
         allowedRepresentation: row.allowed_representation,
@@ -2205,6 +2216,7 @@ export class PostgresAuthRepository {
        WHERE report.workspace_id = $1 AND report.opportunity_id = $2
          AND report.approval_state <> 'withdrawn'
          AND report.deletion_state = 'active'
+         AND (analysis.analysis_run_id IS NULL OR analysis.availability_state = 'active')
        ORDER BY report.generated_at DESC LIMIT 1`,
       [workspaceId, opportunityId]
     )
@@ -2221,6 +2233,7 @@ export class PostgresAuthRepository {
       `${workspacePlanSelect}
        WHERE plan.workspace_id = $1 AND plan.opportunity_id = $2
          AND plan.deletion_state = 'active'
+         AND (analysis.analysis_run_id IS NULL OR analysis.availability_state = 'active')
        ORDER BY plan.generated_at DESC LIMIT 1`,
       [workspaceId, opportunityId]
     )

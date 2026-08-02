@@ -253,6 +253,40 @@ export const complaintAnalysisSchema = z
   })
   .strict()
 
+/**
+ * Human edits may change only the derived complaint interpretation. Source
+ * evidence, provenance, policy flags, and derivation metadata remain owned by
+ * the collection/analysis pipeline. The complete snapshot is rebuilt and
+ * validated at the repository boundary before it is persisted.
+ */
+export const complaintAnalysisCorrectionSchema = z
+  .object({
+    classification: complaintClassificationSchema.optional(),
+    complaintType: complaintTypeSchema.optional(),
+    problemStatement: z.string().min(1).max(20_000).optional(),
+    expectedOutcome: z.string().min(1).max(2_000).nullable().optional(),
+    observedOutcome: z.string().min(1).max(20_000).optional(),
+    consequence: z.string().min(1).max(2_000).nullable().optional(),
+    affectedWorkflow: z.string().min(1).max(2_000).optional(),
+    workaround: z.string().min(1).max(2_000).nullable().optional(),
+    featureMentions: z.array(z.string().min(1).max(240)).max(50).optional(),
+    userSegmentHints: z.array(z.string().min(1).max(240)).max(50).optional(),
+    severity: z.number().int().min(0).max(5).optional(),
+    recurrence: z.enum(['none', 'occasional', 'repeated', 'persistent', 'unknown']).optional(),
+    switchingIntent: z.enum(['none', 'possible', 'explicit', 'unknown']).optional(),
+    paymentSignal: z.enum(['none', 'weak', 'explicit', 'unknown']).optional(),
+    actionabilityProbability: z.number().min(0).max(1).optional(),
+    classificationConfidence: z.number().min(0).max(1).optional(),
+    entityConfidence: z.number().min(0).max(1).optional(),
+    manipulationRisk: z.number().min(0).max(1).optional(),
+    piiFlags: z.array(z.string().min(1).max(120)).max(50).optional(),
+    entities: complaintEntityResolutionSchema.optional()
+  })
+  .strict()
+  .refine((value) => Object.keys(value).length > 0, {
+    message: 'At least one derived analysis field must be corrected'
+  })
+
 export const complaintClusterSchema = z.object({
   id: z.string().min(1),
   title: z.string().min(1),
@@ -1688,7 +1722,9 @@ export const productionCollectionPersistenceInputSchema = z
 /**
  * Input to the non-fixture analysis composition stage. This contract is
  * deliberately separate from the collection read model so query and policy
- * provenance cannot be reconstructed by guessing at a later stage.
+ * provenance cannot be reconstructed by guessing at a later stage. When
+ * present, `analyses` are the reviewed derived snapshots from the collection
+ * boundary, including any human corrections.
  */
 export const productionAnalysisInputSchema = z
   .object({
@@ -1700,6 +1736,7 @@ export const productionAnalysisInputSchema = z
     request: productionCollectionRequestSchema,
     policySnapshot: productionPolicySnapshotSchema,
     complaints: z.array(productionAnalysisComplaintSchema).max(5_000),
+    analyses: z.array(complaintAnalysisSchema).max(5_000).optional(),
     deletions: z.array(sourceDeletionEventSchema).max(5_000),
     coverageGaps: z.array(z.string().max(500)).max(500),
     warnings: z.array(z.string().max(500)).max(500),
@@ -1805,6 +1842,28 @@ export const productionAnalysisInputSchema = z
         )
       }
     })
+    if (input.analyses !== undefined) {
+      const complaintIds = new Set(input.complaints.map((complaint) => complaint.id))
+      const analysisIds = input.analyses.map((analysis) => analysis.complaintId)
+      if (
+        input.analyses.length !== complaintIds.size ||
+        new Set(analysisIds).size !== analysisIds.length ||
+        !analysisIds.every((complaintId) => complaintIds.has(complaintId))
+      ) {
+        addIssue(
+          ['analyses'],
+          'Reviewed analysis snapshots must cover each retained complaint exactly once'
+        )
+      }
+      input.analyses.forEach((analysis, index) => {
+        if (!['confirmed', 'corrected'].includes(analysis.reviewState)) {
+          addIssue(
+            ['analyses', index, 'reviewState'],
+            'Production analysis snapshots must be confirmed or corrected'
+          )
+        }
+      })
+    }
     input.deletions.forEach((deletion, index) => {
       if (deletion.sourceId !== input.request.sourceId) {
         addIssue(['deletions', index, 'sourceId'], 'Deletion source must match the request')
@@ -2237,6 +2296,7 @@ export const productionCollectionAnalysisSourceSchema = z
     runId: appseaIdentifierSchema,
     policySnapshot: productionPolicySnapshotSchema,
     complaints: z.array(productionAnalysisComplaintSchema).max(5_000),
+    analyses: z.array(complaintAnalysisSchema).max(5_000).optional(),
     deletions: z.array(sourceDeletionEventSchema).max(5_000),
     coverageGaps: z.array(z.string().max(500)).max(500),
     warnings: z.array(z.string().max(500)).max(500)
@@ -3656,18 +3716,47 @@ export const workspaceEvidenceReadModelSchema = z
   })
   .strict()
 
-export const workspaceComplaintReviewActionSchema = z.enum(['confirmed', 'rejected'])
+export const workspaceComplaintReviewActionSchema = z.enum(['confirmed', 'corrected', 'rejected'])
 
 export const workspaceComplaintReviewInputSchema = z
   .object({
-    action: workspaceComplaintReviewActionSchema
+    action: workspaceComplaintReviewActionSchema,
+    correctionId: appseaIdentifierSchema.optional(),
+    analysisCorrection: complaintAnalysisCorrectionSchema.optional()
   })
   .strict()
+  .superRefine((value, context) => {
+    if (value.action === 'corrected') {
+      if (!value.correctionId) {
+        context.addIssue({
+          code: 'custom',
+          path: ['correctionId'],
+          message: 'A correction ID is required for a corrected analysis'
+        })
+      }
+      if (!value.analysisCorrection) {
+        context.addIssue({
+          code: 'custom',
+          path: ['analysisCorrection'],
+          message: 'Derived analysis fields are required for a correction'
+        })
+      }
+    } else if (value.correctionId || value.analysisCorrection) {
+      context.addIssue({
+        code: 'custom',
+        path: ['analysisCorrection'],
+        message: 'Analysis corrections require the corrected action'
+      })
+    }
+  })
 
 export const workspaceComplaintReviewReadModelSchema = z
   .object({
     complaintId: appseaIdentifierSchema,
-    reviewState: complaintReviewStateSchema
+    reviewState: complaintReviewStateSchema,
+    analysis: complaintAnalysisSchema.optional(),
+    invalidatedAnalysisCount: z.number().int().nonnegative().optional(),
+    invalidatedOpportunityCount: z.number().int().nonnegative().optional()
   })
   .strict()
 
@@ -3751,6 +3840,7 @@ export type ComplaintType = z.infer<typeof complaintTypeSchema>
 export type ComplaintEntityReference = z.infer<typeof complaintEntityReferenceSchema>
 export type ComplaintEntityResolution = z.infer<typeof complaintEntityResolutionSchema>
 export type ComplaintAnalysis = z.infer<typeof complaintAnalysisSchema>
+export type ComplaintAnalysisCorrection = z.infer<typeof complaintAnalysisCorrectionSchema>
 export type ComplaintCluster = z.infer<typeof complaintClusterSchema>
 export type Competitor = z.infer<typeof competitorSchema>
 export type ScoreFactors = z.infer<typeof scoreFactorsSchema>

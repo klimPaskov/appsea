@@ -51,6 +51,8 @@ import {
   sourcePolicySchema,
   sourcePolicyApprovalInputSchema,
   workspaceSourceReadModelSchema,
+  complaintAnalysisCorrectionSchema,
+  workspaceComplaintReviewInputSchema,
   sourceMaintenanceInputSchema,
   sourceMaintenanceResultSchema,
   maintenanceSchedulerNameSchema,
@@ -1074,6 +1076,67 @@ describe('contracts', () => {
       allowedRepresentation: 'fixture'
     })
     expect(result.success).toBe(false)
+  })
+
+  it('keeps complaint-analysis corrections derived-only and idempotency-bound', () => {
+    const correction = {
+      classification: 'complaint' as const,
+      complaintType: 'workflow_gap' as const,
+      severity: 4,
+      entities: {
+        product: {
+          entityType: 'product' as const,
+          surfaceText: 'TeamMail',
+          canonicalName: 'TeamMail',
+          confidence: 0.98,
+          resolution: 'exact' as const,
+          evidence: 'source-field' as const
+        },
+        company: {
+          entityType: 'company' as const,
+          surfaceText: 'Synthetic Mail Co',
+          canonicalName: 'Synthetic Mail Co',
+          confidence: 0.98,
+          resolution: 'exact' as const,
+          evidence: 'source-field' as const
+        },
+        feature: {
+          entityType: 'feature' as const,
+          surfaceText: 'shared inbox assignment',
+          canonicalName: 'shared inbox assignment',
+          confidence: 0.9,
+          resolution: 'normalized' as const,
+          evidence: 'source-context' as const
+        },
+        substitutes: [],
+        competitors: [],
+        unresolvedTypes: ['substitute', 'competitor'] as const
+      }
+    }
+    expect(complaintAnalysisCorrectionSchema.safeParse(correction).success).toBe(true)
+    expect(
+      workspaceComplaintReviewInputSchema.safeParse({
+        action: 'corrected',
+        correctionId: 'correction:analysis:one',
+        analysisCorrection: correction
+      }).success
+    ).toBe(true)
+    expect(
+      workspaceComplaintReviewInputSchema.safeParse({
+        action: 'corrected',
+        analysisCorrection: correction
+      }).success
+    ).toBe(false)
+    expect(
+      workspaceComplaintReviewInputSchema.safeParse({
+        action: 'confirmed',
+        correctionId: 'correction:analysis:one',
+        analysisCorrection: correction
+      }).success
+    ).toBe(false)
+    expect(
+      complaintAnalysisCorrectionSchema.safeParse({ text: 'raw source content' }).success
+    ).toBe(false)
   })
 
   it('retains an optional canonical source locator for attribution', () => {

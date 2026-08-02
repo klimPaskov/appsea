@@ -116,7 +116,7 @@ export function createProductionAnalysisRecomputeDispatcher(
       }
       const failureCode = waitingForEvidence ? 'analysis_not_ready' : 'recompute_dispatch_failed'
       const failureSummary = waitingForEvidence
-        ? 'The collection needs confirmed, active, policy-allowed evidence before repair can start.'
+        ? 'The collection needs confirmed or corrected, active, policy-allowed evidence before repair can start.'
         : 'The deletion-triggered analysis repair could not be dispatched.'
       const retry = await recomputations.reschedule(
         claimed.workspaceId,

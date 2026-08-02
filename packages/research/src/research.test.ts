@@ -7,7 +7,7 @@ import {
   clusterComplaints,
   deduplicateComplaints
 } from './index'
-import { productionAnalysisInputSchema } from '@appsea/contracts'
+import { complaintAnalysisSchema, productionAnalysisInputSchema } from '@appsea/contracts'
 
 const complaint = {
   id: 'c1',
@@ -283,6 +283,29 @@ describe('production analysis composition', () => {
       }))
     })
     expect(changedText.opportunity.scoreSnapshot).toEqual(first.opportunity.scoreSnapshot)
+  })
+
+  it('uses reviewed analysis snapshots so human corrections reach reports', () => {
+    const reviewedAnalyses = productionInput.complaints.map((complaint, index) =>
+      complaintAnalysisSchema.parse({
+        ...analyzeComplaint(complaint),
+        ...(index === 0
+          ? { severity: 5, reviewState: 'corrected' as const }
+          : { reviewState: 'confirmed' as const })
+      })
+    )
+    const artifact = buildProductionResearchArtifact({
+      ...productionInput,
+      analyses: reviewedAnalyses
+    })
+    expect(
+      artifact.analyses.find(
+        (analysis) => analysis.complaintId === productionInput.complaints[0]?.id
+      )
+    ).toMatchObject({
+      severity: 5,
+      reviewState: 'corrected'
+    })
   })
 
   it('keeps production clustering wording separate from fixture wording', () => {

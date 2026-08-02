@@ -13,11 +13,11 @@
   reviewed seed registry and distinct analysis-run contracts, versioned report
   persistence, source-policy coverage metadata, private report rendering,
   approval governance, approved JSON export, a content-addressed
-  object-storage seam with filesystem and signed S3-compatible adapters, and an explicit confirmed-evidence
+  object-storage seam with filesystem and signed S3-compatible adapters, and an explicit reviewed-evidence
   analysis-start route implemented. Production private opportunity reads also
   carry the linked report and plan approval states from PostgreSQL governance
   projections instead of inferring draft defaults from object payloads
-- PostgreSQL persistence: sixty forward, checksummed migrations plus least-privilege repositories, durable auth controls, owner-scoped member administration and existing-account invitations with session step-up, owner-safe account closure, complaint review plus immutable seed-review and report/plan approval guards, source quota reservations, policy-derived retention tombstones, deletion lineage, monotonic source/evidence/tombstone guards, migration-owner source-policy review/activation evidence with identity and independence attestation, a migration-owner maintenance enumerator, fixture and production-collection workflow checkpoints with principal attribution, deterministic complaint-analysis/entity snapshots, deterministic analysis handoff and deletion-triggered recomputation queues, durable production-analysis lineage/object references, immutable analysis initiator attribution, source-deletion invalidation, mutable opportunity availability repair, same-run active-evidence re-analysis recovery, and database-serialized production ingress admissions through migrations `0036`-`0060`, plus bounded monotonic production-analysis activity-attempt telemetry with server-clock attempt history, policy-bound source collection leases, identifier-only snapshot page checkpoints, warning-preserving retries, atomic full-snapshot tombstone finalization, retryable deletion propagation with bounded exhausted failure, manual analysis admission/replay limits, authenticated source-reconciliation admission, a worker-principal admission branch for the direct CFPB command, retention-aware invalidated analysis-object purge, a server-clock maintenance scheduler lease and transaction-fence boundary for selected SQL mutations, maintenance-role-only durable scheduler run metrics, an indexed private cross-run cost summary, a forced-RLS quota-reconciliation case ledger with maintenance-only resolution, explicit one-record tombstone-bound re-collection lineage, campaign edit/archive lifecycle receipts, crash-recoverable policy-gated campaign refresh claims, policy-gated per-claim competitor observations, and a database-level HTTP(S) canonical-locator constraint
+- PostgreSQL persistence: sixty-one forward, checksummed migrations plus least-privilege repositories, durable auth controls, owner-scoped member administration and existing-account invitations with session step-up, owner-safe account closure, complaint review plus immutable seed-review and report/plan approval guards, source quota reservations, policy-derived retention tombstones, deletion lineage, monotonic source/evidence/tombstone guards, migration-owner source-policy review/activation evidence with identity and independence attestation, a migration-owner maintenance enumerator, fixture and production-collection workflow checkpoints with principal attribution, deterministic complaint-analysis/entity snapshots, deterministic analysis handoff and deletion-triggered recomputation queues, durable production-analysis lineage/object references, immutable analysis initiator attribution, source-deletion invalidation, mutable opportunity availability repair, same-run active-evidence re-analysis recovery, and database-serialized production ingress admissions through migrations `0036`-`0061`, plus bounded monotonic production-analysis activity-attempt telemetry with server-clock attempt history, policy-bound source collection leases, identifier-only snapshot page checkpoints, warning-preserving retries, atomic full-snapshot tombstone finalization, retryable deletion propagation with bounded exhausted failure, manual analysis admission/replay limits, authenticated source-reconciliation admission, a worker-principal admission branch for the direct CFPB command, retention-aware invalidated analysis-object purge, a server-clock maintenance scheduler lease and transaction-fence boundary for selected SQL mutations, maintenance-role-only durable scheduler run metrics, an indexed private cross-run cost summary, a forced-RLS quota-reconciliation case ledger with maintenance-only resolution, explicit one-record tombstone-bound re-collection lineage, campaign edit/archive lifecycle receipts, crash-recoverable policy-gated campaign refresh claims, policy-gated per-claim competitor observations, and a database-level HTTP(S) canonical-locator constraint
 - Database verification: PostgreSQL 18 fresh-install and populated-upgrade lifecycle is covered by local/CI gates; this environment currently lacks Docker for a fresh rerun
 - Native Codex skills: 21 synchronized skills
 - Codex helper agents: 11 bounded agents
@@ -40,6 +40,14 @@ production-shaped artifacts carry classification, severity, recurrence,
 switching signals, entity confidence, and explicit unresolved competitor and
 substitute dimensions into private evidence views and generated reports. The
 rules are a reproducible checkpoint, not a live model or market claim.
+
+Migration `0061_complaint_analysis_corrections.sql` adds an editor/owner,
+derived-only correction history. Corrections hash-chain the prior and next
+snapshots, leave source evidence/provenance immutable, invalidate stale active
+analysis/opportunity projections, and hide stale report/plan reads until a new
+reviewed analysis is produced. The next analysis input carries the corrected
+snapshot instead of reclassifying source text. Automatic recomputation remains
+a deliberate follow-up.
 
 Migration `0054_source_policy_review_integrity.sql` now requires canonical
 reviewer identity, independent review role, and explicit attestation for new
@@ -124,7 +132,7 @@ with bounded server-clock scheduling; workspace-closure and export purge
 remain separate boundaries.
 The analysis activity now anchors retention to server-observed time, rejects
 materially future timestamps, and finalizes only against an active/current/
-unexpired policy with allowed or restricted commercial use and confirmed,
+unexpired policy with allowed or restricted commercial use and confirmed or corrected,
 redacted evidence. Production collection initialization now fails closed when
 its database admission reservation is absent or already consumed. Manual
 analysis admission/rate limits and initiator actor attribution are now

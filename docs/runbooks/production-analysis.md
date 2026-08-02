@@ -84,7 +84,7 @@ the collection completion transaction. The worker dispatcher reconstructs the
 same policy-validated, complaint-review-gated input and starts this workflow
 with a deterministic analysis run identity. A handoff is not a source
 connector: it performs no external acquisition and cannot bypass source policy,
-redaction, or complaint confirmation. If evidence is not yet confirmed, the
+redaction, or complaint review. If evidence is not yet confirmed or corrected, the
 handoff remains queued for bounded retry; if Temporal is unavailable, a later
 claim safely retries the same idempotent start.
 
@@ -124,6 +124,31 @@ scheduler ownership remain separate operational controls.
 Private opportunity pages prefer the latest active production analysis for a
 slug and otherwise retain the fixture read path. The public leaderboard remains
 fixture-only and never displays production rows.
+
+## Correcting derived complaint analysis
+
+An owner or editor can correct a complaint's derived interpretation from the
+private production evidence view. The correction payload is strict JSON and
+may contain only fields from `complaintAnalysisCorrectionSchema`; source text,
+source identifiers, capture/publish times, policy metadata, redaction state,
+and provenance are not editable.
+
+The repository rebuilds and validates the complete analysis snapshot, then
+calls `appsea.apply_complaint_analysis_correction` in the authenticated
+workspace transaction. Migration `0061` records an immutable correction row
+with actor and prior/next snapshot hashes, changes review state to `corrected`,
+and emits identifier/hash-only audit and outbox receipts. Active production
+analysis runs linked to the complaint are invalidated. Opportunity projections
+that no longer have another active completed analysis are invalidated and their
+current score/plan pointers are cleared. Private report/plan reads filter out
+outputs linked only to invalidated analysis runs.
+
+The correction endpoint is idempotent for the same correction ID and hashes;
+conflicting reuse is rejected. Evidence deletion and rejected complaints fail
+closed. The next reviewed analysis input carries the persisted corrected
+snapshot, so the report does not silently reclassify the source text. That
+analysis must still be started explicitly; automatic recomputation and cloud
+object deletion remain operational follow-ups.
 
 ## Object storage boundary
 

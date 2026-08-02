@@ -65,10 +65,11 @@ retain the digest and use the bounded
 
 Before starting downstream analysis, an authenticated workspace editor or
 owner must review each active complaint observation on the private collection
-page. `Confirm` makes the observation eligible for the reviewed analysis input;
-`Reject` excludes it. The database transition guard in migration `0032` allows
-only those forward review transitions, records identifier-only receipts, and
-rejects reviews after source deletion.
+page. `Confirm` or a derived-only `Correct` makes the observation eligible for
+the reviewed analysis input; `Reject` excludes it. Migration `0061` records
+correction hashes and invalidates stale downstream outputs, while the database
+transition guard records identifier-only receipts and rejects review after
+source deletion.
 
 Inspect the result only through the authenticated private route:
 
@@ -119,7 +120,7 @@ seed content, reconstructs the request and approved source-policy snapshot from
 PostgreSQL, and the durable repository rechecks the seed hash/version before
 persisting. Callers cannot submit complaint payloads, substitute a policy, or
 inline an unapproved seed. The route rejects collections without active
-confirmed excerpt evidence and returns a Temporal workflow ID. It is available
+confirmed or corrected excerpt evidence and returns a Temporal workflow ID. It is available
 as a manual fallback when collection was started without
 `analysisSeedReviewId` or when a reviewer chooses a different approved seed.
 

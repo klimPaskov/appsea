@@ -642,7 +642,7 @@ async function assertEvidenceLineage(
       row.evidence_content_hash !== complaint.evidenceHash ||
       row.source_record_id !== complaint.sourceRecordId ||
       row.canonical_locator !== complaint.canonicalLocator ||
-      row.review_state !== 'confirmed' ||
+      !['confirmed', 'corrected'].includes(row.review_state) ||
       row.allowed_representation !== 'excerpt' ||
       row.allowed_representation !== complaint.allowedRepresentation ||
       !row.redacted ||

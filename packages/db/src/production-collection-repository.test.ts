@@ -1,11 +1,15 @@
 import { describe, expect, it, vi } from 'vitest'
+import { analyzeComplaint } from '@appsea/research'
 import { productionCollectionPersistenceInputSchema } from '@appsea/contracts'
 import { contentHash } from './hash'
 
 const mocks = vi.hoisted(() => ({
   handoffRows: [] as Array<Record<string, unknown>>,
   leaseAssertions: 0,
-  recollectionRows: [] as Array<Record<string, unknown>>
+  recollectionRows: [] as Array<Record<string, unknown>>,
+  reviewRows: [] as Array<Record<string, unknown>>,
+  correctionRows: [] as Array<Record<string, unknown>>,
+  queryLog: [] as string[]
 }))
 
 vi.mock('./transaction', () => ({
@@ -100,8 +104,21 @@ const persistenceInput = productionCollectionPersistenceInputSchema.parse({
 })
 
 async function fakeQuery(text: string): Promise<{ rows: unknown[] }> {
+  mocks.queryLog.push(text)
   if (text.includes('SELECT fixture_only, status, visibility')) {
     return { rows: [{ fixture_only: false, status: 'active', visibility: 'private' }] }
+  }
+  if (text.includes('SELECT role') && text.includes('FROM appsea.workspace_memberships')) {
+    return { rows: [{ role: 'editor' }] }
+  }
+  if (text.includes('SELECT complaint.complaint_id, complaint.review_state')) {
+    return { rows: mocks.reviewRows }
+  }
+  if (text.includes('apply_complaint_analysis_correction')) {
+    return { rows: mocks.correctionRows }
+  }
+  if (text.includes('UPDATE appsea.complaint_observations')) {
+    return { rows: [] }
   }
   if (text.includes('assert_source_collection_lease')) {
     mocks.leaseAssertions += 1
@@ -213,5 +230,112 @@ describe('production collection read model', () => {
     expect(result.replayed).toBe(true)
     expect(result.costMicros).toBe(17)
     expect(mocks.leaseAssertions).toBe(1)
+  })
+
+  it('persists a derived-only correction and reports invalidated projections', async () => {
+    mocks.queryLog = []
+    mocks.reviewRows = [
+      {
+        complaint_id: 'complaint:one',
+        review_state: 'confirmed',
+        evidence_state: 'active',
+        source_state: 'active',
+        analysis_snapshot: analyzeComplaint({
+          id: 'complaint:one',
+          sourceId: 'source:cfpb',
+          sourceRecordId: 'record:one',
+          canonicalLocator: null,
+          capturedAt: at,
+          publishedAt: null,
+          query: 'billing',
+          product: 'Product',
+          company: 'Company',
+          feature: 'Feature',
+          category: 'Reliability',
+          text: 'The feature fails repeatedly.',
+          language: 'en',
+          synthetic: false,
+          redacted: true,
+          allowedRepresentation: 'excerpt'
+        })
+      }
+    ]
+    mocks.correctionRows = [
+      {
+        review_state: 'corrected',
+        invalidated_analysis_count: '1',
+        invalidated_opportunity_count: '1'
+      }
+    ]
+
+    const { PostgresProductionCollectionRepository } =
+      await import('./production-collection-repository')
+    const result = await new PostgresProductionCollectionRepository(
+      {} as never
+    ).updateComplaintReview('user:one', 'workspace:one', 'run:production:one', 'complaint:one', {
+      action: 'corrected',
+      correctionId: 'correction:analysis:one',
+      analysisCorrection: { severity: 5 }
+    })
+
+    expect(result).toMatchObject({
+      complaintId: 'complaint:one',
+      reviewState: 'corrected',
+      invalidatedAnalysisCount: 1,
+      invalidatedOpportunityCount: 1,
+      analysis: { severity: 5, reviewState: 'corrected' }
+    })
+    expect(
+      mocks.queryLog.some((query) => query.includes('apply_complaint_analysis_correction'))
+    ).toBe(true)
+    expect(mocks.queryLog.some((query) => query.includes('SET review_state = $4'))).toBe(false)
+    mocks.reviewRows = []
+    mocks.correctionRows = []
+  })
+
+  it('changes only review state for confirm/reject actions', async () => {
+    mocks.queryLog = []
+    mocks.reviewRows = [
+      {
+        complaint_id: 'complaint:one',
+        review_state: 'unreviewed',
+        evidence_state: 'active',
+        source_state: 'active',
+        analysis_snapshot: analyzeComplaint({
+          id: 'complaint:one',
+          sourceId: 'source:cfpb',
+          sourceRecordId: 'record:one',
+          canonicalLocator: null,
+          capturedAt: at,
+          publishedAt: null,
+          query: 'billing',
+          product: 'Product',
+          company: 'Company',
+          feature: 'Feature',
+          category: 'Reliability',
+          text: 'The feature fails repeatedly.',
+          language: 'en',
+          synthetic: false,
+          redacted: true,
+          allowedRepresentation: 'excerpt'
+        })
+      }
+    ]
+
+    const { PostgresProductionCollectionRepository } =
+      await import('./production-collection-repository')
+    const result = await new PostgresProductionCollectionRepository(
+      {} as never
+    ).updateComplaintReview('user:one', 'workspace:one', 'run:production:one', 'complaint:one', {
+      action: 'confirmed'
+    })
+
+    expect(result.reviewState).toBe('confirmed')
+    const update = mocks.queryLog.find((query) =>
+      query.includes('UPDATE appsea.complaint_observations')
+    )
+    expect(update).toContain('SET review_state = $4')
+    expect(update).not.toContain('analysis_snapshot')
+    mocks.reviewRows = []
   })
 })

@@ -16,6 +16,8 @@ import {
   sourcePolicySchema,
   workspaceComplaintReviewInputSchema,
   workspaceComplaintReviewReadModelSchema,
+  type ComplaintAnalysis,
+  type ComplaintAnalysisCorrection,
   type ProductionCollectionPersistenceInput,
   type ProductionCollectionAnalysisSource,
   type ProductionCollectionReadModel,
@@ -429,7 +431,7 @@ export class PostgresProductionCollectionRepository {
 
   /**
    * Reconstruct the server-owned analysis input from a completed collection.
-   * The caller supplies no complaint payload: only confirmed, active,
+   * The caller supplies no complaint payload: only confirmed/corrected, active,
    * excerpt-represented observations cross this boundary.
    */
   async readForAnalysis(
@@ -627,7 +629,7 @@ export class PostgresProductionCollectionRepository {
                ON source_item.workspace_id = run_item.workspace_id
               AND source_item.source_item_id = run_item.source_item_id
             WHERE run_item.workspace_id = $1 AND run_item.run_id = $2
-              AND complaint.review_state = 'confirmed'
+              AND complaint.review_state IN ('confirmed', 'corrected')
               AND evidence.deletion_state = 'active'
               AND source_item.deletion_state = 'active'
             ORDER BY source_item.captured_at, evidence.evidence_id`,
@@ -675,7 +677,7 @@ export class PostgresProductionCollectionRepository {
     )
     if (evidenceRows.rows.length < snapshot.complaintCount) {
       coverageGaps.push(
-        'Only active complaint observations explicitly confirmed by a workspace reviewer enter this analysis.'
+        'Only active complaint observations explicitly confirmed or corrected by a workspace reviewer enter this analysis.'
       )
     }
     const complaints = evidenceRows.rows.map((row) =>
@@ -701,12 +703,19 @@ export class PostgresProductionCollectionRepository {
         evidenceHash: row.evidence_hash
       })
     )
+    const analyses = evidenceRows.rows.map((row) =>
+      complaintAnalysisSchema.parse({
+        ...complaintAnalysisSchema.parse(row.analysis_snapshot),
+        reviewState: row.review_state
+      })
+    )
     return productionCollectionAnalysisSourceSchema.parse({
       request,
       collectionArtifactId: run.artifact_id,
       runId,
       policySnapshot,
       complaints,
+      analyses,
       deletions,
       coverageGaps: [...new Set(coverageGaps)],
       warnings: snapshot.warnings
@@ -1504,7 +1513,10 @@ export class PostgresProductionCollectionRepository {
         company: row.company_candidate,
         feature: row.feature_candidate,
         category: row.category_candidate,
-        analysis: complaintAnalysisSchema.parse(row.analysis_snapshot),
+        analysis: complaintAnalysisSchema.parse({
+          ...complaintAnalysisSchema.parse(row.analysis_snapshot),
+          reviewState: row.review_state
+        }),
         synthetic: false,
         redacted: row.redacted,
         allowedRepresentation: row.allowed_representation,
@@ -1587,9 +1599,11 @@ export class PostgresProductionCollectionRepository {
               review_state: 'unreviewed' | 'confirmed' | 'corrected' | 'rejected'
               evidence_state: string
               source_state: string
+              analysis_snapshot: unknown
             }
           >(
             `SELECT complaint.complaint_id, complaint.review_state,
+                    complaint.analysis_snapshot,
                     evidence.deletion_state AS evidence_state,
                     source_item.deletion_state AS source_state
                FROM appsea.research_run_complaints run_complaint
@@ -1612,27 +1626,60 @@ export class PostgresProductionCollectionRepository {
           if (!row || row.evidence_state !== 'active' || row.source_state !== 'active') {
             throw new ProductionComplaintReviewNotFoundError()
           }
+          const currentAnalysis = complaintAnalysisSchema.parse(row.analysis_snapshot)
+          if (parsedInput.action === 'corrected') {
+            const correction = parsedInput.analysisCorrection
+            const correctionId = parsedInput.correctionId
+            if (!correction || !correctionId) {
+              throw new ProductionComplaintReviewConflictError()
+            }
+            const nextAnalysis = mergeComplaintAnalysisCorrection(currentAnalysis, correction)
+            const correctionResult = await client.query<{
+              review_state: string
+              invalidated_analysis_count: number | string
+              invalidated_opportunity_count: number | string
+            }>(
+              `SELECT review_state, invalidated_analysis_count,
+                      invalidated_opportunity_count
+                 FROM appsea.apply_complaint_analysis_correction(
+                   $1, $2, $3, $4, $5, $6::jsonb
+                 )`,
+              [
+                parsedWorkspaceId,
+                parsedComplaintId,
+                correctionId,
+                contentHash(currentAnalysis),
+                contentHash(nextAnalysis),
+                JSON.stringify(nextAnalysis)
+              ]
+            )
+            const corrected = correctionResult.rows[0]
+            if (!corrected) throw new ProductionComplaintReviewConflictError()
+            return workspaceComplaintReviewReadModelSchema.parse({
+              complaintId: row.complaint_id,
+              reviewState: corrected.review_state,
+              analysis: nextAnalysis,
+              invalidatedAnalysisCount: Number(corrected.invalidated_analysis_count),
+              invalidatedOpportunityCount: Number(corrected.invalidated_opportunity_count)
+            })
+          }
           if (row.review_state === parsedInput.action) {
             return workspaceComplaintReviewReadModelSchema.parse({
               complaintId: row.complaint_id,
-              reviewState: row.review_state
+              reviewState: row.review_state,
+              analysis: currentAnalysis
             })
           }
           const allowed =
             (row.review_state === 'unreviewed' &&
               (parsedInput.action === 'confirmed' || parsedInput.action === 'rejected')) ||
-            (row.review_state === 'confirmed' && parsedInput.action === 'rejected')
+            (['confirmed', 'corrected'].includes(row.review_state) &&
+              parsedInput.action === 'rejected')
           if (!allowed) throw new ProductionComplaintReviewConflictError()
 
           await client.query(
             `UPDATE appsea.complaint_observations
-                SET review_state = $4,
-                    analysis_snapshot = jsonb_set(
-                      COALESCE(analysis_snapshot, '{}'::jsonb),
-                      '{reviewState}',
-                      to_jsonb($4::text),
-                      true
-                    )
+                SET review_state = $4
               WHERE workspace_id = $1
                 AND complaint_id = $2
                 AND EXISTS (
@@ -1646,7 +1693,11 @@ export class PostgresProductionCollectionRepository {
           )
           return workspaceComplaintReviewReadModelSchema.parse({
             complaintId: parsedComplaintId,
-            reviewState: parsedInput.action
+            reviewState: parsedInput.action,
+            analysis: complaintAnalysisSchema.parse({
+              ...currentAnalysis,
+              reviewState: parsedInput.action
+            })
           })
         },
         { isolationLevel: 'SERIALIZABLE' }
@@ -1665,8 +1716,44 @@ function isComplaintReviewConflict(error: unknown): boolean {
     typeof error === 'object' &&
     error !== null &&
     'code' in error &&
-    (error as { code?: unknown }).code === '23514' &&
+    ['23505', '23514'].includes(String((error as { code?: unknown }).code)) &&
     'message' in error &&
-    String((error as { message?: unknown }).message).includes('complaint review')
+    /complaint(?:[ _](?:review|correction)|_analysis_corrections)|rejected complaints/i.test(
+      String((error as { message?: unknown }).message)
+    )
   )
+}
+
+function mergeComplaintAnalysisCorrection(
+  current: ComplaintAnalysis,
+  correction: ComplaintAnalysisCorrection
+): ComplaintAnalysis {
+  const entities = correction.entities ?? current.entities
+  const unresolvedTypes: ComplaintAnalysis['entities']['unresolvedTypes'] = [
+    ...(entities.product.canonicalName === null ? (['product'] as const) : []),
+    ...(entities.company.canonicalName === null ? (['company'] as const) : []),
+    ...(entities.feature.canonicalName === null ? (['feature'] as const) : []),
+    ...(entities.substitutes.some((entry) => entry.canonicalName !== null)
+      ? []
+      : (['substitute'] as const)),
+    ...(entities.competitors.some((entry) => entry.canonicalName !== null)
+      ? []
+      : (['competitor'] as const))
+  ]
+  return complaintAnalysisSchema.parse({
+    ...current,
+    ...correction,
+    complaintId: current.complaintId,
+    reviewState: 'corrected',
+    extractionVersion: 'complaint-analysis-correction-v1',
+    derivation: {
+      ...current.derivation,
+      modelVersion: 'human-correction-v1',
+      promptVersion: 'none'
+    },
+    entities: {
+      ...entities,
+      unresolvedTypes
+    }
+  })
 }

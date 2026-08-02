@@ -87,17 +87,10 @@ the worker now has a registry-selected path but no active source row.
 Migration `0060` adds a database-level HTTP(S) host/path check for those
 locators, while policy still controls whether a locator may be displayed.
 
-The 2026-08-02 campaign tranche adds a private one-source run route plus
-bounded history/status reads on the strict `campaign-v1` boundary. The server
-derives collection inputs from persisted intent, rechecks approved policy,
-purpose, expiry, and optional seed review, then commits admission before
-Temporal. History exposes only state, checkpoint, counters, IDs, and times;
-hashes/payloads stay hidden. Migration `0057` adds validated draft edits and a
-soft archive state with run/evidence lineage preserved. Migration `0058` adds
-durable daily/weekly/monthly refresh claims, pending request lineage, bounded
-retry state, and source-maintenance dispatch through the same policy/admission
-gates. Multi-source, source picker, live activation, deployed scheduler/
-Temporal, and Docker PostgreSQL proof remain open; CFPB is disabled.
+The 2026-08-02 campaign slice adds a private one-source `campaign-v1` run,
+bounded history, draft edits/archive, and policy/admission-gated refresh claims.
+Multi-source orchestration, source picker, live activation, deployed
+scheduler/Temporal, and Docker PostgreSQL proof remain open; CFPB is disabled.
 
 The 2026-08-02 analysis tranche adds a reviewed seed handoff: owner/editor
 members choose an approved seed, the admission route starts
@@ -111,6 +104,13 @@ The 2026-08-02 source-coverage tranche adds a private read-only registry/API
 over existing policy tables. It derives production collectibility from the
 independent approval gate and exposes quotas, deletion duties, and gaps while
 keeping payloads, hashes, reviewer identities, and activation controls out.
+
+The 2026-08-02 correction tranche adds migration `0061`, a strict derived-only
+editor/owner correction contract, immutable prior/next snapshot hashes, and
+active analysis/opportunity invalidation. Source evidence/provenance remains
+immutable; stale report/plan reads are hidden until explicit reviewed
+re-analysis; the persisted corrected snapshot feeds that next artifact. The
+editor is compact JSON and automatic recomputation remains open.
 
 ## Next production tranche
 

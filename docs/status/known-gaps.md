@@ -49,8 +49,18 @@ research. Migration `0059` adds a policy-gated, human-reviewable observation
 boundary that retains source-item/evidence identifiers per competitive claim;
 no approved competitor-purpose source is connected yet, so production research
 remains `reviewed-seed-only` until confirmed non-synthetic observations exist.
-Human correction is persisted only as review state in this slice; richer
-corrected field editing and a full competitor feature matrix remain open.
+Correction editing is intentionally a compact derived-field JSON boundary;
+full field-by-field editing and a complete competitor feature matrix remain
+open.
+
+Migration `0061_complaint_analysis_corrections.sql` now closes the first part
+of that gap: an editor/owner can submit a strict derived-only correction from
+the private evidence view. The immutable correction history stores prior/next
+snapshot hashes, source evidence and provenance are not editable, and active
+analysis/opportunity projections are invalidated so stale reports and plans
+are hidden. A new reviewed analysis must be started explicitly; automatic
+recomputation, full corrected-field forms, and the competitor feature matrix
+remain open.
 
 ## Infrastructure
 
@@ -198,7 +208,7 @@ the server clock and terminalizes exhausted claims, so a worker crash cannot
 strand that queue indefinitely. Retention is anchored to
 server-observed activity time and final
 lineage rechecks active/current/unexpired policy, commercial-use eligibility,
-and confirmed redacted evidence. The manual analysis route now has a workspace
+and confirmed or corrected redacted evidence. The manual analysis route now has a workspace
 admission/rate gate and authenticated initiator attribution through migration
 `0042`; deployment still needs a scheduler, Temporal authorization, and
 crash/failure proof for that boundary.

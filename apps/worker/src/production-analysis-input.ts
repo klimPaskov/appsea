@@ -41,6 +41,7 @@ export async function reconstructProductionAnalysisArtifact(
     request: source.request,
     policySnapshot: source.policySnapshot,
     complaints: source.complaints,
+    analyses: source.analyses,
     deletions: source.deletions,
     coverageGaps: source.coverageGaps,
     warnings: source.warnings,

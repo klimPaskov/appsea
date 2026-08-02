@@ -112,7 +112,7 @@ export function createProductionAnalysisHandoffDispatcher(
       }
       const failureCode = waitingForReview ? 'analysis_not_ready' : 'handoff_dispatch_failed'
       const failureSummary = waitingForReview
-        ? 'The collection needs confirmed active excerpt evidence before analysis can start.'
+        ? 'The collection needs confirmed or corrected active excerpt evidence before analysis can start.'
         : 'The post-collection analysis handoff could not be dispatched.'
       const retry = await handoffs.reschedule(
         claimed.workspaceId,

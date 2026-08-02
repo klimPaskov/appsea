@@ -146,7 +146,10 @@ export async function POST(
   } catch (error) {
     if (error instanceof ProductionCollectionAnalysisUnavailableError) {
       return Response.json(
-        { error: 'Collection needs confirmed excerpt evidence before analysis can start' },
+        {
+          error:
+            'Collection needs confirmed or corrected excerpt evidence before analysis can start'
+        },
         { status: 422, headers: privateResponseHeaders }
       )
     }

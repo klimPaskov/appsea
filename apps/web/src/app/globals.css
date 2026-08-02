@@ -381,8 +381,62 @@ a:focus-visible {
   text-transform: uppercase;
 }
 
-.review-actions .form-error {
+.review-actions .form-error,
+.review-actions .form-success {
   flex-basis: 100%;
+}
+
+.analysis-correction {
+  flex-basis: 100%;
+  display: grid;
+  gap: 10px;
+  margin-top: 4px;
+  padding-top: 10px;
+  border-top: 1px solid var(--line);
+}
+
+.analysis-correction summary {
+  width: fit-content;
+  color: var(--ink);
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 650;
+}
+
+.analysis-correction summary:focus-visible {
+  outline: 3px solid color-mix(in srgb, var(--accent) 25%, transparent);
+  outline-offset: 3px;
+}
+
+.analysis-correction label {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.analysis-correction textarea {
+  width: min(100%, 760px);
+  min-height: 160px;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 5px;
+  background: var(--surface);
+  color: var(--ink);
+  font:
+    13px/1.5 ui-monospace,
+    SFMono-Regular,
+    Menlo,
+    Monaco,
+    Consolas,
+    monospace;
+  resize: vertical;
+}
+
+.analysis-correction textarea:focus {
+  outline: 3px solid color-mix(in srgb, var(--accent) 25%, transparent);
+  border-color: var(--accent);
 }
 
 .competitor-list article {
@@ -609,6 +663,12 @@ a:focus-visible {
 .form-error {
   margin: 0;
   color: #a22b2b;
+  font-size: 13px;
+}
+
+.form-success {
+  margin: 0;
+  color: #28613b;
   font-size: 13px;
 }
 
