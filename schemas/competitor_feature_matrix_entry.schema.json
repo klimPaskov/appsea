@@ -1,0 +1,71 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.appsea.local/competitor_feature_matrix_entry.schema.json",
+  "title": "AppSea Competitor Feature Matrix Entry",
+  "description": "A bounded competitor capability claim. Raw provider payloads are not part of this contract.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["feature", "status", "evidenceBasis", "observationIds", "notes"],
+  "properties": {
+    "feature": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 240
+    },
+    "status": {
+      "enum": ["supported", "partial", "missing", "unknown"]
+    },
+    "evidenceBasis": {
+      "enum": ["fixture", "reviewed-seed", "source-observation", "mixed"]
+    },
+    "observationIds": {
+      "type": "array",
+      "maxItems": 50,
+      "items": {
+        "type": "string",
+        "minLength": 3,
+        "maxLength": 160,
+        "pattern": "^[a-z][a-z0-9_:-]*$"
+      }
+    },
+    "notes": {
+      "type": ["string", "null"],
+      "minLength": 1,
+      "maxLength": 2000
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "evidenceBasis": {
+            "enum": ["source-observation", "mixed"]
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "observationIds": {
+            "minItems": 1
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "evidenceBasis": {
+            "enum": ["fixture", "reviewed-seed"]
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "observationIds": {
+            "maxItems": 0
+          }
+        }
+      }
+    }
+  ]
+}

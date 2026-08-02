@@ -94,6 +94,13 @@ for that pre-context authorization lookup.
   purpose, and an editor/owner review guard. The read model exposes only the
   bounded paraphrase and provenance metadata; raw provider payloads remain
   outside the table and web contract.
+- Migration `0063` stores competitor feature comparisons as a bounded JSONB
+  matrix with explicit `fixture`, `reviewed-seed`, `source-observation`, or
+  `mixed` provenance. Production seeds are limited to reviewed-seed entries;
+  source-backed entries must identify retained competitive observations. The
+  public and private UI renders the normalized status, notes, and identifiers
+  only, so imported provider content cannot become executable instructions or
+  repository guidance through this surface.
 - Migration `0033` makes opportunity-seed assumptions an explicit workspace
   boundary. Seed content is validated before insertion, immutable after create,
   and transitions through `unreviewed` -> `reviewed` -> `approved` only through

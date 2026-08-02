@@ -8,7 +8,7 @@ import {
   type WorkspaceOpportunitySeedReadModel
 } from '@appsea/contracts'
 import type { Pool, PoolClient, QueryResultRow } from 'pg'
-import { contentHash } from './hash'
+import { opportunitySeedContentHash } from './opportunity-seed-hash'
 import {
   withAuthenticatedWorkspaceTransaction,
   withWorkspaceTransaction,
@@ -80,7 +80,7 @@ const selectColumns = `
 
 function readModel(row: SeedReviewRow): WorkspaceOpportunitySeedReadModel {
   const seed = workspaceOpportunitySeedReadModelSchema.shape.seed.parse(row.seed_payload)
-  const expectedHash = contentHash(seed)
+  const expectedHash = opportunitySeedContentHash(seed)
   if (row.content_hash !== expectedHash) throw new OpportunitySeedReviewLineageError()
   return workspaceOpportunitySeedReadModelSchema.parse({
     seedReviewId: row.seed_review_id,
@@ -124,7 +124,7 @@ export class PostgresOpportunitySeedReviewRepository {
     const parsedUserId = appseaIdentifierSchema.parse(userId)
     const parsedWorkspaceId = appseaIdentifierSchema.parse(workspaceId)
     const parsedInput = workspaceOpportunitySeedCreateInputSchema.parse(input)
-    const seedContentHash = contentHash(parsedInput.seed)
+    const seedContentHash = opportunitySeedContentHash(parsedInput.seed)
     const now = new Date().toISOString()
 
     try {

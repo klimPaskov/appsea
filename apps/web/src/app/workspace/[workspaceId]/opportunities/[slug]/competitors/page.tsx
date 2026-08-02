@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import { notFound, redirect } from 'next/navigation'
+import { CompetitorFeatureMatrix } from '../../../../../../components/competitor-feature-matrix'
 import { readSession } from '../../../../../../server/auth-session'
 import { readPrivateOpportunityContext } from '../../../../../../server/private-opportunity'
 import { CompetitorObservationActions } from '../../../../competitor-observation-actions'
@@ -270,6 +271,7 @@ export default async function PrivateCompetitorsPage({
                   Related complaint categories:{' '}
                   {competitor.relatedComplaintCategories.join(' · ') || 'Not recorded'}
                 </p>
+                <CompetitorFeatureMatrix competitor={competitor} />
               </article>
             ))}
           </div>

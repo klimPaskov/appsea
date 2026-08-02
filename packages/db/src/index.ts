@@ -5,6 +5,8 @@ export {
   type DatabaseSslMode
 } from './config'
 export { canonicalJson, contentHash, sha256 } from './hash'
+export { competitorContentHash } from './competitor-hash'
+export { opportunitySeedContentHash } from './opportunity-seed-hash'
 export {
   defaultMigrationsDirectory,
   loadMigrations,

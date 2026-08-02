@@ -1,5 +1,6 @@
 import { notFound } from 'next/navigation'
 import { getOpportunity } from '@appsea/catalog'
+import { CompetitorFeatureMatrix } from '../../../../components/competitor-feature-matrix'
 import { OpportunityShell } from '../../../../components/opportunity-shell'
 
 interface PageProps {
@@ -27,6 +28,7 @@ export default async function CompetitorsPage({ params }: PageProps) {
               </div>
               <p>{competitor.positioning}</p>
               <p className="weakness">{competitor.weaknesses.join(' · ')}</p>
+              <CompetitorFeatureMatrix competitor={competitor} />
             </article>
           ))}
         </div>

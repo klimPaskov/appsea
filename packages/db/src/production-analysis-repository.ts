@@ -34,6 +34,8 @@ import {
 import { assertDeterministicScoreSnapshot } from '@appsea/scoring'
 import type { ObjectStore } from '@appsea/object-store'
 import { canonicalJson, contentHash } from './hash'
+import { competitorContentHash } from './competitor-hash'
+import { opportunitySeedContentHash } from './opportunity-seed-hash'
 import { IdempotencyConflictError, ImmutableRecordConflictError } from './fixture-repository'
 import { withAuthenticatedWorkspaceTransaction, withWorkspaceTransaction } from './transaction'
 import {
@@ -586,8 +588,8 @@ async function assertCollectionAndPolicyLineage(
     seedRow.seed_version !== input.artifact.opportunitySeedReview.seedVersion ||
     seedRow.content_hash !== input.artifact.opportunitySeedReview.contentHash ||
     !parsedSeed?.success ||
-    contentHash(parsedSeed.data) !== seedRow.content_hash ||
-    contentHash(parsedSeed.data) !== input.artifact.opportunitySeedReview.contentHash
+    opportunitySeedContentHash(parsedSeed.data) !== seedRow.content_hash ||
+    opportunitySeedContentHash(parsedSeed.data) !== input.artifact.opportunitySeedReview.contentHash
   ) {
     throw new ProductionAnalysisLineageError(
       'Analysis seed is not the approved immutable seed in the workspace registry'
@@ -1514,12 +1516,13 @@ export class PostgresProductionAnalysisRepository {
               name: competitor.name,
               type: competitor.type
             })
-            const competitorHash = contentHash(competitor)
+            const competitorHash = competitorContentHash(competitor)
             await client.query(
               `INSERT INTO appsea.competitors
                (workspace_id, competitor_id, name, competitor_type, positioning, strengths,
-                weaknesses, related_complaint_categories, synthetic, content_hash, observed_at)
-             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, false, $9, $10)
+                weaknesses, related_complaint_categories, feature_matrix, synthetic,
+                content_hash, observed_at)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9::jsonb, false, $10, $11)
              ON CONFLICT DO NOTHING`,
               [
                 parsed.workspaceId,
@@ -1530,6 +1533,7 @@ export class PostgresProductionAnalysisRepository {
                 competitor.strengths,
                 competitor.weaknesses,
                 competitor.relatedComplaintCategories,
+                JSON.stringify(competitor.featureMatrix),
                 competitorHash,
                 completedAt
               ]

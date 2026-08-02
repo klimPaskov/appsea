@@ -135,6 +135,15 @@ independently approved `competitor-research` purpose, and editor/owner review
 is required before the private read model can report source-backed research.
 The migration retains provenance metadata only and activates no connector.
 
+Migration `0063_competitor_feature_matrix.sql` adds a bounded feature matrix
+to each normalized competitor row. Entries carry a status, an explicit
+evidence basis, bounded notes, and (for source-backed or mixed claims) retained
+competitive observation IDs. Fixture matrices remain synthetic, production
+seed matrices are restricted to reviewed-seed assumptions, and the public and
+private competitor routes render only this normalized contract. Raw provider
+payloads remain outside the matrix; approved competitor-purpose source
+coverage is still required before source-backed entries can be populated.
+
 The connector package now includes a disabled Stack Exchange candidate for
 bounded competitor/contrary-signal collection. It uses the official API only,
 sanitizes question excerpts, preserves an HTTPS attribution locator, and emits

@@ -54,7 +54,9 @@ remains `reviewed-seed-only` until confirmed non-synthetic observations exist.
 The private correction editor now exposes field-level controls for the derived
 interpretation and entity references while retaining evidence basis, source
 provenance, policy flags, and derivation metadata as read-only. A complete
-competitor feature matrix remains open.
+competitor feature matrix contract and fixture/private/public read surface are
+now implemented by migration `0063`; source-backed matrix entries remain
+blocked until approved competitor-purpose observations exist.
 
 Migration `0061_complaint_analysis_corrections.sql` now closes the first part
 of that gap: an editor/owner can submit a strict derived-only correction from
@@ -65,7 +67,9 @@ are hidden. Migration `0062_correction_recompute_jobs.sql` extends the existing
 forced-RLS repair queue with a deferred correction trigger. Each affected
 opportunity gets one deterministic re-analysis request; missing or withdrawn
 seeds remain blocked rather than bypassing review. The competitor feature
-matrix remains open.
+matrix is now persisted and rendered with explicit fixture/reviewed-seed/source
+observation provenance; the source-backed portion remains open pending external
+policy review.
 
 ## Infrastructure
 

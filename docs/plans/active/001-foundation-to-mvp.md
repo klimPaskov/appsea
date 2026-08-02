@@ -132,6 +132,14 @@ under an independently approved `competitor-research` purpose, and an
 editor/owner must confirm the row before it can make the read model
 source-backed. No connector is activated by this migration.
 
+Migration `0063_competitor_feature_matrix.sql` adds a normalized, bounded
+JSONB feature matrix to competitor rows. Fixture entries are labelled
+synthetic, production seeds accept only `reviewed-seed` assumptions, and
+source-backed or mixed entries require retained competitive observation IDs.
+The public and private competitor routes render the matrix and its evidence
+basis without exposing raw provider payloads. Source-backed matrix population
+remains blocked until an approved competitor-purpose connector is available.
+
 Migration `0060_source_canonical_locator_integrity.sql` adds a database-level
 HTTP(S) host/path check for persisted attribution locators. The TypeScript
 contract remains the primary validator, while the constraint is defense in
@@ -148,7 +156,9 @@ next analysis input carries the corrected snapshot. Migration
 `0062_correction_recompute_jobs.sql` extends the existing forced-RLS repair
 queue with a deferred correction trigger; each affected opportunity receives
 one deterministic re-analysis request, while missing or withdrawn seeds remain
-blocked. A complete competitor feature matrix remains open.
+blocked. The feature-matrix contract, migration, fixture persistence, and
+public/private read surfaces are implemented in migration `0063`; source-backed
+matrix population remains an external policy and evidence dependency.
 
 Migration `0054_source_policy_review_integrity.sql` binds new source-policy
 approvals to a lowercase reviewer identity, an independent review role, and an

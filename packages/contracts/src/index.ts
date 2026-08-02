@@ -299,13 +299,90 @@ export const complaintClusterSchema = z.object({
   confidence: z.number().min(0).max(1)
 })
 
+const competitorFeatureMatrixObservationIdSchema = z
+  .string()
+  .min(3)
+  .max(160)
+  .regex(/^[a-z][a-z0-9_:-]*$/)
+
+export const competitorFeatureMatrixStatusSchema = z.enum([
+  'supported',
+  'partial',
+  'missing',
+  'unknown'
+])
+
+export const competitorFeatureMatrixEvidenceBasisSchema = z.enum([
+  'fixture',
+  'reviewed-seed',
+  'source-observation',
+  'mixed'
+])
+
+/**
+ * A bounded comparison claim. Seed and fixture entries are assumptions or
+ * examples; source-backed entries must point at retained competitive
+ * observations rather than carrying raw provider content.
+ */
+export const competitorFeatureMatrixEntrySchema = z
+  .object({
+    feature: z.string().min(1).max(240),
+    status: competitorFeatureMatrixStatusSchema,
+    evidenceBasis: competitorFeatureMatrixEvidenceBasisSchema,
+    observationIds: z.array(competitorFeatureMatrixObservationIdSchema).max(50).default([]),
+    notes: z.string().min(1).max(2_000).nullable().default(null)
+  })
+  .strict()
+  .superRefine((entry, context) => {
+    const requiresObservation =
+      entry.evidenceBasis === 'source-observation' || entry.evidenceBasis === 'mixed'
+    if (requiresObservation && entry.observationIds.length === 0) {
+      context.addIssue({
+        code: 'custom',
+        path: ['observationIds'],
+        message: 'Source-backed feature coverage requires an observation identifier'
+      })
+    }
+    if (
+      (entry.evidenceBasis === 'fixture' || entry.evidenceBasis === 'reviewed-seed') &&
+      entry.observationIds.length > 0
+    ) {
+      context.addIssue({
+        code: 'custom',
+        path: ['observationIds'],
+        message: 'Fixture and reviewed-seed coverage cannot claim source observations'
+      })
+    }
+  })
+
+export const competitorFeatureMatrixSchema = z
+  .array(competitorFeatureMatrixEntrySchema)
+  .max(200)
+  .superRefine((entries, context) => {
+    const seen = new Map<string, number>()
+    entries.forEach((entry, index) => {
+      const key = entry.feature.trim().toLocaleLowerCase('en-US')
+      const previous = seen.get(key)
+      if (previous !== undefined) {
+        context.addIssue({
+          code: 'custom',
+          path: [index, 'feature'],
+          message: `Feature duplicates entry ${previous + 1}`
+        })
+      } else {
+        seen.set(key, index)
+      }
+    })
+  })
+
 export const competitorSchema = z.object({
   name: z.string().min(1),
   type: z.enum(['direct', 'adjacent', 'platform', 'workaround', 'do-nothing']),
   positioning: z.string().min(1),
   strengths: z.array(z.string()),
   weaknesses: z.array(z.string()),
-  relatedComplaintCategories: z.array(z.string())
+  relatedComplaintCategories: z.array(z.string()),
+  featureMatrix: competitorFeatureMatrixSchema.default([])
 })
 
 export const scoreFactorsSchema = z.object({
@@ -845,6 +922,18 @@ export const productionOpportunitySeedSchema = z
       }
     }
     inspect(seed, [])
+    seed.competitors.forEach((competitor, competitorIndex) => {
+      competitor.featureMatrix.forEach((entry, featureIndex) => {
+        if (entry.evidenceBasis !== 'reviewed-seed') {
+          context.addIssue({
+            code: 'custom',
+            path: ['competitors', competitorIndex, 'featureMatrix', featureIndex, 'evidenceBasis'],
+            message:
+              'Production opportunity seeds may contain reviewed-seed feature assumptions only'
+          })
+        }
+      })
+    })
     if (new TextEncoder().encode(JSON.stringify(seed)).byteLength > 1_000_000) {
       context.addIssue({
         code: 'custom',
@@ -3842,6 +3931,11 @@ export type ComplaintEntityResolution = z.infer<typeof complaintEntityResolution
 export type ComplaintAnalysis = z.infer<typeof complaintAnalysisSchema>
 export type ComplaintAnalysisCorrection = z.infer<typeof complaintAnalysisCorrectionSchema>
 export type ComplaintCluster = z.infer<typeof complaintClusterSchema>
+export type CompetitorFeatureMatrixStatus = z.infer<typeof competitorFeatureMatrixStatusSchema>
+export type CompetitorFeatureMatrixEvidenceBasis = z.infer<
+  typeof competitorFeatureMatrixEvidenceBasisSchema
+>
+export type CompetitorFeatureMatrixEntry = z.infer<typeof competitorFeatureMatrixEntrySchema>
 export type Competitor = z.infer<typeof competitorSchema>
 export type ScoreFactors = z.infer<typeof scoreFactorsSchema>
 export type ScoreSnapshot = z.infer<typeof scoreSnapshotSchema>

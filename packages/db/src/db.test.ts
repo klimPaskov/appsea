@@ -75,7 +75,8 @@ describe('database foundation', () => {
       '0059',
       '0060',
       '0061',
-      '0062'
+      '0062',
+      '0063'
     ])
     expect(migrations[0]?.checksum).toMatch(/^[a-f0-9]{64}$/)
     expect(migrations[0]?.sql).toContain('CREATE TABLE appsea.evidence_records')
@@ -185,6 +186,9 @@ describe('database foundation', () => {
     )
     const correctionRecomputeMigration = migrations.find(
       (migration) => migration.version === '0062'
+    )
+    const competitorFeatureMatrixMigration = migrations.find(
+      (migration) => migration.version === '0063'
     )
     expect(authMigration?.sql).toContain('CREATE TABLE appsea.users')
     expect(authMigration?.sql).toContain('CREATE TABLE appsea.auth_sessions')
@@ -602,6 +606,13 @@ describe('database foundation', () => {
     expect(correctionRecomputeMigration?.sql).toContain(
       'CREATE OR REPLACE FUNCTION appsea.enqueue_complaint_analysis_recompute'
     )
+    expect(competitorFeatureMatrixMigration?.sql).toContain(
+      "ADD COLUMN feature_matrix jsonb NOT NULL DEFAULT '[]'::jsonb"
+    )
+    expect(competitorFeatureMatrixMigration?.sql).toContain(
+      'competitors_feature_matrix_shape_check'
+    )
+    expect(competitorFeatureMatrixMigration?.sql).toContain('jsonb_array_length(feature_matrix)')
   })
 
   it('requires verified TLS for production database connections', () => {

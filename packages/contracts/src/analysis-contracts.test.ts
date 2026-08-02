@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import {
   complaintAnalysisSchema,
   productionAnalysisInputSchema,
+  productionOpportunitySeedSchema,
   productionResearchArtifactSchema,
   workspaceOpportunitySeedApprovalInputSchema,
   workspaceOpportunitySeedCreateInputSchema,
@@ -203,6 +204,34 @@ function input(overrides: Partial<ProductionAnalysisInput> = {}): ProductionAnal
 }
 
 describe('production analysis contracts', () => {
+  it('keeps source-backed competitor feature claims outside reviewed seed input', () => {
+    const seed = input().opportunitySeed.seed
+    expect(
+      productionOpportunitySeedSchema.safeParse({
+        ...seed,
+        competitors: [
+          {
+            name: 'Source-backed claim',
+            type: 'direct',
+            positioning: 'Untrusted source claim',
+            strengths: [],
+            weaknesses: [],
+            relatedComplaintCategories: [],
+            featureMatrix: [
+              {
+                feature: 'handoff history',
+                status: 'supported',
+                evidenceBasis: 'source-observation',
+                observationIds: ['observation:competitor-one'],
+                notes: null
+              }
+            ]
+          }
+        ]
+      }).success
+    ).toBe(false)
+  })
+
   it('keeps seed review creation and approval inputs strict', () => {
     const seedReview = workspaceOpportunitySeedCreateInputSchema.parse({
       seedReviewId: 'seed-review:contract',

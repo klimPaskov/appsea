@@ -177,6 +177,16 @@ content hash, policy snapshots carry the approved policy version/content hash
 and review ID, and the analysis run ID is distinct from the collection run ID.
 Opportunity/score/competitor assumptions remain inside a reviewed seed envelope.
 
+Competitor feature comparisons follow the same boundary. The normalized
+competitor row may carry a bounded feature matrix with an explicit evidence
+basis and notes. Production seed reviews accept only `reviewed-seed` entries;
+fixture entries remain synthetic, and `source-observation`/`mixed` entries must
+reference retained competitive observation identifiers. The public and private
+competitor routes render this normalized matrix without raw provider payloads.
+Populate source-backed entries only after a competitor-purpose source policy
+has been independently approved and the corresponding observations have passed
+editor/owner review.
+
 The filesystem adapter is not a production deployment. Production still needs
 an encrypted, versioned S3-compatible implementation, lifecycle rules, backup
 deletion verification, and a fresh Docker-backed migration/read/deletion test.

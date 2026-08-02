@@ -209,16 +209,33 @@ def competitors_screen(width: int, height: int, mobile: bool) -> str:
     content += text(margin, y, 'Competitors and alternatives', 24 if mobile else 28, 650, letter=-0.8)
     content += line(margin, y + 28, width - margin, y + 28)
     items = [
-        ('Shared inbox suites', 'direct', 'Broad routing, but complex setup and weak handoff reasoning.'),
-        ('Email labels and rules', 'platform', 'Already available, but no durable ownership history.'),
-        ('Shift handoff document', 'workaround', 'Flexible, but stale and dependent on manual discipline.')
+        (
+            'Shared inbox suites',
+            'direct',
+            'Broad routing, but complex setup and weak handoff reasoning.',
+            'Handoff history partial / cross-shift summary missing.'
+        ),
+        (
+            'Email labels and rules',
+            'platform',
+            'Already available, but no durable ownership history.',
+            'Routing rules supported / handoff history missing.'
+        ),
+        (
+            'Shift handoff document',
+            'workaround',
+            'Flexible, but stale and dependent on manual discipline.',
+            'Handoff summary supported / live state sync missing.'
+        )
     ]
-    row_h = 112 if mobile else 126
-    for index, (name, kind, body) in enumerate(items):
+    row_h = 140 if mobile else 150
+    for index, (name, kind, body, coverage) in enumerate(items):
         row_y = y + 28 + index * row_h
         content += text(margin, row_y + 37, name, 17 if mobile else 21, 650, letter=-0.3)
         content += text(width - margin, row_y + 37, kind, 10 if mobile else 11, 400, MUTED, 'end')
         content += multiline(margin, row_y + 70, body, 13 if mobile else 15, 45 if mobile else 82, 21 if mobile else 24, fill='#41444a')
+        content += text(margin, row_y + 105, 'FEATURE COVERAGE', 9, 700, MUTED, letter=0.8)
+        content += multiline(margin, row_y + 126, coverage, 11 if mobile else 12, 48 if mobile else 92, 17 if mobile else 19, fill=MUTED)
         content += line(margin, row_y + row_h, width - margin, row_y + row_h)
     risk_y = y + 28 + row_h * len(items) + 36
     content += rect(margin, risk_y, width - margin * 2, 104 if mobile else 112, SURFACE, 0, LINE)

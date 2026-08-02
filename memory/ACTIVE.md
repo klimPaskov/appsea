@@ -5,7 +5,7 @@
 The fixture product, PostgreSQL persistence, durable workflows, policy-gated
 CFPB collection checkpoint, authenticated private workspaces, report/plan
 approval/export, recovery, and invitations are implemented. Migrations
-`0027`-`0062` add policy evidence, collection checkpoints, deletion repair,
+`0027`-`0063` add policy evidence, collection checkpoints, deletion repair,
 leases, snapshot reconciliation, workflow admissions, source-reconciliation
 admission, retryable tombstones, maintenance-run telemetry, and a durable
 source-quota reconciliation case ledger. Migration `0050` adds explicit,
@@ -43,7 +43,7 @@ the immutable collection snapshot/result, Temporal checkpoints, and
 audit/outbox metadata. The reviewed CFPB policy declares zero API cost; the
 runner rejects known cost overages before lease acquisition.
 
-Production analysis read models now include the linked report and plan approval
+Production analysis read models include the linked report and plan approval
 states from their PostgreSQL governance projections. The private opportunity
 mapper uses those states, so a later report/plan approval transition is visible
 without inferring `draft` or `unreviewed` from an immutable object payload.
@@ -61,16 +61,15 @@ re-collection requires a completed matching tombstone.
 
 ## Validated commands
 
-- `pnpm verify` passed 2026-08-02 after the source tranche; 56 Turbo tasks,
-  fixture/plan/analysis samples, web smoke, formatting, and repository checks
-  pass.
+- `pnpm verify` passed 2026-08-02 after the source tranche: 56 Turbo tasks,
+  samples, web smoke, formatting, and repository checks pass.
 - PostgreSQL and Temporal integration are staged but Docker-blocked because the
   Docker Desktop Linux engine pipe is unavailable.
 
-- Maintenance loop tests pass; no deployed scheduler, Temporal, or source policy
+- Maintenance loop tests pass; no deployed scheduler, Temporal, or source
   activation claim.
 
-On 2026-08-01, migrations `0053` and `0054` added deterministic complaint
+Migrations `0053` and `0054` added deterministic complaint
 analysis snapshots and identity/independence-bound source approvals. The CFPB
 source remains disabled pending external review.
 
@@ -80,18 +79,19 @@ production seeds are reviewed-seed-only with provenance, and source-backed
 status requires a confirmed non-synthetic observation with permitted source/
 evidence IDs and an observation time. Migration `0059` persists bounded
 per-claim provenance and owner/editor review; no approved competitor source is
-connected, and feature matrices remain open. Complaint/source-item provenance
+connected. Migration `0063` adds a bounded, provenance-labelled competitor
+feature matrix through persistence and public/private reads; source-backed
+rows remain gated. Complaint/source-item provenance
 now carries an HTTPS canonical locator for attribution; a disabled,
 fixture-tested Stack Exchange candidate remains pending independent review;
 the worker now has a registry-selected path but no active source row.
 Migration `0060` adds a database-level HTTP(S) host/path check for those
 locators, while policy still controls whether a locator may be displayed.
 
-The 2026-08-02 campaign slice adds a private one-source `campaign-v1` run,
-history, draft edits/archive, policy-gated refresh claims, and a
-registry source picker. Multi-source orchestration, live activation,
-deployed scheduler/Temporal, and Docker PostgreSQL proof remain open; CFPB is
-disabled.
+Campaigns now have a private one-source `campaign-v1` run/history, draft
+lifecycle, policy-gated refresh claims, and registry picker. Multi-source
+orchestration, live activation, deployed scheduler/Temporal, and Docker proof
+remain open; CFPB is disabled.
 
 The 2026-08-02 analysis tranche adds a reviewed seed handoff: owner/editor
 members choose an approved seed, the admission route starts
@@ -106,7 +106,7 @@ over existing policy tables. It derives production collectibility from the
 independent approval gate and exposes quotas, deletion duties, and gaps while
 keeping payloads, hashes, reviewer identities, and activation controls out.
 
-The 2026-08-02 correction tranche adds migrations `0061` and `0062`, a strict
+2026-08-02 correction tranche adds migrations `0061` and `0062`, a strict
 derived-only editor/owner correction contract, immutable prior/next snapshot
 hashes, active analysis/opportunity invalidation, and a deferred correction
 trigger that queues one deterministic repair per affected opportunity. Source
@@ -119,8 +119,7 @@ Missing or unapproved seeds block repair.
 
 1. Legal/privacy/security approval and CFPB policy activation.
 2. Production Temporal/DB provisioning and Docker crash/retry proof.
-3. Provider/identity approval, delivery, deployed maintenance, and export/
-   recollection operations.
+3. Provider/identity approval, delivery, deployed maintenance, and export.
 4. Monitoring, scheduler ownership, pricing/billing controls, and security
    review.
 5. Supply a separately reviewed competitor/contrary-signal source under the
@@ -133,9 +132,9 @@ Missing or unapproved seeds block repair.
 - CFPB is disabled pending source approval; no real source is enabled.
 - Production DB/Temporal, identity delivery, role separation, cloud/backup
   purge, and deployment validation remain.
-- Recovery/invitations await provider, DPA/retention, key-rotation, monitoring,
+- Recovery/invitations await provider, DPA/retention, key rotation, monitoring,
   and failure-drill approval.
 - Deletion retries and explicit one-record recollection exist; workspace/export
   purge, cloud storage, recomputation alerts, deployed scheduler ownership, and quota
   case alert ownership remain open.
-- Windows/macOS packaging remains open.
+- Windows/macOS release remains open.

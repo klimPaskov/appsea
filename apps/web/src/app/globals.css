@@ -608,6 +608,61 @@ a:focus-visible {
   font-size: 13px;
 }
 
+.feature-matrix-scroll {
+  max-width: 100%;
+  margin-top: 22px;
+  overflow-x: auto;
+}
+
+.feature-matrix {
+  width: 100%;
+  min-width: 620px;
+  border-collapse: collapse;
+  color: #41444a;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.feature-matrix caption {
+  margin-bottom: 10px;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 650;
+  letter-spacing: 0.06em;
+  text-align: left;
+  text-transform: uppercase;
+}
+
+.feature-matrix th,
+.feature-matrix td {
+  padding: 11px 12px;
+  border-bottom: 1px solid var(--line);
+  vertical-align: top;
+  text-align: left;
+}
+
+.feature-matrix th {
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 650;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.feature-matrix td:first-child {
+  min-width: 180px;
+  color: var(--ink);
+  font-weight: 600;
+}
+
+.feature-matrix-provenance {
+  display: block;
+  margin-top: 4px;
+  color: var(--muted);
+  font-size: 10px;
+  overflow-wrap: anywhere;
+}
+
 .observation-list article {
   padding: 30px 0;
   border-bottom: 1px solid var(--line);

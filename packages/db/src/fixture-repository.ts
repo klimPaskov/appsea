@@ -14,6 +14,7 @@ import {
 import { assertDeterministicScoreSnapshot } from '@appsea/scoring'
 import { generateOpportunityReport } from '@appsea/reports'
 import { contentHash } from './hash'
+import { competitorContentHash } from './competitor-hash'
 import { withWorkspaceTransaction } from './transaction'
 
 const fixtureNormalizerVersion = 'fixture-normalizer-v1'
@@ -682,12 +683,13 @@ export class PostgresFixtureResearchRepository {
               name: competitor.name,
               type: competitor.type
             })
-            const competitorHash = contentHash(competitor)
+            const competitorHash = competitorContentHash(competitor)
             await client.query(
               `INSERT INTO appsea.competitors
                (workspace_id, competitor_id, name, competitor_type, positioning, strengths,
-                weaknesses, related_complaint_categories, synthetic, content_hash, observed_at)
-             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, true, $9, $10)
+                weaknesses, related_complaint_categories, feature_matrix, synthetic,
+                content_hash, observed_at)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9::jsonb, true, $10, $11)
              ON CONFLICT (workspace_id, competitor_id) DO NOTHING`,
               [
                 parsed.workspaceId,
@@ -698,6 +700,7 @@ export class PostgresFixtureResearchRepository {
                 competitor.strengths,
                 competitor.weaknesses,
                 competitor.relatedComplaintCategories,
+                JSON.stringify(competitor.featureMatrix),
                 competitorHash,
                 parsed.requestedAt
               ]
@@ -1105,11 +1108,12 @@ export class PostgresFixtureResearchRepository {
               strengths: string[]
               weaknesses: string[]
               related_complaint_categories: string[]
+              feature_matrix: unknown
             }
           >(
             `SELECT competitor.name, competitor.competitor_type, competitor.positioning,
                     competitor.strengths, competitor.weaknesses,
-                    competitor.related_complaint_categories
+                    competitor.related_complaint_categories, competitor.feature_matrix
                FROM appsea.research_run_competitors relation
                JOIN appsea.competitors competitor
                  ON competitor.workspace_id = relation.workspace_id
@@ -1141,7 +1145,8 @@ export class PostgresFixtureResearchRepository {
                 positioning: competitor.positioning,
                 strengths: competitor.strengths,
                 weaknesses: competitor.weaknesses,
-                relatedComplaintCategories: competitor.related_complaint_categories
+                relatedComplaintCategories: competitor.related_complaint_categories,
+                featureMatrix: competitor.feature_matrix
               })),
               scoreSnapshot: {
                 score: Number(row.score),

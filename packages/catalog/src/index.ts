@@ -5,6 +5,20 @@ import { calculateOpportunityScore } from '@appsea/scoring'
 const calculatedAt = '2026-07-10T00:00:00.000Z'
 const capturedAt = '2026-07-09T18:00:00.000Z'
 
+function fixtureFeature(
+  feature: string,
+  status: 'supported' | 'partial' | 'missing' | 'unknown',
+  notes: string
+): Competitor['featureMatrix'][number] {
+  return {
+    feature,
+    status,
+    evidenceBasis: 'fixture',
+    observationIds: [],
+    notes
+  }
+}
+
 function complaint(
   id: string,
   product: string,
@@ -195,7 +209,12 @@ const competitors: Record<string, Competitor[]> = {
       positioning: 'Full support and team email platforms',
       strengths: ['Broad channel support', 'Mature routing'],
       weaknesses: ['Complex setup', 'Weak handoff reasoning', 'Expensive for small teams'],
-      relatedComplaintCategories: ['handoff loss', 'state drift']
+      relatedComplaintCategories: ['handoff loss', 'state drift'],
+      featureMatrix: [
+        fixtureFeature('Handoff history', 'partial', 'Synthetic comparison only.'),
+        fixtureFeature('Ownership audit trail', 'partial', 'Synthetic comparison only.'),
+        fixtureFeature('Cross-shift summary', 'missing', 'Synthetic comparison only.')
+      ]
     },
     {
       name: 'Email labels and rules',
@@ -203,7 +222,12 @@ const competitors: Record<string, Competitor[]> = {
       positioning: 'Native organization inside a mail provider',
       strengths: ['Already available', 'Low setup cost'],
       weaknesses: ['No durable ownership history', 'Hard to audit across shifts'],
-      relatedComplaintCategories: ['accountability gap']
+      relatedComplaintCategories: ['accountability gap'],
+      featureMatrix: [
+        fixtureFeature('Handoff history', 'missing', 'Synthetic comparison only.'),
+        fixtureFeature('Routing rules', 'supported', 'Synthetic comparison only.'),
+        fixtureFeature('Cross-shift summary', 'missing', 'Synthetic comparison only.')
+      ]
     },
     {
       name: 'Shift handoff document',
@@ -211,7 +235,12 @@ const competitors: Record<string, Competitor[]> = {
       positioning: 'Manual summary maintained by the team',
       strengths: ['Flexible', 'No integration needed'],
       weaknesses: ['Becomes stale', 'Duplicates the inbox', 'Relies on discipline'],
-      relatedComplaintCategories: ['handoff loss']
+      relatedComplaintCategories: ['handoff loss'],
+      featureMatrix: [
+        fixtureFeature('Handoff summary', 'supported', 'Synthetic comparison only.'),
+        fixtureFeature('Live state sync', 'missing', 'Synthetic comparison only.'),
+        fixtureFeature('Audit trail', 'missing', 'Synthetic comparison only.')
+      ]
     }
   ],
   'receipt-vault': [
@@ -221,7 +250,12 @@ const competitors: Record<string, Competitor[]> = {
       positioning: 'Cards, approvals, and receipt capture in one suite',
       strengths: ['Integrated financial controls', 'Established accounting exports'],
       weaknesses: ['Receipt recovery remains manual', 'High switching cost'],
-      relatedComplaintCategories: ['missing receipts', 'reconciliation work']
+      relatedComplaintCategories: ['missing receipts', 'reconciliation work'],
+      featureMatrix: [
+        fixtureFeature('Receipt capture', 'supported', 'Synthetic comparison only.'),
+        fixtureFeature('Transaction matching', 'partial', 'Synthetic comparison only.'),
+        fixtureFeature('Recovery workflow', 'partial', 'Synthetic comparison only.')
+      ]
     },
     {
       name: 'Accounting inbox',
@@ -229,7 +263,12 @@ const competitors: Record<string, Competitor[]> = {
       positioning: 'Forward receipts into an accounting workspace',
       strengths: ['Simple behavior', 'Works with existing email'],
       weaknesses: ['Weak transaction matching', 'Poor employee follow-up'],
-      relatedComplaintCategories: ['missing receipts']
+      relatedComplaintCategories: ['missing receipts'],
+      featureMatrix: [
+        fixtureFeature('Receipt forwarding', 'supported', 'Synthetic comparison only.'),
+        fixtureFeature('Transaction matching', 'missing', 'Synthetic comparison only.'),
+        fixtureFeature('Follow-up ownership', 'missing', 'Synthetic comparison only.')
+      ]
     }
   ],
   'subscription-auditor': [
@@ -239,7 +278,12 @@ const competitors: Record<string, Competitor[]> = {
       positioning: 'Central spend control and card administration',
       strengths: ['Transaction access', 'Policy controls'],
       weaknesses: ['Weak product usage evidence', 'Owner mapping depends on clean data'],
-      relatedComplaintCategories: ['hidden renewals', 'unknown owner']
+      relatedComplaintCategories: ['hidden renewals', 'unknown owner'],
+      featureMatrix: [
+        fixtureFeature('Renewal inventory', 'supported', 'Synthetic comparison only.'),
+        fixtureFeature('Usage signals', 'partial', 'Synthetic comparison only.'),
+        fixtureFeature('Owner mapping', 'partial', 'Synthetic comparison only.')
+      ]
     },
     {
       name: 'Spreadsheet renewal calendar',
@@ -247,7 +291,12 @@ const competitors: Record<string, Competitor[]> = {
       positioning: 'Manually tracked renewal dates and owners',
       strengths: ['Cheap', 'Custom'],
       weaknesses: ['Stale quickly', 'Misses shadow subscriptions'],
-      relatedComplaintCategories: ['hidden renewals']
+      relatedComplaintCategories: ['hidden renewals'],
+      featureMatrix: [
+        fixtureFeature('Renewal calendar', 'supported', 'Synthetic comparison only.'),
+        fixtureFeature('Shadow subscription detection', 'missing', 'Synthetic comparison only.'),
+        fixtureFeature('Reminder automation', 'partial', 'Synthetic comparison only.')
+      ]
     }
   ],
   'handoff-memory': [
@@ -257,7 +306,12 @@ const competitors: Record<string, Competitor[]> = {
       positioning: 'Markdown instructions and architecture notes',
       strengths: ['Version controlled', 'Reviewable'],
       weaknesses: ['Hard to keep current', 'Weak retrieval across sessions'],
-      relatedComplaintCategories: ['context loss', 'stale handoff']
+      relatedComplaintCategories: ['context loss', 'stale handoff'],
+      featureMatrix: [
+        fixtureFeature('Version history', 'supported', 'Synthetic comparison only.'),
+        fixtureFeature('Semantic retrieval', 'partial', 'Synthetic comparison only.'),
+        fixtureFeature('Review workflow', 'missing', 'Synthetic comparison only.')
+      ]
     },
     {
       name: 'Agent memory products',
@@ -265,7 +319,12 @@ const competitors: Record<string, Competitor[]> = {
       positioning: 'Persistent memories for long-running assistants',
       strengths: ['Automated recall', 'Cross-session continuity'],
       weaknesses: ['Can store low-quality facts', 'Often lacks repository review workflow'],
-      relatedComplaintCategories: ['decision rediscovery']
+      relatedComplaintCategories: ['decision rediscovery'],
+      featureMatrix: [
+        fixtureFeature('Cross-session recall', 'supported', 'Synthetic comparison only.'),
+        fixtureFeature('Repository grounding', 'partial', 'Synthetic comparison only.'),
+        fixtureFeature('Approval workflow', 'missing', 'Synthetic comparison only.')
+      ]
     }
   ],
   'form-debugger': [
@@ -275,7 +334,12 @@ const competitors: Record<string, Competitor[]> = {
       positioning: 'Basic submission and webhook history',
       strengths: ['Close to the source', 'No extra integration'],
       weaknesses: ['Limited traces', 'Weak replay and condition visualization'],
-      relatedComplaintCategories: ['invisible failure', 'delivery uncertainty']
+      relatedComplaintCategories: ['invisible failure', 'delivery uncertainty'],
+      featureMatrix: [
+        fixtureFeature('Submission history', 'supported', 'Synthetic comparison only.'),
+        fixtureFeature('Delivery trace', 'partial', 'Synthetic comparison only.'),
+        fixtureFeature('Replay controls', 'missing', 'Synthetic comparison only.')
+      ]
     },
     {
       name: 'General observability tools',
@@ -283,7 +347,12 @@ const competitors: Record<string, Competitor[]> = {
       positioning: 'Application logs and event tracing',
       strengths: ['Powerful diagnostics', 'Flexible'],
       weaknesses: ['Too technical for form operators', 'Requires custom instrumentation'],
-      relatedComplaintCategories: ['delivery uncertainty']
+      relatedComplaintCategories: ['delivery uncertainty'],
+      featureMatrix: [
+        fixtureFeature('Event traces', 'supported', 'Synthetic comparison only.'),
+        fixtureFeature('Form-specific diagnosis', 'partial', 'Synthetic comparison only.'),
+        fixtureFeature('No-code replay', 'missing', 'Synthetic comparison only.')
+      ]
     }
   ],
   'decision-ledger': [
@@ -293,7 +362,12 @@ const competitors: Record<string, Competitor[]> = {
       positioning: 'Tasks, comments, and project history',
       strengths: ['Already used by teams', 'Links to delivery work'],
       weaknesses: ['Decisions remain mixed with discussion', 'Rationale is inconsistent'],
-      relatedComplaintCategories: ['missing rationale', 'unowned follow-up']
+      relatedComplaintCategories: ['missing rationale', 'unowned follow-up'],
+      featureMatrix: [
+        fixtureFeature('Task links', 'supported', 'Synthetic comparison only.'),
+        fixtureFeature('Rationale history', 'partial', 'Synthetic comparison only.'),
+        fixtureFeature('Decision review cadence', 'missing', 'Synthetic comparison only.')
+      ]
     },
     {
       name: 'Architecture decision records',
@@ -301,7 +375,12 @@ const competitors: Record<string, Competitor[]> = {
       positioning: 'Structured decisions stored in a repository',
       strengths: ['Clear history', 'Version controlled'],
       weaknesses: ['Mostly technical', 'Manual adoption burden'],
-      relatedComplaintCategories: ['decision loss']
+      relatedComplaintCategories: ['decision loss'],
+      featureMatrix: [
+        fixtureFeature('Rationale history', 'supported', 'Synthetic comparison only.'),
+        fixtureFeature('Follow-up ownership', 'partial', 'Synthetic comparison only.'),
+        fixtureFeature('Nontechnical adoption', 'missing', 'Synthetic comparison only.')
+      ]
     }
   ]
 }

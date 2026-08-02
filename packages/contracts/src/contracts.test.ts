@@ -22,6 +22,8 @@ import {
   sourceQuotaReconciliationListQuerySchema,
   sourceQuotaReconciliationResolveInputSchema,
   complaintSchema,
+  competitorFeatureMatrixEntrySchema,
+  competitorSchema,
   fixturePersistenceInputSchema,
   fixtureResearchWorkflowInputSchema,
   fixtureResearchWorkflowStartRequestSchema,
@@ -1136,6 +1138,58 @@ describe('contracts', () => {
     ).toBe(false)
     expect(
       complaintAnalysisCorrectionSchema.safeParse({ text: 'raw source content' }).success
+    ).toBe(false)
+  })
+
+  it('requires provenance for source-backed competitor feature coverage', () => {
+    const reviewedSeed = competitorSchema.parse({
+      name: 'Reviewed alternative',
+      type: 'adjacent',
+      positioning: 'A reviewed seed assumption',
+      strengths: [],
+      weaknesses: [],
+      relatedComplaintCategories: [],
+      featureMatrix: [
+        {
+          feature: 'Handoff history',
+          status: 'partial',
+          evidenceBasis: 'reviewed-seed',
+          notes: 'Requires a reviewed product assumption.'
+        }
+      ]
+    })
+    expect(reviewedSeed.featureMatrix[0]?.observationIds).toEqual([])
+    expect(
+      competitorFeatureMatrixEntrySchema.safeParse({
+        feature: 'Handoff history',
+        status: 'supported',
+        evidenceBasis: 'source-observation',
+        observationIds: [],
+        notes: null
+      }).success
+    ).toBe(false)
+    expect(
+      competitorFeatureMatrixEntrySchema.safeParse({
+        feature: 'Handoff history',
+        status: 'supported',
+        evidenceBasis: 'fixture',
+        observationIds: ['observation:source-backed'],
+        notes: null
+      }).success
+    ).toBe(false)
+    expect(
+      competitorSchema.safeParse({
+        ...reviewedSeed,
+        featureMatrix: [
+          ...reviewedSeed.featureMatrix,
+          {
+            feature: ' handoff HISTORY ',
+            status: 'unknown',
+            evidenceBasis: 'reviewed-seed',
+            notes: null
+          }
+        ]
+      }).success
     ).toBe(false)
   })
 
