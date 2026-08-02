@@ -344,9 +344,14 @@ No migration was needed because the table shape is additive.
 
 ## 2026-08-02: Start collection only from persisted campaign intent
 
-The private campaign run route accepts only a bounded run/idempotency envelope.
-It reconstructs source, query, purpose, display mode, limit, budget, and seed
-lineage from the authenticated stored campaign, rechecks the current approved
-policy, and commits the existing admission ledger before Temporal. The first
-production boundary is exactly one non-synthetic source; multi-source fan-out,
-scheduling, and connector activation remain explicit reviewed work.
+The campaign run route accepts only a bounded run/idempotency envelope,
+reconstructs collection inputs from the authenticated campaign, rechecks
+policy, and commits admission before Temporal. The first boundary is one
+non-synthetic source; fan-out, scheduling, and activation remain reviewed work.
+
+## 2026-08-02: Keep campaign run history safe and projection-backed
+
+Campaign history reuses the authenticated production workflow projection,
+bounded to 100 rows. It exposes state, checkpoint, source/policy IDs, counters,
+and timestamps only; hashes, actor details, and payloads stay private. Completed
+runs link to the existing policy-filtered evidence page.

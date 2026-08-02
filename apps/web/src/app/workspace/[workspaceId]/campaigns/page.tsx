@@ -2,10 +2,12 @@ import Link from 'next/link'
 import { notFound, redirect } from 'next/navigation'
 import { appseaIdentifierSchema } from '@appsea/contracts'
 import { PostgresResearchCampaignRepository } from '@appsea/db/research-campaign'
+import { PostgresProductionCollectionWorkflowRepository } from '@appsea/db/production-collection-workflow'
 import { readSession } from '../../../../server/auth-session'
 import { getDatabasePool } from '../../../../server/database'
 import { ResearchCampaignCreateForm } from '../../campaign-actions'
 import { ResearchCampaignRunAction } from '../../campaign-run-action'
+import { ResearchCampaignRunHistory } from '../../campaign-run-history'
 
 export const dynamic = 'force-dynamic'
 
@@ -23,10 +25,29 @@ export default async function ResearchCampaignsPage({
     (candidate) => candidate.workspaceId === parsedWorkspaceId.data
   )
   if (!workspace) notFound()
-  const campaigns = await new PostgresResearchCampaignRepository(getDatabasePool()).listForUser(
+  const pool = getDatabasePool()
+  const campaigns = await new PostgresResearchCampaignRepository(pool).listForUser(
     session.user.userId,
     parsedWorkspaceId.data
   )
+  const runHistoryByCampaignId = new Map<
+    string,
+    Awaited<ReturnType<PostgresProductionCollectionWorkflowRepository['listForCampaignForUser']>>
+  >()
+  if (!workspace.fixtureOnly) {
+    const runLists = await Promise.all(
+      campaigns.map((campaign) =>
+        new PostgresProductionCollectionWorkflowRepository(pool).listForCampaignForUser(
+          session.user.userId,
+          parsedWorkspaceId.data,
+          campaign.campaignId
+        )
+      )
+    )
+    campaigns.forEach((campaign, index) => {
+      runHistoryByCampaignId.set(campaign.campaignId, runLists[index] ?? [])
+    })
+  }
 
   return (
     <main className="workspace-page">
@@ -84,6 +105,10 @@ export default async function ResearchCampaignsPage({
                       campaign.sources[0]?.enabled === true &&
                       campaign.sources[0]?.policyState === 'approved'
                     }
+                  />
+                  <ResearchCampaignRunHistory
+                    workspaceId={parsedWorkspaceId.data}
+                    runs={runHistoryByCampaignId.get(campaign.campaignId) ?? []}
                   />
                   <details>
                     <summary>Configuration snapshot</summary>

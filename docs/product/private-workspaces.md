@@ -60,6 +60,13 @@ purpose/display mode and any approved seed review, and admits the digest before
 contacting Temporal. Pending policy remains a visible gap; multi-source runs
 and scheduled refresh are not yet implemented.
 
+Private members can inspect the latest 100 production runs for a campaign at
+`GET /api/workspaces/:workspaceId/campaigns/:campaignId/runs` or through the
+campaign page. The workflow-status page shows only safe state, checkpoint,
+source/policy identifiers, counters, and timestamps; completed runs link to
+the existing source evidence and coverage page. Idempotency hashes, raw source
+payloads, and caller secrets never appear in this history.
+
 Workspace members can inspect bounded cross-run operational cost accounting at
 `GET /api/workspaces/:workspaceId/costs`. The read model keeps currencies and
 cost types separate, reports exact micro-unit strings, defaults to a 30-day

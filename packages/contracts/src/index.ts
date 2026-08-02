@@ -2233,6 +2233,28 @@ export const productionCollectionWorkflowStatusSchema = z
   })
   .strict()
 
+/** Safe private read model for campaign collection history. */
+export const researchCampaignRunReadModelSchema = z
+  .object({
+    campaignId: appseaIdentifierSchema,
+    workflowId: workflowIdSchema,
+    runId: appseaIdentifierSchema,
+    sourceId: appseaIdentifierSchema,
+    policyVersion: z.string().min(1).max(80),
+    state: workflowJobStateSchema,
+    checkpoint: workflowJobCheckpointSchema,
+    activityAttempts: z.number().int().nonnegative().max(10),
+    consumedSourceItems: z.number().int().nonnegative().max(5_000),
+    consumedCostMicros: z.number().int().nonnegative().max(1_000_000_000_000),
+    analysisSeedReviewId: appseaIdentifierSchema.nullable(),
+    recollectionTombstoneId: appseaIdentifierSchema.nullable(),
+    requestedAt: z.string().datetime(),
+    startedAt: z.string().datetime(),
+    updatedAt: z.string().datetime(),
+    finishedAt: z.string().datetime().nullable()
+  })
+  .strict()
+
 export const productionCollectionWorkflowJobInitializeInputSchema = z
   .object({
     execution: productionCollectionWorkflowExecutionMetadataSchema,
@@ -3555,6 +3577,7 @@ export type ProductionCollectionWorkflowResult = z.infer<
 export type ProductionCollectionWorkflowStatus = z.infer<
   typeof productionCollectionWorkflowStatusSchema
 >
+export type ResearchCampaignRunReadModel = z.infer<typeof researchCampaignRunReadModelSchema>
 export type ProductionCollectionWorkflowJobInitializeInput = z.infer<
   typeof productionCollectionWorkflowJobInitializeInputSchema
 >

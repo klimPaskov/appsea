@@ -9,7 +9,9 @@ visible. Owners/editors can start a bounded one-source run from the campaign
 page; the route derives collection inputs from the stored campaign and admits
 the idempotency digest before Temporal. Edit/delete, pagination, scheduled
 refresh, multi-source orchestration, and a source-registry picker are not
-implemented. Pending policies can be named to make coverage gaps explicit;
+implemented. The page now lists the latest 100 production run projections and
+links completed runs to evidence inspection without exposing hashes or source
+payloads. Pending policies can be named to make coverage gaps explicit;
 they cannot be collected or treated as enabled sources. The CFPB connector
 remains disabled pending external legal, privacy, and security approval.
 

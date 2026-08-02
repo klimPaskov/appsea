@@ -65,3 +65,15 @@ rate, concurrency, and idempotency failures do not start a workflow. A pending
 or mismatched policy remains a visible coverage gap and returns a bounded
 validation error. Multi-source orchestration, scheduling, and connector
 activation remain separate reviewed work.
+
+## Run history and inspection
+
+Private members can list the latest 100 production runs at
+`GET /api/workspaces/:workspaceId/campaigns/:campaignId/runs`. The read model
+contains only the campaign/run/workflow identifiers, source and policy IDs,
+state, checkpoint, bounded counters, and timestamps. It deliberately excludes
+idempotency digests, input hashes, actor details, and source payloads. The
+campaign page links each run to the private workflow-status page
+`/workspace/:workspaceId/research/workflows/:workflowId`; completed runs also
+link to the existing evidence and coverage page at
+`/workspace/:workspaceId/research/:runId`.

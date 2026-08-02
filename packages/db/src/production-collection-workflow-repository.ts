@@ -1,16 +1,19 @@
 import type { Pool, PoolClient, QueryResultRow } from 'pg'
 import {
+  appseaIdentifierSchema,
   productionCollectionWorkflowCheckpointWriteSchema,
   productionCollectionWorkflowCompletionInputSchema,
   productionCollectionWorkflowHashMaterialSchema,
   productionCollectionWorkflowJobInitializeInputSchema,
   productionCollectionWorkflowTerminationInputSchema,
+  researchCampaignRunReadModelSchema,
   type ProductionCollectionWorkflowCheckpointWrite,
   type ProductionCollectionWorkflowCompletionInput,
   type ProductionCollectionWorkflowExecutionMetadata,
   type ProductionCollectionWorkflowInput,
   type ProductionCollectionWorkflowPersistenceActivityResult,
   type ProductionCollectionWorkflowStatus,
+  type ResearchCampaignRunReadModel,
   workflowJobCheckpointSchema,
   workflowJobStateSchema,
   workflowActorSchema
@@ -70,6 +73,14 @@ interface StoredHashRow extends QueryResultRow {
   content_hash: string
 }
 
+function asIso(value: Date | string | null): string | null {
+  return value === null
+    ? null
+    : value instanceof Date
+      ? value.toISOString()
+      : new Date(value).toISOString()
+}
+
 const checkpointRanks: Record<ProductionCollectionWorkflowCheckpointWrite['checkpoint'], number> = {
   accepted: 0,
   initialized: 1,
@@ -98,6 +109,10 @@ function mapRow(row: ProductionWorkflowRow): ProductionCollectionWorkflowStatus 
   analysisSeedReviewId: string | null
   recollectionTombstoneId: string | null
   requestedBy: ProductionCollectionWorkflowInput['requestedBy']
+  requestedAt: string
+  startedAt: string
+  updatedAt: string
+  finishedAt: string | null
 } {
   return {
     workflowId: row.workflow_id,
@@ -120,8 +135,33 @@ function mapRow(row: ProductionWorkflowRow): ProductionCollectionWorkflowStatus 
     requestedBy: workflowActorSchema.parse({
       actorType: row.requested_by_actor_type,
       actorId: row.requested_by_actor_id
-    })
+    }),
+    requestedAt: asIso(row.requested_at)!,
+    startedAt: asIso(row.started_at)!,
+    updatedAt: asIso(row.updated_at)!,
+    finishedAt: asIso(row.finished_at)
   }
+}
+
+function mapCampaignRun(row: ProductionWorkflowRow): ResearchCampaignRunReadModel {
+  return researchCampaignRunReadModelSchema.parse({
+    campaignId: row.campaign_id,
+    workflowId: row.workflow_id,
+    runId: row.requested_research_run_id,
+    sourceId: row.source_id,
+    policyVersion: row.policy_version,
+    state: row.state,
+    checkpoint: row.checkpoint,
+    activityAttempts: row.activity_attempts,
+    consumedSourceItems: row.consumed_source_items,
+    consumedCostMicros: Number(row.consumed_cost_micros),
+    analysisSeedReviewId: row.analysis_seed_review_id,
+    recollectionTombstoneId: row.recollection_tombstone_id,
+    requestedAt: asIso(row.requested_at)!,
+    startedAt: asIso(row.started_at)!,
+    updatedAt: asIso(row.updated_at)!,
+    finishedAt: asIso(row.finished_at)
+  })
 }
 
 async function readForUpdate(
@@ -770,6 +810,39 @@ export class PostgresProductionCollectionWorkflowRepository {
       userId,
       workspaceId,
       (client) => this.readInTransaction(client, workspaceId, workflowId),
+      { readOnly: true }
+    )
+  }
+
+  async listForCampaignForUser(
+    userId: string,
+    workspaceId: string,
+    campaignId: string
+  ): Promise<ResearchCampaignRunReadModel[]> {
+    const parsedUserId = appseaIdentifierSchema.parse(userId)
+    const parsedWorkspaceId = appseaIdentifierSchema.parse(workspaceId)
+    const parsedCampaignId = appseaIdentifierSchema.parse(campaignId)
+    return withAuthenticatedWorkspaceTransaction(
+      this.pool,
+      parsedUserId,
+      parsedWorkspaceId,
+      async (client) => {
+        const result = await client.query<ProductionWorkflowRow>(
+          `SELECT job.*
+             FROM appsea.production_collection_workflow_jobs job
+             JOIN appsea.workspaces workspace
+               ON workspace.workspace_id = job.workspace_id
+            WHERE job.workspace_id = $1
+              AND job.campaign_id = $2
+              AND workspace.status = 'active'
+              AND workspace.visibility = 'private'
+              AND workspace.fixture_only = false
+            ORDER BY job.requested_at DESC, job.workflow_id
+            LIMIT 100`,
+          [parsedWorkspaceId, parsedCampaignId]
+        )
+        return result.rows.map(mapCampaignRun)
+      },
       { readOnly: true }
     )
   }

@@ -149,7 +149,10 @@ route. It is intentionally one-source for this tranche: the route rechecks
 the current approved policy, purpose, display mode, expiry, budget, and any
 approved seed review, derives all collection inputs server-side, and commits
 the existing idempotent admission before starting Temporal. Multi-source
-orchestration, scheduling, and campaign edit/delete remain open.
+orchestration, scheduling, and campaign edit/delete remain open. The private
+campaign surface now lists the latest 100 production workflow projections and
+links completed runs to evidence inspection without exposing workflow hashes
+or raw source payloads.
 
 ### 2. Durable workflows
 

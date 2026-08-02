@@ -43,6 +43,7 @@ import {
   researchCampaignCreateInputSchema,
   researchCampaignReadModelSchema,
   researchCampaignRunInputSchema,
+  researchCampaignRunReadModelSchema,
   sourcePolicySchema,
   sourcePolicyApprovalInputSchema,
   sourceMaintenanceInputSchema,
@@ -1313,6 +1314,26 @@ describe('contracts', () => {
         requestedAt: now
       }).success
     ).toBe(false)
+    expect(
+      researchCampaignRunReadModelSchema.parse({
+        campaignId: 'campaign:billing',
+        workflowId: 'workflow:production:workspace:one:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
+        runId: 'run:billing',
+        sourceId: 'source:cfpb',
+        policyVersion: 'cfpb-v1',
+        state: 'running',
+        checkpoint: 'initialized',
+        activityAttempts: 1,
+        consumedSourceItems: 0,
+        consumedCostMicros: 0,
+        analysisSeedReviewId: null,
+        recollectionTombstoneId: null,
+        requestedAt: now,
+        startedAt: now,
+        updatedAt: now,
+        finishedAt: null
+      }).state
+    ).toBe('running')
   })
 
   it('accepts an explicit approved-seed reference for automatic analysis handoff', () => {

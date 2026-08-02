@@ -23,9 +23,8 @@
 - Codex helper agents: 11 bounded agents
 - Project memory: implemented and validated
 - Documentation system: implemented and linked
-- UI references: fourteen sparse desktop/mobile references; the seed-review
-  route currently has deterministic SVG sources while raster export awaits the
-  local `cairosvg` dependency
+- UI references: eighteen deterministic sparse desktop/mobile reference
+  sources; raster export awaits the local `cairosvg` dependency
 - Real source connectors: CFPB connector boundary and policy metadata implemented, disabled pending legal/privacy/security approval; migrations `0027` and `0054` add operator-only draft/approval evidence with canonical reviewer identity and independence attestation, and the production collection checkpoint persists policy-bound non-synthetic source/evidence/complaint lineage when a reviewed version is explicitly activated. The direct CFPB command now uses migration `0051`'s worker-principal admission branch and cannot bypass the bounded production ingress ledger; no source is activated in this repository
 - Production database deployment: not provisioned; the schema, repository, migrations, roles, RLS, and local/CI proof are implemented
 - Authentication: private workspace signup/sign-in, hashed/revocable sessions with authenticated inventory and per-session revocation, durable login/signup/reauthentication/recovery/invitation/account-closure throttling, bounded retention, 15-minute password step-up for high-risk mutations, owner-scoped member role administration and existing-account invitations, membership authorization, private research read routes, single-use reset/invitation outbox mechanics, and owner-safe account closure implemented; recovery and invitation delivery are kill-switched pending provider/identity review, while MFA/OIDC and external identity policy remain
@@ -67,6 +66,11 @@ approved seed review, and commits the existing admission ledger before
 Temporal. Legacy fixture/workflow campaign rows remain readable. The CFPB
 connector remains disabled; multi-source orchestration and scheduling remain
 open.
+
+The campaign page and private API also expose the latest 100 production run
+projections with safe state/checkpoint/counter/timestamp fields. A status page
+links completed runs to the existing evidence and coverage inspection route;
+idempotency hashes and raw source payloads remain excluded.
 
 `pnpm analysis:sample` produces a visibly `testOnly` production-shaped CFPB
 artifact, report, deterministic score, and generic coding package under

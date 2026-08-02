@@ -17,6 +17,13 @@ review, then commits the existing digest-only admission before contacting
 Temporal. A multi-source campaign remains a visible validation gap rather than
 an implicit fan-out.
 
+The private campaign page and run-history API read the existing production
+workflow projection through an authenticated workspace transaction. History is
+bounded to the latest 100 rows and maps only operational state, checkpoint,
+source/policy identifiers, counters, and timestamps. The status page links a
+completed run to the existing collection evidence read; hashes, actor details,
+and source payloads remain outside the read model.
+
 1. An authorized client submits a bounded, hashed workflow request; the web
    boundary binds the authenticated user as the requesting principal, then
    migration `0038` verifies the active private non-fixture workspace and

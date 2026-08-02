@@ -276,6 +276,12 @@ a:focus-visible {
   line-height: 1.65;
 }
 
+.detail-grid dd {
+  margin: 0;
+  color: #41444a;
+  line-height: 1.65;
+}
+
 .quiet-metrics {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
@@ -557,8 +563,11 @@ a:focus-visible {
 }
 
 .quiet-button {
+  display: inline-flex;
+  align-items: center;
   background: transparent;
   color: var(--ink);
+  text-decoration: none;
 }
 
 .form-error {
@@ -667,6 +676,37 @@ a:focus-visible {
 .seed-review-list code {
   overflow-wrap: anywhere;
   font-size: 11px;
+}
+
+.workspace-campaign-runs {
+  max-width: 760px;
+  margin-top: 24px;
+}
+
+.workspace-campaign-runs > ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border-top: 1px solid var(--line);
+}
+
+.workspace-campaign-runs li {
+  display: grid;
+  gap: 10px;
+  padding: 16px 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.workspace-campaign-runs code {
+  overflow-wrap: anywhere;
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.workspace-campaign-runs .quiet-button {
+  min-height: 36px;
+  padding: 0 12px;
+  font-size: 12px;
 }
 
 .seed-review-create {

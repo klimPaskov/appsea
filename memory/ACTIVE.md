@@ -90,7 +90,7 @@ completed matching tombstone.
 
 ## Validated commands
 
-- `pnpm verify` passed 2026-08-01; affected contract/database/worker checks and
+- `pnpm verify` passed 2026-08-02; affected contract/database/worker checks and
   guidance, formatting, memory, and docs checks pass.
 - PostgreSQL integration is staged but Docker-blocked because the Docker Desktop
   Linux engine pipe is unavailable.
@@ -105,14 +105,13 @@ production seeds are reviewed-seed-only with provenance, and source-backed
 status requires permitted source IDs, retained evidence IDs, and an observation
 time. Per-competitor observations and feature matrices remain open.
 
-The 2026-08-02 campaign tranche adds a private one-source run route on the
-strict `campaign-v1` draft boundary. The server derives
-source/query/purpose/display mode/limit/budget from persisted intent, rechecks
-approved policy, purpose, expiry, and optional approved seed review,
-then commits the existing digest-only admission before Temporal. Pending
-policies and multi-source campaigns fail closed and remain visible as gaps.
-Edit/delete, refresh scheduling, source picker, live activation, and Docker
-PostgreSQL proof remain open; the CFPB connector is still disabled.
+The 2026-08-02 campaign tranche adds a private one-source run route plus
+bounded history/status reads on the strict `campaign-v1` boundary. The server
+derives collection inputs from persisted intent, rechecks approved policy,
+purpose, expiry, and optional seed review, then commits admission before
+Temporal. History exposes only state, checkpoint, counters, IDs, and times;
+hashes/payloads stay hidden. Multi-source, scheduling, source picker, live
+activation, and Docker PostgreSQL proof remain open; CFPB is disabled.
 
 ## Next production tranche
 

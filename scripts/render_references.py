@@ -395,6 +395,7 @@ def campaigns_screen(width: int, height: int, mobile: bool) -> str:
             button_x = width - margin - button_width
             content += rect(button_x, row_y + 62, button_width, 32, SURFACE, 5, INK)
             content += text(button_x + button_width / 2, row_y + 83, 'Start collection', 11, 650, INK, 'middle')
+            content += text(margin, row_y + (98 if mobile else 84), 'Recent runs: 1 completed', 11, 400, MUTED)
         else:
             content += text(margin, row_y + 82, 'Waiting for approved source policy before collection.', 12, 400, MUTED)
         content += line(margin, row_y + row_height, width - margin, row_y + row_height)
@@ -414,6 +415,35 @@ def campaigns_screen(width: int, height: int, mobile: bool) -> str:
     return shell(width, height, content, mobile)
 
 
+def campaign_status_screen(width: int, height: int, mobile: bool) -> str:
+    margin = 24 if mobile else 220
+    top = 112 if mobile else 132
+    title_size = 40 if mobile else 58
+    content = text(margin, top, 'Private research workspace', 10, 700, MUTED, letter=1.1)
+    content += text(margin, top + 54, 'Collection status', title_size, 650, INK, letter=-2.5)
+    content += text(margin, top + (88 if mobile else 100), 'source:cfpb  /  policy cfpb-v1', 14, 400, MUTED)
+    status_y = top + (148 if mobile else 160)
+    content += text(width - margin, status_y, 'COMPLETED', 11, 700, INK, 'end', 1.0)
+    content += line(margin, status_y + 24, width - margin, status_y + 24, INK)
+    rows = [
+        ('CAMPAIGN', 'campaign:billing'),
+        ('RESEARCH RUN', 'run:billing'),
+        ('CHECKPOINT', 'completed'),
+        ('SOURCE ITEMS', '10'),
+        ('COST MICROS', '0'),
+    ]
+    row_height = 54 if mobile else 48
+    for index, (label, value) in enumerate(rows):
+        row_y = status_y + 24 + index * row_height
+        content += text(margin, row_y + 30, label, 10, 700, MUTED, letter=1.0)
+        content += text(width - margin, row_y + 30, value, 14, 600, INK, 'end')
+        content += line(margin, row_y + row_height, width - margin, row_y + row_height)
+    action_y = status_y + 24 + row_height * len(rows) + (38 if mobile else 46)
+    content += rect(margin, action_y, 170, 34, INK, 5)
+    content += text(margin + 85, action_y + 22, 'Inspect retained evidence', 11, 650, '#ffffff', 'middle')
+    return shell(width, height, content, mobile)
+
+
 SCREENS = {
     'leaderboard': leaderboard,
     'opportunity': opportunity_screen,
@@ -422,7 +452,8 @@ SCREENS = {
     'plan': plan_screen,
     'security': security_screen,
     'seed-reviews': seed_reviews_screen,
-    'campaigns': campaigns_screen
+    'campaigns': campaigns_screen,
+    'campaign-status': campaign_status_screen
 }
 
 

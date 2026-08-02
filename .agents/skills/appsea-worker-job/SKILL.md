@@ -80,6 +80,10 @@ description: Use when adding or changing AppSea worker commands, scheduled jobs,
     display mode, expiry, source count, and budget before admission. Keep a
     one-source boundary explicit until a reviewed multi-source orchestration
     contract exists, and commit admission before contacting Temporal.
+    Expose run history from the durable projection with a fixed result limit;
+    return operational state, counters, provenance identifiers, and timestamps
+    only. Never expose idempotency/input hashes, caller secrets, or raw source
+    payloads in a status read.
 
 Do not rely on an in-memory loop for production durability. Do not hide a partial result behind a successful exit code.
 

@@ -55,6 +55,11 @@ for that pre-context authorization lookup.
   before Temporal. It returns private no-store errors for pending policy,
   multi-source configuration, and admission conflicts; it cannot activate a
   connector or fan out to an unreviewed source.
+- Campaign run history is a separate read-only projection. The repository
+  repeats authenticated membership/RLS checks, limits results to 100 recent
+  production rows, and omits idempotency digests, input hashes, actor details,
+  and source payloads. The status page can link to evidence only after a
+  completed run, preserving the collection policy/display gate.
 - Migration `0032` makes complaint curation an explicit workspace boundary:
   only active workspace editors and owners can transition an active complaint
   observation from `unreviewed` to `confirmed`/`rejected` or from `confirmed`
