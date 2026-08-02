@@ -157,6 +157,14 @@ or backups; it only stops new workspace research, archives campaign refresh
 state, revokes pending invitations, and emits identifier-only receipts.
 Destructive retention/purge remains a separately reviewed operation.
 
+Migration `0067_field_level_evidence_redaction.sql` adds the private privacy
+projection boundary. A step-up-authenticated owner/editor can record a strict
+field mask for one run-bound evidence item. The database function validates
+membership and provenance, retains identity/hash/capture lineage, and emits
+identifier-only receipts; read mappers mask current evidence, analysis, and
+report projections. Raw source deletion, object-store purge, and backup
+deletion remain source-policy operations.
+
 The connector package now includes a disabled Stack Exchange candidate for
 bounded competitor/contrary-signal collection. It uses the official API only,
 sanitizes question excerpts, preserves an HTTPS attribution locator, and emits

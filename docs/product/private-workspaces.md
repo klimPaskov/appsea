@@ -46,6 +46,13 @@ The public AppSea leaderboard is a sparse, synthetic fixture surface. Private re
   provenance, exports, object references, and backups; destructive workspace/object/backup/export
   purge is a separate reviewed retention operation and is not exposed by this endpoint. Repeating
   an owner request is an idempotent read of the archived state.
+- Owners and editors can expand `Privacy redaction` on a collection evidence row after the same
+  password step-up. They select one or more narrative/entity/locator fields and a reason; the
+  strict API binds the evidence to the run and complaint and records an immutable receipt. Private
+  collection, opportunity/leaderboard, analysis, report, and coding-plan reads show stable masks while source IDs, capture/policy
+  provenance, and content hashes remain available for traceability. A narrative mask cannot be
+  applied while a raw source object reference remains. Source deletion, object-store/export purge,
+  backups, and downstream re-analysis are separate reviewed operations.
 
 ## Research detail
 

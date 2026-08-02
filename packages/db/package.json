@@ -18,7 +18,8 @@
     "./opportunity-seed-review": "./src/opportunity-seed-review.ts",
     "./research-campaign": "./src/research-campaign-repository.ts",
     "./source-policy": "./src/source-policy.ts",
-    "./competitive-research": "./src/competitive-research.ts"
+    "./competitive-research": "./src/competitive-research.ts",
+    "./evidence-redaction": "./src/evidence-redaction-repository.ts"
   },
   "scripts": {
     "build": "tsc --noEmit",

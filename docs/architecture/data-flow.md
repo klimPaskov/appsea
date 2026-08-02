@@ -70,6 +70,12 @@ before either status source is queried.
    the private collection surface. Migration `0032` permits only
    `unreviewed` -> `confirmed`/`rejected` and `confirmed` -> `rejected`
    transitions; review receipts contain identifiers only.
+   9a. After a recent password step-up, an editor or owner may submit a strict
+   field-redaction request for one run-bound evidence record. Migration `0067`
+   checks the complaint/run/evidence binding, records a durable receipt, and
+   masks only the selected current projection fields. Source identity, hashes,
+   capture time, policy lineage, and immutable analysis history remain intact;
+   raw-object deletion still follows the source-policy path.
 10. The production-shaped analysis checkpoint normalizes and deduplicates the
     validated payload, computes one versioned complaint-analysis snapshot per
     retained complaint, and preserves source-native identifiers, evidence and

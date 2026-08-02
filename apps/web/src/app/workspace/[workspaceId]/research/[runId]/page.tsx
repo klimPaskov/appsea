@@ -147,6 +147,9 @@ export default async function ProductionCollectionPage({
                 workspaceId={parsedWorkspaceId.data}
                 runId={parsedRunId.data}
                 complaintId={evidence.complaintId}
+                evidenceId={evidence.id}
+                redactedFields={evidence.redactedFields}
+                canRedact={workspace.role === 'owner' || workspace.role === 'editor'}
                 initialState={evidence.reviewState}
                 analysis={evidence.analysis}
               />

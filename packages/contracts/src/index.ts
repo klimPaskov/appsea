@@ -150,8 +150,29 @@ export const complaintSchema = z.object({
   language: z.string().min(2),
   synthetic: z.boolean(),
   redacted: z.boolean(),
-  allowedRepresentation: z.enum(['excerpt', 'metadata-only', 'aggregate-only', 'fixture'])
+  allowedRepresentation: z.enum(['excerpt', 'metadata-only', 'aggregate-only', 'fixture']),
+  /** Fields removed from the current display projection after collection. */
+  redactedFields: z
+    .array(z.enum(['text', 'product', 'company', 'feature', 'category', 'canonicalLocator']))
+    .max(6)
+    .optional()
 })
+
+export const evidenceRedactionFieldSchema = z.enum([
+  'text',
+  'product',
+  'company',
+  'feature',
+  'category',
+  'canonicalLocator'
+])
+
+export const evidenceRedactionReasonSchema = z.enum([
+  'pii',
+  'legal_request',
+  'policy_minimization',
+  'operator_correction'
+])
 
 export const complaintReviewStateSchema = z.enum([
   'unreviewed',
@@ -427,6 +448,52 @@ export const appseaIdentifierSchema = z
   .min(3)
   .max(160)
   .regex(/^[a-z][a-z0-9_:-]*$/)
+
+export const evidenceRedactionInputSchema = z
+  .object({
+    redactionId: appseaIdentifierSchema,
+    fields: z.array(evidenceRedactionFieldSchema).min(1).max(6),
+    reason: evidenceRedactionReasonSchema
+  })
+  .strict()
+  .superRefine((value, context) => {
+    if (new Set(value.fields).size !== value.fields.length) {
+      context.addIssue({
+        code: 'custom',
+        path: ['fields'],
+        message: 'Redaction fields must be unique'
+      })
+    }
+  })
+
+export const evidenceRedactionResultSchema = z
+  .object({
+    redactionId: appseaIdentifierSchema,
+    evidenceId: appseaIdentifierSchema,
+    fields: z.array(evidenceRedactionFieldSchema).min(1).max(6),
+    reason: evidenceRedactionReasonSchema,
+    redactedAt: z.string().datetime(),
+    replayed: z.boolean()
+  })
+  .strict()
+
+export const workspaceEvidenceRedactionInputSchema = z
+  .object({
+    evidenceId: appseaIdentifierSchema,
+    redactionId: appseaIdentifierSchema,
+    fields: z.array(evidenceRedactionFieldSchema).min(1).max(6),
+    reason: evidenceRedactionReasonSchema
+  })
+  .strict()
+  .superRefine((value, context) => {
+    if (new Set(value.fields).size !== value.fields.length) {
+      context.addIssue({
+        code: 'custom',
+        path: ['fields'],
+        message: 'Redaction fields must be unique'
+      })
+    }
+  })
 
 /** Safe private source-registry metadata; policy payloads and review identities stay out. */
 export const workspaceSourceReadModelSchema = z
@@ -2362,6 +2429,7 @@ export const productionCollectionEvidenceReadModelSchema = z
     analysis: complaintAnalysisSchema,
     synthetic: z.literal(false),
     redacted: z.boolean(),
+    redactedFields: z.array(evidenceRedactionFieldSchema).max(6).optional(),
     allowedRepresentation: z.enum(['excerpt', 'metadata-only', 'aggregate-only']),
     capturedAt: z.string().datetime(),
     publishedAt: z.string().datetime().nullable()
@@ -4272,6 +4340,7 @@ export const workspaceEvidenceReadModelSchema = z
     analysis: complaintAnalysisSchema,
     synthetic: z.boolean(),
     redacted: z.boolean(),
+    redactedFields: z.array(evidenceRedactionFieldSchema).max(6).optional(),
     allowedRepresentation: z.enum(['excerpt', 'metadata-only', 'aggregate-only', 'fixture']),
     capturedAt: z.string().datetime(),
     publishedAt: z.string().datetime().nullable()
@@ -4387,6 +4456,285 @@ export const workspaceOpportunityDetailReadModelSchema = z
   })
   .strict()
 
+/** Stable marker used by private read projections after a field is redacted. */
+export const evidenceRedactionMarker = '[Content redacted by workspace privacy policy]'
+
+export type EvidenceRedactionField = z.infer<typeof evidenceRedactionFieldSchema>
+export type EvidenceRedactionReason = z.infer<typeof evidenceRedactionReasonSchema>
+export type EvidenceRedactionMask = {
+  evidenceId: string
+  fields: EvidenceRedactionField[]
+}
+
+function redactedEntityReference(reference: ComplaintEntityReference): ComplaintEntityReference {
+  return {
+    ...reference,
+    surfaceText: evidenceRedactionMarker,
+    canonicalName: null,
+    resolution: 'unresolved',
+    evidence: 'not-inferred'
+  }
+}
+
+function redactAnalysisEntityFields(
+  entities: ComplaintEntityResolution,
+  fields: ReadonlySet<EvidenceRedactionField>
+): ComplaintEntityResolution {
+  const redact = (reference: ComplaintEntityReference): ComplaintEntityReference => {
+    if (
+      fields.has('text') ||
+      fields.has('product') ||
+      fields.has('company') ||
+      fields.has('feature') ||
+      fields.has('category')
+    ) {
+      return redactedEntityReference(reference)
+    }
+    return reference
+  }
+  const product = redact(entities.product)
+  const company = redact(entities.company)
+  const feature = redact(entities.feature)
+  const substitutes = entities.substitutes.map(redact)
+  const competitors = entities.competitors.map(redact)
+  const unresolvedTypes = new Set(entities.unresolvedTypes)
+  if (product.canonicalName === null) unresolvedTypes.add('product')
+  if (company.canonicalName === null) unresolvedTypes.add('company')
+  if (feature.canonicalName === null) unresolvedTypes.add('feature')
+  if (!substitutes.some((entry) => entry.canonicalName !== null)) unresolvedTypes.add('substitute')
+  if (!competitors.some((entry) => entry.canonicalName !== null)) unresolvedTypes.add('competitor')
+  return {
+    product,
+    company,
+    feature,
+    substitutes,
+    competitors,
+    unresolvedTypes: [...unresolvedTypes]
+  }
+}
+
+/** Mask only a read projection; the immutable analysis snapshot is not rewritten. */
+export function redactComplaintAnalysis(
+  analysis: ComplaintAnalysis,
+  fields: ReadonlySet<EvidenceRedactionField>
+): ComplaintAnalysis {
+  const redactText = fields.has('text')
+  const redactNarrative =
+    redactText ||
+    fields.has('product') ||
+    fields.has('company') ||
+    fields.has('feature') ||
+    fields.has('category')
+  return complaintAnalysisSchema.parse({
+    ...analysis,
+    ...(redactNarrative
+      ? {
+          problemStatement: evidenceRedactionMarker,
+          expectedOutcome: evidenceRedactionMarker,
+          observedOutcome: evidenceRedactionMarker,
+          consequence: evidenceRedactionMarker,
+          affectedWorkflow: evidenceRedactionMarker,
+          workaround: evidenceRedactionMarker,
+          featureMentions: [evidenceRedactionMarker],
+          userSegmentHints: [evidenceRedactionMarker]
+        }
+      : {}),
+    entities: redactAnalysisEntityFields(analysis.entities, fields)
+  })
+}
+
+function redactedFieldsWith(
+  existing: readonly EvidenceRedactionField[] | undefined,
+  fields: ReadonlySet<EvidenceRedactionField>
+): EvidenceRedactionField[] {
+  return [...new Set([...(existing ?? []), ...fields])].sort()
+}
+
+function hasNarrativeRedaction(masks: readonly EvidenceRedactionMask[]): boolean {
+  return masks.some((mask) => mask.fields.some((field) => field !== 'canonicalLocator'))
+}
+
+/** Mask opportunity narratives when a linked evidence field is private. */
+export function redactOpportunity(
+  opportunity: Opportunity,
+  masks: readonly EvidenceRedactionMask[]
+): Opportunity {
+  if (!hasNarrativeRedaction(masks)) return opportunitySchema.parse(opportunity)
+  return opportunitySchema.parse({
+    ...opportunity,
+    name: evidenceRedactionMarker,
+    oneLine: evidenceRedactionMarker,
+    thesis: evidenceRedactionMarker,
+    audience: evidenceRedactionMarker,
+    firstWedge: evidenceRedactionMarker,
+    tags: [evidenceRedactionMarker],
+    contraryEvidence: [evidenceRedactionMarker],
+    competitors: []
+  })
+}
+
+/** Mask the bounded private opportunity summary without changing its score. */
+export function redactOpportunityReadModel(
+  summary: WorkspaceOpportunityReadModel,
+  masks: readonly EvidenceRedactionMask[]
+): WorkspaceOpportunityReadModel {
+  if (!hasNarrativeRedaction(masks)) return workspaceOpportunityReadModelSchema.parse(summary)
+  return workspaceOpportunityReadModelSchema.parse({
+    ...summary,
+    name: evidenceRedactionMarker,
+    oneLine: evidenceRedactionMarker
+  })
+}
+
+/** Apply a persisted field mask to an evidence-shaped complaint read model. */
+export function redactComplaint(complaint: Complaint, mask: EvidenceRedactionMask): Complaint {
+  const fields = new Set(mask.fields)
+  const projected = complaintSchema.parse({
+    ...complaint,
+    ...(fields.has('text') ||
+    fields.has('product') ||
+    fields.has('company') ||
+    fields.has('feature') ||
+    fields.has('category')
+      ? { query: evidenceRedactionMarker }
+      : {}),
+    ...(fields.has('text') ? { text: evidenceRedactionMarker } : {}),
+    ...(fields.has('product') ? { product: evidenceRedactionMarker } : {}),
+    ...(fields.has('company') ? { company: evidenceRedactionMarker } : {}),
+    ...(fields.has('feature') ? { feature: evidenceRedactionMarker } : {}),
+    ...(fields.has('category') ? { category: evidenceRedactionMarker } : {}),
+    ...(fields.has('canonicalLocator') ? { canonicalLocator: null } : {}),
+    redacted: true,
+    redactedFields: redactedFieldsWith(complaint.redactedFields, fields)
+  })
+  // Validate the base complaint shape while retaining production-only lineage
+  // fields (evidenceId, sourceItemId, evidenceHash) on extended projections.
+  return { ...complaint, ...projected }
+}
+
+/** Apply evidence masks to a production artifact before a private read. */
+export function redactProductionResearchArtifact(
+  artifact: ProductionResearchArtifact,
+  masks: readonly EvidenceRedactionMask[]
+): ProductionResearchArtifact {
+  const byEvidenceId = new Map(masks.map((mask) => [mask.evidenceId, new Set(mask.fields)]))
+  if (byEvidenceId.size === 0) return productionResearchArtifactSchema.parse(artifact)
+  const byComplaintId = new Map(
+    artifact.complaints.map((complaint) => [complaint.evidenceId, complaint.id])
+  )
+  const masksByComplaintId = new Map<string, Set<EvidenceRedactionField>>()
+  for (const [evidenceId, fields] of byEvidenceId) {
+    const complaintId = byComplaintId.get(evidenceId)
+    if (complaintId) masksByComplaintId.set(complaintId, fields)
+  }
+  return productionResearchArtifactSchema.parse({
+    ...artifact,
+    opportunity: redactOpportunity(artifact.opportunity, masks),
+    complaints: artifact.complaints.map((complaint) => {
+      const fields = byEvidenceId.get(complaint.evidenceId)
+      return fields
+        ? redactComplaint(complaint, { evidenceId: complaint.evidenceId, fields: [...fields] })
+        : complaint
+    }),
+    analyses: artifact.analyses.map((analysis) => {
+      const fields = masksByComplaintId.get(analysis.complaintId)
+      return fields ? redactComplaintAnalysis(analysis, fields) : analysis
+    }),
+    clusters: hasNarrativeRedaction(masks)
+      ? artifact.clusters.map((cluster) => ({
+          ...cluster,
+          title: evidenceRedactionMarker,
+          summary: evidenceRedactionMarker
+        }))
+      : artifact.clusters
+  })
+}
+
+/** Apply evidence masks to persisted report observations without mutating the object. */
+export function redactOpportunityReport(
+  report: OpportunityReport,
+  masks: readonly EvidenceRedactionMask[]
+): OpportunityReport {
+  const byEvidenceId = new Map(masks.map((mask) => [mask.evidenceId, new Set(mask.fields)]))
+  if (byEvidenceId.size === 0) return opportunityReportSchema.parse(report)
+  const narrativeRedacted = hasNarrativeRedaction(masks)
+  return opportunityReportSchema.parse({
+    ...report,
+    opportunity: narrativeRedacted
+      ? {
+          ...report.opportunity,
+          name: evidenceRedactionMarker,
+          thesis: evidenceRedactionMarker,
+          audience: evidenceRedactionMarker,
+          firstWedge: evidenceRedactionMarker
+        }
+      : report.opportunity,
+    evidence: {
+      ...report.evidence,
+      observations: report.evidence.observations.map((observation) => {
+        const fields = byEvidenceId.get(observation.evidenceId)
+        if (!fields) return observation
+        return {
+          ...observation,
+          ...(narrativeRedacted ? { query: evidenceRedactionMarker } : {}),
+          ...(fields.has('text') ? { excerpt: evidenceRedactionMarker } : {}),
+          ...(fields.has('product') ? { product: evidenceRedactionMarker } : {}),
+          ...(fields.has('feature') ? { feature: evidenceRedactionMarker } : {}),
+          ...(fields.has('category') ? { category: evidenceRedactionMarker } : {}),
+          ...(fields.has('canonicalLocator') ? { canonicalLocator: null } : {}),
+          analysis: observation.analysis
+            ? redactComplaintAnalysis(observation.analysis, fields)
+            : null,
+          redacted: true
+        }
+      }),
+      clusters: report.evidence.clusters.map((cluster) =>
+        narrativeRedacted
+          ? {
+              ...cluster,
+              title: evidenceRedactionMarker,
+              summary: evidenceRedactionMarker
+            }
+          : cluster
+      )
+    },
+    inference: narrativeRedacted
+      ? {
+          ...report.inference,
+          contraryEvidence: [evidenceRedactionMarker],
+          rationale: [evidenceRedactionMarker]
+        }
+      : report.inference,
+    recommendation: narrativeRedacted
+      ? {
+          ...report.recommendation,
+          firstWedge: evidenceRedactionMarker,
+          nextSteps: [evidenceRedactionMarker]
+        }
+      : report.recommendation
+  })
+}
+
+/**
+ * Plan files are generated from the opportunity narrative and evidence-backed
+ * report. Once a linked evidence mask removes narrative fields, the opaque
+ * file body cannot be safely field-filtered without parsing every template;
+ * preserve the manifest while masking the private file contents.
+ */
+export function redactPlanPackage(
+  planPackage: PlanPackage,
+  masks: readonly EvidenceRedactionMask[]
+): PlanPackage {
+  if (!hasNarrativeRedaction(masks)) return planPackageSchema.parse(planPackage)
+  return planPackageSchema.parse({
+    ...planPackage,
+    files: planPackage.files.map((file) => ({
+      ...file,
+      content: evidenceRedactionMarker
+    }))
+  })
+}
+
 export type SourcePolicy = z.infer<typeof sourcePolicySchema>
 export type SourceQuota = z.infer<typeof sourceQuotaSchema>
 export type SourceDeletionPolicy = z.infer<typeof sourceDeletionPolicySchema>
@@ -4395,6 +4743,9 @@ export type SourcePolicyReviewerRole = z.infer<typeof sourcePolicyReviewerRoleSc
 export type SourcePolicyApprovalInput = z.infer<typeof sourcePolicyApprovalInputSchema>
 export type WorkspaceSourceReadModel = z.infer<typeof workspaceSourceReadModelSchema>
 export type SourceDeletionEvent = z.infer<typeof sourceDeletionEventSchema>
+export type EvidenceRedactionInput = z.infer<typeof evidenceRedactionInputSchema>
+export type WorkspaceEvidenceRedactionInput = z.infer<typeof workspaceEvidenceRedactionInputSchema>
+export type EvidenceRedactionResult = z.infer<typeof evidenceRedactionResultSchema>
 export type Complaint = z.infer<typeof complaintSchema>
 export type ComplaintReviewState = z.infer<typeof complaintReviewStateSchema>
 export type ComplaintClassification = z.infer<typeof complaintClassificationSchema>

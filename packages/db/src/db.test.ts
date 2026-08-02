@@ -79,7 +79,8 @@ describe('database foundation', () => {
       '0063',
       '0064',
       '0065',
-      '0066'
+      '0066',
+      '0067'
     ])
     expect(migrations[0]?.checksum).toMatch(/^[a-f0-9]{64}$/)
     expect(migrations[0]?.sql).toContain('CREATE TABLE appsea.evidence_records')
@@ -196,6 +197,7 @@ describe('database foundation', () => {
     const recomputeAlertMigration = migrations.find((migration) => migration.version === '0064')
     const costAlertMigration = migrations.find((migration) => migration.version === '0065')
     const workspaceArchivalMigration = migrations.find((migration) => migration.version === '0066')
+    const evidenceRedactionMigration = migrations.find((migration) => migration.version === '0067')
     expect(authMigration?.sql).toContain('CREATE TABLE appsea.users')
     expect(authMigration?.sql).toContain('CREATE TABLE appsea.auth_sessions')
     expect(authMigration?.sql).toContain('FORCE ROW LEVEL SECURITY')
@@ -659,6 +661,21 @@ describe('database foundation', () => {
     )
     expect(workspaceArchivalMigration?.sql).toContain(
       'GRANT EXECUTE ON FUNCTION appsea.archive_workspace(text, text) TO appsea_service'
+    )
+    expect(evidenceRedactionMigration?.sql).toContain(
+      'CREATE TABLE appsea.evidence_redaction_events'
+    )
+    expect(evidenceRedactionMigration?.sql).toContain(
+      'CREATE OR REPLACE FUNCTION appsea.apply_evidence_field_redaction'
+    )
+    expect(evidenceRedactionMigration?.sql).toContain(
+      'REVOKE ALL ON FUNCTION appsea.apply_evidence_field_redaction'
+    )
+    expect(evidenceRedactionMigration?.sql).toContain(
+      'GRANT SELECT ON appsea.evidence_redaction_events TO appsea_service'
+    )
+    expect(evidenceRedactionMigration?.sql).toContain(
+      "current_setting('appsea.evidence_redaction_id', true)"
     )
   })
 

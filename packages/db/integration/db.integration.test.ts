@@ -8,6 +8,7 @@ import {
   type FixturePersistenceInput,
   type WorkflowActor,
   type FixtureResearchWorkflowInput,
+  type EvidenceRedactionInput,
   type WorkflowExecutionMetadata
 } from '@appsea/contracts'
 import { generatePlanPackage } from '@appsea/reports'
@@ -39,6 +40,7 @@ import {
   PostgresWorkspaceCostRepository,
   PostgresWorkspaceCostAlertRepository,
   PostgresCompetitiveResearchRepository,
+  PostgresEvidenceRedactionRepository,
   PostgresSourceCollectionLeaseRepository,
   PostgresSourceQuotaRepository,
   PostgresSourceSnapshotReconciliationRepository,
@@ -125,6 +127,7 @@ const workflowRepository = new PostgresWorkflowJobRepository(servicePool)
 const authRepository = new PostgresAuthRepository(servicePool)
 const deletionRepository = new PostgresDeletionPropagationRepository(servicePool)
 const seedReviewRepository = new PostgresOpportunitySeedReviewRepository(servicePool)
+const evidenceRedactionRepository = new PostgresEvidenceRedactionRepository(servicePool)
 
 async function withOwnerClient<T>(operation: (client: PoolClient) => Promise<T>): Promise<T> {
   const client = await migrationPool.connect()
@@ -482,7 +485,14 @@ describe.sequential('PostgreSQL fixture persistence lifecycle', () => {
       '0057',
       '0058',
       '0059',
-      '0060'
+      '0060',
+      '0061',
+      '0062',
+      '0063',
+      '0064',
+      '0065',
+      '0066',
+      '0067'
     ])
     expect(secondMigrationResult.applied).toEqual([])
     expect(secondMigrationResult.alreadyApplied).toEqual([
@@ -545,7 +555,14 @@ describe.sequential('PostgreSQL fixture persistence lifecycle', () => {
       '0057',
       '0058',
       '0059',
-      '0060'
+      '0060',
+      '0061',
+      '0062',
+      '0063',
+      '0064',
+      '0065',
+      '0066',
+      '0067'
     ])
   })
 
@@ -2398,6 +2415,186 @@ describe.sequential('PostgreSQL fixture persistence lifecycle', () => {
     expect(provenance.source_policy_version).toMatch(/^fixture-[a-f0-9]{12}$/)
     expect(provenance.source_hash).toMatch(/^[a-f0-9]{64}$/)
     expect(provenance.evidence_hash).toMatch(/^[a-f0-9]{64}$/)
+  })
+
+  it('applies idempotent field redaction without erasing provenance or immutable analysis', async () => {
+    const input = await fixtureInput(
+      'workspace-redaction',
+      'campaign-redaction',
+      'run-redaction',
+      'fixture-redaction-key'
+    )
+    await repository.persist(input)
+    const userId = 'user:evidence-redaction'
+    await withOwnerClient(async (client) => {
+      await client.query(
+        `INSERT INTO appsea.users
+           (user_id, email, display_name, password_hash, created_at, updated_at)
+         VALUES ($1, $2, 'Evidence redaction reviewer', repeat('x', 64), $3, $3)
+         ON CONFLICT (user_id) DO NOTHING`,
+        [userId, 'evidence-redaction@example.test', latestAt]
+      )
+      await client.query(
+        `INSERT INTO appsea.workspace_memberships
+           (workspace_id, user_id, role, created_at, updated_at)
+         VALUES ($1, $2, 'owner', $3, $3)
+         ON CONFLICT (workspace_id, user_id) DO NOTHING`,
+        [input.workspaceId, userId, latestAt]
+      )
+    })
+
+    const complaint = input.artifact.complaints[0]!
+    const before = await withWorkspaceTransaction(
+      servicePool,
+      input.workspaceId,
+      async (client) => {
+        const result = await client.query<{
+          evidence_id: string
+          normalized_text: string
+          product_candidate: string
+          evidence_hash: string
+          source_hash: string
+          source_captured_at: Date
+          analysis_snapshot: unknown
+        }>(
+          `SELECT evidence.evidence_id,
+                  evidence.normalized_text,
+                  evidence.product_candidate,
+                  evidence.content_hash AS evidence_hash,
+                  source_item.content_hash AS source_hash,
+                  source_item.captured_at AS source_captured_at,
+                  complaint.analysis_snapshot
+             FROM appsea.complaint_observations complaint
+             JOIN appsea.evidence_records evidence
+               ON evidence.workspace_id = complaint.workspace_id
+              AND evidence.evidence_id = complaint.evidence_id
+             JOIN appsea.source_items source_item
+               ON source_item.workspace_id = evidence.workspace_id
+              AND source_item.source_item_id = evidence.source_item_id
+            WHERE complaint.workspace_id = $1
+              AND complaint.complaint_id = $2`,
+          [input.workspaceId, complaint.id]
+        )
+        return result.rows[0]!
+      },
+      { readOnly: true }
+    )
+
+    const redactionInput: EvidenceRedactionInput = {
+      redactionId: 'redaction:evidence:one',
+      fields: ['text', 'product', 'canonicalLocator'],
+      reason: 'pii'
+    }
+    const first = await evidenceRedactionRepository.redact(
+      userId,
+      input.workspaceId,
+      input.runId,
+      complaint.id,
+      before.evidence_id,
+      redactionInput
+    )
+    expect(first.replayed).toBe(false)
+    expect(first.fields).toEqual(['canonicalLocator', 'product', 'text'])
+    await expect(
+      evidenceRedactionRepository.redact(
+        userId,
+        input.workspaceId,
+        input.runId,
+        complaint.id,
+        before.evidence_id,
+        redactionInput
+      )
+    ).resolves.toMatchObject({ replayed: true })
+    await expect(
+      evidenceRedactionRepository.redact(
+        userId,
+        input.workspaceId,
+        input.runId,
+        complaint.id,
+        before.evidence_id,
+        { ...redactionInput, fields: ['text'] }
+      )
+    ).rejects.toThrow('conflicts')
+
+    const after = await withWorkspaceTransaction(
+      servicePool,
+      input.workspaceId,
+      async (client) => {
+        const result = await client.query<{
+          normalized_text: string
+          product_candidate: string
+          canonical_locator: string | null
+          evidence_hash: string
+          source_hash: string
+          source_captured_at: Date
+          evidence_redacted_fields: string[]
+          source_redacted_fields: string[]
+          analysis_snapshot: unknown
+        }>(
+          `SELECT evidence.normalized_text,
+                  evidence.product_candidate,
+                  source_item.canonical_locator,
+                  evidence.content_hash AS evidence_hash,
+                  source_item.content_hash AS source_hash,
+                  source_item.captured_at AS source_captured_at,
+                  evidence.redacted_fields AS evidence_redacted_fields,
+                  source_item.redacted_fields AS source_redacted_fields,
+                  complaint.analysis_snapshot
+             FROM appsea.complaint_observations complaint
+             JOIN appsea.evidence_records evidence
+               ON evidence.workspace_id = complaint.workspace_id
+              AND evidence.evidence_id = complaint.evidence_id
+             JOIN appsea.source_items source_item
+               ON source_item.workspace_id = evidence.workspace_id
+              AND source_item.source_item_id = evidence.source_item_id
+            WHERE complaint.workspace_id = $1
+              AND complaint.complaint_id = $2`,
+          [input.workspaceId, complaint.id]
+        )
+        return result.rows[0]!
+      },
+      { readOnly: true }
+    )
+    expect(after.normalized_text).toBe('[Content redacted by workspace privacy policy]')
+    expect(after.product_candidate).toBe('[Field redacted by workspace privacy policy]')
+    expect(after.canonical_locator).toBeNull()
+    expect(after.evidence_hash).toBe(before.evidence_hash)
+    expect(after.source_hash).toBe(before.source_hash)
+    expect(after.source_captured_at.toISOString()).toBe(before.source_captured_at.toISOString())
+    expect(after.analysis_snapshot).toEqual(before.analysis_snapshot)
+    expect(after.evidence_redacted_fields).toEqual(['product', 'text'])
+    expect(after.source_redacted_fields).toEqual(['canonicalLocator'])
+
+    const privateDetail = await authRepository.readWorkspaceOpportunity(
+      userId,
+      input.workspaceId,
+      input.artifact.opportunity.slug
+    )
+    const privateEvidence = privateDetail?.evidence.find((entry) => entry.id === before.evidence_id)
+    expect(privateEvidence).toMatchObject({
+      text: '[Content redacted by workspace privacy policy]',
+      product: '[Content redacted by workspace privacy policy]',
+      canonicalLocator: null,
+      redactedFields: ['canonicalLocator', 'product', 'text']
+    })
+    expect(privateDetail?.opportunity.name).toBe('[Content redacted by workspace privacy policy]')
+    expect(privateDetail?.summary.name).toBe('[Content redacted by workspace privacy policy]')
+    expect(privateDetail?.plan?.files[0]?.content).toBe(
+      '[Content redacted by workspace privacy policy]'
+    )
+
+    await expect(
+      servicePool.query(
+        `UPDATE appsea.evidence_records
+            SET normalized_text = 'runtime tamper'
+          WHERE workspace_id = $1 AND evidence_id = $2`,
+        [input.workspaceId, before.evidence_id]
+      )
+    ).rejects.toMatchObject({ code: '42501' })
+
+    await withOwnerClient(async (client) => {
+      await client.query('DELETE FROM appsea.users WHERE user_id = $1', [userId])
+    })
   })
 
   it('keeps competitive observation provenance policy-gated and reviewable', async () => {

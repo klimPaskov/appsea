@@ -2,6 +2,8 @@ import type { Pool, PoolClient, QueryResultRow } from 'pg'
 import {
   appseaIdentifierSchema,
   complaintAnalysisSchema,
+  evidenceRedactionMarker,
+  evidenceRedactionFieldSchema,
   productionAnalysisComplaintSchema,
   productionAnalysisHandoffReadModelSchema,
   productionCollectionAnalysisSourceSchema,
@@ -11,6 +13,8 @@ import {
   productionCollectionSnapshotSchema,
   productionCollectionRequestSchema,
   productionPolicySnapshotSchema,
+  redactComplaint,
+  redactComplaintAnalysis,
   researchJobBudgetSchema,
   sourceDeletionEventSchema,
   sourcePolicySchema,
@@ -18,6 +22,7 @@ import {
   workspaceComplaintReviewReadModelSchema,
   type ComplaintAnalysis,
   type ComplaintAnalysisCorrection,
+  type EvidenceRedactionField,
   type ProductionCollectionPersistenceInput,
   type ProductionCollectionAnalysisSource,
   type ProductionCollectionReadModel,
@@ -249,6 +254,15 @@ function coverageGaps(input: ProductionCollectionPersistenceInput): string[] {
     )
   }
   return [...new Set(gaps)]
+}
+
+function redactionFields(
+  evidenceFields: readonly string[] | null | undefined,
+  sourceFields: readonly string[] | null | undefined
+): EvidenceRedactionField[] {
+  return evidenceRedactionFieldSchema
+    .array()
+    .parse([...new Set([...(evidenceFields ?? []), ...(sourceFields ?? [])])].sort())
 }
 
 function buildSnapshot(
@@ -597,6 +611,8 @@ export class PostgresProductionCollectionRepository {
         company_candidate: string
         feature_candidate: string
         category_candidate: string
+        redacted_fields: string[]
+        source_redacted_fields: string[]
         analysis_snapshot: unknown
         allowed_representation: 'excerpt' | 'metadata-only' | 'aggregate-only'
         redacted: boolean
@@ -610,9 +626,11 @@ export class PostgresProductionCollectionRepository {
                   source_item.source_record_id, source_item.canonical_locator,
                   evidence.normalized_text,
                   evidence.language, evidence.product_candidate,
-                  evidence.company_candidate, evidence.feature_candidate,
-                  evidence.category_candidate, evidence.allowed_representation,
-                  evidence.redacted, source_item.captured_at, source_item.published_at,
+                   evidence.company_candidate, evidence.feature_candidate,
+                   evidence.category_candidate, evidence.allowed_representation,
+                   evidence.redacted, evidence.redacted_fields,
+                   source_item.redacted_fields AS source_redacted_fields,
+                   source_item.captured_at, source_item.published_at,
                   complaint.review_state, complaint.analysis_snapshot
              FROM appsea.research_run_source_items run_item
              JOIN appsea.research_run_complaints run_complaint
@@ -680,8 +698,9 @@ export class PostgresProductionCollectionRepository {
         'Only active complaint observations explicitly confirmed or corrected by a workspace reviewer enter this analysis.'
       )
     }
-    const complaints = evidenceRows.rows.map((row) =>
-      productionAnalysisComplaintSchema.parse({
+    const complaints = evidenceRows.rows.map((row) => {
+      const fields = redactionFields(row.redacted_fields, row.source_redacted_fields)
+      const complaint = productionAnalysisComplaintSchema.parse({
         id: row.complaint_id,
         sourceId: snapshot.sourceId,
         sourceRecordId: row.source_record_id,
@@ -698,17 +717,23 @@ export class PostgresProductionCollectionRepository {
         synthetic: false,
         redacted: row.redacted,
         allowedRepresentation: row.allowed_representation,
+        redactedFields: fields,
         evidenceId: row.evidence_id,
         sourceItemId: row.source_item_id,
         evidenceHash: row.evidence_hash
       })
-    )
-    const analyses = evidenceRows.rows.map((row) =>
-      complaintAnalysisSchema.parse({
+      return fields.length > 0
+        ? redactComplaint(complaint, { evidenceId: row.evidence_id, fields })
+        : complaint
+    })
+    const analyses = evidenceRows.rows.map((row) => {
+      const fields = redactionFields(row.redacted_fields, row.source_redacted_fields)
+      const analysis = complaintAnalysisSchema.parse({
         ...complaintAnalysisSchema.parse(row.analysis_snapshot),
         reviewState: row.review_state
       })
-    )
+      return fields.length > 0 ? redactComplaintAnalysis(analysis, new Set(fields)) : analysis
+    })
     return productionCollectionAnalysisSourceSchema.parse({
       request,
       collectionArtifactId: run.artifact_id,
@@ -1388,6 +1413,8 @@ export class PostgresProductionCollectionRepository {
         company_candidate: string
         feature_candidate: string
         category_candidate: string
+        redacted_fields: string[]
+        source_redacted_fields: string[]
         analysis_snapshot: unknown
         allowed_representation: 'excerpt' | 'metadata-only' | 'aggregate-only'
         redacted: boolean
@@ -1400,9 +1427,11 @@ export class PostgresProductionCollectionRepository {
                   source_item.source_record_id, source_item.canonical_locator,
                   evidence.normalized_text,
                   evidence.language, evidence.product_candidate,
-                  evidence.company_candidate, evidence.feature_candidate,
-                  evidence.category_candidate, evidence.allowed_representation,
-                  evidence.redacted, source_item.captured_at, source_item.published_at,
+                   evidence.company_candidate, evidence.feature_candidate,
+                   evidence.category_candidate, evidence.allowed_representation,
+                   evidence.redacted, evidence.redacted_fields,
+                   source_item.redacted_fields AS source_redacted_fields,
+                   source_item.captured_at, source_item.published_at,
                   complaint.analysis_snapshot
              FROM appsea.research_run_source_items run_item
              JOIN appsea.research_run_complaints run_complaint
@@ -1500,29 +1529,39 @@ export class PostgresProductionCollectionRepository {
     const result = await resultFromRun(client, workspaceId, storedRun, false)
     return productionCollectionReadModelSchema.parse({
       result,
-      evidence: evidenceRows.rows.map((row) => ({
-        id: row.evidence_id,
-        complaintId: row.complaint_id,
-        reviewState: row.review_state,
-        sourceItemId: row.source_item_id,
-        sourceRecordId: row.source_record_id,
-        canonicalLocator: row.canonical_locator,
-        text: row.allowed_representation === 'excerpt' ? row.normalized_text : null,
-        language: row.language,
-        product: row.product_candidate,
-        company: row.company_candidate,
-        feature: row.feature_candidate,
-        category: row.category_candidate,
-        analysis: complaintAnalysisSchema.parse({
+      evidence: evidenceRows.rows.map((row) => {
+        const fields = redactionFields(row.redacted_fields, row.source_redacted_fields)
+        const analysis = complaintAnalysisSchema.parse({
           ...complaintAnalysisSchema.parse(row.analysis_snapshot),
           reviewState: row.review_state
-        }),
-        synthetic: false,
-        redacted: row.redacted,
-        allowedRepresentation: row.allowed_representation,
-        capturedAt: asIso(row.captured_at),
-        publishedAt: row.published_at === null ? null : asIso(row.published_at)
-      })),
+        })
+        return {
+          id: row.evidence_id,
+          complaintId: row.complaint_id,
+          reviewState: row.review_state,
+          sourceItemId: row.source_item_id,
+          sourceRecordId: row.source_record_id,
+          canonicalLocator: fields.includes('canonicalLocator') ? null : row.canonical_locator,
+          text: fields.includes('text')
+            ? evidenceRedactionMarker
+            : row.allowed_representation === 'excerpt'
+              ? row.normalized_text
+              : null,
+          language: row.language,
+          product: fields.includes('product') ? evidenceRedactionMarker : row.product_candidate,
+          company: fields.includes('company') ? evidenceRedactionMarker : row.company_candidate,
+          feature: fields.includes('feature') ? evidenceRedactionMarker : row.feature_candidate,
+          category: fields.includes('category') ? evidenceRedactionMarker : row.category_candidate,
+          analysis:
+            fields.length > 0 ? redactComplaintAnalysis(analysis, new Set(fields)) : analysis,
+          synthetic: false,
+          redacted: row.redacted,
+          redactedFields: fields,
+          allowedRepresentation: row.allowed_representation,
+          capturedAt: asIso(row.captured_at),
+          publishedAt: row.published_at === null ? null : asIso(row.published_at)
+        }
+      }),
       sourceCoverage: sourceCoverage.rows.map((row) => ({
         sourceId: row.source_id,
         displayName: row.display_name,
@@ -1599,12 +1638,16 @@ export class PostgresProductionCollectionRepository {
               review_state: 'unreviewed' | 'confirmed' | 'corrected' | 'rejected'
               evidence_state: string
               source_state: string
+              redacted_fields: string[]
+              source_redacted_fields: string[]
               analysis_snapshot: unknown
             }
           >(
             `SELECT complaint.complaint_id, complaint.review_state,
-                    complaint.analysis_snapshot,
-                    evidence.deletion_state AS evidence_state,
+                     complaint.analysis_snapshot,
+                     evidence.redacted_fields,
+                     source_item.redacted_fields AS source_redacted_fields,
+                     evidence.deletion_state AS evidence_state,
                     source_item.deletion_state AS source_state
                FROM appsea.research_run_complaints run_complaint
                JOIN appsea.complaint_observations complaint
@@ -1627,6 +1670,7 @@ export class PostgresProductionCollectionRepository {
             throw new ProductionComplaintReviewNotFoundError()
           }
           const currentAnalysis = complaintAnalysisSchema.parse(row.analysis_snapshot)
+          const fields = redactionFields(row.redacted_fields, row.source_redacted_fields)
           if (parsedInput.action === 'corrected') {
             const correction = parsedInput.analysisCorrection
             const correctionId = parsedInput.correctionId
@@ -1658,7 +1702,10 @@ export class PostgresProductionCollectionRepository {
             return workspaceComplaintReviewReadModelSchema.parse({
               complaintId: row.complaint_id,
               reviewState: corrected.review_state,
-              analysis: nextAnalysis,
+              analysis:
+                fields.length > 0
+                  ? redactComplaintAnalysis(nextAnalysis, new Set(fields))
+                  : nextAnalysis,
               invalidatedAnalysisCount: Number(corrected.invalidated_analysis_count),
               invalidatedOpportunityCount: Number(corrected.invalidated_opportunity_count)
             })
@@ -1667,7 +1714,10 @@ export class PostgresProductionCollectionRepository {
             return workspaceComplaintReviewReadModelSchema.parse({
               complaintId: row.complaint_id,
               reviewState: row.review_state,
-              analysis: currentAnalysis
+              analysis:
+                fields.length > 0
+                  ? redactComplaintAnalysis(currentAnalysis, new Set(fields))
+                  : currentAnalysis
             })
           }
           const allowed =
@@ -1694,10 +1744,15 @@ export class PostgresProductionCollectionRepository {
           return workspaceComplaintReviewReadModelSchema.parse({
             complaintId: parsedComplaintId,
             reviewState: parsedInput.action,
-            analysis: complaintAnalysisSchema.parse({
-              ...currentAnalysis,
-              reviewState: parsedInput.action
-            })
+            analysis: (() => {
+              const nextReviewAnalysis = complaintAnalysisSchema.parse({
+                ...currentAnalysis,
+                reviewState: parsedInput.action
+              })
+              return fields.length > 0
+                ? redactComplaintAnalysis(nextReviewAnalysis, new Set(fields))
+                : nextReviewAnalysis
+            })()
           })
         },
         { isolationLevel: 'SERIALIZABLE' }

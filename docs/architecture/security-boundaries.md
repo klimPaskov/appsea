@@ -294,6 +294,20 @@ for that pre-context authorization lookup.
   archived workspace. Evidence lineage, reports, plans, exports, object
   references, backups, and deletion obligations remain retained; purge is a
   separate reviewed retention boundary.
+- Migration `0067_field_level_evidence_redaction.sql` adds the privacy
+  projection boundary. An authenticated owner/editor calls a narrow
+  security-definer function after a recent web step-up; PostgreSQL repeats the
+  membership check, validates the selected fields/reason, locks the active
+  evidence/source item, and records an immutable redaction receipt plus
+  identifier-only audit/outbox events. A transaction-local capability permits
+  only that function to replace selected display fields; ordinary runtime
+  attempts to change active payloads remain denied by the immutability trigger,
+  which stays fail-closed. Read repositories union persisted masks across
+  collection, opportunity/leaderboard, analysis, report, and coding-plan
+  projections. Source identity, capture/policy lineage,
+  and content hashes remain available for provenance. A text mask is rejected
+  while a raw source object reference exists; source-policy deletion and
+  cloud/backup purge remain separate reviewed operations.
 - Report approval transitions stay inside the private workspace boundary:
   owners/editors can review drafts, only owners can approve or withdraw, and
   migration `0022` repeats the transition check in PostgreSQL while recording

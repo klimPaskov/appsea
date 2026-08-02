@@ -27,6 +27,7 @@ Open `http://localhost:3000` after the web server starts.
 - coding-agent plan package generation
 - content-addressed object-reference storage seam with deterministic local/test adapters
 - PostgreSQL migrations, normalized fixture persistence, RLS, lineage, and replay verification
+- editor/owner field-level evidence redaction with immutable receipts, provenance-preserving masks, and private report/analysis read projections
 - durable fixture workflow with PostgreSQL checkpoints, bounded retries, budgets, cancellation, and Temporal restart/replay proof
 - shared fail-closed Temporal endpoint configuration for the web client and durable worker (local loopback or production TLS/API-key/namespace/CA settings)
 - server-clock PostgreSQL scheduler leases for bounded maintenance and delivery commands, with a dedicated maintenance role, per-acquisition tokens, owner-checked renewal, stale takeover, fixed lease-loss events, and maintenance-role-only durable run metrics

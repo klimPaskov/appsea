@@ -32,6 +32,9 @@ import {
   productionAnalysisRecomputeAlertObservationSchema,
   productionAnalysisRecomputeAlertResultSchema,
   complaintSchema,
+  evidenceRedactionInputSchema,
+  evidenceRedactionResultSchema,
+  opportunityReportSchema,
   competitorFeatureMatrixEntrySchema,
   competitorSchema,
   fixturePersistenceInputSchema,
@@ -65,6 +68,11 @@ import {
   workspaceSourceReadModelSchema,
   complaintAnalysisCorrectionSchema,
   workspaceComplaintReviewInputSchema,
+  workspaceEvidenceRedactionInputSchema,
+  redactComplaint,
+  redactComplaintAnalysis,
+  redactPlanPackage,
+  redactOpportunityReport,
   sourceMaintenanceInputSchema,
   sourceMaintenanceResultSchema,
   maintenanceSchedulerNameSchema,
@@ -1266,6 +1274,160 @@ describe('contracts', () => {
     expect(
       complaintSchema.safeParse({ ...complaint, canonicalLocator: 'javascript:alert(1)' }).success
     ).toBe(false)
+  })
+
+  it('keeps field-level redaction inputs strict and masks only read projections', () => {
+    const input = {
+      evidenceId: 'evidence:one',
+      redactionId: 'redaction:one',
+      fields: ['text', 'canonicalLocator'] as const,
+      reason: 'pii' as const
+    }
+    expect(
+      evidenceRedactionInputSchema.safeParse({
+        redactionId: input.redactionId,
+        fields: input.fields,
+        reason: input.reason
+      }).success
+    ).toBe(true)
+    expect(workspaceEvidenceRedactionInputSchema.safeParse(input).success).toBe(true)
+    expect(
+      workspaceEvidenceRedactionInputSchema.safeParse({ ...input, fields: ['text', 'text'] })
+        .success
+    ).toBe(false)
+    expect(
+      evidenceRedactionInputSchema.safeParse({ ...input, extra: 'must be rejected' }).success
+    ).toBe(false)
+    expect(
+      evidenceRedactionResultSchema.safeParse({
+        redactionId: 'redaction:one',
+        evidenceId: 'evidence:one',
+        fields: ['canonicalLocator', 'text'],
+        reason: 'pii',
+        redactedAt: now,
+        replayed: false
+      }).success
+    ).toBe(true)
+
+    const complaint = redactComplaint(validFixturePersistenceInput.artifact.complaints[0]!, {
+      evidenceId: 'evidence:one',
+      fields: ['text', 'canonicalLocator']
+    })
+    expect(complaint.text).toBe('[Content redacted by workspace privacy policy]')
+    expect(complaint.canonicalLocator).toBeNull()
+    expect(complaint.product).toBe('Fixture product')
+    expect(complaint.query).toBe('[Content redacted by workspace privacy policy]')
+    expect(complaint.redactedFields).toEqual(['canonicalLocator', 'text'])
+    const productionComplaint = {
+      ...validFixturePersistenceInput.artifact.complaints[0]!,
+      evidenceId: 'evidence:one',
+      sourceItemId: 'source-item:one',
+      evidenceHash: 'a'.repeat(64)
+    }
+    const maskedProductionComplaint = redactComplaint(productionComplaint, {
+      evidenceId: 'evidence:one',
+      fields: ['text']
+    }) as typeof productionComplaint
+    expect(maskedProductionComplaint.evidenceId).toBe('evidence:one')
+
+    const analysis = redactComplaintAnalysis(
+      validFixturePersistenceInput.artifact.analyses[0]!,
+      new Set(['text'])
+    )
+    expect(analysis.problemStatement).toBe('[Content redacted by workspace privacy policy]')
+    expect(analysis.severity).toBe(1)
+    expect(analysis.entities.product.canonicalName).toBeNull()
+
+    const report = opportunityReportSchema.parse({
+      schemaVersion: '1.0.0',
+      reportType: 'opportunity',
+      synthetic: false,
+      testOnly: false,
+      transport: null,
+      artifactId: 'artifact:one',
+      generatedAt: now,
+      opportunity: {
+        id: 'opportunity:one',
+        slug: 'redaction-opportunity',
+        name: 'Sensitive opportunity',
+        thesis: 'Sensitive thesis',
+        audience: 'Sensitive audience',
+        firstWedge: 'Sensitive wedge'
+      },
+      evidence: {
+        complaintCount: 1,
+        clusterCount: 1,
+        observations: [
+          {
+            evidenceId: 'evidence:one',
+            sourceRecordId: 'record:one',
+            canonicalLocator: 'https://example.com/evidence/one',
+            sourceId: 'source:one',
+            query: 'query',
+            product: 'Sensitive product',
+            feature: 'Sensitive feature',
+            category: 'Sensitive category',
+            analysis: null,
+            excerpt: 'Sensitive excerpt',
+            redacted: true,
+            allowedRepresentation: 'excerpt',
+            capturedAt: now,
+            publishedAt: null,
+            synthetic: false
+          }
+        ],
+        clusters: [
+          {
+            id: 'cluster:one',
+            title: 'Sensitive cluster',
+            summary: 'Sensitive summary',
+            complaintIds: ['complaint:one'],
+            confidence: 0.8
+          }
+        ]
+      },
+      inference: {
+        scoreSnapshot: {
+          score: 50,
+          version: 'score-v1',
+          calculatedAt: now,
+          factors: scoreValues,
+          weights: scoreValues
+        },
+        contraryEvidence: [],
+        confidence: 'medium',
+        rationale: ['Sensitive rationale']
+      },
+      recommendation: {
+        decision: 'explore',
+        firstWedge: 'Sensitive recommendation',
+        nextSteps: ['Sensitive next step']
+      },
+      coverage: { gaps: [], sources: [] },
+      warnings: []
+    })
+    const maskedReport = redactOpportunityReport(report, [
+      { evidenceId: 'evidence:one', fields: ['text', 'product'] }
+    ])
+    expect(maskedReport.evidence.observations[0]?.excerpt).toBe(
+      '[Content redacted by workspace privacy policy]'
+    )
+    expect(maskedReport.evidence.observations[0]?.query).toBe(
+      '[Content redacted by workspace privacy policy]'
+    )
+    expect(maskedReport.opportunity.name).toBe('[Content redacted by workspace privacy policy]')
+    expect(maskedReport.evidence.clusters[0]?.title).toBe(
+      '[Content redacted by workspace privacy policy]'
+    )
+    const maskedPlan = redactPlanPackage(validFixturePersistenceInput.planPackage, [
+      { evidenceId: 'evidence:one', fields: ['product'] }
+    ])
+    expect(maskedPlan.files[0]?.path).toBe(validFixturePersistenceInput.planPackage.files[0]?.path)
+    expect(maskedPlan.files[0]?.content).toBe('[Content redacted by workspace privacy policy]')
+    const locatorOnlyPlan = redactPlanPackage(validFixturePersistenceInput.planPackage, [
+      { evidenceId: 'evidence:one', fields: ['canonicalLocator'] }
+    ])
+    expect(locatorOnlyPlan).toEqual(validFixturePersistenceInput.planPackage)
   })
 
   it('rejects opportunity scores above 100', () => {

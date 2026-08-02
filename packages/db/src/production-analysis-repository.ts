@@ -1,6 +1,9 @@
 import type { Pool, PoolClient, QueryResultRow } from 'pg'
 import {
   appseaIdentifierSchema,
+  redactOpportunityReport,
+  redactPlanPackage,
+  redactProductionResearchArtifact,
   objectReferenceSchema,
   productionAnalysisGovernanceSchema,
   productionAnalysisActivityAttemptHistorySchema,
@@ -44,6 +47,7 @@ import {
   releaseProductionAnalysisAdmissionInTransaction,
   ProductionAnalysisAdmissionRequiredError
 } from './production-analysis-admission-repository'
+import { PostgresEvidenceRedactionRepository } from './evidence-redaction-repository'
 
 const analysisVersion = 'production-analysis-v1'
 const clusterVersion = 'production-cluster-v1'
@@ -1831,7 +1835,8 @@ export class PostgresProductionAnalysisRepository {
   }
 
   private async readModelFromRow(
-    row: AnalysisRunRow
+    row: AnalysisRunRow,
+    userId?: string
   ): Promise<ProductionAnalysisReadModel | undefined> {
     if (row.state !== 'completed' || row.availability_state !== 'active') return undefined
     const result = rowResult(row, false)
@@ -1856,9 +1861,17 @@ export class PostgresProductionAnalysisRepository {
         'an output object is deleted'
       )
     }
-    const artifact = productionResearchArtifactSchema.parse(decodeJson(artifactStored.body))
-    const report = decodeOpportunityReport(reportStored.body)
-    const planPackage = decodePlanPackage(planStored.body)
+    const masks = await new PostgresEvidenceRedactionRepository(this.pool).listForAnalysisRun(
+      row.workspace_id,
+      row.analysis_run_id,
+      userId
+    )
+    const artifact = redactProductionResearchArtifact(
+      productionResearchArtifactSchema.parse(decodeJson(artifactStored.body)),
+      masks
+    )
+    const report = redactOpportunityReport(decodeOpportunityReport(reportStored.body), masks)
+    const planPackage = redactPlanPackage(decodePlanPackage(planStored.body), masks)
     return productionAnalysisReadModelSchema.parse({
       result,
       artifact,
@@ -1882,7 +1895,7 @@ export class PostgresProductionAnalysisRepository {
     analysisRunId: string
   ): Promise<ProductionAnalysisReadModel | undefined> {
     const row = await this.readRunRow(workspaceId, analysisRunId, userId)
-    return row ? this.readModelFromRow(row) : undefined
+    return row ? this.readModelFromRow(row, userId) : undefined
   }
 
   /** Read only the durable analysis projection; hashes and object references stay private. */
@@ -1998,6 +2011,6 @@ export class PostgresProductionAnalysisRepository {
       },
       { readOnly: true }
     )
-    return row ? this.readModelFromRow(row) : undefined
+    return row ? this.readModelFromRow(row, userId) : undefined
   }
 }

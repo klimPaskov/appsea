@@ -205,6 +205,11 @@ Every complaint claim needs provenance. Preserve at least:
 
 Do not claim universal social media coverage. A restricted or unavailable source is a visible coverage gap. Do not interpret missing access as absence of complaints.
 
+Field-level evidence redaction is a separate reviewed privacy projection: it
+may mask current text/entity/locator fields while retaining provenance and
+immutable analysis history. Raw source-object, export, cloud, and backup
+deletion must continue through the approved source/retention path.
+
 Source connectors must be policy-first. Each connector needs an access method, permitted purpose, commercial-use state, quotas, retention rules, deletion duties, attribution rules, and display limits. A connector stays disabled until those fields are reviewed.
 
 Research reports must separate evidence, inference, and recommendation. Mark synthetic fixture content clearly. Do not present fixture rankings as market facts.

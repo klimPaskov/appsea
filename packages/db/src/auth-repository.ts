@@ -12,6 +12,8 @@ import {
   appseaIdentifierSchema,
   complaintAnalysisSchema,
   composeCompetitiveResearchReadModel,
+  evidenceRedactionMarker,
+  evidenceRedactionFieldSchema,
   objectReferenceSchema,
   authPasswordResetInputSchema,
   authPasswordResetRequestInputSchema,
@@ -28,6 +30,7 @@ import {
   authSignUpInputSchema,
   authSessionTokenSchema,
   fixtureResearchArtifactSchema,
+  opportunityReportSchema,
   opportunitySchema,
   planPackageSchema,
   reportSourceCoverageSchema,
@@ -46,6 +49,11 @@ import {
   workspaceReportApprovalInputSchema,
   workspaceReportExportReadModelSchema,
   workspaceReportReadModelSchema,
+  redactOpportunityReport,
+  redactComplaintAnalysis,
+  redactOpportunity,
+  redactOpportunityReadModel,
+  redactPlanPackage,
   type MaintenanceSchedulerFence,
   type AuthSessionReadModel,
   type AuthSessionSummaryReadModel,
@@ -60,6 +68,7 @@ import {
   type AuthSignInResult,
   type AuthSignUpInput,
   type WorkspaceEvidenceReadModel,
+  type EvidenceRedactionMask,
   type WorkspaceMemberReadModel,
   type WorkspaceMemberRoleUpdateInput,
   type WorkspaceInvitationCreateInput,
@@ -389,6 +398,8 @@ interface EvidenceRow extends QueryResultRow {
   review_state: 'unreviewed' | 'confirmed' | 'corrected' | 'rejected'
   synthetic: boolean
   redacted: boolean
+  redacted_fields: string[]
+  source_redacted_fields: string[]
   allowed_representation: WorkspaceEvidenceReadModel['allowedRepresentation']
   captured_at: Date | string
   published_at: Date | string | null
@@ -405,6 +416,8 @@ interface WorkspaceReportRow extends QueryResultRow {
   deletion_state: string
   synthetic: boolean
   analysis_report_object_ref: unknown
+  analysis_run_id: string | null
+  collection_run_id: string | null
 }
 
 interface WorkspacePlanRow extends QueryResultRow {
@@ -420,6 +433,8 @@ interface WorkspacePlanRow extends QueryResultRow {
   deletion_state: string
   manifest_hash: string
   opportunity_slug: string
+  analysis_run_id: string | null
+  collection_run_id: string
   analysis_plan_object_ref: unknown
 }
 
@@ -632,7 +647,8 @@ function mapOpportunity(row: OpportunityRow): WorkspaceOpportunityReadModel {
 async function mapWorkspaceReport(
   row: WorkspaceReportRow,
   workspaceId: string,
-  objectStore?: ObjectStore
+  objectStore?: ObjectStore,
+  masks: readonly EvidenceRedactionMask[] = []
 ): Promise<WorkspaceReportReadModel> {
   let structuredReport = row.structured_report
   const objectReferenceValue =
@@ -659,10 +675,11 @@ async function mapWorkspaceReport(
       throw new WorkspaceReportNotFoundError()
     }
   }
+  const parsedReport = opportunityReportSchema.parse(structuredReport)
   return workspaceReportReadModelSchema.parse({
     id: row.report_id,
     version: row.version,
-    structuredReport,
+    structuredReport: redactOpportunityReport(parsedReport, masks),
     generatedAt: iso(row.generated_at),
     approvalState: row.approval_state
   })
@@ -671,7 +688,8 @@ async function mapWorkspaceReport(
 async function mapWorkspacePlan(
   row: WorkspacePlanRow,
   workspaceId: string,
-  objectStore?: ObjectStore
+  objectStore?: ObjectStore,
+  masks: readonly EvidenceRedactionMask[] = []
 ): Promise<WorkspacePlanReadModel> {
   let files: unknown = row.fixture_files
   const objectReferenceValue =
@@ -700,10 +718,15 @@ async function mapWorkspacePlan(
   }
   const parsedFiles = planPackageSchema.shape.files.safeParse(files)
   if (!parsedFiles.success) throw new WorkspacePlanNotFoundError()
+  const parsedPlan = planPackageSchema.parse({
+    opportunitySlug: row.opportunity_slug,
+    generatedAt: iso(row.generated_at),
+    files: parsedFiles.data
+  })
   return workspacePlanReadModelSchema.parse({
     id: row.plan_package_id,
     version: row.version,
-    files: parsedFiles.data,
+    files: redactPlanPackage(parsedPlan, masks).files,
     generatedAt: iso(row.generated_at),
     readinessState: row.readiness_state,
     approvalState: row.approval_state,
@@ -715,8 +738,13 @@ const workspaceReportSelect = `
   SELECT report.report_id, report.version, report.structured_report,
          report.structured_object_ref, report.generated_at,
          report.approval_state, report.manifest_hash, report.deletion_state,
-         report.synthetic, analysis.report_object_ref AS analysis_report_object_ref
+         report.synthetic, report_opportunity.source_run_id AS collection_run_id,
+         analysis.analysis_run_id,
+         analysis.report_object_ref AS analysis_report_object_ref
     FROM appsea.report_versions report
+    JOIN appsea.opportunities report_opportunity
+      ON report_opportunity.workspace_id = report.workspace_id
+     AND report_opportunity.opportunity_id = report.opportunity_id
     LEFT JOIN appsea.research_analysis_run_outputs analysis_output
       ON analysis_output.workspace_id = report.workspace_id
      AND analysis_output.report_id = report.report_id
@@ -729,6 +757,8 @@ const workspacePlanSelect = `
          plan.package_object_ref, plan.generated_at, plan.readiness_state,
          plan.approval_state, plan.synthetic, plan.deletion_state,
          plan.manifest_hash, opportunity.slug AS opportunity_slug,
+         plan.run_id AS collection_run_id,
+         analysis.analysis_run_id,
          analysis.plan_object_ref AS analysis_plan_object_ref
     FROM appsea.plan_package_versions plan
     JOIN appsea.opportunities opportunity
@@ -761,6 +791,73 @@ async function readMembershipRows(client: PoolClient, userId: string): Promise<M
     [userId]
   )
   return result.rows
+}
+
+async function readEvidenceRedactionMasks(
+  client: PoolClient,
+  workspaceId: string,
+  analysisRunId: string | null
+): Promise<EvidenceRedactionMask[]> {
+  if (!analysisRunId) return []
+  const result = await client.query<{ evidence_id: string; fields: string[] }>(
+    `SELECT event.evidence_id,
+            array_agg(DISTINCT field ORDER BY field)::text[] AS fields
+       FROM appsea.evidence_redaction_events event
+       JOIN appsea.research_analysis_run_evidence analysis_evidence
+         ON analysis_evidence.workspace_id = event.workspace_id
+        AND analysis_evidence.evidence_id = event.evidence_id
+      CROSS JOIN LATERAL unnest(event.fields) AS event_field(field)
+      WHERE event.workspace_id = $1
+        AND analysis_evidence.analysis_run_id = $2
+      GROUP BY event.evidence_id`,
+    [workspaceId, analysisRunId]
+  )
+  return result.rows.map((row) => ({
+    evidenceId: row.evidence_id,
+    fields: evidenceRedactionFieldSchema.array().parse(row.fields)
+  }))
+}
+
+async function readCollectionRunRedactionMasks(
+  client: PoolClient,
+  workspaceId: string,
+  collectionRunId: string | null
+): Promise<EvidenceRedactionMask[]> {
+  if (!collectionRunId) return []
+  const result = await client.query<{ evidence_id: string; fields: string[] }>(
+    `SELECT evidence.evidence_id,
+            array_agg(DISTINCT field ORDER BY field)::text[] AS fields
+       FROM appsea.research_run_source_items run_item
+       JOIN appsea.evidence_records evidence
+         ON evidence.workspace_id = run_item.workspace_id
+        AND evidence.source_item_id = run_item.source_item_id
+       JOIN appsea.source_items source_item
+         ON source_item.workspace_id = run_item.workspace_id
+        AND source_item.source_item_id = run_item.source_item_id
+       CROSS JOIN LATERAL unnest(
+         evidence.redacted_fields || source_item.redacted_fields
+       ) AS redaction_field(field)
+      WHERE run_item.workspace_id = $1
+        AND run_item.run_id = $2
+      GROUP BY evidence.evidence_id
+      ORDER BY evidence.evidence_id`,
+    [workspaceId, collectionRunId]
+  )
+  return result.rows.map((row) => ({
+    evidenceId: row.evidence_id,
+    fields: evidenceRedactionFieldSchema.array().parse(row.fields)
+  }))
+}
+
+async function readOutputRedactionMasks(
+  client: PoolClient,
+  workspaceId: string,
+  analysisRunId: string | null,
+  collectionRunId: string | null
+): Promise<EvidenceRedactionMask[]> {
+  return analysisRunId
+    ? readEvidenceRedactionMasks(client, workspaceId, analysisRunId)
+    : readCollectionRunRedactionMasks(client, workspaceId, collectionRunId)
 }
 
 export class PostgresAuthRepository {
@@ -1861,7 +1958,13 @@ export class PostgresAuthRepository {
             throw new WorkspaceReportNotFoundError()
           }
           if (row.approval_state === parsedInput.action) {
-            return mapWorkspaceReport(row, parsedWorkspaceId, this.objectStore)
+            const masks = await readOutputRedactionMasks(
+              client,
+              parsedWorkspaceId,
+              row.analysis_run_id,
+              row.collection_run_id
+            )
+            return mapWorkspaceReport(row, parsedWorkspaceId, this.objectStore, masks)
           }
 
           const allowed =
@@ -1888,7 +1991,13 @@ export class PostgresAuthRepository {
           )
           const refreshedRow = refreshed.rows[0]
           if (!refreshedRow) throw new WorkspaceReportNotFoundError()
-          return mapWorkspaceReport(refreshedRow, parsedWorkspaceId, this.objectStore)
+          const masks = await readOutputRedactionMasks(
+            client,
+            parsedWorkspaceId,
+            refreshedRow.analysis_run_id,
+            refreshedRow.collection_run_id
+          )
+          return mapWorkspaceReport(refreshedRow, parsedWorkspaceId, this.objectStore, masks)
         },
         { isolationLevel: 'SERIALIZABLE' }
       )
@@ -1923,8 +2032,14 @@ export class PostgresAuthRepository {
         const row = result.rows[0]
         if (!row) throw new WorkspaceReportNotFoundError()
         if (row.approval_state !== 'approved') throw new WorkspaceReportNotApprovedError()
+        const masks = await readOutputRedactionMasks(
+          client,
+          parsedWorkspaceId,
+          row.analysis_run_id,
+          row.collection_run_id
+        )
         return workspaceReportExportReadModelSchema.parse({
-          report: await mapWorkspaceReport(row, parsedWorkspaceId, this.objectStore),
+          report: await mapWorkspaceReport(row, parsedWorkspaceId, this.objectStore, masks),
           manifestHash: row.manifest_hash
         })
       },
@@ -1976,7 +2091,13 @@ export class PostgresAuthRepository {
             throw new WorkspacePlanNotFoundError()
           }
           if (row.approval_state === parsedInput.action) {
-            return mapWorkspacePlan(row, parsedWorkspaceId, this.objectStore)
+            const masks = await readOutputRedactionMasks(
+              client,
+              parsedWorkspaceId,
+              row.analysis_run_id,
+              row.collection_run_id
+            )
+            return mapWorkspacePlan(row, parsedWorkspaceId, this.objectStore, masks)
           }
 
           const allowed =
@@ -2016,7 +2137,13 @@ export class PostgresAuthRepository {
           )
           const refreshedRow = refreshed.rows[0]
           if (!refreshedRow) throw new WorkspacePlanNotFoundError()
-          return mapWorkspacePlan(refreshedRow, parsedWorkspaceId, this.objectStore)
+          const masks = await readOutputRedactionMasks(
+            client,
+            parsedWorkspaceId,
+            refreshedRow.analysis_run_id,
+            refreshedRow.collection_run_id
+          )
+          return mapWorkspacePlan(refreshedRow, parsedWorkspaceId, this.objectStore, masks)
         },
         { isolationLevel: 'SERIALIZABLE' }
       )
@@ -2051,8 +2178,14 @@ export class PostgresAuthRepository {
         const row = result.rows[0]
         if (!row) throw new WorkspacePlanNotFoundError()
         if (row.approval_state !== 'approved') throw new WorkspacePlanNotApprovedError()
+        const masks = await readOutputRedactionMasks(
+          client,
+          parsedWorkspaceId,
+          row.analysis_run_id,
+          row.collection_run_id
+        )
         return workspacePlanExportReadModelSchema.parse({
-          plan: await mapWorkspacePlan(row, parsedWorkspaceId, this.objectStore),
+          plan: await mapWorkspacePlan(row, parsedWorkspaceId, this.objectStore, masks),
           manifestHash: row.manifest_hash
         })
       },
@@ -2098,7 +2231,18 @@ export class PostgresAuthRepository {
                      opportunity.slug`,
           [workspaceId]
         )
-        return rows.rows.map(mapOpportunity)
+        const masksByRun = new Map<string, EvidenceRedactionMask[]>()
+        return Promise.all(
+          rows.rows.map(async (row) => {
+            const runId = row.source_run_id
+            let masks = masksByRun.get(runId)
+            if (!masks) {
+              masks = await readCollectionRunRedactionMasks(client, workspaceId, runId)
+              masksByRun.set(runId, masks)
+            }
+            return redactOpportunityReadModel(mapOpportunity(row), masks)
+          })
+        )
       },
       { readOnly: true }
     )
@@ -2191,11 +2335,16 @@ export class PostgresAuthRepository {
               coverageGaps: []
             })
         const evidence = await this.readEvidence(client, workspaceId, row.source_run_id)
-        const report = await this.readReport(client, workspaceId, row.opportunity_id)
-        const plan = await this.readPlan(client, workspaceId, row.opportunity_id)
+        const masks: EvidenceRedactionMask[] = evidence.flatMap((entry) =>
+          entry.redactedFields && entry.redactedFields.length > 0
+            ? [{ evidenceId: entry.id, fields: entry.redactedFields }]
+            : []
+        )
+        const report = await this.readReport(client, workspaceId, row.opportunity_id, masks)
+        const plan = await this.readPlan(client, workspaceId, row.opportunity_id, masks)
         return workspaceOpportunityDetailReadModelSchema.parse({
-          opportunity,
-          summary,
+          opportunity: redactOpportunity(opportunity, masks),
+          summary: redactOpportunityReadModel(summary, masks),
           evidence,
           competitiveResearch,
           coverageGaps: run.rows[0]?.coverage_gaps ?? [],
@@ -2236,7 +2385,9 @@ export class PostgresAuthRepository {
               evidence.normalized_text,
               evidence.language, evidence.product_candidate, evidence.company_candidate,
               evidence.feature_candidate, evidence.category_candidate, evidence.synthetic,
-              evidence.redacted, evidence.allowed_representation, source_item.captured_at,
+              evidence.redacted, evidence.redacted_fields,
+              source_item.redacted_fields AS source_redacted_fields,
+              evidence.allowed_representation, source_item.captured_at,
               source_item.published_at, complaint.review_state,
               complaint.analysis_snapshot
          FROM appsea.research_run_source_items run_item
@@ -2257,34 +2408,57 @@ export class PostgresAuthRepository {
         ORDER BY source_item.captured_at DESC, evidence.evidence_id`,
       [workspaceId, runId]
     )
-    return rows.rows.map((row) =>
-      workspaceEvidenceReadModelSchema.parse({
+    return rows.rows.map((row) => {
+      const redactedFields = evidenceRedactionFieldSchema
+        .array()
+        .parse(
+          [
+            ...new Set([...(row.redacted_fields ?? []), ...(row.source_redacted_fields ?? [])])
+          ].sort()
+        )
+      const analysis = complaintAnalysisSchema.parse({
+        ...complaintAnalysisSchema.parse(row.analysis_snapshot),
+        reviewState: row.review_state
+      })
+      return workspaceEvidenceReadModelSchema.parse({
         id: row.evidence_id,
         sourceItemId: row.source_item_id,
-        canonicalLocator: row.canonical_locator,
-        text: row.normalized_text,
+        canonicalLocator: redactedFields.includes('canonicalLocator')
+          ? null
+          : row.canonical_locator,
+        text: redactedFields.includes('text') ? evidenceRedactionMarker : row.normalized_text,
         language: row.language,
-        product: row.product_candidate,
-        company: row.company_candidate,
-        feature: row.feature_candidate,
-        category: row.category_candidate,
-        analysis: complaintAnalysisSchema.parse({
-          ...complaintAnalysisSchema.parse(row.analysis_snapshot),
-          reviewState: row.review_state
-        }),
+        product: redactedFields.includes('product')
+          ? evidenceRedactionMarker
+          : row.product_candidate,
+        company: redactedFields.includes('company')
+          ? evidenceRedactionMarker
+          : row.company_candidate,
+        feature: redactedFields.includes('feature')
+          ? evidenceRedactionMarker
+          : row.feature_candidate,
+        category: redactedFields.includes('category')
+          ? evidenceRedactionMarker
+          : row.category_candidate,
+        analysis:
+          redactedFields.length > 0
+            ? redactComplaintAnalysis(analysis, new Set(redactedFields))
+            : analysis,
         synthetic: row.synthetic,
         redacted: row.redacted,
+        redactedFields,
         allowedRepresentation: row.allowed_representation,
         capturedAt: iso(row.captured_at),
         publishedAt: row.published_at === null ? null : iso(row.published_at)
       })
-    )
+    })
   }
 
   private async readReport(
     client: PoolClient,
     workspaceId: string,
-    opportunityId: string
+    opportunityId: string,
+    masks: readonly EvidenceRedactionMask[] = []
   ): Promise<WorkspaceReportReadModel | null> {
     const result = await client.query<WorkspaceReportRow>(
       `${workspaceReportSelect}
@@ -2296,13 +2470,14 @@ export class PostgresAuthRepository {
       [workspaceId, opportunityId]
     )
     const row = result.rows[0]
-    return row ? mapWorkspaceReport(row, workspaceId, this.objectStore) : null
+    return row ? mapWorkspaceReport(row, workspaceId, this.objectStore, masks) : null
   }
 
   private async readPlan(
     client: PoolClient,
     workspaceId: string,
-    opportunityId: string
+    opportunityId: string,
+    masks: readonly EvidenceRedactionMask[] = []
   ): Promise<WorkspacePlanReadModel | null> {
     const result = await client.query<WorkspacePlanRow>(
       `${workspacePlanSelect}
@@ -2314,7 +2489,7 @@ export class PostgresAuthRepository {
     )
     const row = result.rows[0]
     if (!row) return null
-    return mapWorkspacePlan(row, workspaceId, this.objectStore)
+    return mapWorkspacePlan(row, workspaceId, this.objectStore, masks)
   }
 }
 

@@ -1,8 +1,9 @@
 'use client'
 
-import type { ComplaintAnalysis } from '@appsea/contracts'
+import type { ComplaintAnalysis, EvidenceRedactionField } from '@appsea/contracts'
 import { useState } from 'react'
 import { ComplaintCorrectionForm } from './complaint-correction-form'
+import { EvidenceRedactionActions } from './evidence-redaction-actions'
 
 type ReviewState = 'unreviewed' | 'confirmed' | 'corrected' | 'rejected'
 
@@ -10,12 +11,18 @@ export function ProductionComplaintReviewActions({
   workspaceId,
   runId,
   complaintId,
+  evidenceId,
+  redactedFields,
+  canRedact,
   initialState,
   analysis
 }: {
   workspaceId: string
   runId: string
   complaintId: string
+  evidenceId: string
+  redactedFields?: readonly EvidenceRedactionField[] | undefined
+  canRedact: boolean
   initialState: ReviewState
   analysis?: ComplaintAnalysis
 }) {
@@ -100,6 +107,14 @@ export function ProductionComplaintReviewActions({
           onError={setError}
         />
       ) : null}
+      <EvidenceRedactionActions
+        workspaceId={workspaceId}
+        runId={runId}
+        complaintId={complaintId}
+        evidenceId={evidenceId}
+        initialFields={redactedFields}
+        canRedact={canRedact}
+      />
       {status ? <p className="form-success">{status}</p> : null}
       {error ? <p className="form-error">{error}</p> : null}
     </div>

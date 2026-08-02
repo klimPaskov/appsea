@@ -25,7 +25,7 @@ Status: production-shaped foundation implemented and validated locally; producti
 
 Implemented:
 
-- PostgreSQL 18 schema and sixty-six forward, checksummed migrations
+- PostgreSQL 18 schema and sixty-seven forward, checksummed migrations
 - normalized source, evidence, complaint, cluster, competitor, opportunity, score, report, plan, audit, cost, deletion, outbox, and lineage tables
 - no-login owner, separate migrator, and least-privilege runtime role contract
 - forced workspace RLS and transaction-scoped workspace context
@@ -91,6 +91,14 @@ lease/reconciliation/recomputation work is active, archives campaign refresh
 state, revokes pending invitations, and records identifier-only audit/outbox
 receipts. Research lineage and object/export/backup references remain intact;
 destructive purge is a separate reviewed retention operation.
+
+Migration `0067_field_level_evidence_redaction.sql` adds a policy-bound,
+owner/editor-only redaction receipt. It masks selected evidence fields in
+private collection, analysis, and report reads while preserving source
+identifiers, capture/policy lineage, content hashes, and immutable analysis
+snapshots. Text redaction requires the raw source reference to have already
+been removed through the source-policy deletion path; cloud/backup purge and
+downstream recomputation remain separate deployment work.
 
 The invalidated production-analysis output queue is a deliberate narrow slice:
 it does not claim source-wide retention purge, cloud backup deletion, or

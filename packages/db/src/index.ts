@@ -120,6 +120,12 @@ export {
   CompetitiveResearchObservationPolicyError
 } from './competitive-research-repository'
 export {
+  PostgresEvidenceRedactionRepository,
+  EvidenceRedactionConflictError,
+  EvidenceRedactionNotFoundError,
+  EvidenceRedactionPermissionError
+} from './evidence-redaction-repository'
+export {
   PostgresSourceSnapshotReconciliationRepository,
   SourceSnapshotReconciliationAdmissionDeniedError,
   SourceSnapshotReconciliationClaimError,

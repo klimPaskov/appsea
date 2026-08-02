@@ -5,7 +5,7 @@
 Fixture product, PostgreSQL persistence, durable workflows, policy-gated CFPB
 collection, private workspaces, report/plan approval/export, recovery, and
 invitations are implemented. Migrations
-`0027`-`0066` add policy evidence, collection checkpoints, deletion repair,
+`0027`-`0067` add policy evidence, collection checkpoints, deletion repair,
 leases, snapshot reconciliation, workflow admissions, source-reconciliation
 admission, retryable tombstones, maintenance-run telemetry, a durable source-
 quota case ledger, recomputation alerts, cost-threshold projection, and
@@ -15,12 +15,6 @@ with immutable lineage; it never runs automatically and the source remains
 disabled. `0051` binds direct CFPB admission to `appsea-worker`. Deployed
 Temporal/scheduler ownership, policy approval, role separation, non-fixture
 outputs, and identity-provider approval remain open.
-
-On 2026-08-02, the production collection activity was generalized to select
-the CFPB or Stack Exchange connector only after `readCollectible` returns a
-matching approved source-policy snapshot. The scheduled campaign-refresh worker
-uses the same production connector allowlist. The Stack Exchange policy remains
-unregistered and disabled, so this adds no activation or market-research claim.
 
 On 2026-08-01, production analysis Temporal starts were versioned to
 `production-analysis-v2`. New starts carry only workspace, collection,
@@ -45,11 +39,6 @@ validates role-separated TLS databases, authenticated Temporal, signed object
 storage, scheduler ownership, HTTPS origin, delivery switches, and proxy
 secret shape without network calls. Deployment topology, HA, retention, alert
 routing, and failure drills remain open.
-
-Migration `0046`/`0052` leases and fences protect maintenance mutations;
-metrics, cost summaries, and quota cases are durable/private. The worker's
-bounded, signal-safe `maintenance:loop` remains deployment-owned, and explicit
-re-collection requires a completed matching tombstone.
 
 ## Validated commands
 
@@ -113,6 +102,16 @@ active durable-work blocker, campaign refresh cleanup, pending-invitation
 revocation, and identifier-only receipts. Archival retains lineage and is not
 workspace/object/export/backup purge. Web `DELETE /api/workspaces/:workspaceId`
 and the member settings control expose the strict `ARCHIVE WORKSPACE` action.
+
+Migration `0067` adds owner/editor field-level evidence redaction. The strict
+run/complaint/evidence route requires a recent step-up and records immutable
+redaction receipts plus identifier-only audit/outbox events. Source identity,
+capture/policy lineage, content hashes, and immutable analysis snapshots remain;
+private collection, opportunity/leaderboard, analysis, report, coding-plan, and
+export mappers apply stable masks.
+Text masking is denied while a raw source object reference exists, leaving
+source-policy deletion and cloud/backup purge as separate operations. The
+collection page exposes the small privacy-redaction control.
 
 Current audit: `docs/status/production-readiness-audit-2026-08-02.md`.
 

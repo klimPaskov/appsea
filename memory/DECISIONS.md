@@ -265,20 +265,16 @@ histories need a drain/retention plan; retention uses server-observed time.
 ## 2026-08-01: Make full-snapshot deletion inference identifier-only and durable
 
 Filtered pages cannot prove deletion. CFPB uses an unfiltered
-`deletion-reconciliation` purpose and stores identifiers, page hashes, warnings,
-and checkpoints. Migration `0041` persists warnings and idempotent pages; only
-a warning-free short page in the lease tx may enqueue tombstones. A settled
-quota without its checkpoint needs reconciliation; no auto-refetch.
+`deletion-reconciliation` purpose with identifier/page checkpoints; only a
+warning-free short page may enqueue tombstones, and a settled quota without a
+checkpoint needs reconciliation rather than auto-refetch.
 
 ## 2026-08-01: Admit manual analysis separately and bind its initiator
 
-Manual production analysis is downstream, not source collection, so migration
-`0042` gives it a separate digest/input admission ledger. The private route
-binds the owner/editor; the worker consumes/releases with run persistence, and
-the run stores an immutable membership-checked actor. The digest excludes the
-actor so a workspace key cannot fork; actor remains in the input hash and a
-mismatch conflicts. Consumed/released digests replay; expired reservations
-alone are reclaimable.
+Manual analysis is downstream, so migration `0042` gives it a separate
+digest/input admission ledger and immutable membership-checked initiator. The
+actor stays in the input hash while consumed/released digests replay; expired
+reservations alone are reclaimable.
 
 ## 2026-08-01: Reclaim stale recomputation dispatches from the server clock
 
@@ -316,13 +312,11 @@ observation time. This prevents missing coverage becoming a market claim.
 
 ## 2026-08-01: Persist campaign intent before collection
 
-Use existing `research_campaigns` JSONB columns for strict `campaign-v1` writes
-and a bounded legacy read union. Owners/editors create only `draft` campaigns;
-members inspect source lifecycle/policy readiness. The repository rejects
-unknown sources, fixture mixing, and approved-purpose mismatches, then writes
-identifier-only audit/outbox receipts. It never starts Temporal or activates a
-connector; workflow admission rechecks policy, quota, deletion, and budget.
-No migration was needed because the table shape is additive.
+Use existing `research_campaigns` JSONB for strict `campaign-v1` intent and a
+bounded legacy read union. Draft writes resolve policy readiness, reject source
+or purpose mismatches, record identifier-only receipts, and never start
+Temporal or activate a connector; admission rechecks quota, deletion, and
+budget. No migration was needed.
 
 ## 2026-08-02: Start collection only from persisted campaign intent
 
@@ -333,16 +327,11 @@ non-synthetic source; fan-out, scheduling, and activation remain reviewed work.
 
 ## 2026-08-02: Make reviewed analysis handoff explicit and safe
 
-Collection completion is not analysis. The private collection page
-offers owner/editor members only the approved seed reviews already scoped to
-their workspace and starts the existing production-analysis admission route.
-The status API/page validates any workflow identifier against its workspace
-prefix, and maps Temporal or PostgreSQL to a strict
-projection of state, checkpoint, bounded attempts, availability, identifiers,
-failure summary, and timestamps. Hashes, object references, source payloads,
-and seed content stay out of the read contract. Migration `0055` persists the
-activity attempt outside the idempotency hash, while `0056` adds ten
-server-clock attempt rows with stage heartbeat and fixed failure codes.
+Collection completion is not analysis. The private handoff accepts only an
+approved workspace seed and exposes a safe Temporal/PostgreSQL projection;
+hashes, object references, source payloads, and seed content stay out of the
+read contract. Migrations `0055`/`0056` keep bounded activity attempts and
+server-clock heartbeat history outside the idempotency hash.
 
 ## 2026-08-02: Reuse the maintenance lease for campaign refresh dispatch
 
@@ -360,3 +349,16 @@ identity and adds a deferred trigger that queues one deterministic repair per
 affected opportunity after correction invalidation. Worker reuses evidence and
 seed checks; missing or unapproved seeds
 remain blocked for operator inspection.
+
+## 2026-08-02: Keep evidence redaction as a provenance-preserving projection
+
+Migration `0067` adds an editor/owner-only, run-bound field-redaction receipt.
+The database function retains source identifiers, capture/policy lineage,
+original content hashes, and immutable analysis snapshots while replacing only
+selected current display fields. Private collection, opportunity/leaderboard,
+analysis, report, coding-plan, and export mappers apply the persisted masks;
+stored derived objects are not
+rewritten. A text mask is rejected while a raw source object reference exists,
+so source-policy deletion and cloud/backup purge remain separate reviewed
+operations. The stable generic marker avoids revealing the redaction reason or
+original content, and receipt replay is idempotent with conflict on reuse.

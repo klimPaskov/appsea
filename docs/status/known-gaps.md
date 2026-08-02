@@ -309,9 +309,17 @@ registry, but it remains disabled and unregistered: the API terms/CC BY-SA
 attribution path, 14-day excerpt retention, deletion behavior, and restricted
 commercial use still require independent review. Its filtered search path
 emits no deletion tombstones and cannot be used to infer absence.
-In this tranche, `redact` and
-`tombstone` intentionally share the same source-deletion propagation path;
-field-level redaction that preserves derived payloads is not implemented.
+Migration `0067_field_level_evidence_redaction.sql` now adds a separate,
+editor/owner-only field-redaction boundary. It records an immutable receipt,
+retains source identifiers, capture/policy metadata, and the original content
+hash, and masks the selected evidence fields in collection, private evidence,
+opportunity/leaderboard, analysis, report, and coding-plan read projections.
+Redacted analysis snapshots and stored
+objects are not rewritten; read mappers apply the mask before returning them.
+Text redaction is denied while a raw source object reference remains, so the
+source-policy deletion path still owns raw-object and backup deletion. This
+slice does not claim workspace/export purge, cloud object-store deletion, or
+automatic downstream recomputation after a privacy request.
 Migration `0039` adds a workspace-scoped, digest-only source collection lease.
 The lease binds acquisition to the current active policy and matching operator
 approval review, stores one observed collection timestamp for retry replay, and
