@@ -22,7 +22,8 @@ export interface ProductionAnalysisRecomputeRecord {
   opportunityId: string
   collectionRunId: string
   seedReviewId: string
-  sourceTombstoneId: string
+  sourceTombstoneId: string | null
+  correctionId: string | null
   analysisRunId: string
   idempotencyKey: string
   requestedAt: string
@@ -43,7 +44,8 @@ interface RecomputeRow extends QueryResultRow {
   opportunity_id: string
   collection_run_id: string
   seed_review_id: string
-  source_tombstone_id: string
+  source_tombstone_id: string | null
+  correction_id: string | null
   analysis_run_id: string
   idempotency_key: string
   requested_at: Date | string
@@ -67,7 +69,7 @@ export class ProductionAnalysisRecomputeStateError extends Error {
 
 const recomputeColumns = `
   workspace_id, recompute_id, opportunity_id, collection_run_id, seed_review_id,
-  source_tombstone_id, analysis_run_id, idempotency_key, requested_at, state,
+  source_tombstone_id, correction_id, analysis_run_id, idempotency_key, requested_at, state,
   attempt_count, workflow_id, failure_code, failure_summary, next_attempt_at,
   started_at, finished_at, updated_at`
 
@@ -83,7 +85,12 @@ function mapRow(row: RecomputeRow): ProductionAnalysisRecomputeRecord {
     opportunityId: row.opportunity_id,
     collectionRunId: row.collection_run_id,
     seedReviewId: row.seed_review_id,
-    sourceTombstoneId: row.source_tombstone_id,
+    sourceTombstoneId:
+      row.source_tombstone_id === null
+        ? null
+        : appseaIdentifierSchema.parse(row.source_tombstone_id),
+    correctionId:
+      row.correction_id === null ? null : appseaIdentifierSchema.parse(row.correction_id),
     analysisRunId: row.analysis_run_id,
     idempotencyKey: row.idempotency_key,
     requestedAt: iso(row.requested_at)!,

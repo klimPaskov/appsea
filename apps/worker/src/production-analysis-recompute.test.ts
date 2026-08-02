@@ -50,6 +50,7 @@ const record = {
   collectionRunId: 'run:one',
   seedReviewId: 'seed-review:one',
   sourceTombstoneId: 'tombstone:one',
+  correctionId: null,
   analysisRunId: 'analysis-run:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
   idempotencyKey: 'production-analysis-recompute-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
   requestedAt: '2026-08-01T00:00:00.000Z',

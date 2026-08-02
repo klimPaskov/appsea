@@ -108,11 +108,11 @@ before either status source is queried.
 18. A workspace transaction persists immutable production projections,
     output IDs, audit/outbox receipts, and active availability state. Source
     deletion propagation invalidates the analysis run while retaining lineage
-    for authorized object purge; migration `0037` queues a deletion-triggered
-    active-evidence repair with its source tombstone and reviewed seed lineage.
-    The worker dispatches that job only after the seed is approved, while
-    migration `0036` permits reactivation only after the new active output is
-    linked.
+    for authorized object purge; migrations `0037` and `0062` queue
+    deletion- or correction-triggered active-evidence repairs with their
+    immutable trigger and reviewed seed lineage. The worker dispatches those
+    jobs only after the seed is approved, while migration `0036` permits
+    reactivation only after the new active output is linked.
 19. Checkpoints, budget counters, and fixed failure records make progress inspectable and retry-safe. If a source quota reservation settles before a production result, migration `0049` creates a bounded reconciliation case instead of permitting a blind retry.
 20. Workspace members can inspect open quota-reconciliation cases privately; only the standalone maintenance role can resolve one after verifying the exact completed run or recording an explicit no-result decision. Resolution never refunds quota or starts a new source request.
 21. An outbox event records accepted run completion without making delivery part of the database transaction.

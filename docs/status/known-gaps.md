@@ -58,9 +58,11 @@ of that gap: an editor/owner can submit a strict derived-only correction from
 the private evidence view. The immutable correction history stores prior/next
 snapshot hashes, source evidence and provenance are not editable, and active
 analysis/opportunity projections are invalidated so stale reports and plans
-are hidden. A new reviewed analysis must be started explicitly; automatic
-recomputation, full corrected-field forms, and the competitor feature matrix
-remain open.
+are hidden. Migration `0062_correction_recompute_jobs.sql` extends the existing
+forced-RLS repair queue with a deferred correction trigger. Each affected
+opportunity gets one deterministic re-analysis request; missing or withdrawn
+seeds remain blocked rather than bypassing review. Full corrected-field forms
+and the competitor feature matrix remain open.
 
 ## Infrastructure
 
@@ -124,8 +126,8 @@ sidecar crash. Migration `0044` makes failed tombstone propagation retryable
 with a server-clock deadline and bounded exhausted terminal state. An explicit
 reviewed analysis can now re-cluster the
 remaining active evidence after deletion, but automatic recomputation
-scheduling now persists a source-tombstone/seed-bound job and dispatches through
-the existing analysis workflow. Automatic re-collection, object
+scheduling now persists source-tombstone- or correction-bound jobs and dispatches
+through the existing analysis workflow. Automatic re-collection, object
 storage/backups, workspace-closure purge, export purge, and deployed scheduler
 alerting are not implemented.
 Complaint review transitions and the
@@ -261,7 +263,8 @@ policy drafts requesting a general `purge` retention action remain rejected
 until source/object/backups scope is approved. Invalidated analysis output
 purge is now bounded through migration `0043`; cloud object-store/backups purge
 remains open;
-automatic recomputation dispatch now exists through migration `0037`, and
+automatic recomputation dispatch now exists through migrations `0037` and
+`0062`, and
 migrations `0040`/`0041` provide a policy-gated identifier-only reconciliation
 job, page checkpoints, warning-preserving retries, and atomic tombstone
 finalization, but alerting and deployed scheduler ownership remain open. A production-shaped

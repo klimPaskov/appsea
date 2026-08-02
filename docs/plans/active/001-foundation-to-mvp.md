@@ -25,7 +25,7 @@ Status: production-shaped foundation implemented and validated locally; producti
 
 Implemented:
 
-- PostgreSQL 18 schema and sixty-one forward, checksummed migrations
+- PostgreSQL 18 schema and sixty-two forward, checksummed migrations
 - normalized source, evidence, complaint, cluster, competitor, opportunity, score, report, plan, audit, cost, deletion, outbox, and lineage tables
 - no-login owner, separate migrator, and least-privilege runtime role contract
 - forced workspace RLS and transaction-scoped workspace context
@@ -143,8 +143,10 @@ function keeps source evidence/provenance immutable, invalidates active
 analysis/opportunity projections, and requires an explicit new reviewed
 analysis before stale report/plan outputs can reappear. The private evidence
 view exposes a compact JSON correction editor; the next analysis input carries
-the corrected snapshot. A field-by-field form and automatic recomputation
-remain follow-up work.
+the corrected snapshot. Migration `0062_correction_recompute_jobs.sql` extends
+the existing forced-RLS repair queue with a deferred correction trigger; each
+affected opportunity receives one deterministic re-analysis request, while
+missing or withdrawn seeds remain blocked. A field-by-field form remains open.
 
 Migration `0054_source_policy_review_integrity.sql` binds new source-policy
 approvals to a lowercase reviewer identity, an independent review role, and an
@@ -279,7 +281,8 @@ Remaining production work: legacy v1 history drain/retention for the analysis
 workflow, deployed Temporal topology and namespace/task-queue authorization,
 HA, provider object-store/backups retention and purge, deployment, metric
 aggregation/alerts, deployed
-snapshot scheduler ownership, and worker crash fault-injection proof. Migration `0037` now queues deletion-triggered
+snapshot scheduler ownership, and worker crash fault-injection proof. Migrations
+`0037` and `0062` now queue deletion- or correction-triggered
 active-evidence repairs and the dispatcher reclaims stale dispatch claims with
 bounded terminal failure; deployed scheduling, alerting, and production
 Temporal remain open. The repository-level collection and manual-analysis
@@ -338,7 +341,8 @@ workspace seed-review registry. Migration `0033` and the private seed-review
 routes now persist immutable seed content and editor/owner approval state.
 Durable analysis
 persistence/reference wiring, an idempotent post-collection repository, a
-Temporal activity, an opt-in approved-seed handoff queue, a deletion-triggered
+Temporal activity, an opt-in approved-seed handoff queue, a deletion- or
+correction-triggered
 recomputation queue, and private active-output reads are implemented after a
 completed collection; live activation, cloud object-store deployment, deployed
 scheduling, and handoff/recomputation alerting remain open. Source deletion now

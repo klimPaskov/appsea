@@ -146,9 +146,14 @@ outputs linked only to invalidated analysis runs.
 The correction endpoint is idempotent for the same correction ID and hashes;
 conflicting reuse is rejected. Evidence deletion and rejected complaints fail
 closed. The next reviewed analysis input carries the persisted corrected
-snapshot, so the report does not silently reclassify the source text. That
-analysis must still be started explicitly; automatic recomputation and cloud
-object deletion remain operational follow-ups.
+snapshot, so the report does not silently reclassify the source text. Migration
+`0062_correction_recompute_jobs.sql` adds a deferred database trigger that
+queues one deterministic repair request for each affected invalidated
+opportunity. The existing worker dispatcher reconstructs active evidence and
+starts the same identifier-only analysis workflow. An approved immutable seed
+is still required; a missing or withdrawn seed leaves the request blocked for
+operator inspection rather than bypassing review. Cloud object deletion,
+deployment scheduling, and alert routing remain operational follow-ups.
 
 ## Object storage boundary
 

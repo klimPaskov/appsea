@@ -85,28 +85,25 @@ workspace-data, export, object-store, or backup deletion.
 ## 2026-07-25: Policy-gated production collection checkpoint
 
 Keep the complete fixture artifact contract unchanged while adding an additive
-production collection contract. Migration `0027` stores immutable source-policy
-review evidence and grants draft registration/approval only to the migration
-operator role; runtime workers may read an active approved snapshot but cannot
-activate a source. The first production CFPB checkpoint persists only
-policy-allowed, non-synthetic source items, redacted evidence, unreviewed
-complaints, deletion tombstones, coverage gaps, and identifier-only audit/outbox
-receipts through an idempotent PostgreSQL repository. It is intentionally not
-called a full research run: clustering, competitors, scoring, reports, plans,
-and production Temporal orchestration remain later stages. This preserves the
-public synthetic leaderboard and makes the next boundary testable without
-pretending legal approval or market completeness.
+collection contract. Migration `0027` stores immutable source-policy review
+evidence and keeps activation in the migration-operator boundary; runtime
+workers can only read an active approved snapshot. The first CFPB checkpoint
+persists policy-allowed non-synthetic items, redacted evidence, unreviewed
+complaints, tombstones, coverage gaps, and idempotent identifier-only receipts.
+It is not a full research run: clustering, competitors, scoring, reports,
+plans, Temporal orchestration, legal approval, and market completeness remain
+separate boundaries.
 
 ## 2026-07-25: Production collection workflow boundary
 
 Keep the production collection Temporal workflow additive to the fixture
-workflow. Migrations `0028`/`0029` store an RLS job/checkpoint projection,
-policy-derived retention enqueue, source/cost budgets, terminal guards, hashed
-idempotency, and immutable user/service attribution. PostgreSQL remains the
-non-cancellable persistence authority; a settled quota without a committed
-result stops for operator reconciliation. This proves the contract locally,
-without claiming production Temporal, live-source approval, object/backups
-purge, aggregate recomputation, or downstream opportunity analysis.
+workflow. Migrations `0028`/`0029` store RLS job/checkpoint state,
+policy-derived retention, budgets, terminal guards, hashed idempotency, and
+immutable user/service attribution. PostgreSQL is the non-cancellable
+persistence authority; a settled quota without a result stops for operator
+reconciliation. This proves the contract locally without claiming production
+Temporal, live-source approval, purge, aggregate recomputation, or downstream
+opportunity analysis.
 
 ## 2026-07-25: Policy-derived source retention
 
@@ -232,16 +229,13 @@ approval-gated work.
 
 ## 2026-08-01: Queue deletion-triggered active-evidence recomputation
 
-Source deletion must not leave an invalidated opportunity dependent on a human
-remembering to restart analysis, but it also must not re-fetch deleted source
-records or invent a seed. Migration `0037` records one tenant-scoped job per
-opportunity/tombstone in the propagation transaction, retaining collection,
-seed, and tombstone lineage. A skip-locked worker dispatches only when the
-opportunity is still invalidated, no active output exists, the seed is approved,
-and active confirmed policy-allowed evidence can be reconstructed. Seed
-withdrawal is visible as `blocked`; readiness and transient dispatch failures
-are bounded retries; Temporal start is idempotent. Production scheduling,
-alerting, and source re-collection remain separate deployment/review work.
+Source deletion must not leave an invalidated opportunity waiting for a manual
+restart, but it must not re-fetch deleted records or invent a seed. Migration
+`0037` records one tenant-scoped job with collection/seed/tombstone lineage. A
+skip-locked worker dispatches only with an invalidated opportunity, no active
+output, an approved seed, and reconstructable active policy-allowed evidence;
+withdrawal is `blocked`, retries are bounded, and Temporal start is idempotent.
+Scheduling, alerting, and source re-collection remain separate deployment work.
 
 ## 2026-08-01: Gate production workflow starts before Temporal
 
@@ -356,3 +350,13 @@ Migration `0058` stores due time, claim token, workflow identity, pending
 request, attempts, and fixed failure state. Source maintenance claims due
 non-fixture campaigns, rechecks policy, binds before admission, and starts an
 idempotent workflow; stale claims reclaim; denied sources inactive.
+
+## 2026-08-02: Reuse the recomputation queue for complaint corrections
+
+Correction invalidation must not create a second repair architecture or call
+Temporal from the web transaction. Migration `0062` makes the existing
+forced-RLS recomputation row accept one source-tombstone or correction
+identity and adds a deferred trigger that queues one deterministic repair per
+affected opportunity after correction invalidation. Worker reuses evidence and
+seed checks; missing or unapproved seeds
+remain blocked for operator inspection.

@@ -66,15 +66,16 @@ row/advisory lock through commit, so a stale process cannot commit quota,
 deletion, admission, source-lease, or object-purge state after takeover.
 Snapshot reconciliation remains a separate checkpoint flow because its source
 request and persistence work are not one atomic transaction.
-Migration `0037` also inserts one durable recomputation job per invalidated
-opportunity/tombstone when prior analysis lineage provides a seed review. The
-durable worker claims due jobs with `FOR UPDATE SKIP LOCKED`, reconstructs the
-remaining active evidence, and starts the existing analysis workflow. A
-withdrawn seed is visible as `blocked` and becomes dispatchable only after a
-new approval; a `dispatching` claim older than 15 minutes is reclaimable from
-the PostgreSQL clock, and a stale claim at the 24-attempt limit becomes a fixed
-terminal failure. The deterministic workflow identity makes a late Temporal
-start an idempotent replay; no job performs source acquisition.
+Migrations `0037` and `0062` insert one durable recomputation job per
+invalidated opportunity/tombstone or complaint correction when prior analysis
+lineage provides a seed review. The durable worker claims due jobs with
+`FOR UPDATE SKIP LOCKED`, reconstructs the remaining active evidence, and
+starts the existing analysis workflow. A withdrawn seed is visible as `blocked`
+and becomes dispatchable only after a new approval; a `dispatching` claim older
+than 15 minutes is reclaimable from the PostgreSQL clock, and a stale claim at
+the 24-attempt limit becomes a fixed terminal failure. The deterministic
+workflow identity makes a late Temporal start an idempotent replay; no job
+performs source acquisition.
 
 Migration `0038` adds transient production workflow admission rows before a
 user-triggered Temporal start. The admission function serializes each

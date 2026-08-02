@@ -8,7 +8,8 @@ const baseRow = {
   opportunity_id: 'opportunity:one',
   collection_run_id: 'run:one',
   seed_review_id: 'seed-review:one',
-  source_tombstone_id: 'tombstone:one',
+  source_tombstone_id: 'tombstone:one' as string | null,
+  correction_id: null as string | null,
   analysis_run_id: 'analysis-run:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
   idempotency_key: 'production-analysis-recompute-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
   requested_at: '2026-08-01T00:00:00.000Z',
@@ -189,5 +190,17 @@ describe('production analysis recomputation repository', () => {
     )
 
     expect(blocked).toMatchObject({ state: 'blocked', failureCode: 'seed_not_approved' })
+  })
+
+  it('maps a correction-triggered repair without a source tombstone', async () => {
+    const { pool, row } = fakePool()
+    row.source_tombstone_id = null
+    row.correction_id = 'correction:analysis:one'
+    const repository = new PostgresProductionAnalysisRecomputeRepository(pool)
+
+    await expect(repository.read('workspace:one', row.recompute_id)).resolves.toMatchObject({
+      sourceTombstoneId: null,
+      correctionId: 'correction:analysis:one'
+    })
   })
 })

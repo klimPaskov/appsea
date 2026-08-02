@@ -5,7 +5,7 @@
 The fixture product, PostgreSQL persistence, durable workflows, policy-gated
 CFPB collection checkpoint, authenticated private workspaces, report/plan
 approval/export, recovery, and invitations are implemented. Migrations
-`0027`-`0060` add policy evidence, collection checkpoints, deletion repair,
+`0027`-`0062` add policy evidence, collection checkpoints, deletion repair,
 leases, snapshot reconciliation, workflow admissions, source-reconciliation
 admission, retryable tombstones, maintenance-run telemetry, and a durable
 source-quota reconciliation case ledger. Migration `0050` adds explicit,
@@ -15,8 +15,8 @@ source remains disabled. Migration `0051` requires the direct CFPB command to
 reserve and consume the shared production admission ledger through the
 `appsea-worker` service principal. Deployed Temporal/scheduler ownership, policy
 approval, role separation, non-fixture outputs, and identity-provider approval
-remain open. Fixture and production collection routes are Temporal gateways;
-signup workspaces remain non-fixture by design.
+remain open. Collection routes are Temporal gateways; signup workspaces remain
+non-fixture by design.
 
 On 2026-08-02, the production collection activity was generalized to select
 the CFPB or Stack Exchange connector only after `readCollectible` returns a
@@ -88,7 +88,7 @@ Migration `0060` adds a database-level HTTP(S) host/path check for those
 locators, while policy still controls whether a locator may be displayed.
 
 The 2026-08-02 campaign slice adds a private one-source `campaign-v1` run,
-bounded history, draft edits/archive, and policy/admission-gated refresh claims.
+history, draft edits/archive, and policy/admission-gated refresh claims.
 Multi-source orchestration, source picker, live activation, deployed
 scheduler/Temporal, and Docker PostgreSQL proof remain open; CFPB is disabled.
 
@@ -105,12 +105,14 @@ over existing policy tables. It derives production collectibility from the
 independent approval gate and exposes quotas, deletion duties, and gaps while
 keeping payloads, hashes, reviewer identities, and activation controls out.
 
-The 2026-08-02 correction tranche adds migration `0061`, a strict derived-only
-editor/owner correction contract, immutable prior/next snapshot hashes, and
-active analysis/opportunity invalidation. Source evidence/provenance remains
-immutable; stale report/plan reads are hidden until explicit reviewed
-re-analysis; the persisted corrected snapshot feeds that next artifact. The
-editor is compact JSON and automatic recomputation remains open.
+The 2026-08-02 correction tranche adds migrations `0061` and `0062`, a strict
+derived-only editor/owner correction contract, immutable prior/next snapshot
+hashes, active analysis/opportunity invalidation, and a deferred correction
+trigger that queues one deterministic repair per affected opportunity. Source
+evidence/provenance remains immutable; stale report/plan reads are hidden until
+reviewed re-analysis; the persisted corrected snapshot feeds that next
+artifact. The editor is compact JSON, and missing or unapproved seeds leave the
+repair visibly blocked.
 
 ## Next production tranche
 

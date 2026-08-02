@@ -125,6 +125,11 @@ for that pre-context authorization lookup.
   `dispatching` claims, terminalizes exhausted claims, and starts Temporal
   idempotently; it never re-fetches a source record or accepts caller-supplied
   complaint text.
+- Migration `0062` extends the same forced-RLS row with a correction identity
+  and a deferred trigger that queues one deterministic repair after the
+  correction invalidation is committed. The correction path reuses the active
+  evidence and approved-seed gates; it cannot create a source tombstone or
+  bypass review.
 - Migration `0038` places an authenticated production collection start behind
   a security-definer admission function. The function verifies the active
   private non-fixture workspace and owner/editor membership, serializes one

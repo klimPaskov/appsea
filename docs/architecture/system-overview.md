@@ -51,6 +51,11 @@ reactivate until its active output is linked. Migration `0037` records a
 deletion-triggered recomputation job in the same propagation transaction; the
 durable worker claims it with bounded retries and starts the existing analysis
 workflow only from active evidence and an approved immutable seed.
+Migration `0062` extends that same forced-RLS queue for derived complaint
+corrections. A deferred database trigger records one deterministic correction-
+bound repair per affected opportunity after invalidation commits; the worker
+reuses the same active-evidence and approved-seed gates, and blocked seeds stay
+inspectable instead of bypassing review.
 Migration `0038` adds a pre-Temporal, workspace-serialized production start
 admission with fixed rate/concurrency limits, digest-only replay identity, and
 bounded terminal/expired-row purge.

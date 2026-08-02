@@ -23,9 +23,10 @@ export interface ProductionAnalysisRecomputeDispatcher {
 }
 
 /**
- * Dispatches deletion-triggered repairs without acquiring source data. The
- * collection is reconstructed from active policy/evidence rows and an
- * approved, immutable seed; Temporal owns the durable execution history.
+ * Dispatches deletion- or correction-triggered repairs without acquiring new
+ * source data. The collection is reconstructed from active policy/evidence
+ * rows and an approved, immutable seed; Temporal owns the durable execution
+ * history.
  */
 export function createProductionAnalysisRecomputeDispatcher(
   pool: Pool,
@@ -117,7 +118,7 @@ export function createProductionAnalysisRecomputeDispatcher(
       const failureCode = waitingForEvidence ? 'analysis_not_ready' : 'recompute_dispatch_failed'
       const failureSummary = waitingForEvidence
         ? 'The collection needs confirmed or corrected, active, policy-allowed evidence before repair can start.'
-        : 'The deletion-triggered analysis repair could not be dispatched.'
+        : 'The queued analysis repair could not be dispatched.'
       const retry = await recomputations.reschedule(
         claimed.workspaceId,
         claimed.recomputeId,

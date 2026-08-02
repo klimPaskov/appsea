@@ -24,6 +24,10 @@ description: Use when normalizing, deduplicating, classifying, clustering, or cu
 13. Treat editor/owner corrections as derived-only immutable revisions: hash
     the prior and next snapshots, preserve source/provenance, invalidate stale
     downstream outputs, and require a new reviewed analysis before publication.
+14. Let the correction transaction enqueue one deterministic, correction-bound
+    re-analysis request per invalidated opportunity through the existing durable
+    queue. Reuse the active-evidence and approved-seed gates; a missing or
+    withdrawn seed must remain blocked and inspectable.
 
 A cluster must not merge different jobs merely because they mention the same product. A complaint count must not count copies as independent demand.
 
@@ -38,4 +42,5 @@ unresolved states for every retained complaint.
 Each cluster has a clear title, summary, observation ids, unique count, source count, confidence, and unresolved ambiguity. Each retained complaint also has a
 replayable, provenance-linked analysis snapshot; synthetic fixtures remain marked
 as synthetic and unresolved entity types remain visible. Corrections have an
-immutable history and never rewrite source evidence.
+immutable history, never rewrite source evidence, and either dispatch or
+visibly block their downstream re-analysis request without bypassing review.

@@ -74,7 +74,8 @@ describe('database foundation', () => {
       '0058',
       '0059',
       '0060',
-      '0061'
+      '0061',
+      '0062'
     ])
     expect(migrations[0]?.checksum).toMatch(/^[a-f0-9]{64}$/)
     expect(migrations[0]?.sql).toContain('CREATE TABLE appsea.evidence_records')
@@ -181,6 +182,9 @@ describe('database foundation', () => {
     )
     const complaintAnalysisCorrectionMigration = migrations.find(
       (migration) => migration.version === '0061'
+    )
+    const correctionRecomputeMigration = migrations.find(
+      (migration) => migration.version === '0062'
     )
     expect(authMigration?.sql).toContain('CREATE TABLE appsea.users')
     expect(authMigration?.sql).toContain('CREATE TABLE appsea.auth_sessions')
@@ -583,6 +587,20 @@ describe('database foundation', () => {
     )
     expect(complaintAnalysisCorrectionMigration?.sql).toContain(
       'REVOKE ALL ON appsea.complaint_analysis_corrections FROM PUBLIC, appsea_service'
+    )
+    expect(correctionRecomputeMigration?.sql).toContain(
+      'ALTER COLUMN source_tombstone_id DROP NOT NULL'
+    )
+    expect(correctionRecomputeMigration?.sql).toContain('ADD COLUMN correction_id text')
+    expect(correctionRecomputeMigration?.sql).toContain(
+      'production_analysis_recompute_correction_key'
+    )
+    expect(correctionRecomputeMigration?.sql).toContain(
+      'CREATE CONSTRAINT TRIGGER complaint_analysis_correction_recompute_enqueue'
+    )
+    expect(correctionRecomputeMigration?.sql).toContain('DEFERRABLE INITIALLY DEFERRED')
+    expect(correctionRecomputeMigration?.sql).toContain(
+      'CREATE OR REPLACE FUNCTION appsea.enqueue_complaint_analysis_recompute'
     )
   })
 
