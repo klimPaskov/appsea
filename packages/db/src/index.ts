@@ -78,6 +78,18 @@ export {
   type ResearchCampaignRefreshFailure,
   type ResearchCampaignRefreshRequestBinding
 } from './research-campaign-repository'
+export {
+  PostgresResearchCampaignOrchestrationRepository,
+  ResearchCampaignOrchestrationClaimLostError,
+  ResearchCampaignOrchestrationConflictError,
+  ResearchCampaignOrchestrationPermissionError,
+  ResearchCampaignOrchestrationSourceError,
+  ResearchCampaignOrchestrationStateError,
+  campaignSourceIdempotencyKey,
+  type ResearchCampaignOrchestrationClaim,
+  type ResearchCampaignOrchestrationDispatch,
+  type ResearchCampaignOrchestrationFailure
+} from './research-campaign-orchestration-repository'
 export { PostgresProductionCollectionWorkflowRepository } from './production-collection-workflow-repository'
 export {
   PostgresProductionWorkflowAdmissionRepository,

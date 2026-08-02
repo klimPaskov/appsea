@@ -10,6 +10,13 @@ import {
   ResearchCampaignPermissionError
 } from '@appsea/db/research-campaign'
 import {
+  PostgresResearchCampaignOrchestrationRepository,
+  ResearchCampaignOrchestrationConflictError,
+  ResearchCampaignOrchestrationPermissionError,
+  ResearchCampaignOrchestrationSourceError,
+  ResearchCampaignOrchestrationStateError
+} from '@appsea/db/research-campaign-orchestration'
+import {
   PostgresProductionWorkflowAdmissionRepository,
   ProductionWorkflowAdmissionConflictError,
   ProductionWorkflowConcurrencyLimitError,
@@ -137,39 +144,42 @@ export async function POST(
       { status: 422, headers: privateResponseHeaders }
     )
   }
-  if (configuration.data.sourceIds.length !== 1 || campaign.sources.length !== 1) {
-    return Response.json(
-      { error: 'This production run boundary currently requires exactly one configured source' },
-      { status: 422, headers: privateResponseHeaders }
-    )
-  }
+  const multiSource = configuration.data.sourceIds.length > 1
   const source = campaign.sources[0]
-  if (
-    !source ||
-    source.sourceId !== configuration.data.sourceIds[0] ||
-    source.synthetic ||
-    !source.enabled ||
-    source.policyState !== 'approved' ||
-    !source.policyVersion ||
-    !source.permittedPurposes.includes(campaign.purpose)
-  ) {
-    return Response.json(
-      { error: 'The configured source is not currently approved for collection' },
-      { status: 422, headers: privateResponseHeaders }
-    )
-  }
-  if (source.displayMode !== configuration.data.requestedDisplayMode) {
-    return Response.json(
-      { error: 'The requested display mode does not match the approved source policy' },
-      { status: 422, headers: privateResponseHeaders }
-    )
-  }
   const limit = Math.min(configuration.data.maxEvidenceCount, budget.data.maxSourceItems)
-  if (limit < 1) {
-    return Response.json(
-      { error: 'The campaign budget does not permit any source items' },
-      { status: 422, headers: privateResponseHeaders }
-    )
+  if (!multiSource) {
+    if (campaign.sources.length !== 1) {
+      return Response.json(
+        { error: 'The configured source could not be resolved' },
+        { status: 422, headers: privateResponseHeaders }
+      )
+    }
+    if (
+      !source ||
+      source.sourceId !== configuration.data.sourceIds[0] ||
+      source.synthetic ||
+      !source.enabled ||
+      source.policyState !== 'approved' ||
+      !source.policyVersion ||
+      !source.permittedPurposes.includes(campaign.purpose)
+    ) {
+      return Response.json(
+        { error: 'The configured source is not currently approved for collection' },
+        { status: 422, headers: privateResponseHeaders }
+      )
+    }
+    if (source.displayMode !== configuration.data.requestedDisplayMode) {
+      return Response.json(
+        { error: 'The requested display mode does not match the approved source policy' },
+        { status: 422, headers: privateResponseHeaders }
+      )
+    }
+    if (limit < 1) {
+      return Response.json(
+        { error: 'The campaign budget does not permit any source items' },
+        { status: 422, headers: privateResponseHeaders }
+      )
+    }
   }
 
   if (parsedRun.data.analysisSeedReviewId) {
@@ -198,14 +208,65 @@ export async function POST(
     }
   }
 
+  if (multiSource) {
+    try {
+      const orchestration = await new PostgresResearchCampaignOrchestrationRepository(
+        pool
+      ).createForUser(
+        session.user.userId,
+        parsedWorkspaceId.data,
+        parsedCampaignId.data,
+        parsedRun.data
+      )
+      return NextResponse.json(
+        {
+          data: {
+            campaignId: parsedCampaignId.data,
+            runId: orchestration.orchestrationId,
+            orchestrationId: orchestration.orchestrationId,
+            state: orchestration.state,
+            sourceCount: orchestration.sourceCount
+          }
+        },
+        { status: 202, headers: privateResponseHeaders }
+      )
+    } catch (error) {
+      if (error instanceof ResearchCampaignOrchestrationPermissionError) {
+        return forbiddenResponse()
+      }
+      if (
+        error instanceof ResearchCampaignOrchestrationSourceError ||
+        error instanceof ResearchCampaignOrchestrationStateError
+      ) {
+        return Response.json(
+          { error: error.message },
+          { status: 422, headers: privateResponseHeaders }
+        )
+      }
+      if (error instanceof ResearchCampaignOrchestrationConflictError) {
+        return Response.json(
+          { error: 'Campaign orchestration idempotency conflicts with a previous request' },
+          { status: 409, headers: privateResponseHeaders }
+        )
+      }
+      console.error('AppSea campaign orchestration queue failed', {
+        name: error instanceof Error ? error.name : 'unknown'
+      })
+      return Response.json(
+        { error: 'Unable to queue campaign collection' },
+        { status: 503, headers: privateResponseHeaders }
+      )
+    }
+  }
+
   const requestInput = productionCollectionWorkflowStartRequestSchema.parse({
     workspaceId: parsedWorkspaceId.data,
     campaignId: parsedCampaignId.data,
     runId: parsedRun.data.runId,
     idempotencyKey: parsedRun.data.idempotencyKey,
     workflowVersion: 'production-collection-v1',
-    sourceId: source.sourceId,
-    policyVersion: source.policyVersion,
+    sourceId: source!.sourceId,
+    policyVersion: source!.policyVersion!,
     query: configuration.data.query,
     limit,
     purpose: campaign.purpose,
@@ -234,8 +295,8 @@ export async function POST(
         data: {
           campaignId: parsedCampaignId.data,
           runId: parsedRun.data.runId,
-          sourceId: source.sourceId,
-          policyVersion: source.policyVersion,
+          sourceId: source!.sourceId,
+          policyVersion: source!.policyVersion!,
           workflowId: handle.workflowId
         }
       },

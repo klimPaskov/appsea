@@ -64,6 +64,7 @@ import {
   researchCampaignRefreshScheduleReadModelSchema,
   researchCampaignRunInputSchema,
   researchCampaignRunReadModelSchema,
+  researchCampaignOrchestrationReadModelSchema,
   sourcePolicySchema,
   sourcePolicyApprovalInputSchema,
   workspaceSourceReadModelSchema,
@@ -762,6 +763,7 @@ describe('contracts', () => {
       deletionBatchSize: 25,
       retentionBatchSize: 25,
       snapshotReconciliationBatchSize: 2,
+      campaignOrchestrationBatchSize: 1,
       quotaRetentionDays: 7,
       workspaceId: null
     }
@@ -787,6 +789,11 @@ describe('contracts', () => {
         campaignRefreshDispatched: 1,
         campaignRefreshFailed: 0,
         campaignRefreshPolicyDenied: 0,
+        campaignOrchestrationClaims: 1,
+        campaignOrchestrationDispatched: 1,
+        campaignOrchestrationFailed: 0,
+        campaignOrchestrationPolicyDenied: 0,
+        campaignOrchestrationReconciled: 1,
         retentionTombstonesQueued: 5,
         deletionTombstonesProcessed: 6,
         deletionObjectsAffected: 7,
@@ -818,6 +825,11 @@ describe('contracts', () => {
         campaignRefreshDispatched: 1,
         campaignRefreshFailed: 0,
         campaignRefreshPolicyDenied: 0,
+        campaignOrchestrationClaims: 1,
+        campaignOrchestrationDispatched: 1,
+        campaignOrchestrationFailed: 0,
+        campaignOrchestrationPolicyDenied: 0,
+        campaignOrchestrationReconciled: 1,
         retentionTombstonesQueued: 5,
         deletionTombstonesProcessed: 5,
         deletionObjectsAffected: 10_000_001,
@@ -1903,6 +1915,92 @@ describe('contracts', () => {
         finishedAt: null
       }).state
     ).toBe('running')
+    expect(
+      researchCampaignOrchestrationReadModelSchema.parse({
+        workspaceId: 'workspace:one',
+        campaignId: 'campaign:billing',
+        orchestrationId: 'run:billing:multi',
+        state: 'queued',
+        sourceCount: 2,
+        completedSourceCount: 0,
+        failedSourceCount: 0,
+        analysisSeedReviewId: null,
+        failureCode: null,
+        failureSummary: null,
+        requestedAt: now,
+        startedAt: null,
+        updatedAt: now,
+        finishedAt: null,
+        sources: [
+          {
+            sourceId: 'source:cfpb',
+            childRunId: 'run:billing:multi:cfpb',
+            state: 'queued',
+            policyVersion: null,
+            workflowId: null,
+            attemptCount: 0,
+            failureCode: null,
+            failureSummary: null,
+            requestedAt: now,
+            startedAt: null,
+            updatedAt: now,
+            finishedAt: null
+          },
+          {
+            sourceId: 'source:stackexchange',
+            childRunId: 'run:billing:multi:stackexchange',
+            state: 'queued',
+            policyVersion: null,
+            workflowId: null,
+            attemptCount: 0,
+            failureCode: null,
+            failureSummary: null,
+            requestedAt: now,
+            startedAt: null,
+            updatedAt: now,
+            finishedAt: null
+          }
+        ]
+      })
+    ).toMatchObject({ state: 'queued', sourceCount: 2 })
+    expect(
+      researchCampaignOrchestrationReadModelSchema.safeParse({
+        workspaceId: 'workspace:one',
+        campaignId: 'campaign:billing',
+        orchestrationId: 'run:billing:multi',
+        state: 'completed',
+        sourceCount: 2,
+        completedSourceCount: 1,
+        failedSourceCount: 0,
+        analysisSeedReviewId: null,
+        failureCode: null,
+        failureSummary: null,
+        requestedAt: now,
+        startedAt: now,
+        updatedAt: now,
+        finishedAt: now,
+        sources: []
+      }).success
+    ).toBe(false)
+    expect(
+      researchCampaignOrchestrationReadModelSchema.safeParse({
+        workspaceId: 'workspace:one',
+        campaignId: 'campaign:billing',
+        orchestrationId: 'run:billing:future',
+        state: 'running',
+        sourceCount: 2,
+        completedSourceCount: 0,
+        failedSourceCount: 0,
+        analysisSeedReviewId: null,
+        failureCode: null,
+        failureSummary: null,
+        requestedAt: now,
+        startedAt: '2026-07-09T00:00:00.000Z',
+        updatedAt: now,
+        finishedAt: null,
+        sources: []
+      }).success
+    ).toBe(false)
   })
 
   it('accepts an explicit approved-seed reference for automatic analysis handoff', () => {

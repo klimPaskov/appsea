@@ -31,11 +31,15 @@ export function ResearchCampaignRunAction({
         })
       })
       const payload = (await response.json()) as {
-        data?: { workflowId?: string }
+        data?: { workflowId?: string; orchestrationId?: string; sourceCount?: number }
         error?: string
       }
       if (!response.ok) throw new Error(payload.error ?? 'Unable to start collection')
-      setStatus(`Queued ${payload.data?.workflowId ?? 'production collection'}.`)
+      setStatus(
+        payload.data?.orchestrationId
+          ? `Queued ${payload.data.sourceCount ?? 'multi-source'} source collections (${payload.data.orchestrationId}).`
+          : `Queued ${payload.data?.workflowId ?? 'production collection'}.`
+      )
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : 'Unable to start collection')
     } finally {

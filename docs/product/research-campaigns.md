@@ -73,16 +73,21 @@ and an optional approved seed-review identifier. The server derives the source,
 query, purpose, display mode, evidence limit, and budget from the persisted
 campaign; callers cannot override those values.
 
-The current production workflow boundary intentionally accepts exactly one
-configured non-synthetic source. Before admission, the route re-reads source
-policy readiness, expiry, approved purpose, display mode, campaign state, and
-budget, and verifies any optional seed review is approved for the workspace.
-The digest-only admission ledger is committed before Temporal is contacted, so
+The one-source production workflow re-reads source policy readiness, expiry,
+approved purpose, display mode, campaign state, and budget before admission,
+and verifies any optional seed review is approved for the workspace. The
+digest-only admission ledger is committed before Temporal is contacted, so
 rate, concurrency, and idempotency failures do not start a workflow. A pending
 or mismatched policy remains a visible coverage gap and returns a bounded
-validation error. Multi-source orchestration and connector activation remain
-separate reviewed work. Non-manual refresh policies are dispatched by the
-existing lease-backed source-maintenance worker, not by a browser request.
+validation error. A campaign with two to sixteen configured non-fixture sources
+uses migration `0068` instead: the route creates an idempotent parent
+orchestration and one durable child per source, while the lease-backed worker
+rechecks each policy, admits and starts the existing one-source workflow, and
+reconciles child/parent/campaign state. Policy denial is recorded on that child;
+it is not interpreted as evidence absence. Connector activation remains a
+separate reviewed operation. Non-manual refresh policies and orchestration
+children are dispatched by the existing lease-backed source-maintenance
+worker, not by a browser request.
 
 ## Scheduled refresh
 
@@ -108,6 +113,14 @@ campaign page links each run to the private workflow-status page
 `/workspace/:workspaceId/research/workflows/:workflowId`; completed runs also
 link to the existing evidence and coverage page at
 `/workspace/:workspaceId/research/:runId`.
+
+Multi-source parent/child history is available only inside the private campaign
+surface. `GET /api/workspaces/:workspaceId/campaigns/:campaignId/orchestrations`
+lists at most 100 parent requests, and the detail route adds bounded child
+state, attempt count, policy/workflow identifiers, and fixed failure summaries.
+These read models omit caller keys, hashes, policy-review hashes, raw source
+payloads, and imported instructions. The public leaderboard remains a ranked
+list only; research detail belongs on private campaign and opportunity routes.
 
 ## Reviewed analysis handoff
 

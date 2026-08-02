@@ -25,7 +25,7 @@ Status: production-shaped foundation implemented and validated locally; producti
 
 Implemented:
 
-- PostgreSQL 18 schema and sixty-seven forward, checksummed migrations
+- PostgreSQL 18 schema and sixty-eight forward, checksummed migrations
 - normalized source, evidence, complaint, cluster, competitor, opportunity, score, report, plan, audit, cost, deletion, outbox, and lineage tables
 - no-login owner, separate migrator, and least-privilege runtime role contract
 - forced workspace RLS and transaction-scoped workspace context
@@ -240,11 +240,14 @@ Temporal, scheduler ownership, and external CFPB approval remain open.
 
 The campaign run boundary now consumes that persisted intent through the
 authenticated `POST /api/workspaces/:workspaceId/campaigns/:campaignId/run`
-route. It is intentionally one-source for this tranche: the route rechecks
-the current approved policy, purpose, display mode, expiry, budget, and any
-approved seed review, derives all collection inputs server-side, and commits
-the existing idempotent admission before starting Temporal. Multi-source
-orchestration remains open. Campaign edits now replace draft
+route. One-source starts recheck the current approved policy, purpose, display
+mode, expiry, budget, and any approved seed review, derive all collection
+inputs server-side, and commit the existing idempotent admission before
+starting Temporal. Migration `0068_research_campaign_orchestration.sql` adds
+the reviewed multi-source slice: an idempotent parent request and one durable
+child per configured non-fixture source, forced-RLS claims, bounded retries,
+service-principal admission, existing Temporal starts, and child-to-parent
+reconciliation. Campaign edits now replace draft
 intent through a validated PATCH boundary, while DELETE archives without
 deleting run/evidence lineage. The private
 campaign surface now lists the latest 100 production workflow projections and
@@ -257,9 +260,11 @@ source payloads, and seed content. Migration `0055` records the highest
 bounded Temporal activity attempt on the run without changing input idempotency;
 `0056` now supplies bounded attempt timing and heartbeat history. Periodic
 deployment alerting, deployed scheduler ownership, and production Temporal
-remain open; repository-level campaign refresh dispatch is implemented. Draft
-campaign forms now select from the private source registry while retaining
-visible pending-policy states; multi-source orchestration remains open.
+remain open; repository-level campaign refresh and multi-source dispatch are
+implemented locally. Draft campaign forms now select from the private source
+registry while retaining visible pending-policy states. Deployed Temporal and
+scheduler crash/retry proof, live source-policy approval, and Docker-backed
+integration remain release gates.
 
 The source coverage tranche adds a strict `workspaceSourceReadModel` and an
 authenticated read-only registry at `/workspace/:workspaceId/sources` plus

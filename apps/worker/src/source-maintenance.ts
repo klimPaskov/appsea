@@ -9,6 +9,7 @@ import {
   PostgresProductionAnalysisObjectPurgeRepository,
   PostgresProductionWorkflowAdmissionRepository,
   PostgresResearchCampaignRepository,
+  PostgresResearchCampaignOrchestrationRepository,
   PostgresSourcePolicyRepository,
   PostgresMaintenanceSchedulerLeaseRepository,
   PostgresMaintenanceSchedulerRunRepository,
@@ -31,6 +32,7 @@ import {
   runNextProductionCfpbSnapshotReconciliation
 } from './production-cfpb-reconciliation'
 import { runCampaignRefresh } from './campaign-refresh-runner'
+import { runCampaignOrchestration } from './campaign-orchestration-runner'
 import {
   startProductionCollectionWorkflow,
   temporalClientConfigFromEnv,
@@ -45,6 +47,9 @@ const snapshotReconciliationBatchSize = Number(
   process.env.APPSEA_SOURCE_SNAPSHOT_RECONCILIATION_BATCH_SIZE ?? '1'
 )
 const campaignRefreshBatchSize = Number(process.env.APPSEA_CAMPAIGN_REFRESH_BATCH_SIZE ?? '1')
+const campaignOrchestrationBatchSize = Number(
+  process.env.APPSEA_CAMPAIGN_ORCHESTRATION_BATCH_SIZE ?? '1'
+)
 const quotaRetentionDays = Number(process.env.APPSEA_SOURCE_QUOTA_RETENTION_DAYS ?? '30')
 const input = {
   jobId:
@@ -56,6 +61,7 @@ const input = {
   retentionBatchSize,
   snapshotReconciliationBatchSize,
   campaignRefreshBatchSize,
+  campaignOrchestrationBatchSize,
   quotaRetentionDays,
   workspaceId: process.env.APPSEA_DELETION_WORKSPACE_ID ?? null
 }
@@ -108,7 +114,12 @@ try {
           campaignRefreshClaims: result.campaignRefreshClaims,
           campaignRefreshDispatched: result.campaignRefreshDispatched,
           campaignRefreshFailed: result.campaignRefreshFailed,
-          campaignRefreshPolicyDenied: result.campaignRefreshPolicyDenied
+          campaignRefreshPolicyDenied: result.campaignRefreshPolicyDenied,
+          campaignOrchestrationClaims: result.campaignOrchestrationClaims,
+          campaignOrchestrationDispatched: result.campaignOrchestrationDispatched,
+          campaignOrchestrationFailed: result.campaignOrchestrationFailed,
+          campaignOrchestrationPolicyDenied: result.campaignOrchestrationPolicyDenied,
+          campaignOrchestrationReconciled: result.campaignOrchestrationReconciled
         })
       }
     },
@@ -118,6 +129,9 @@ try {
       const deletionRepository = new PostgresDeletionPropagationRepository(pool)
       const admissionRepository = new PostgresProductionWorkflowAdmissionRepository(pool)
       const campaignRepository = new PostgresResearchCampaignRepository(pool)
+      const campaignOrchestrationRepository = new PostgresResearchCampaignOrchestrationRepository(
+        pool
+      )
       const policyRepository = new PostgresSourcePolicyRepository(pool)
       const analysisAdmissionRepository = new PostgresProductionAnalysisAdmissionRepository(pool)
       const objectPurgeRepository = new PostgresProductionAnalysisObjectPurgeRepository(
@@ -168,6 +182,35 @@ try {
               }
             }
           ),
+        campaignOrchestration: async () =>
+          runCampaignOrchestration(
+            {
+              batchSize: input.campaignOrchestrationBatchSize,
+              claimOwner: ownerId,
+              claimLeaseSeconds: leaseSeconds,
+              retryAfterSeconds: 300,
+              occurredAt: input.occurredAt,
+              assertLease,
+              fence
+            },
+            {
+              orchestrations: campaignOrchestrationRepository,
+              policies: policyRepository,
+              admission: admissionRepository,
+              startWorkflow: async (request) => {
+                if (!temporalClient) {
+                  const config = temporalClientConfigFromEnv()
+                  temporalConnection = await Connection.connect(temporalConnectionOptions(config))
+                  temporalClient = new WorkflowClient({
+                    connection: temporalConnection,
+                    namespace: config.namespace
+                  })
+                }
+                const handle = await startProductionCollectionWorkflow(temporalClient, request)
+                return { workflowId: handle.workflowId }
+              }
+            }
+          ),
         assertLease
       })
     }
@@ -193,7 +236,12 @@ try {
       campaignRefreshClaims: result.campaignRefreshClaims,
       campaignRefreshDispatched: result.campaignRefreshDispatched,
       campaignRefreshFailed: result.campaignRefreshFailed,
-      campaignRefreshPolicyDenied: result.campaignRefreshPolicyDenied
+      campaignRefreshPolicyDenied: result.campaignRefreshPolicyDenied,
+      campaignOrchestrationClaims: result.campaignOrchestrationClaims,
+      campaignOrchestrationDispatched: result.campaignOrchestrationDispatched,
+      campaignOrchestrationFailed: result.campaignOrchestrationFailed,
+      campaignOrchestrationPolicyDenied: result.campaignOrchestrationPolicyDenied,
+      campaignOrchestrationReconciled: result.campaignOrchestrationReconciled
     })
     if (result.campaignRefreshClaims > 0) {
       emitWorkerEvent({
@@ -203,7 +251,24 @@ try {
         campaignRefreshClaims: result.campaignRefreshClaims,
         campaignRefreshDispatched: result.campaignRefreshDispatched,
         campaignRefreshFailed: result.campaignRefreshFailed,
-        campaignRefreshPolicyDenied: result.campaignRefreshPolicyDenied
+        campaignRefreshPolicyDenied: result.campaignRefreshPolicyDenied,
+        campaignOrchestrationClaims: result.campaignOrchestrationClaims,
+        campaignOrchestrationDispatched: result.campaignOrchestrationDispatched,
+        campaignOrchestrationFailed: result.campaignOrchestrationFailed,
+        campaignOrchestrationPolicyDenied: result.campaignOrchestrationPolicyDenied,
+        campaignOrchestrationReconciled: result.campaignOrchestrationReconciled
+      })
+    }
+    if (result.campaignOrchestrationClaims > 0) {
+      emitWorkerEvent({
+        event: 'campaign_orchestration_batch_finished',
+        taskQueue,
+        jobId: result.jobId,
+        campaignOrchestrationClaims: result.campaignOrchestrationClaims,
+        campaignOrchestrationDispatched: result.campaignOrchestrationDispatched,
+        campaignOrchestrationFailed: result.campaignOrchestrationFailed,
+        campaignOrchestrationPolicyDenied: result.campaignOrchestrationPolicyDenied,
+        campaignOrchestrationReconciled: result.campaignOrchestrationReconciled
       })
     }
     if (result.sourceSnapshotReconciliationsProcessed > 0) {
@@ -267,6 +332,11 @@ try {
       campaignRefreshDispatched: result.campaignRefreshDispatched,
       campaignRefreshFailed: result.campaignRefreshFailed,
       campaignRefreshPolicyDenied: result.campaignRefreshPolicyDenied,
+      campaignOrchestrationClaims: result.campaignOrchestrationClaims,
+      campaignOrchestrationDispatched: result.campaignOrchestrationDispatched,
+      campaignOrchestrationFailed: result.campaignOrchestrationFailed,
+      campaignOrchestrationPolicyDenied: result.campaignOrchestrationPolicyDenied,
+      campaignOrchestrationReconciled: result.campaignOrchestrationReconciled,
       retentionTombstonesQueued: result.retentionTombstonesQueued,
       deletionTombstonesProcessed: result.deletionTombstonesProcessed,
       deletionObjectsAffected: result.deletionObjectsAffected,

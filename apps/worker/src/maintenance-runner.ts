@@ -21,6 +21,7 @@ import type {
   PostgresSourceQuotaRepository
 } from '@appsea/db'
 import type { CampaignRefreshResult } from './campaign-refresh-runner'
+import type { CampaignOrchestrationResult } from './campaign-orchestration-runner'
 
 const millisecondsPerDay = 24 * 60 * 60 * 1_000
 const maximumWorkspaceCount = 10_000
@@ -52,6 +53,8 @@ export interface SourceMaintenanceDependencies {
   ) => Promise<SourceSnapshotReconciliationReadModel | null>
   /** Dispatch bounded, policy-gated refreshes for private production campaigns. */
   campaignRefresh?: () => Promise<CampaignRefreshResult>
+  /** Dispatch bounded, policy-gated children for multi-source campaigns. */
+  campaignOrchestration?: () => Promise<CampaignOrchestrationResult>
 }
 
 export interface AuthRetentionDependencies {
@@ -151,6 +154,11 @@ export async function runSourceMaintenance(
   let campaignRefreshDispatched = 0
   let campaignRefreshFailed = 0
   let campaignRefreshPolicyDenied = 0
+  let campaignOrchestrationClaims = 0
+  let campaignOrchestrationDispatched = 0
+  let campaignOrchestrationFailed = 0
+  let campaignOrchestrationPolicyDenied = 0
+  let campaignOrchestrationReconciled = 0
   if (dependencies.admission) {
     for (const workspaceId of deletionWorkspaceIds) {
       if (productionWorkflowAdmissionsPurged >= parsed.retentionBatchSize) break
@@ -288,6 +296,36 @@ export async function runSourceMaintenance(
     )
   }
 
+  if (dependencies.campaignOrchestration && parsed.campaignOrchestrationBatchSize > 0) {
+    await assertLease()
+    const orchestration = await dependencies.campaignOrchestration()
+    campaignOrchestrationClaims = countWithin(
+      orchestration.claims,
+      'campaignOrchestrationClaims',
+      100
+    )
+    campaignOrchestrationDispatched = countWithin(
+      orchestration.dispatched,
+      'campaignOrchestrationDispatched',
+      100
+    )
+    campaignOrchestrationFailed = countWithin(
+      orchestration.failed,
+      'campaignOrchestrationFailed',
+      100
+    )
+    campaignOrchestrationPolicyDenied = countWithin(
+      orchestration.policyDenied,
+      'campaignOrchestrationPolicyDenied',
+      100
+    )
+    campaignOrchestrationReconciled = countWithin(
+      orchestration.reconciled,
+      'campaignOrchestrationReconciled',
+      100
+    )
+  }
+
   return sourceMaintenanceResultSchema.parse({
     jobId: parsed.jobId,
     quotaWorkspacesScanned: quotaWorkspaceIds.length,
@@ -308,6 +346,11 @@ export async function runSourceMaintenance(
     campaignRefreshDispatched,
     campaignRefreshFailed,
     campaignRefreshPolicyDenied,
+    campaignOrchestrationClaims,
+    campaignOrchestrationDispatched,
+    campaignOrchestrationFailed,
+    campaignOrchestrationPolicyDenied,
+    campaignOrchestrationReconciled,
     retentionTombstonesQueued,
     deletionTombstonesProcessed,
     deletionObjectsAffected,

@@ -1,13 +1,11 @@
 # Decision memory
 
-The six foundation decisions from 2026-07-10 are archived in
+Foundation decisions from 2026-07-10 are archived in
 [`archive/DECISIONS-foundation-2026-07-10.md`](archive/DECISIONS-foundation-2026-07-10.md).
-
-Foundation decisions remain archived; see linked file.
 
 ## 2026-07-24: Temporal orchestration with PostgreSQL commit authority
 
-Use pinned Temporal workflows for scheduling, bounded retries, cancellation,
+Use pinned Temporal workflows for scheduling, retries, cancellation,
 and recovery, with sanitized history and side effects in activities. PostgreSQL
 owns RLS, checkpoints, lineage, and ledgers; the persistence safe point and
 terminal reconciliation handle late cancellation. Local Compose is development
@@ -318,13 +316,6 @@ or purpose mismatches, record identifier-only receipts, and never start
 Temporal or activate a connector; admission rechecks quota, deletion, and
 budget. No migration was needed.
 
-## 2026-08-02: Start collection only from persisted campaign intent
-
-The campaign run route accepts only a bounded run/idempotency envelope,
-reconstructs collection inputs from the authenticated campaign, rechecks
-policy, and commits admission before Temporal. The first boundary is one
-non-synthetic source; fan-out, scheduling, and activation remain reviewed work.
-
 ## 2026-08-02: Make reviewed analysis handoff explicit and safe
 
 Collection completion is not analysis. The private handoff accepts only an
@@ -339,6 +330,15 @@ Migration `0058` stores due time, claim token, workflow identity, pending
 request, attempts, and fixed failure state. Source maintenance claims due
 non-fixture campaigns, rechecks policy, binds before admission, and starts an
 idempotent workflow; stale claims reclaim; denied sources inactive.
+
+## 2026-08-03: Orchestrate multi-source campaigns as durable child requests
+
+Keep the existing one-source workflow/admission as the execution boundary.
+Migration `0068` adds a forced-RLS parent and one child per configured
+non-fixture source (two to sixteen), with deterministic identity, leases,
+bounded attempts, and fixed failures. Maintenance rechecks policy and
+reconciles child projections into parent/campaign state, preserving partial
+outcomes without treating policy denial as missing evidence.
 
 ## 2026-08-02: Reuse the recomputation queue for complaint corrections
 

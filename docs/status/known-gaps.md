@@ -9,8 +9,15 @@ visible. Owners/editors can start a bounded one-source run from the campaign
 page; the route derives collection inputs from the stored campaign and admits
 the idempotency digest before Temporal. Owners/editors can now replace draft
 intent through a validated PATCH boundary, and DELETE archives without
-removing run or evidence lineage. Pagination and multi-source orchestration
-are not implemented. The campaign forms now use a private source picker backed
+removing run or evidence lineage. Pagination remains open. Migration `0068`
+now adds a forced-RLS multi-source parent/child orchestration queue for two to
+sixteen approved non-fixture sources. The run route is idempotent; the existing
+lease-backed maintenance worker claims children, rechecks policy, reserves the
+existing service admission, starts the existing collection workflow, and
+reconciles safe child state into private campaign history/detail routes. This
+slice is production-shaped but not operational until deployed scheduler/Temporal
+ownership, crash/retry drills, and live source-policy approval exist. The
+campaign forms now use a private source picker backed
 by the read-only registry; policy state remains visible and the picker cannot
 activate a connector. Scheduled refresh now has a
 durable campaign claim/dispatch boundary in the existing lease-backed source

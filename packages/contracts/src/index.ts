@@ -2759,6 +2759,207 @@ export const researchCampaignRunReadModelSchema = z
   })
   .strict()
 
+/** Durable parent state for a multi-source campaign collection request. */
+export const researchCampaignOrchestrationStateSchema = z.enum([
+  'queued',
+  'running',
+  'completed',
+  'partial',
+  'failed',
+  'canceled'
+])
+
+/** Durable state for one policy-gated source child in an orchestration. */
+export const researchCampaignOrchestrationSourceStateSchema = z.enum([
+  'queued',
+  'dispatching',
+  'started',
+  'completed',
+  'failed',
+  'canceled'
+])
+
+/** Fixed, secret-free failure reasons exposed by the private orchestration read model. */
+export const researchCampaignOrchestrationFailureCodeSchema = z.enum([
+  'source_policy_denied',
+  'source_unsupported',
+  'input_invalid',
+  'admission_rate_limited',
+  'admission_concurrency_limited',
+  'temporal_unavailable',
+  'dispatch_failed',
+  'attempts_exhausted',
+  'child_failed',
+  'canceled'
+])
+
+export const researchCampaignOrchestrationSourceReadModelSchema = z
+  .object({
+    sourceId: appseaIdentifierSchema,
+    childRunId: appseaIdentifierSchema,
+    state: researchCampaignOrchestrationSourceStateSchema,
+    policyVersion: z
+      .string()
+      .min(1)
+      .max(80)
+      .regex(/^[a-zA-Z0-9._:-]+$/)
+      .nullable(),
+    workflowId: workflowIdSchema.nullable(),
+    attemptCount: z.number().int().nonnegative().max(10),
+    failureCode: researchCampaignOrchestrationFailureCodeSchema.nullable(),
+    failureSummary: z.string().min(1).max(240).nullable(),
+    requestedAt: z.string().datetime(),
+    startedAt: z.string().datetime().nullable(),
+    updatedAt: z.string().datetime(),
+    finishedAt: z.string().datetime().nullable()
+  })
+  .superRefine((source, context) => {
+    const terminal = ['completed', 'failed', 'canceled'].includes(source.state)
+    if (terminal !== (source.finishedAt !== null)) {
+      context.addIssue({
+        code: 'custom',
+        path: ['finishedAt'],
+        message: 'Terminal orchestration sources require a finish timestamp'
+      })
+    }
+    if (source.state === 'started' && (source.workflowId === null || source.startedAt === null)) {
+      context.addIssue({
+        code: 'custom',
+        path: ['workflowId'],
+        message: 'Started orchestration sources require a workflow and start timestamp'
+      })
+    }
+    if (source.startedAt !== null && source.startedAt < source.requestedAt) {
+      context.addIssue({
+        code: 'custom',
+        path: ['startedAt'],
+        message: 'Orchestration source start cannot precede its request'
+      })
+    }
+    if (source.finishedAt !== null && source.finishedAt < source.requestedAt) {
+      context.addIssue({
+        code: 'custom',
+        path: ['finishedAt'],
+        message: 'Orchestration source finish cannot precede its request'
+      })
+    }
+    if (source.state === 'completed' && source.workflowId === null) {
+      context.addIssue({
+        code: 'custom',
+        path: ['workflowId'],
+        message: 'Completed orchestration sources require a workflow identity'
+      })
+    }
+    const terminalFailure = source.state === 'failed' || source.state === 'canceled'
+    const hasFailure = source.failureCode !== null && source.failureSummary !== null
+    if (terminalFailure !== hasFailure && source.state !== 'queued') {
+      context.addIssue({
+        code: 'custom',
+        path: ['failureCode'],
+        message: 'Failed or canceled orchestration sources require fixed failure metadata'
+      })
+    }
+    if ((source.failureCode === null) !== (source.failureSummary === null)) {
+      context.addIssue({
+        code: 'custom',
+        path: ['failureSummary'],
+        message: 'Orchestration source failure metadata must be provided together'
+      })
+    }
+  })
+  .strict()
+
+/** Safe private read model for a queued multi-source campaign run. */
+export const researchCampaignOrchestrationReadModelSchema = z
+  .object({
+    workspaceId: appseaIdentifierSchema,
+    campaignId: appseaIdentifierSchema,
+    orchestrationId: appseaIdentifierSchema,
+    state: researchCampaignOrchestrationStateSchema,
+    sourceCount: z.number().int().positive().max(16),
+    completedSourceCount: z.number().int().nonnegative().max(16),
+    failedSourceCount: z.number().int().nonnegative().max(16),
+    analysisSeedReviewId: appseaIdentifierSchema.nullable(),
+    failureCode: researchCampaignOrchestrationFailureCodeSchema.nullable(),
+    failureSummary: z.string().min(1).max(240).nullable(),
+    requestedAt: z.string().datetime(),
+    startedAt: z.string().datetime().nullable(),
+    updatedAt: z.string().datetime(),
+    finishedAt: z.string().datetime().nullable(),
+    sources: z.array(researchCampaignOrchestrationSourceReadModelSchema).min(1).max(16)
+  })
+  .superRefine((orchestration, context) => {
+    if (orchestration.sources.length !== orchestration.sourceCount) {
+      context.addIssue({
+        code: 'custom',
+        path: ['sources'],
+        message: 'Orchestration source count must match its child list'
+      })
+    }
+    if (
+      orchestration.completedSourceCount + orchestration.failedSourceCount >
+      orchestration.sourceCount
+    ) {
+      context.addIssue({
+        code: 'custom',
+        path: ['completedSourceCount'],
+        message: 'Orchestration terminal source counters cannot exceed source count'
+      })
+    }
+    const terminal = ['completed', 'partial', 'failed', 'canceled'].includes(orchestration.state)
+    if (terminal !== (orchestration.finishedAt !== null)) {
+      context.addIssue({
+        code: 'custom',
+        path: ['finishedAt'],
+        message: 'Terminal orchestrations require a finish timestamp'
+      })
+    }
+    if (orchestration.startedAt !== null && orchestration.startedAt < orchestration.requestedAt) {
+      context.addIssue({
+        code: 'custom',
+        path: ['startedAt'],
+        message: 'Orchestration start cannot precede its request'
+      })
+    }
+    if (orchestration.finishedAt !== null && orchestration.finishedAt < orchestration.requestedAt) {
+      context.addIssue({
+        code: 'custom',
+        path: ['finishedAt'],
+        message: 'Orchestration finish cannot precede its request'
+      })
+    }
+    if (orchestration.state === 'completed') {
+      if (
+        orchestration.completedSourceCount !== orchestration.sourceCount ||
+        orchestration.failedSourceCount !== 0
+      ) {
+        context.addIssue({
+          code: 'custom',
+          path: ['completedSourceCount'],
+          message: 'Completed orchestrations require every source to complete'
+        })
+      }
+    }
+    if (orchestration.state === 'failed' && orchestration.failedSourceCount === 0) {
+      context.addIssue({
+        code: 'custom',
+        path: ['failedSourceCount'],
+        message: 'Failed orchestrations require at least one failed source'
+      })
+    }
+    if (
+      ['partial', 'failed', 'canceled'].includes(orchestration.state) !==
+      (orchestration.failureCode !== null && orchestration.failureSummary !== null)
+    ) {
+      context.addIssue({
+        code: 'custom',
+        path: ['failureCode'],
+        message: 'Terminal non-success orchestrations require fixed failure metadata'
+      })
+    }
+  })
+  .strict()
+
 export const productionCollectionWorkflowJobInitializeInputSchema = z
   .object({
     execution: productionCollectionWorkflowExecutionMetadataSchema,
@@ -3282,6 +3483,8 @@ export const sourceMaintenanceInputSchema = z
     snapshotReconciliationBatchSize: z.number().int().min(0).max(100),
     /** Maximum number of due private campaign refreshes to dispatch. */
     campaignRefreshBatchSize: z.number().int().min(0).max(100).default(0),
+    /** Maximum number of queued multi-source campaign children to dispatch. */
+    campaignOrchestrationBatchSize: z.number().int().min(0).max(100).default(0),
     quotaRetentionDays: z.number().int().min(1).max(3_650),
     workspaceId: appseaIdentifierSchema.nullable()
   })
@@ -3308,6 +3511,11 @@ export const sourceMaintenanceResultSchema = z
     campaignRefreshDispatched: z.number().int().nonnegative().max(100),
     campaignRefreshFailed: z.number().int().nonnegative().max(100),
     campaignRefreshPolicyDenied: z.number().int().nonnegative().max(100),
+    campaignOrchestrationClaims: z.number().int().nonnegative().max(100),
+    campaignOrchestrationDispatched: z.number().int().nonnegative().max(100),
+    campaignOrchestrationFailed: z.number().int().nonnegative().max(100),
+    campaignOrchestrationPolicyDenied: z.number().int().nonnegative().max(100),
+    campaignOrchestrationReconciled: z.number().int().nonnegative().max(100),
     retentionTombstonesQueued: z.number().int().nonnegative().max(1_000),
     deletionTombstonesProcessed: z.number().int().nonnegative().max(1_000),
     deletionObjectsAffected: z.number().int().nonnegative().max(10_000_000),
@@ -4839,6 +5047,21 @@ export type ResearchCampaignRefreshScheduleReadModel = z.infer<
   typeof researchCampaignRefreshScheduleReadModelSchema
 >
 export type ResearchCampaignRunInput = z.infer<typeof researchCampaignRunInputSchema>
+export type ResearchCampaignOrchestrationState = z.infer<
+  typeof researchCampaignOrchestrationStateSchema
+>
+export type ResearchCampaignOrchestrationSourceState = z.infer<
+  typeof researchCampaignOrchestrationSourceStateSchema
+>
+export type ResearchCampaignOrchestrationFailureCode = z.infer<
+  typeof researchCampaignOrchestrationFailureCodeSchema
+>
+export type ResearchCampaignOrchestrationSourceReadModel = z.infer<
+  typeof researchCampaignOrchestrationSourceReadModelSchema
+>
+export type ResearchCampaignOrchestrationReadModel = z.infer<
+  typeof researchCampaignOrchestrationReadModelSchema
+>
 export type ResearchCampaignSourceReadModel = z.infer<typeof researchCampaignSourceReadModelSchema>
 export type ResearchCampaignReadModel = z.infer<typeof researchCampaignReadModelSchema>
 export type ResearchArtifact = z.infer<typeof researchArtifactSchema>

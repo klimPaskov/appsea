@@ -14,7 +14,8 @@ const mocks = vi.hoisted(() => ({
   startProductionCollectionWorkflow: vi.fn(),
   getTemporalWorkflowClient: vi.fn(),
   getDatabasePool: vi.fn(),
-  readApprovedForUser: vi.fn()
+  readApprovedForUser: vi.fn(),
+  createOrchestration: vi.fn()
 }))
 
 vi.mock('@appsea/db/research-campaign', () => ({
@@ -45,6 +46,16 @@ vi.mock('@appsea/db/production-workflow-admission', () => ({
       this.retryAfterSeconds = retryAfterSeconds
     }
   }
+}))
+
+vi.mock('@appsea/db/research-campaign-orchestration', () => ({
+  PostgresResearchCampaignOrchestrationRepository: class {
+    createForUser = mocks.createOrchestration
+  },
+  ResearchCampaignOrchestrationConflictError: class extends Error {},
+  ResearchCampaignOrchestrationPermissionError: class extends Error {},
+  ResearchCampaignOrchestrationSourceError: class extends Error {},
+  ResearchCampaignOrchestrationStateError: class extends Error {}
 }))
 
 vi.mock('@appsea/db/opportunity-seed-review', () => ({
@@ -165,6 +176,7 @@ describe('campaign production run route', () => {
     mocks.getTemporalWorkflowClient.mockReset()
     mocks.getDatabasePool.mockReset()
     mocks.readApprovedForUser.mockReset()
+    mocks.createOrchestration.mockReset()
     mocks.readSession.mockResolvedValue(session)
     mocks.readForUser.mockResolvedValue(campaign)
     mocks.admitForUser.mockResolvedValue({
@@ -183,6 +195,11 @@ describe('campaign production run route', () => {
     mocks.getTemporalWorkflowClient.mockResolvedValue({})
     mocks.getDatabasePool.mockReturnValue({})
     mocks.readApprovedForUser.mockResolvedValue({ seedReviewId: 'seed-review:billing' })
+    mocks.createOrchestration.mockResolvedValue({
+      orchestrationId: 'run:billing:multi',
+      state: 'queued',
+      sourceCount: 2
+    })
   })
 
   it('derives a bounded production request from the persisted campaign before admission', async () => {
@@ -257,7 +274,7 @@ describe('campaign production run route', () => {
     expect(mocks.admitForUser).not.toHaveBeenCalled()
   })
 
-  it('requires a single source for the current production collection workflow', async () => {
+  it('queues a durable parent for a multi-source campaign instead of widening the child workflow', async () => {
     mocks.readForUser.mockResolvedValue({
       ...campaign,
       configuration: {
@@ -271,8 +288,18 @@ describe('campaign production run route', () => {
       params: Promise.resolve({ workspaceId: 'workspace:one', campaignId: 'campaign:billing' })
     })
 
-    expect(response.status).toBe(422)
+    expect(response.status).toBe(202)
     expect(mocks.admitForUser).not.toHaveBeenCalled()
+    expect(mocks.startProductionCollectionWorkflow).not.toHaveBeenCalled()
+    expect(mocks.createOrchestration).toHaveBeenCalledWith(
+      'user:one',
+      'workspace:one',
+      'campaign:billing',
+      runInput
+    )
+    await expect(response.json()).resolves.toMatchObject({
+      data: { orchestrationId: 'run:billing:multi', sourceCount: 2 }
+    })
   })
 
   it('keeps admission errors retryable and does not call Temporal', async () => {

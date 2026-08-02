@@ -5,7 +5,7 @@
 Fixture product, PostgreSQL persistence, durable workflows, policy-gated CFPB
 collection, private workspaces, report/plan approval/export, recovery, and
 invitations are implemented. Migrations
-`0027`-`0067` add policy evidence, collection checkpoints, deletion repair,
+`0027`-`0068` add policy evidence, collection checkpoints, deletion repair,
 leases, snapshot reconciliation, workflow admissions, source-reconciliation
 admission, retryable tombstones, maintenance-run telemetry, a durable source-
 quota case ledger, recomputation alerts, cost-threshold projection, and
@@ -14,6 +14,11 @@ The 2026-08-02 purge-readiness tranche adds an owner-only read-only
 `WorkspacePurgeReadiness` API/settings inventory with deterministic active-work
 and object-reference blockers. It names cloud/object/export/backup requirements
 and never deletes; see `docs/runbooks/workspace-purge-readiness.md`.
+
+The 2026-08-03 tranche adds migration `0068`: a forced-RLS parent/child queue
+for two to sixteen non-fixture sources. The authenticated route is idempotent;
+source maintenance rechecks policy, admits/starts the existing workflow, and
+reconciles safe child state. No connector was activated.
 Migration `0050` adds explicit one-record tombstone-bound CFPB re-collection
 with immutable lineage; it never runs automatically and the source remains
 disabled. `0051` binds direct CFPB admission to `appsea-worker`. Deployed
@@ -46,30 +51,19 @@ routing, and failure drills remain open.
 
 ## Validated commands
 
-- `pnpm verify` passed 2026-08-02 after the source tranche: 56 Turbo tasks,
-  samples, web smoke, formatting, checks pass.
+- `pnpm verify` passed 2026-08-02 after the source tranche. On 2026-08-03,
+  focused contracts (82), db (119), worker (96), and web (118) suites plus
+  package typechecks/lints passed after orchestration.
 - PostgreSQL and Temporal integration are staged but Docker-blocked because the
   Docker Desktop Linux engine pipe is unavailable.
 
 - Maintenance loop, quota-alert, and recomputation-alert tests pass; no
   deployed scheduler, Temporal, or source activation claim.
 
-Private opportunity details now expose `competitiveResearch` and a separate
-competitors/contrary-signals page: fixture records are synthetic/unresolved,
-production seeds are reviewed-seed-only with provenance, and source-backed
-status requires a confirmed non-synthetic observation with permitted source/
-evidence IDs and an observation time. Migration `0059` persists bounded
-per-claim provenance and owner/editor review; no approved competitor source is
-connected. Migration `0063` adds a bounded, provenance-labelled competitor
-feature matrix through persistence and public/private reads; source-backed
-rows remain gated. Complaint/source-item provenance
-now carries an HTTPS canonical locator for attribution; a disabled,
-fixture-tested Stack Exchange candidate remains pending independent review;
-the worker now has a registry-selected path but no active source row.
-Campaigns now have a private one-source `campaign-v1` run/history, draft
-lifecycle, policy-gated refresh claims, and registry picker. Multi-source
-orchestration, live activation, deployed scheduler/Temporal, and Docker proof
-remain open; CFPB is disabled.
+Competitive research remains synthetic/reviewed-seed-only until an approved
+competitor source supplies retained evidence; the Stack Exchange candidate is
+disabled. Campaigns have private run/history, refresh, and multi-source
+orchestration; live activation and deployed workflow proof remain open.
 
 The 2026-08-02 analysis tranche adds a reviewed seed handoff: owner/editor
 members choose an approved seed, the admission route starts
@@ -114,7 +108,8 @@ Current audit: `docs/status/production-readiness-audit-2026-08-02.md`.
 ## Next production tranche
 
 1. Legal/privacy/security approval and CFPB policy activation.
-2. Production Temporal/DB provisioning and Docker crash/retry proof.
+2. Production Temporal/DB provisioning, orchestration crash/retry proof, and
+   Docker-backed integration execution.
 3. Provider/identity approval, delivery, deployed maintenance, and export.
 4. Monitoring, scheduler ownership, pricing/billing controls, and security
    review.

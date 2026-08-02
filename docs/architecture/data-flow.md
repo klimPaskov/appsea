@@ -11,11 +11,15 @@ current policy, purpose, quota, deletion obligations, and budget.
 Starting from the private campaign page, the authenticated campaign-run route
 reconstructs the production request from the persisted campaign and resolved
 source read model. It accepts no caller-supplied source, query, purpose,
-display mode, limit, or budget. The current slice requires one non-synthetic
-source, checks policy readiness/purpose/display mode and optional approved seed
-review, then commits the existing digest-only admission before contacting
-Temporal. A multi-source campaign remains a visible validation gap rather than
-an implicit fan-out.
+display mode, limit, or budget. A one-source request checks policy
+readiness/purpose/display mode and optional approved seed review, then commits
+the existing digest-only admission before contacting Temporal. For two to
+sixteen configured non-fixture sources, migration `0068` instead creates one
+idempotent parent orchestration plus one durable child per source. The
+lease-backed maintenance worker claims children independently, rechecks policy,
+admits and starts the existing one-source workflow, and reconciles the durable
+workflow projection into child, parent, and campaign state. A policy denial is
+visible on that child; it is never inferred as absence of complaints.
 
 The private campaign page and run-history API read the existing production
 workflow projection through an authenticated workspace transaction. History is

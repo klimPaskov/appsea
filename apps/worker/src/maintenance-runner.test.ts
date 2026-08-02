@@ -138,6 +138,11 @@ describe('maintenance runners', () => {
       campaignRefreshDispatched: 0,
       campaignRefreshFailed: 0,
       campaignRefreshPolicyDenied: 0,
+      campaignOrchestrationClaims: 0,
+      campaignOrchestrationDispatched: 0,
+      campaignOrchestrationFailed: 0,
+      campaignOrchestrationPolicyDenied: 0,
+      campaignOrchestrationReconciled: 0,
       retentionTombstonesQueued: 0,
       deletionTombstonesProcessed: 2,
       deletionObjectsAffected: 8,
@@ -193,6 +198,63 @@ describe('maintenance runners', () => {
 
     expect(result.deletionWorkspacesScanned).toBe(1)
     expect(calls).toEqual(['workspace:target'])
+  })
+
+  it('runs the bounded multi-source orchestration callback and records its counters', async () => {
+    let calls = 0
+    const result = await runSourceMaintenance(
+      {
+        jobId: 'maintenance:source:orchestration',
+        occurredAt,
+        quotaBatchSize: 1,
+        deletionBatchSize: 1,
+        retentionBatchSize: 1,
+        snapshotReconciliationBatchSize: 0,
+        campaignOrchestrationBatchSize: 1,
+        quotaRetentionDays: 7,
+        workspaceId: null
+      },
+      {
+        quota: {
+          async listActiveWorkspaceIds() {
+            return []
+          },
+          async expireStale() {
+            return 0
+          },
+          async purgeSettled() {
+            return 0
+          }
+        },
+        deletion: {
+          async listActiveWorkspaceIds() {
+            return []
+          },
+          async enqueueExpired() {
+            return 0
+          },
+          async processNext() {
+            return null
+          }
+        },
+        campaignOrchestration: async () => {
+          calls += 1
+          return {
+            workspacesScanned: 2,
+            claims: 1,
+            dispatched: 1,
+            failed: 0,
+            policyDenied: 0,
+            reconciled: 1
+          }
+        }
+      }
+    )
+
+    expect(calls).toBe(1)
+    expect(result.campaignOrchestrationClaims).toBe(1)
+    expect(result.campaignOrchestrationDispatched).toBe(1)
+    expect(result.campaignOrchestrationReconciled).toBe(1)
   })
 
   it('resumes one due snapshot per sorted workspace within its independent budget', async () => {

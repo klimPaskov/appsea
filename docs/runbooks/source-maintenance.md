@@ -150,6 +150,24 @@ request; admission and Temporal failures retain it for a bounded retry. The
 campaign page exposes the resulting state and failure summary. This path never
 activates a source or treats a fixture as market evidence.
 
+Migration `0068_research_campaign_orchestration.sql` adds a separate bounded
+multi-source pass for campaigns configured with two to sixteen approved
+non-fixture sources. The authenticated run route creates an idempotent parent
+and durable source children. The same lease-backed maintenance process claims
+one child at a time, clears stale dispatch leases, rechecks policy and source
+connector support, consumes the service production-workflow admission, and
+starts the existing one-source Temporal workflow with a deterministic child
+run/idempotency identity. A child policy denial is terminal and visible; rate,
+admission, and Temporal failures retry with a bounded attempt budget. The
+reconciliation step reads `production_collection_workflow_jobs`, projects child
+completion/failure counters to the parent, and updates the campaign aggregate
+without letting one child incorrectly mark the whole campaign complete. Private
+history/detail routes show only child identifiers, state, attempt count, policy
+version, workflow identity, and fixed failure summaries. This queue is
+production-shaped but not an activation mechanism: live source policy approval,
+deployed scheduler/Temporal ownership, and crash/retry integration proof remain
+required.
+
 The direct filtered collection command uses the same service-principal
 boundary. Migration `0051` makes `pnpm worker:source:cfpb` reserve and consume
 the shared production workflow admission ledger immediately before the CFPB
@@ -188,6 +206,7 @@ Configuration is bounded by the command:
 - `APPSEA_RETENTION_BATCH_SIZE` (1-1,000, default 100)
 - `APPSEA_SOURCE_SNAPSHOT_RECONCILIATION_BATCH_SIZE` (0-100, default 1)
 - `APPSEA_CAMPAIGN_REFRESH_BATCH_SIZE` (0-100, default 1)
+- `APPSEA_CAMPAIGN_ORCHESTRATION_BATCH_SIZE` (0-100, default 1)
 - `APPSEA_SOURCE_QUOTA_RETENTION_DAYS` (1-3,650, default 30)
 - `APPSEA_DELETION_WORKSPACE_ID` (optional persistence-safe workspace ID)
 - `APPSEA_OBJECT_STORE_ROOT` (required absolute object-store adapter root)
@@ -204,8 +223,8 @@ Configuration is bounded by the command:
 The worker emits secret-free quota expiry/purge, production collection and
 analysis admission purge, source-collection-lease purge, snapshot
 reconciliation state/coverage counters, retention enqueue, deletion
-propagation, output-object purge, campaign refresh dispatch, and failure
-events. Snapshot and campaign counters never
+propagation, output-object purge, campaign refresh and orchestration dispatch,
+and separate bounded failure/completion events. Snapshot and campaign counters never
 include raw source content or caller idempotency keys.
 `sourceMaintenanceInputSchema` validates the configuration
 before repository work, and `runSourceMaintenance` returns bounded counters

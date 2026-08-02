@@ -57,16 +57,25 @@ for that pre-context authorization lookup.
   admission must recheck policy and budgets. The authenticated campaign-run
   route accepts only a run/idempotency envelope and derives source, query,
   purpose, display mode, limit, and budget from the stored campaign. It
-  requires one non-synthetic source, rechecks approved purpose/display mode,
   verifies any approved seed review, and commits the existing admission ledger
-  before Temporal. It returns private no-store errors for pending policy,
-  multi-source configuration, and admission conflicts; it cannot activate a
-  connector or fan out to an unreviewed source.
+  before Temporal. A two-to-sixteen-source non-fixture request enters the
+  migration `0068` parent/child queue instead: each child has its own
+  policy/version check, service admission, deterministic child identity, claim
+  lease, and bounded retry state. It returns private no-store errors for
+  pending policy and admission conflicts; it cannot activate a connector or
+  fan out to an unreviewed source.
 - Campaign run history is a separate read-only projection. The repository
   repeats authenticated membership/RLS checks, limits results to 100 recent
   production rows, and omits idempotency digests, input hashes, actor details,
   and source payloads. The status page can link to evidence only after a
   completed run, preserving the collection policy/display gate.
+- Multi-source orchestration history is a separate forced-RLS read model. The
+  authenticated list/detail routes expose at most 100 parent requests with
+  bounded child state, attempt count, policy/workflow identifiers, and fixed
+  failure summaries. They do not expose caller keys, hashes, source payloads,
+  policy-review hashes, or imported instructions. Archived/paused campaigns
+  cannot receive new child claims, and the service worker must recheck the
+  current approved independent policy before admission and Temporal start.
 - The reviewed analysis handoff has a separate safe status projection. The
   owner/editor start action sends only identifiers and an idempotency envelope;
   the status API/page validates any workflow identifier against the workspace

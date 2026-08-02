@@ -80,7 +80,8 @@ describe('database foundation', () => {
       '0064',
       '0065',
       '0066',
-      '0067'
+      '0067',
+      '0068'
     ])
     expect(migrations[0]?.checksum).toMatch(/^[a-f0-9]{64}$/)
     expect(migrations[0]?.sql).toContain('CREATE TABLE appsea.evidence_records')
@@ -198,6 +199,9 @@ describe('database foundation', () => {
     const costAlertMigration = migrations.find((migration) => migration.version === '0065')
     const workspaceArchivalMigration = migrations.find((migration) => migration.version === '0066')
     const evidenceRedactionMigration = migrations.find((migration) => migration.version === '0067')
+    const campaignOrchestrationMigration = migrations.find(
+      (migration) => migration.version === '0068'
+    )
     expect(authMigration?.sql).toContain('CREATE TABLE appsea.users')
     expect(authMigration?.sql).toContain('CREATE TABLE appsea.auth_sessions')
     expect(authMigration?.sql).toContain('FORCE ROW LEVEL SECURITY')
@@ -341,6 +345,18 @@ describe('database foundation', () => {
       'production_collection_workflow_source_policy_gate'
     )
     expect(productionWorkflowMigration?.sql).toContain('production_collection_workflow_actor_guard')
+    expect(campaignOrchestrationMigration?.sql).toContain(
+      'CREATE TABLE appsea.research_campaign_orchestrations'
+    )
+    expect(campaignOrchestrationMigration?.sql).toContain(
+      'CREATE TABLE appsea.research_campaign_orchestration_sources'
+    )
+    expect(campaignOrchestrationMigration?.sql).toContain(
+      'ALTER TABLE appsea.research_campaign_orchestrations FORCE ROW LEVEL SECURITY'
+    )
+    expect(campaignOrchestrationMigration?.sql).toContain(
+      'research_campaign_orchestration_source_transition_guard'
+    )
     expect(sourceRetentionMigration?.sql).toContain('enqueue_expired_source_tombstones')
     expect(sourceRetentionMigration?.sql).toContain('retention window elapsed')
     expect(sourceRetentionMigration?.sql).toContain("current_setting('appsea.workspace_id'")
@@ -677,6 +693,10 @@ describe('database foundation', () => {
     expect(evidenceRedactionMigration?.sql).toContain(
       "current_setting('appsea.evidence_redaction_id', true)"
     )
+    expect(campaignOrchestrationMigration?.sql).toContain(
+      'CREATE TABLE appsea.research_campaign_orchestrations'
+    )
+    expect(campaignOrchestrationMigration?.sql).toContain('FORCE ROW LEVEL SECURITY')
   })
 
   it('requires verified TLS for production database connections', () => {

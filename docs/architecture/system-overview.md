@@ -165,6 +165,23 @@ identifier-only receipts; read mappers mask current evidence, analysis, and
 report projections. Raw source deletion, object-store purge, and backup
 deletion remain source-policy operations.
 
+Migration `0068_research_campaign_orchestration.sql` adds the multi-source
+campaign boundary. A private owner/editor request creates one idempotent
+parent orchestration and one forced-RLS child row per configured non-fixture
+source (two to sixteen). The child queue stores only identifiers, policy and
+workflow identities, bounded attempt/lease state, and fixed failure metadata.
+The existing lease-backed source-maintenance worker claims one child with
+`FOR UPDATE SKIP LOCKED`, rechecks the current independently approved source
+policy, consumes the service production-workflow admission, and starts the
+existing one-source Temporal workflow. Reconciliation reads the durable
+workflow projection and updates child, parent, and campaign state in one
+workspace transaction. The private history/detail routes expose only the
+bounded read model; no raw complaint content, caller key, policy hash, or
+workflow input is returned. Paused or archived campaigns cannot receive new
+claims, and failed policy checks remain visible rather than being treated as
+coverage absence. Deployed Temporal/scheduler ownership, live policy approval,
+and crash/retry integration proof remain release gates.
+
 The connector package now includes a disabled Stack Exchange candidate for
 bounded competitor/contrary-signal collection. It uses the official API only,
 sanitizes question excerpts, preserves an HTTPS attribution locator, and emits

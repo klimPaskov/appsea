@@ -150,6 +150,7 @@
 - [`status/complaint-analysis-correction-editor-completion-report-2026-08-02.md`](status/complaint-analysis-correction-editor-completion-report-2026-08-02.md)
 - [`status/complaint-correction-recompute-completion-report-2026-08-02.md`](status/complaint-correction-recompute-completion-report-2026-08-02.md)
 - [`status/research-campaign-source-picker-completion-report-2026-08-02.md`](status/research-campaign-source-picker-completion-report-2026-08-02.md)
+- [`status/research-campaign-orchestration-completion-report-2026-08-03.md`](status/research-campaign-orchestration-completion-report-2026-08-03.md)
 - [`status/competitor-feature-matrix-completion-report-2026-08-02.md`](status/competitor-feature-matrix-completion-report-2026-08-02.md)
 - [`status/workspace-archival-completion-report-2026-08-02.md`](status/workspace-archival-completion-report-2026-08-02.md)
 - [`status/workspace-purge-readiness-completion-report-2026-08-02.md`](status/workspace-purge-readiness-completion-report-2026-08-02.md)

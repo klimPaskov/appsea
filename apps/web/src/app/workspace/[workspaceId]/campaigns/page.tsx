@@ -2,17 +2,20 @@ import Link from 'next/link'
 import { notFound, redirect } from 'next/navigation'
 import {
   appseaIdentifierSchema,
+  researchCampaignConfigurationSchema,
   type ResearchCampaignReadModel,
   type WorkspaceSourceReadModel
 } from '@appsea/contracts'
 import { PostgresResearchCampaignRepository } from '@appsea/db/research-campaign'
 import { PostgresProductionCollectionWorkflowRepository } from '@appsea/db/production-collection-workflow'
+import { PostgresResearchCampaignOrchestrationRepository } from '@appsea/db/research-campaign-orchestration'
 import { PostgresSourcePolicyRepository } from '@appsea/db/source-policy'
 import { readSession } from '../../../../server/auth-session'
 import { getDatabasePool } from '../../../../server/database'
 import { ResearchCampaignCreateForm, ResearchCampaignEditForm } from '../../campaign-actions'
 import { ResearchCampaignRunAction } from '../../campaign-run-action'
 import { ResearchCampaignRunHistory } from '../../campaign-run-history'
+import { ResearchCampaignOrchestrationHistory } from '../../campaign-orchestration-history'
 
 export const dynamic = 'force-dynamic'
 
@@ -22,6 +25,25 @@ function supportsCampaignEdit(campaign: ResearchCampaignReadModel): boolean {
     campaign.configuration !== null &&
     'schemaVersion' in campaign.configuration &&
     campaign.configuration.schemaVersion === 'campaign-v1'
+  )
+}
+
+function supportsCampaignRun(campaign: ResearchCampaignReadModel): boolean {
+  const parsed = researchCampaignConfigurationSchema.safeParse(campaign.configuration)
+  if (!parsed.success) return false
+  const configuration = parsed.data
+  return (
+    configuration.sourceIds.length === campaign.sources.length &&
+    campaign.sources.length > 0 &&
+    campaign.sources.every(
+      (source) =>
+        source.enabled &&
+        source.policyState === 'approved' &&
+        source.policyVersion !== null &&
+        source.permittedPurposes.includes(campaign.purpose) &&
+        source.displayMode === configuration.requestedDisplayMode &&
+        !source.synthetic
+    )
   )
 }
 
@@ -59,6 +81,10 @@ export default async function ResearchCampaignsPage({
     string,
     Awaited<ReturnType<PostgresProductionCollectionWorkflowRepository['listForCampaignForUser']>>
   >()
+  const orchestrationHistoryByCampaignId = new Map<
+    string,
+    Awaited<ReturnType<PostgresResearchCampaignOrchestrationRepository['listForCampaignForUser']>>
+  >()
   if (!workspace.fixtureOnly) {
     const runLists = await Promise.all(
       campaigns.map((campaign) =>
@@ -71,6 +97,18 @@ export default async function ResearchCampaignsPage({
     )
     campaigns.forEach((campaign, index) => {
       runHistoryByCampaignId.set(campaign.campaignId, runLists[index] ?? [])
+    })
+    const orchestrationLists = await Promise.all(
+      campaigns.map((campaign) =>
+        new PostgresResearchCampaignOrchestrationRepository(pool).listForCampaignForUser(
+          session.user.userId,
+          parsedWorkspaceId.data,
+          campaign.campaignId
+        )
+      )
+    )
+    campaigns.forEach((campaign, index) => {
+      orchestrationHistoryByCampaignId.set(campaign.campaignId, orchestrationLists[index] ?? [])
     })
   }
 
@@ -136,16 +174,14 @@ export default async function ResearchCampaignsPage({
                   <ResearchCampaignRunAction
                     workspaceId={parsedWorkspaceId.data}
                     campaignId={campaign.campaignId}
-                    ready={
-                      campaign.state !== 'archived' &&
-                      campaign.sources.length === 1 &&
-                      campaign.sources[0]?.enabled === true &&
-                      campaign.sources[0]?.policyState === 'approved'
-                    }
+                    ready={campaign.state !== 'archived' && supportsCampaignRun(campaign)}
                   />
                   <ResearchCampaignRunHistory
                     workspaceId={parsedWorkspaceId.data}
                     runs={runHistoryByCampaignId.get(campaign.campaignId) ?? []}
+                  />
+                  <ResearchCampaignOrchestrationHistory
+                    orchestrations={orchestrationHistoryByCampaignId.get(campaign.campaignId) ?? []}
                   />
                   {(workspace.role === 'owner' || workspace.role === 'editor') &&
                   campaign.state !== 'archived' &&

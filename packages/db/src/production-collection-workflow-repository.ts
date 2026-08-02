@@ -638,8 +638,14 @@ export class PostgresProductionCollectionWorkflowRepository {
           `UPDATE appsea.research_campaigns
               SET state = 'completed', updated_at = GREATEST(updated_at, $3)
             WHERE workspace_id = $1 AND campaign_id = $2
-              AND state <> 'archived'`,
-          [parsed.workspaceId, row.campaign_id, parsed.occurredAt]
+              AND state <> 'archived'
+              AND NOT EXISTS (
+                SELECT 1
+                  FROM appsea.research_campaign_orchestration_sources child
+                 WHERE child.workspace_id = $1
+                   AND child.child_run_id = $4
+              )`,
+          [parsed.workspaceId, row.campaign_id, parsed.occurredAt, result.persistence.runId]
         )
         if (row.analysis_seed_review_id) {
           const identity = productionAnalysisHandoffIdentity(
@@ -746,12 +752,19 @@ export class PostgresProductionCollectionWorkflowRepository {
               SET state = CASE WHEN state = 'completed' THEN state ELSE $3 END,
                   updated_at = GREATEST(updated_at, $4)
             WHERE workspace_id = $1 AND campaign_id = $2
-              AND state <> 'archived'`,
+              AND state <> 'archived'
+              AND NOT EXISTS (
+                SELECT 1
+                  FROM appsea.research_campaign_orchestration_sources child
+                 WHERE child.workspace_id = $1
+                   AND child.child_run_id = $5
+              )`,
           [
             parsed.input.workspaceId,
             row.campaign_id,
             parsed.state === 'canceled' ? 'canceled' : 'failed',
-            parsed.occurredAt
+            parsed.occurredAt,
+            parsed.input.runId
           ]
         )
         await insertTerminalLedger(

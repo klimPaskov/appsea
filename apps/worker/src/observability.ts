@@ -55,6 +55,11 @@ export interface WorkerEvent {
   campaignRefreshDispatched?: number
   campaignRefreshFailed?: number
   campaignRefreshPolicyDenied?: number
+  campaignOrchestrationClaims?: number
+  campaignOrchestrationDispatched?: number
+  campaignOrchestrationFailed?: number
+  campaignOrchestrationPolicyDenied?: number
+  campaignOrchestrationReconciled?: number
   retentionTombstonesQueued?: number
   deletionTombstonesProcessed?: number
   deletionObjectsAffected?: number
@@ -309,6 +314,23 @@ export function emitWorkerEvent(event: WorkerEvent): void {
       : {}),
     ...(finiteInteger(event.campaignRefreshPolicyDenied) !== undefined
       ? { campaignRefreshPolicyDenied: finiteInteger(event.campaignRefreshPolicyDenied) }
+      : {}),
+    ...(finiteInteger(event.campaignOrchestrationClaims) !== undefined
+      ? { campaignOrchestrationClaims: finiteInteger(event.campaignOrchestrationClaims) }
+      : {}),
+    ...(finiteInteger(event.campaignOrchestrationDispatched) !== undefined
+      ? { campaignOrchestrationDispatched: finiteInteger(event.campaignOrchestrationDispatched) }
+      : {}),
+    ...(finiteInteger(event.campaignOrchestrationFailed) !== undefined
+      ? { campaignOrchestrationFailed: finiteInteger(event.campaignOrchestrationFailed) }
+      : {}),
+    ...(finiteInteger(event.campaignOrchestrationPolicyDenied) !== undefined
+      ? {
+          campaignOrchestrationPolicyDenied: finiteInteger(event.campaignOrchestrationPolicyDenied)
+        }
+      : {}),
+    ...(finiteInteger(event.campaignOrchestrationReconciled) !== undefined
+      ? { campaignOrchestrationReconciled: finiteInteger(event.campaignOrchestrationReconciled) }
       : {}),
     ...(finiteInteger(event.retentionTombstonesQueued) !== undefined
       ? { retentionTombstonesQueued: finiteInteger(event.retentionTombstonesQueued) }
