@@ -23,6 +23,7 @@ import {
   authAccountDeletionResultSchema,
   workspaceArchiveInputSchema,
   workspaceArchiveResultSchema,
+  workspacePurgeReadinessSchema,
   authSessionSummaryReadModelSchema,
   authSessionReadModelSchema,
   authSignInInputSchema,
@@ -64,6 +65,7 @@ import {
   type AuthAccountDeletionResult,
   type WorkspaceArchiveInput,
   type WorkspaceArchiveResult,
+  type WorkspacePurgeReadiness,
   type AuthSignInInput,
   type AuthSignInResult,
   type AuthSignUpInput,
@@ -327,6 +329,18 @@ interface WorkspaceArchiveRow extends QueryResultRow {
   archived_at: Date | string | null
   active_work_count: number | string
   replayed: boolean
+}
+
+interface WorkspacePurgeReadinessRow extends QueryResultRow {
+  workspace_id: string
+  status: 'active' | 'suspended' | 'archived'
+  archived_at: Date | string | null
+  active_work_count: number | string
+  raw_source_object_reference_count: number | string
+  analysis_object_reference_count: number | string
+  report_object_reference_count: number | string
+  plan_object_reference_count: number | string
+  checked_at: Date | string
 }
 
 interface WorkspaceMemberRow extends QueryResultRow {
@@ -1234,6 +1248,127 @@ export class PostgresAuthRepository {
       }
       throw error
     }
+  }
+
+  /**
+   * Read the owner-only database side of workspace purge readiness.
+   *
+   * This boundary is intentionally non-destructive: it inventories active
+   * work and persisted object references, then leaves cloud object-store,
+   * export-retention, and backup verification to an operated provider layer.
+   * Archived workspaces remain readable here so an owner can see what still
+   * prevents a reviewed retention operation.
+   */
+  async readWorkspacePurgeReadiness(
+    userId: string,
+    workspaceId: string
+  ): Promise<WorkspacePurgeReadiness> {
+    const parsedUserId = appseaIdentifierSchema.parse(userId)
+    const parsedWorkspaceId = appseaIdentifierSchema.parse(workspaceId)
+    const result = await withDatabaseTransaction(
+      this.pool,
+      async (client) => {
+        await client.query("SELECT set_config('appsea.auth_user_id', $1, true)", [parsedUserId])
+        const membership = await client.query<{ role: string }>(
+          `SELECT role
+             FROM appsea.workspace_memberships
+            WHERE workspace_id = $1 AND user_id = $2
+            FOR SHARE`,
+          [parsedWorkspaceId, parsedUserId]
+        )
+        if (membership.rows[0]?.role !== 'owner') throw new WorkspaceAuthorizationError()
+        await client.query("SELECT set_config('appsea.workspace_id', $1, true)", [
+          parsedWorkspaceId
+        ])
+        return client.query<WorkspacePurgeReadinessRow>(
+          `SELECT workspace.workspace_id, workspace.status, workspace.archived_at,
+                  clock_timestamp() AS checked_at,
+                  LEAST(
+                    2147483647::bigint,
+                    (SELECT count(*) FROM appsea.workflow_job_executions workflow_execution
+                      WHERE workflow_execution.workspace_id = workspace.workspace_id
+                        AND workflow_execution.state IN ('queued', 'running'))
+                    + (SELECT count(*) FROM appsea.research_runs run
+                      WHERE run.workspace_id = workspace.workspace_id
+                        AND run.state IN ('queued', 'running', 'paused'))
+                    + (SELECT count(*) FROM appsea.production_collection_workflow_jobs workflow
+                      WHERE workflow.workspace_id = workspace.workspace_id
+                        AND workflow.state IN ('queued', 'running'))
+                    + (SELECT count(*) FROM appsea.production_analysis_runs analysis
+                      WHERE analysis.workspace_id = workspace.workspace_id
+                        AND analysis.state IN ('queued', 'running'))
+                    + (SELECT count(*) FROM appsea.production_analysis_handoffs handoff
+                      WHERE handoff.workspace_id = workspace.workspace_id
+                        AND handoff.state IN ('queued', 'dispatching', 'started'))
+                    + (SELECT count(*) FROM appsea.production_analysis_recompute_jobs recompute
+                      WHERE recompute.workspace_id = workspace.workspace_id
+                        AND recompute.state IN ('queued', 'dispatching', 'started'))
+                    + (SELECT count(*) FROM appsea.source_snapshot_reconciliation_jobs snapshot
+                      WHERE snapshot.workspace_id = workspace.workspace_id
+                        AND snapshot.state IN ('queued', 'running'))
+                    + (SELECT count(*) FROM appsea.source_collection_leases lease
+                      WHERE lease.workspace_id = workspace.workspace_id
+                        AND lease.state = 'active')
+                  ) AS active_work_count,
+                  (SELECT count(*) FROM appsea.source_items source_item
+                    WHERE source_item.workspace_id = workspace.workspace_id
+                      AND source_item.raw_object_ref IS NOT NULL)
+                    AS raw_source_object_reference_count,
+                  (SELECT count(*) FROM appsea.production_analysis_runs analysis
+                    WHERE analysis.workspace_id = workspace.workspace_id
+                      AND (analysis.artifact_object_ref IS NOT NULL
+                           OR analysis.report_object_ref IS NOT NULL
+                           OR analysis.plan_object_ref IS NOT NULL))
+                    AS analysis_object_reference_count,
+                  (SELECT count(*) FROM appsea.report_versions report
+                    WHERE report.workspace_id = workspace.workspace_id
+                      AND (report.structured_object_ref IS NOT NULL
+                           OR report.markdown_object_ref IS NOT NULL))
+                    AS report_object_reference_count,
+                  (SELECT count(*) FROM appsea.plan_package_versions plan
+                    WHERE plan.workspace_id = workspace.workspace_id
+                      AND plan.package_object_ref IS NOT NULL)
+                    AS plan_object_reference_count
+             FROM appsea.workspaces workspace
+            WHERE workspace.workspace_id = $1
+            FOR SHARE`,
+          [parsedWorkspaceId]
+        )
+      },
+      { readOnly: true, maxSerializationRetries: 0 }
+    )
+    const row = result.rows[0]
+    if (!row) throw new WorkspaceAuthorizationError()
+    const activeWorkCount = Number(row.active_work_count)
+    const rawSourceObjectReferenceCount = Number(row.raw_source_object_reference_count)
+    const analysisObjectReferenceCount = Number(row.analysis_object_reference_count)
+    const reportObjectReferenceCount = Number(row.report_object_reference_count)
+    const planObjectReferenceCount = Number(row.plan_object_reference_count)
+    const blockers = [
+      ...(row.archived_at === null ? (['workspace_not_archived'] as const) : []),
+      ...(activeWorkCount > 0 ? (['active_work'] as const) : []),
+      ...(rawSourceObjectReferenceCount > 0 ? (['raw_source_objects'] as const) : []),
+      ...(analysisObjectReferenceCount > 0 ? (['analysis_objects'] as const) : []),
+      ...(reportObjectReferenceCount > 0 ? (['report_objects'] as const) : []),
+      ...(planObjectReferenceCount > 0 ? (['plan_objects'] as const) : [])
+    ]
+    return workspacePurgeReadinessSchema.parse({
+      workspaceId: row.workspace_id,
+      state: blockers.length === 0 ? 'database_ready' : 'blocked',
+      archivedAt: row.archived_at === null ? null : iso(row.archived_at),
+      activeWorkCount,
+      rawSourceObjectReferenceCount,
+      analysisObjectReferenceCount,
+      reportObjectReferenceCount,
+      planObjectReferenceCount,
+      blockers,
+      externalRequirements: [
+        'cloud_object_store_purge',
+        'export_retention_purge',
+        'backup_deletion_verification'
+      ],
+      checkedAt: iso(row.checked_at)
+    })
   }
 
   async readAuthenticatedSession(token: string): Promise<AuthSessionReadModel | null> {

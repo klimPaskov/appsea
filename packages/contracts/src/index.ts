@@ -3540,6 +3540,66 @@ export const workspaceArchiveResultSchema = z.discriminatedUnion('state', [
   workspaceArchiveBlockedResultSchema
 ])
 
+// A purge-readiness inventory is deliberately read-only. It separates the
+// database conditions AppSea can observe from cloud object-store, export, and
+// backup controls that still require an operated provider boundary. It never
+// implies that a workspace has been deleted.
+export const workspacePurgeReadinessBlockerSchema = z.enum([
+  'workspace_not_archived',
+  'active_work',
+  'raw_source_objects',
+  'analysis_objects',
+  'report_objects',
+  'plan_objects'
+])
+
+export const workspacePurgeExternalRequirementSchema = z.enum([
+  'cloud_object_store_purge',
+  'export_retention_purge',
+  'backup_deletion_verification'
+])
+
+export const workspacePurgeReadinessSchema = z
+  .object({
+    workspaceId: appseaIdentifierSchema,
+    state: z.enum(['blocked', 'database_ready']),
+    archivedAt: z.string().datetime().nullable(),
+    activeWorkCount: z.number().int().nonnegative().max(2_147_483_647),
+    rawSourceObjectReferenceCount: z.number().int().nonnegative().max(2_147_483_647),
+    analysisObjectReferenceCount: z.number().int().nonnegative().max(2_147_483_647),
+    reportObjectReferenceCount: z.number().int().nonnegative().max(2_147_483_647),
+    planObjectReferenceCount: z.number().int().nonnegative().max(2_147_483_647),
+    blockers: z.array(workspacePurgeReadinessBlockerSchema).max(6),
+    externalRequirements: z.array(workspacePurgeExternalRequirementSchema).length(3),
+    checkedAt: z.string().datetime()
+  })
+  .strict()
+  .superRefine((value, context) => {
+    const expectedBlockers = [
+      ...(value.archivedAt === null ? (['workspace_not_archived'] as const) : []),
+      ...(value.activeWorkCount > 0 ? (['active_work'] as const) : []),
+      ...(value.rawSourceObjectReferenceCount > 0 ? (['raw_source_objects'] as const) : []),
+      ...(value.analysisObjectReferenceCount > 0 ? (['analysis_objects'] as const) : []),
+      ...(value.reportObjectReferenceCount > 0 ? (['report_objects'] as const) : []),
+      ...(value.planObjectReferenceCount > 0 ? (['plan_objects'] as const) : [])
+    ]
+    if (JSON.stringify(value.blockers) !== JSON.stringify(expectedBlockers)) {
+      context.addIssue({
+        code: 'custom',
+        path: ['blockers'],
+        message: 'Purge blockers must match the observed workspace state'
+      })
+    }
+    const expectedState = expectedBlockers.length === 0 ? 'database_ready' : 'blocked'
+    if (value.state !== expectedState) {
+      context.addIssue({
+        code: 'custom',
+        path: ['state'],
+        message: 'Purge readiness state must match the observed blockers'
+      })
+    }
+  })
+
 export const authSessionTokenSchema = z
   .string()
   .min(32)
@@ -5008,6 +5068,11 @@ export type AuthSignInInput = z.infer<typeof authSignInInputSchema>
 export type AuthReauthenticationInput = z.infer<typeof authReauthenticationInputSchema>
 export type AuthAccountDeletionInput = z.infer<typeof authAccountDeletionInputSchema>
 export type WorkspaceArchiveInput = z.infer<typeof workspaceArchiveInputSchema>
+export type WorkspacePurgeReadinessBlocker = z.infer<typeof workspacePurgeReadinessBlockerSchema>
+export type WorkspacePurgeExternalRequirement = z.infer<
+  typeof workspacePurgeExternalRequirementSchema
+>
+export type WorkspacePurgeReadiness = z.infer<typeof workspacePurgeReadinessSchema>
 export type AuthPasswordResetToken = z.infer<typeof authPasswordResetTokenSchema>
 export type AuthPasswordResetRequestInput = z.infer<typeof authPasswordResetRequestInputSchema>
 export type AuthPasswordResetInput = z.infer<typeof authPasswordResetInputSchema>

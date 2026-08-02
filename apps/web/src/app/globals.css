@@ -789,6 +789,43 @@ a:focus-visible {
   line-height: 1.7;
 }
 
+.workspace-purge-summary {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px 24px;
+  margin: 24px 0;
+}
+
+.workspace-purge-summary div {
+  display: grid;
+  gap: 4px;
+}
+
+.workspace-purge-summary dt {
+  color: var(--muted);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.workspace-purge-summary dd {
+  margin: 0;
+  color: var(--ink);
+  font-size: 18px;
+  font-weight: 650;
+}
+
+.workspace-purge-readiness h3 {
+  margin: 24px 0 8px;
+  font-size: 14px;
+}
+
+@media (max-width: 720px) {
+  .workspace-purge-summary {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
 .plan-layout {
   display: grid;
   grid-template-columns: 0.8fr 1.2fr;

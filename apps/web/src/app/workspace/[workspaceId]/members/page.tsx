@@ -3,7 +3,8 @@ import { notFound, redirect } from 'next/navigation'
 import {
   appseaIdentifierSchema,
   type WorkspaceInvitationReadModel,
-  type WorkspaceMemberReadModel
+  type WorkspaceMemberReadModel,
+  type WorkspacePurgeReadiness
 } from '@appsea/contracts'
 import { WorkspaceAuthorizationError, WorkspaceMembershipManagementError } from '@appsea/db/auth'
 import { WorkspaceMembersPanel } from '../../../../components/workspace-members-panel'
@@ -28,6 +29,7 @@ export default async function WorkspaceMembersPage({
 
   let members: WorkspaceMemberReadModel[] = []
   let invitations: WorkspaceInvitationReadModel[] = []
+  let purgeReadiness: WorkspacePurgeReadiness | null = null
   let canManage = workspace.role === 'owner'
   if (canManage) {
     try {
@@ -36,6 +38,10 @@ export default async function WorkspaceMembersPage({
         parsedWorkspaceId.data
       )
       invitations = await authRepository().listWorkspaceInvitations(
+        session.user.userId,
+        parsedWorkspaceId.data
+      )
+      purgeReadiness = await authRepository().readWorkspacePurgeReadiness(
         session.user.userId,
         parsedWorkspaceId.data
       )
@@ -78,6 +84,7 @@ export default async function WorkspaceMembersPage({
             currentUserId={session.user.userId}
             initialMembers={members}
             initialInvitations={invitations}
+            initialPurgeReadiness={purgeReadiness}
             canManage
           />
         ) : (

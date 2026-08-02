@@ -109,6 +109,13 @@ implemented through the same route: it blocks active workflow/run/lease work,
 retains lineage, and records identifier-only receipts. MFA/OIDC and a production
 identity-provider control plane remain open.
 
+The owner-only `GET /api/workspaces/:workspaceId/purge-readiness` projection and
+members-page inventory now expose bounded active-work and raw/analysis/report/
+plan object-reference counts. `database_ready` means only that the
+PostgreSQL-observable blockers are clear; the response always keeps cloud
+object-store purge, export-retention purge, and backup-deletion verification
+visible. It is read-only and does not queue or perform destructive deletion.
+
 The repository refuses to auto-create fixture workspaces when `NODE_ENV` is
 `production`; deployment must provision fixture-enabled workspaces explicitly.
 
@@ -139,7 +146,8 @@ scheduling now persists source-tombstone- or correction-bound jobs and dispatche
 through the existing analysis workflow. Automatic re-collection, object
 storage/backups, destructive workspace purge, export purge, and deployed
 scheduler alerting are not implemented. Workspace archival is a separate,
-non-destructive lifecycle boundary and does not satisfy those purge duties.
+non-destructive lifecycle boundary and does not satisfy those purge duties. The
+readiness inventory documents the sequence but does not change this gap.
 Complaint review transitions and the
 explicit reviewed analysis-start route are implemented. Migration `0034` also
 provides an opt-in, seed-bound post-collection handoff with stale-claim

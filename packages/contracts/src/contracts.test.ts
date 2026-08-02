@@ -10,6 +10,7 @@ import {
   authAccountDeletionResultSchema,
   workspaceArchiveInputSchema,
   workspaceArchiveResultSchema,
+  workspacePurgeReadinessSchema,
   authPasswordResetAcceptedReadModelSchema,
   authPasswordResetInputSchema,
   authPasswordResetRequestInputSchema,
@@ -320,6 +321,42 @@ describe('contracts', () => {
         archivedAt: null,
         activeWorkCount: 2,
         replayed: false
+      }).success
+    ).toBe(true)
+  })
+
+  it('derives purge blockers from observed database state', () => {
+    const base = {
+      workspaceId: 'workspace:one',
+      archivedAt: null,
+      activeWorkCount: 2,
+      rawSourceObjectReferenceCount: 1,
+      analysisObjectReferenceCount: 0,
+      reportObjectReferenceCount: 0,
+      planObjectReferenceCount: 3,
+      blockers: ['workspace_not_archived', 'active_work', 'raw_source_objects', 'plan_objects'],
+      externalRequirements: [
+        'cloud_object_store_purge',
+        'export_retention_purge',
+        'backup_deletion_verification'
+      ],
+      checkedAt: now
+    } as const
+    expect(workspacePurgeReadinessSchema.safeParse({ ...base, state: 'blocked' }).success).toBe(
+      true
+    )
+    expect(
+      workspacePurgeReadinessSchema.safeParse({ ...base, state: 'database_ready' }).success
+    ).toBe(false)
+    expect(
+      workspacePurgeReadinessSchema.safeParse({
+        ...base,
+        archivedAt: now,
+        activeWorkCount: 0,
+        rawSourceObjectReferenceCount: 0,
+        planObjectReferenceCount: 0,
+        blockers: [],
+        state: 'database_ready'
       }).success
     ).toBe(true)
   })

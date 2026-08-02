@@ -5,10 +5,12 @@ import {
   workspaceInvitationReadModelSchema,
   workspaceInvitationRoleSchema,
   workspaceArchiveResultSchema,
+  workspacePurgeReadinessSchema,
   workspaceMemberReadModelSchema,
   workspaceRoleSchema,
   type WorkspaceInvitationReadModel,
-  type WorkspaceMemberReadModel
+  type WorkspaceMemberReadModel,
+  type WorkspacePurgeReadiness
 } from '@appsea/contracts'
 
 type WorkspaceMembersPanelProps = {
@@ -16,6 +18,7 @@ type WorkspaceMembersPanelProps = {
   currentUserId: string
   initialMembers: WorkspaceMemberReadModel[]
   initialInvitations: WorkspaceInvitationReadModel[]
+  initialPurgeReadiness: WorkspacePurgeReadiness | null
   canManage: boolean
 }
 
@@ -24,6 +27,7 @@ export function WorkspaceMembersPanel({
   currentUserId,
   initialMembers,
   initialInvitations,
+  initialPurgeReadiness,
   canManage
 }: WorkspaceMembersPanelProps) {
   const [members, setMembers] = useState(initialMembers)
@@ -37,6 +41,11 @@ export function WorkspaceMembersPanel({
   const [password, setPassword] = useState('')
   const [reauthenticating, setReauthenticating] = useState(false)
   const [archiving, setArchiving] = useState(false)
+  const [purgeReadiness] = useState<WorkspacePurgeReadiness | null>(() =>
+    initialPurgeReadiness === null
+      ? null
+      : workspacePurgeReadinessSchema.parse(initialPurgeReadiness)
+  )
 
   async function reauthenticate(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -384,6 +393,61 @@ export function WorkspaceMembersPanel({
           >
             {archiving ? 'Archiving…' : 'Archive workspace'}
           </button>
+        </section>
+      ) : null}
+      {canManage && purgeReadiness ? (
+        <section
+          className="risk-block workspace-purge-readiness"
+          aria-labelledby="workspace-purge-readiness-heading"
+        >
+          <h2 id="workspace-purge-readiness-heading">Deletion readiness</h2>
+          <p>
+            This is a read-only inventory for a future reviewed retention operation. AppSea has not
+            deleted this workspace, its exports, object storage, or backups.
+          </p>
+          <dl className="workspace-purge-summary">
+            <div>
+              <dt>Database gate</dt>
+              <dd>{purgeReadiness.state === 'database_ready' ? 'Ready' : 'Blocked'}</dd>
+            </div>
+            <div>
+              <dt>Active work</dt>
+              <dd>{purgeReadiness.activeWorkCount}</dd>
+            </div>
+            <div>
+              <dt>Raw source objects</dt>
+              <dd>{purgeReadiness.rawSourceObjectReferenceCount}</dd>
+            </div>
+            <div>
+              <dt>Analysis objects</dt>
+              <dd>{purgeReadiness.analysisObjectReferenceCount}</dd>
+            </div>
+            <div>
+              <dt>Report objects</dt>
+              <dd>{purgeReadiness.reportObjectReferenceCount}</dd>
+            </div>
+            <div>
+              <dt>Plan objects</dt>
+              <dd>{purgeReadiness.planObjectReferenceCount}</dd>
+            </div>
+          </dl>
+          {purgeReadiness.blockers.length > 0 ? (
+            <>
+              <h3>Database blockers</h3>
+              <ul>
+                {purgeReadiness.blockers.map((blocker) => (
+                  <li key={blocker}>{blocker.replaceAll('_', ' ')}</li>
+                ))}
+              </ul>
+            </>
+          ) : null}
+          <p className="member-policy">
+            External requirements remain:{' '}
+            {purgeReadiness.externalRequirements
+              .map((requirement) => requirement.replaceAll('_', ' '))
+              .join(', ')}
+            .
+          </p>
         </section>
       ) : null}
     </>

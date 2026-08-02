@@ -17,6 +17,7 @@ import {
   PostgresAuthRepository,
   WorkspaceMembershipConflictError,
   WorkspaceMembershipManagementError,
+  WorkspaceAuthorizationError,
   WorkspacePlanNotApprovedError
 } from './auth-repository'
 import type { AuthAccountDeletionBlockedError } from './auth-repository'
@@ -539,6 +540,47 @@ function workspaceArchivePool(options: { blocked?: boolean; forbidden?: boolean 
   }
 }
 
+function workspacePurgeReadinessPool(options: { owner?: boolean } = {}): {
+  pool: Pool
+  statements: Array<{ text: string; values: unknown[] }>
+} {
+  const statements: Array<{ text: string; values: unknown[] }> = []
+  const client = {
+    query: async (text: string, values: unknown[] = []) => {
+      statements.push({ text, values })
+      if (text.includes('FROM appsea.workspace_memberships')) {
+        return options.owner === false
+          ? { rows: [{ role: 'editor' }], rowCount: 1 }
+          : { rows: [{ role: 'owner' }], rowCount: 1 }
+      }
+      if (text.includes('FROM appsea.workspaces workspace')) {
+        return {
+          rows: [
+            {
+              workspace_id: 'workspace:one',
+              status: 'archived',
+              archived_at: '2026-08-02T20:00:00.000Z',
+              checked_at: '2026-08-02T20:01:00.000Z',
+              active_work_count: 0,
+              raw_source_object_reference_count: 0,
+              analysis_object_reference_count: 0,
+              report_object_reference_count: 0,
+              plan_object_reference_count: 0
+            }
+          ],
+          rowCount: 1
+        }
+      }
+      return { rows: [], rowCount: 0 }
+    },
+    release: () => undefined
+  } as unknown as PoolClient
+  return {
+    pool: { connect: async () => client } as unknown as Pool,
+    statements
+  }
+}
+
 describe('PostgresAuthRepository', () => {
   it('reads an active session and only stores token hashes in SQL parameters', async () => {
     const token = 'a'.repeat(48)
@@ -803,6 +845,49 @@ describe('PostgresAuthRepository', () => {
         { confirmation: 'ARCHIVE WORKSPACE' }
       )
     ).rejects.toMatchObject({ name: 'WorkspaceArchivePermissionError' })
+  })
+
+  it('reads purge readiness through an owner-only, read-only metadata boundary', async () => {
+    const inspected = workspacePurgeReadinessPool()
+    const repository = new PostgresAuthRepository(inspected.pool)
+    await expect(
+      repository.readWorkspacePurgeReadiness('user:owner', 'workspace:one')
+    ).resolves.toEqual({
+      workspaceId: 'workspace:one',
+      state: 'database_ready',
+      archivedAt: '2026-08-02T20:00:00.000Z',
+      activeWorkCount: 0,
+      rawSourceObjectReferenceCount: 0,
+      analysisObjectReferenceCount: 0,
+      reportObjectReferenceCount: 0,
+      planObjectReferenceCount: 0,
+      blockers: [],
+      externalRequirements: [
+        'cloud_object_store_purge',
+        'export_retention_purge',
+        'backup_deletion_verification'
+      ],
+      checkedAt: '2026-08-02T20:01:00.000Z'
+    })
+    expect(
+      inspected.statements.some(
+        (entry) =>
+          entry.text.includes("set_config('appsea.auth_user_id'") &&
+          entry.values[0] === 'user:owner'
+      )
+    ).toBe(true)
+    expect(
+      inspected.statements.some(
+        (entry) =>
+          entry.text.includes("set_config('appsea.workspace_id'") &&
+          entry.values[0] === 'workspace:one'
+      )
+    ).toBe(true)
+    await expect(
+      new PostgresAuthRepository(
+        workspacePurgeReadinessPool({ owner: false }).pool
+      ).readWorkspacePurgeReadiness('user:editor', 'workspace:one')
+    ).rejects.toBeInstanceOf(WorkspaceAuthorizationError)
   })
 
   it('lists members for owners and records role/removal changes durably', async () => {

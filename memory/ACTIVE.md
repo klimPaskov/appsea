@@ -10,6 +10,10 @@ leases, snapshot reconciliation, workflow admissions, source-reconciliation
 admission, retryable tombstones, maintenance-run telemetry, a durable source-
 quota case ledger, recomputation alerts, cost-threshold projection, and
 owner-only non-destructive workspace archival.
+The 2026-08-02 purge-readiness tranche adds an owner-only read-only
+`WorkspacePurgeReadiness` API/settings inventory with deterministic active-work
+and object-reference blockers. It names cloud/object/export/backup requirements
+and never deletes; see `docs/runbooks/workspace-purge-readiness.md`.
 Migration `0050` adds explicit one-record tombstone-bound CFPB re-collection
 with immutable lineage; it never runs automatically and the source remains
 disabled. `0051` binds direct CFPB admission to `appsea-worker`. Deployed
@@ -62,9 +66,6 @@ rows remain gated. Complaint/source-item provenance
 now carries an HTTPS canonical locator for attribution; a disabled,
 fixture-tested Stack Exchange candidate remains pending independent review;
 the worker now has a registry-selected path but no active source row.
-Migration `0060` adds a database-level HTTP(S) host/path check for those
-locators, while policy still controls whether a locator may be displayed.
-
 Campaigns now have a private one-source `campaign-v1` run/history, draft
 lifecycle, policy-gated refresh claims, and registry picker. Multi-source
 orchestration, live activation, deployed scheduler/Temporal, and Docker proof
@@ -77,11 +78,6 @@ state with PostgreSQL. Workflow prefixes are workspace-bound; hashes, object
 references, source payloads, and seed content stay hidden. Migration `0056`
 adds bounded server-clock attempt history with fixed failures. Deployed
 scheduler ownership, production Temporal, and periodic alerting remain open.
-
-The 2026-08-02 source-coverage tranche adds a private read-only registry/API;
-it derives collectibility from independent approval and exposes quotas,
-deletion duties, and gaps without payloads, hashes, reviewer identities, or
-activation controls.
 
 2026-08-02 correction tranche adds migrations `0061` and `0062`, a strict
 derived-only editor/owner correction contract, immutable prior/next snapshot

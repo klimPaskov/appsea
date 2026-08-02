@@ -47,6 +47,7 @@
 - [`runbooks/workspace-invitations.md`](runbooks/workspace-invitations.md)
 - [`runbooks/account-closure.md`](runbooks/account-closure.md)
 - [`runbooks/workspace-archival.md`](runbooks/workspace-archival.md)
+- [`runbooks/workspace-purge-readiness.md`](runbooks/workspace-purge-readiness.md)
 - [`runbooks/evidence-redaction.md`](runbooks/evidence-redaction.md)
 - [`runbooks/source-policy-review.md`](runbooks/source-policy-review.md)
 - [`runbooks/production-source-collection.md`](runbooks/production-source-collection.md)
@@ -151,3 +152,4 @@
 - [`status/research-campaign-source-picker-completion-report-2026-08-02.md`](status/research-campaign-source-picker-completion-report-2026-08-02.md)
 - [`status/competitor-feature-matrix-completion-report-2026-08-02.md`](status/competitor-feature-matrix-completion-report-2026-08-02.md)
 - [`status/workspace-archival-completion-report-2026-08-02.md`](status/workspace-archival-completion-report-2026-08-02.md)
+- [`status/workspace-purge-readiness-completion-report-2026-08-02.md`](status/workspace-purge-readiness-completion-report-2026-08-02.md)
