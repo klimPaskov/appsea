@@ -979,6 +979,75 @@ a:focus-visible {
   border-color: var(--accent);
 }
 
+.campaign-source-picker {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--surface) 72%, transparent);
+}
+
+.campaign-source-picker legend {
+  padding: 0 6px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.campaign-source-picker p {
+  margin: 0;
+}
+
+.campaign-source-options {
+  display: grid;
+  gap: 8px;
+}
+
+.campaign-source-option {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 10px;
+  border: 1px solid var(--line);
+  border-radius: 5px;
+  background: var(--paper);
+  color: var(--ink);
+  cursor: pointer;
+  font-size: 13px;
+  text-transform: none;
+}
+
+.campaign-source-option input {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--accent);
+}
+
+.campaign-source-option span {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.campaign-source-option small,
+.campaign-source-option em {
+  color: var(--muted);
+  font-size: 11px;
+  font-style: normal;
+  font-weight: 400;
+  overflow-wrap: anywhere;
+}
+
+.campaign-source-option em {
+  text-align: right;
+  white-space: nowrap;
+}
+
 .form-success {
   margin: 0;
   color: #27623a;
@@ -1334,6 +1403,7 @@ a:focus-visible {
   .workspace-step-up,
   .workspace-invitation-form,
   .workspace-seed-form-grid,
+  .campaign-source-option,
   .workspace-member-list li,
   .workspace-member-actions,
   .account-session-list li {

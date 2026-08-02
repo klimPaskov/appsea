@@ -9,8 +9,10 @@ visible. Owners/editors can start a bounded one-source run from the campaign
 page; the route derives collection inputs from the stored campaign and admits
 the idempotency digest before Temporal. Owners/editors can now replace draft
 intent through a validated PATCH boundary, and DELETE archives without
-removing run or evidence lineage. Pagination, multi-source orchestration, and
-a source-picker control are not implemented. Scheduled refresh now has a
+removing run or evidence lineage. Pagination and multi-source orchestration
+are not implemented. The campaign forms now use a private source picker backed
+by the read-only registry; policy state remains visible and the picker cannot
+activate a connector. Scheduled refresh now has a
 durable campaign claim/dispatch boundary in the existing lease-backed source
 maintenance worker; deployment-level scheduler ownership and Temporal remain
 open. The read-only source registry now exposes policy readiness,

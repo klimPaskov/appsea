@@ -58,4 +58,6 @@ code, skills, instructions, permissions, or repository memory.
 - Review and approve the external CFPB policy before enabling any source.
 - Provision production PostgreSQL, Temporal, scheduler ownership, secrets,
   alerting, backup/deletion controls, and crash/failure drills.
-- Add campaign pagination/source-picker and reviewed multi-source orchestration.
+- Add campaign pagination and reviewed multi-source orchestration. The
+  registry-backed source picker is now delivered separately in the
+  [`research-campaign-source-picker-completion-report-2026-08-02.md`](research-campaign-source-picker-completion-report-2026-08-02.md).

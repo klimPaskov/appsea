@@ -88,9 +88,10 @@ Migration `0060` adds a database-level HTTP(S) host/path check for those
 locators, while policy still controls whether a locator may be displayed.
 
 The 2026-08-02 campaign slice adds a private one-source `campaign-v1` run,
-history, draft edits/archive, and policy/admission-gated refresh claims.
-Multi-source orchestration, source picker, live activation, deployed
-scheduler/Temporal, and Docker PostgreSQL proof remain open; CFPB is disabled.
+history, draft edits/archive, policy-gated refresh claims, and a
+registry source picker. Multi-source orchestration, live activation,
+deployed scheduler/Temporal, and Docker PostgreSQL proof remain open; CFPB is
+disabled.
 
 The 2026-08-02 analysis tranche adds a reviewed seed handoff: owner/editor
 members choose an approved seed, the admission route starts

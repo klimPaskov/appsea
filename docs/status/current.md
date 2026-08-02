@@ -51,6 +51,12 @@ same durable recomputation queue with a deferred correction trigger: each
 affected opportunity receives one idempotent repair request, while an absent or
 unapproved seed remains visibly blocked.
 
+Private campaign create/edit forms now select source IDs from the authenticated
+read-only source registry and keep pending-policy states visible. This is a
+planning aid only; the existing approval, purpose, quota, display, and
+admission gates still control collection, and multi-source orchestration remains
+open.
+
 Migration `0054_source_policy_review_integrity.sql` now requires canonical
 reviewer identity, independent review role, and explicit attestation for new
 source approvals. Pre-0054 approvals remain audit history but do not make a

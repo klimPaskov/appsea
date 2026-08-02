@@ -1,8 +1,13 @@
 import Link from 'next/link'
 import { notFound, redirect } from 'next/navigation'
-import { appseaIdentifierSchema, type ResearchCampaignReadModel } from '@appsea/contracts'
+import {
+  appseaIdentifierSchema,
+  type ResearchCampaignReadModel,
+  type WorkspaceSourceReadModel
+} from '@appsea/contracts'
 import { PostgresResearchCampaignRepository } from '@appsea/db/research-campaign'
 import { PostgresProductionCollectionWorkflowRepository } from '@appsea/db/production-collection-workflow'
+import { PostgresSourcePolicyRepository } from '@appsea/db/source-policy'
 import { readSession } from '../../../../server/auth-session'
 import { getDatabasePool } from '../../../../server/database'
 import { ResearchCampaignCreateForm, ResearchCampaignEditForm } from '../../campaign-actions'
@@ -39,6 +44,17 @@ export default async function ResearchCampaignsPage({
     session.user.userId,
     parsedWorkspaceId.data
   )
+  let sourceOptions: WorkspaceSourceReadModel[] = []
+  try {
+    sourceOptions = await new PostgresSourcePolicyRepository(pool).listForUser(
+      session.user.userId,
+      parsedWorkspaceId.data
+    )
+  } catch (error) {
+    console.error('AppSea campaign source picker read failed', {
+      name: error instanceof Error ? error.name : 'unknown'
+    })
+  }
   const runHistoryByCampaignId = new Map<
     string,
     Awaited<ReturnType<PostgresProductionCollectionWorkflowRepository['listForCampaignForUser']>>
@@ -137,6 +153,7 @@ export default async function ResearchCampaignsPage({
                     <ResearchCampaignEditForm
                       workspaceId={parsedWorkspaceId.data}
                       campaign={campaign}
+                      sourceOptions={sourceOptions}
                     />
                   ) : null}
                   <details>
@@ -160,7 +177,10 @@ export default async function ResearchCampaignsPage({
               visible instead of being treated as available coverage.
             </p>
           </div>
-          <ResearchCampaignCreateForm workspaceId={parsedWorkspaceId.data} />
+          <ResearchCampaignCreateForm
+            workspaceId={parsedWorkspaceId.data}
+            sourceOptions={sourceOptions}
+          />
         </section>
       ) : null}
     </main>

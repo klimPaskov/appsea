@@ -1,7 +1,92 @@
 'use client'
 
 import { useState } from 'react'
-import type { ResearchCampaignReadModel } from '@appsea/contracts'
+import type { ResearchCampaignReadModel, WorkspaceSourceReadModel } from '@appsea/contracts'
+
+type CampaignSourceOption = Pick<
+  WorkspaceSourceReadModel,
+  'sourceId' | 'displayName' | 'policyState' | 'collectible' | 'synthetic'
+>
+
+export function extractCampaignSourceIds(value: unknown): string[] {
+  if (typeof value !== 'object' || value === null || Array.isArray(value)) return []
+  const sourceIds = (value as Record<string, unknown>).sourceIds
+  if (!Array.isArray(sourceIds)) return []
+  return [
+    ...new Set(sourceIds.filter((sourceId): sourceId is string => typeof sourceId === 'string'))
+  ]
+}
+
+export function withCampaignSourceIds(value: unknown, sourceIds: string[]): unknown {
+  if (typeof value !== 'object' || value === null || Array.isArray(value)) {
+    throw new Error('Campaign configuration must be a JSON object')
+  }
+  return {
+    ...(value as Record<string, unknown>),
+    sourceIds: [...new Set(sourceIds)]
+  }
+}
+
+function sourceState(option: CampaignSourceOption): string {
+  if (option.synthetic) return 'Fixture only'
+  if (option.collectible) return 'Collectible'
+  if (option.policyState === 'pending_review') return 'Pending review'
+  if (option.policyState === 'expired') return 'Expired'
+  if (option.policyState === 'revoked') return 'Revoked'
+  return 'Not collectible'
+}
+
+function CampaignSourcePicker({
+  options,
+  selectedSourceIds,
+  disabled,
+  onChange
+}: {
+  options: CampaignSourceOption[]
+  selectedSourceIds: string[]
+  disabled: boolean
+  onChange: (sourceIds: string[]) => void
+}) {
+  const selected = new Set(selectedSourceIds)
+  return (
+    <fieldset className="campaign-source-picker">
+      <legend>Source allowlist</legend>
+      <p className="muted-note">
+        Drafts may name pending sources, but only a current approved policy can make a campaign
+        collectible.
+      </p>
+      {options.length === 0 ? (
+        <p className="empty-state">The private source registry is temporarily unavailable.</p>
+      ) : (
+        <div className="campaign-source-options">
+          {options.map((option) => {
+            const checked = selected.has(option.sourceId)
+            return (
+              <label className="campaign-source-option" key={option.sourceId}>
+                <input
+                  type="checkbox"
+                  checked={checked}
+                  disabled={disabled}
+                  onChange={(event) => {
+                    const next = new Set(selected)
+                    if (event.target.checked) next.add(option.sourceId)
+                    else next.delete(option.sourceId)
+                    onChange([...next])
+                  }}
+                />
+                <span>
+                  <strong>{option.displayName}</strong>
+                  <small>{option.sourceId}</small>
+                </span>
+                <em>{sourceState(option)}</em>
+              </label>
+            )
+          })}
+        </div>
+      )}
+    </fieldset>
+  )
+}
 
 const initialConfiguration = {
   schemaVersion: 'campaign-v1',
@@ -26,11 +111,20 @@ const initialBudget = {
   maxActivityAttempts: 3
 }
 
-export function ResearchCampaignCreateForm({ workspaceId }: { workspaceId: string }) {
+export function ResearchCampaignCreateForm({
+  workspaceId,
+  sourceOptions
+}: {
+  workspaceId: string
+  sourceOptions: CampaignSourceOption[]
+}) {
   const [campaignId, setCampaignId] = useState('campaign-new')
   const [name, setName] = useState('New research campaign')
   const [purpose, setPurpose] = useState('opportunity-research')
   const [configuration, setConfiguration] = useState(JSON.stringify(initialConfiguration, null, 2))
+  const [selectedSourceIds, setSelectedSourceIds] = useState(
+    extractCampaignSourceIds(initialConfiguration)
+  )
   const [budget, setBudget] = useState(JSON.stringify(initialBudget, null, 2))
   const [status, setStatus] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -43,6 +137,7 @@ export function ResearchCampaignCreateForm({ workspaceId }: { workspaceId: strin
     try {
       const parsedConfiguration = JSON.parse(configuration) as unknown
       const parsedBudget = JSON.parse(budget) as unknown
+      const parsedWithSources = withCampaignSourceIds(parsedConfiguration, selectedSourceIds)
       const response = await fetch(`/api/workspaces/${workspaceId}/campaigns`, {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
@@ -50,7 +145,7 @@ export function ResearchCampaignCreateForm({ workspaceId }: { workspaceId: strin
           campaignId,
           name,
           purpose,
-          configuration: parsedConfiguration,
+          configuration: parsedWithSources,
           budget: parsedBudget
         })
       })
@@ -81,11 +176,27 @@ export function ResearchCampaignCreateForm({ workspaceId }: { workspaceId: strin
           <input value={purpose} onChange={(event) => setPurpose(event.target.value)} />
         </label>
       </div>
+      <CampaignSourcePicker
+        options={sourceOptions}
+        selectedSourceIds={selectedSourceIds}
+        disabled={pending}
+        onChange={setSelectedSourceIds}
+      />
       <label className="seed-json-label">
         Campaign configuration JSON
         <textarea
           value={configuration}
-          onChange={(event) => setConfiguration(event.target.value)}
+          onChange={(event) => {
+            const nextConfiguration = event.target.value
+            setConfiguration(nextConfiguration)
+            try {
+              setSelectedSourceIds(
+                extractCampaignSourceIds(JSON.parse(nextConfiguration) as unknown)
+              )
+            } catch {
+              // The server reports malformed JSON after submit; keep the draft editable meanwhile.
+            }
+          }}
           rows={18}
         />
       </label>
@@ -104,15 +215,20 @@ export function ResearchCampaignCreateForm({ workspaceId }: { workspaceId: strin
 
 export function ResearchCampaignEditForm({
   workspaceId,
-  campaign
+  campaign,
+  sourceOptions
 }: {
   workspaceId: string
   campaign: ResearchCampaignReadModel
+  sourceOptions: CampaignSourceOption[]
 }) {
   const [name, setName] = useState(campaign.name)
   const [purpose, setPurpose] = useState(campaign.purpose)
   const [configuration, setConfiguration] = useState(
     JSON.stringify(campaign.configuration, null, 2)
+  )
+  const [selectedSourceIds, setSelectedSourceIds] = useState(
+    extractCampaignSourceIds(campaign.configuration)
   )
   const [budget, setBudget] = useState(JSON.stringify(campaign.budget, null, 2))
   const [status, setStatus] = useState<string | null>(null)
@@ -132,7 +248,10 @@ export function ResearchCampaignEditForm({
           body: JSON.stringify({
             name,
             purpose,
-            configuration: JSON.parse(configuration) as unknown,
+            configuration: withCampaignSourceIds(
+              JSON.parse(configuration) as unknown,
+              selectedSourceIds
+            ),
             budget: JSON.parse(budget) as unknown
           })
         }
@@ -185,11 +304,27 @@ export function ResearchCampaignEditForm({
             <input value={purpose} onChange={(event) => setPurpose(event.target.value)} />
           </label>
         </div>
+        <CampaignSourcePicker
+          options={sourceOptions}
+          selectedSourceIds={selectedSourceIds}
+          disabled={pending}
+          onChange={setSelectedSourceIds}
+        />
         <label className="seed-json-label">
           Campaign configuration JSON
           <textarea
             value={configuration}
-            onChange={(event) => setConfiguration(event.target.value)}
+            onChange={(event) => {
+              const nextConfiguration = event.target.value
+              setConfiguration(nextConfiguration)
+              try {
+                setSelectedSourceIds(
+                  extractCampaignSourceIds(JSON.parse(nextConfiguration) as unknown)
+                )
+              } catch {
+                // The server reports malformed JSON after submit; keep the draft editable meanwhile.
+              }
+            }}
             rows={18}
           />
         </label>

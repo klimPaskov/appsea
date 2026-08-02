@@ -400,18 +400,19 @@ def campaigns_screen(width: int, height: int, mobile: bool) -> str:
             content += text(margin, row_y + 82, 'Waiting for approved source policy before collection.', 12, 400, MUTED)
         content += line(margin, row_y + row_height, width - margin, row_y + row_height)
     form_y = list_y + 20 + row_height * len(rows) + (34 if mobile else 46)
-    form_height = 136 if mobile else 118
+    form_height = 146 if mobile else 136
     content += rect(margin, form_y, width - margin * 2, form_height, SURFACE, 6, LINE)
     content += text(margin + 18, form_y + 28, 'CREATE A DRAFT CAMPAIGN', 10, 700, MUTED, letter=1.0)
     content += text(margin + 18, form_y + 53, 'New drafts never activate a connector.', 13, 400, '#41444a')
+    content += text(margin + 18, form_y + 72, 'Source allowlist  ·  policy state stays visible', 11, 400, MUTED)
     if mobile:
-        content += rect(margin + 18, form_y + 72, width - margin * 2 - 36, 32, PAPER, 5, LINE)
-        content += text(margin + 30, form_y + 93, 'campaign-name', 12, 400, MUTED)
+        content += rect(margin + 18, form_y + 90, width - margin * 2 - 36, 32, PAPER, 5, LINE)
+        content += text(margin + 30, form_y + 111, 'campaign-name', 12, 400, MUTED)
     else:
-        content += rect(margin + 18, form_y + 72, 230, 32, PAPER, 5, LINE)
-        content += text(margin + 30, form_y + 93, 'campaign-name', 12, 400, MUTED)
-        content += rect(margin + 262, form_y + 72, 124, 32, INK, 5)
-        content += text(margin + 324, form_y + 93, 'Save draft', 11, 650, '#ffffff', 'middle')
+        content += rect(margin + 18, form_y + 90, 230, 32, PAPER, 5, LINE)
+        content += text(margin + 30, form_y + 111, 'campaign-name', 12, 400, MUTED)
+        content += rect(margin + 262, form_y + 90, 124, 32, INK, 5)
+        content += text(margin + 324, form_y + 111, 'Save draft', 11, 650, '#ffffff', 'middle')
     return shell(width, height, content, mobile)
 
 

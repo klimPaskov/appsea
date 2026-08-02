@@ -137,3 +137,4 @@
 - [`status/production-connector-registry-runner-completion-report-2026-08-02.md`](status/production-connector-registry-runner-completion-report-2026-08-02.md)
 - [`status/complaint-analysis-correction-completion-report-2026-08-02.md`](status/complaint-analysis-correction-completion-report-2026-08-02.md)
 - [`status/complaint-correction-recompute-completion-report-2026-08-02.md`](status/complaint-correction-recompute-completion-report-2026-08-02.md)
+- [`status/research-campaign-source-picker-completion-report-2026-08-02.md`](status/research-campaign-source-picker-completion-report-2026-08-02.md)

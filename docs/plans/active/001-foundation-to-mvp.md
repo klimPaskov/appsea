@@ -201,7 +201,9 @@ source payloads, and seed content. Migration `0055` records the highest
 bounded Temporal activity attempt on the run without changing input idempotency;
 `0056` now supplies bounded attempt timing and heartbeat history. Periodic
 deployment alerting, deployed scheduler ownership, and production Temporal
-remain open; repository-level campaign refresh dispatch is implemented.
+remain open; repository-level campaign refresh dispatch is implemented. Draft
+campaign forms now select from the private source registry while retaining
+visible pending-policy states; multi-source orchestration remains open.
 
 The source coverage tranche adds a strict `workspaceSourceReadModel` and an
 authenticated read-only registry at `/workspace/:workspaceId/sources` plus
