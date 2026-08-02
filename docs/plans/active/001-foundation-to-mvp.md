@@ -142,11 +142,13 @@ editor/owner correction history for derived complaint analysis. The correction
 function keeps source evidence/provenance immutable, invalidates active
 analysis/opportunity projections, and requires an explicit new reviewed
 analysis before stale report/plan outputs can reappear. The private evidence
-view exposes a compact JSON correction editor; the next analysis input carries
-the corrected snapshot. Migration `0062_correction_recompute_jobs.sql` extends
-the existing forced-RLS repair queue with a deferred correction trigger; each
-affected opportunity receives one deterministic re-analysis request, while
-missing or withdrawn seeds remain blocked. A field-by-field form remains open.
+view now exposes field-level controls for the derived snapshot and entity
+references; source provenance and entity evidence basis remain read-only. The
+next analysis input carries the corrected snapshot. Migration
+`0062_correction_recompute_jobs.sql` extends the existing forced-RLS repair
+queue with a deferred correction trigger; each affected opportunity receives
+one deterministic re-analysis request, while missing or withdrawn seeds remain
+blocked. A complete competitor feature matrix remains open.
 
 Migration `0054_source_policy_review_integrity.sql` binds new source-policy
 approvals to a lowercase reviewer identity, an independent review role, and an

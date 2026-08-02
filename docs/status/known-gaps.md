@@ -51,9 +51,10 @@ research. Migration `0059` adds a policy-gated, human-reviewable observation
 boundary that retains source-item/evidence identifiers per competitive claim;
 no approved competitor-purpose source is connected yet, so production research
 remains `reviewed-seed-only` until confirmed non-synthetic observations exist.
-Correction editing is intentionally a compact derived-field JSON boundary;
-full field-by-field editing and a complete competitor feature matrix remain
-open.
+The private correction editor now exposes field-level controls for the derived
+interpretation and entity references while retaining evidence basis, source
+provenance, policy flags, and derivation metadata as read-only. A complete
+competitor feature matrix remains open.
 
 Migration `0061_complaint_analysis_corrections.sql` now closes the first part
 of that gap: an editor/owner can submit a strict derived-only correction from
@@ -63,8 +64,8 @@ analysis/opportunity projections are invalidated so stale reports and plans
 are hidden. Migration `0062_correction_recompute_jobs.sql` extends the existing
 forced-RLS repair queue with a deferred correction trigger. Each affected
 opportunity gets one deterministic re-analysis request; missing or withdrawn
-seeds remain blocked rather than bypassing review. Full corrected-field forms
-and the competitor feature matrix remain open.
+seeds remain blocked rather than bypassing review. The competitor feature
+matrix remains open.
 
 ## Infrastructure
 

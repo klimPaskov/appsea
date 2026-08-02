@@ -112,8 +112,8 @@ hashes, active analysis/opportunity invalidation, and a deferred correction
 trigger that queues one deterministic repair per affected opportunity. Source
 evidence/provenance remains immutable; stale report/plan reads are hidden until
 reviewed re-analysis; the persisted corrected snapshot feeds that next
-artifact. The editor is compact JSON, and missing or unapproved seeds leave the
-repair visibly blocked.
+artifact. Editor has field controls; evidence basis is read-only.
+Missing or unapproved seeds block repair.
 
 ## Next production tranche
 

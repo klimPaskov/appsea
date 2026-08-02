@@ -128,10 +128,11 @@ fixture-only and never displays production rows.
 ## Correcting derived complaint analysis
 
 An owner or editor can correct a complaint's derived interpretation from the
-private production evidence view. The correction payload is strict JSON and
-may contain only fields from `complaintAnalysisCorrectionSchema`; source text,
-source identifiers, capture/publish times, policy metadata, redaction state,
-and provenance are not editable.
+private production evidence view. The UI uses field-level controls, while the
+request remains a strict object validated by `complaintAnalysisCorrectionSchema`;
+source text, source identifiers, capture/publish times, policy metadata,
+redaction state, provenance, and the stored evidence basis for entity claims
+are not editable.
 
 The repository rebuilds and validates the complete analysis snapshot, then
 calls `appsea.apply_complaint_analysis_correction` in the authenticated
