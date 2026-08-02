@@ -24,6 +24,18 @@ source/policy identifiers, counters, and timestamps. The status page links a
 completed run to the existing collection evidence read; hashes, actor details,
 and source payloads remain outside the read model.
 
+After collection, the same page offers an explicit reviewed-analysis handoff
+for owner/editor members. The browser submits only a new analysis identifier,
+the completed collection identifier, an approved seed-review identifier, a
+timestamp, and an idempotency key. The authenticated route rechecks the
+workspace, collection, seed approval, policy lineage, and analysis admission
+before starting `production-analysis-v2`. The analysis-status API/page maps
+Temporal or the durable PostgreSQL projection to state, checkpoint, bounded
+attempts, availability, failure summary, and timestamps; workflow hashes,
+object references, and source payloads are never part of this read contract.
+The optional workflow identifier is validated against the workspace prefix
+before either status source is queried.
+
 1. An authorized client submits a bounded, hashed workflow request; the web
    boundary binds the authenticated user as the requesting principal, then
    migration `0038` verifies the active private non-fixture workspace and

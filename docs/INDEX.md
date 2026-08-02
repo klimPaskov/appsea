@@ -124,3 +124,4 @@
 - [`status/research-campaign-configuration-completion-report-2026-08-01.md`](status/research-campaign-configuration-completion-report-2026-08-01.md)
 - [`status/research-campaign-run-completion-report-2026-08-02.md`](status/research-campaign-run-completion-report-2026-08-02.md)
 - [`status/research-campaign-run-history-completion-report-2026-08-02.md`](status/research-campaign-run-history-completion-report-2026-08-02.md)
+- [`status/production-analysis-launch-completion-report-2026-08-02.md`](status/production-analysis-launch-completion-report-2026-08-02.md)

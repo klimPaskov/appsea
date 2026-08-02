@@ -152,7 +152,12 @@ the existing idempotent admission before starting Temporal. Multi-source
 orchestration, scheduling, and campaign edit/delete remain open. The private
 campaign surface now lists the latest 100 production workflow projections and
 links completed runs to evidence inspection without exposing workflow hashes
-or raw source payloads.
+or raw source payloads. Owners/editors can now choose an approved seed on the
+collection page and launch an explicit downstream analysis. The linked private
+status page/API reconciles safe Temporal state with a PostgreSQL projection,
+validates workflow workspace prefixes, and excludes hashes, object references,
+source payloads, and seed content. Activity attempts remain a bounded
+projection placeholder until the run table records durable attempt history.
 
 ### 2. Durable workflows
 
@@ -194,6 +199,10 @@ Implemented:
   consumes/releases the reservation with run persistence; actor identity is
   immutable, owner/editor membership is checked at insert, and consumed or
   released digests replay without another slot
+- private reviewed-analysis launch action plus status page/API: the collection
+  page offers approved seed reviews only to owner/editor members; the status
+  contract is strict, workflow-prefix bound, and reconciles Temporal with the
+  authenticated PostgreSQL projection without exposing hashes or object refs
 - the production runner acquires a digest-only source lease before the fetch,
   supplies its immutable observed timestamp to complaint/quota provenance, and
   passes the lease into a same-transaction persistence assertion; the lease is

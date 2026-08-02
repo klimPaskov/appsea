@@ -1,10 +1,12 @@
 import Link from 'next/link'
 import { notFound, redirect } from 'next/navigation'
 import { appseaIdentifierSchema } from '@appsea/contracts'
+import { PostgresOpportunitySeedReviewRepository } from '@appsea/db/opportunity-seed-review'
 import { PostgresProductionCollectionRepository } from '@appsea/db/production-collection'
 import { getDatabasePool } from '../../../../../server/database'
 import { readSession } from '../../../../../server/auth-session'
 import { ProductionComplaintReviewActions } from '../../../production-complaint-review-actions'
+import { ProductionAnalysisStartAction } from '../../../production-analysis-start-action'
 
 export const dynamic = 'force-dynamic'
 
@@ -23,10 +25,31 @@ export default async function ProductionCollectionPage({
     (candidate) => candidate.workspaceId === parsedWorkspaceId.data
   )
   if (!workspace) notFound()
-  const collection = await new PostgresProductionCollectionRepository(
-    getDatabasePool()
-  ).readForUser(session.user.userId, parsedWorkspaceId.data, parsedRunId.data)
+  const pool = getDatabasePool()
+  const collection = await new PostgresProductionCollectionRepository(pool).readForUser(
+    session.user.userId,
+    parsedWorkspaceId.data,
+    parsedRunId.data
+  )
   if (!collection) notFound()
+  const canStartAnalysis =
+    !workspace.fixtureOnly &&
+    workspace.visibility === 'private' &&
+    (workspace.role === 'owner' || workspace.role === 'editor')
+  const approvedSeeds = canStartAnalysis
+    ? (
+        await new PostgresOpportunitySeedReviewRepository(pool).listForUser(
+          session.user.userId,
+          parsedWorkspaceId.data
+        )
+      )
+        .filter((review) => review.reviewState === 'approved')
+        .map((review) => ({
+          seedReviewId: review.seedReviewId,
+          name: review.seed.name,
+          slug: review.seed.slug
+        }))
+    : []
 
   return (
     <main className="workspace-page">
@@ -137,10 +160,21 @@ export default async function ProductionCollectionPage({
         <div className="section-intro">
           <h2 id="next-stage-heading">Next stage</h2>
           <p>
-            This page is a collection checkpoint. Clustering, competitor research, scoring, reports,
-            and coding plans are separate reviewed stages.
+            Analysis uses only confirmed evidence and an approved opportunity seed. It produces the
+            private opportunity, report, and coding plan as separate governed outputs.
           </p>
         </div>
+        {canStartAnalysis ? (
+          <ProductionAnalysisStartAction
+            workspaceId={parsedWorkspaceId.data}
+            collectionRunId={parsedRunId.data}
+            approvedSeeds={approvedSeeds}
+          />
+        ) : (
+          <p className="muted-note">
+            An owner or editor can start reviewed analysis after confirming the retained evidence.
+          </p>
+        )}
       </section>
     </main>
   )

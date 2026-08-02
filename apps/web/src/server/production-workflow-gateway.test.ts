@@ -4,6 +4,7 @@ import {
   canReadProductionWorkflow,
   canStartProductionWorkflow,
   parseProductionWorkflowStartRequest,
+  productionAnalysisWorkflowBelongsToWorkspace,
   productionWorkflowBelongsToWorkspace
 } from './production-workflow-gateway'
 
@@ -113,5 +114,20 @@ describe('production workflow web gateway helpers', () => {
         'workspace:private:team'
       )
     ).toBe(true)
+  })
+
+  it('binds analysis status reads to the workspace encoded in the analysis workflow ID', () => {
+    expect(
+      productionAnalysisWorkflowBelongsToWorkspace(
+        'workflow:analysis:workspace:private:abcdef0123456789abcdef0123456789',
+        'workspace:private'
+      )
+    ).toBe(true)
+    expect(
+      productionAnalysisWorkflowBelongsToWorkspace(
+        'workflow:production:workspace:private:abcdef0123456789abcdef0123456789',
+        'workspace:private'
+      )
+    ).toBe(false)
   })
 })

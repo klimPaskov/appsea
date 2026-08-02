@@ -23,7 +23,7 @@
 - Codex helper agents: 11 bounded agents
 - Project memory: implemented and validated
 - Documentation system: implemented and linked
-- UI references: eighteen deterministic sparse desktop/mobile reference
+- UI references: twenty deterministic sparse desktop/mobile reference
   sources; raster export awaits the local `cairosvg` dependency
 - Real source connectors: CFPB connector boundary and policy metadata implemented, disabled pending legal/privacy/security approval; migrations `0027` and `0054` add operator-only draft/approval evidence with canonical reviewer identity and independence attestation, and the production collection checkpoint persists policy-bound non-synthetic source/evidence/complaint lineage when a reviewed version is explicitly activated. The direct CFPB command now uses migration `0051`'s worker-principal admission branch and cannot bypass the bounded production ingress ledger; no source is activated in this repository
 - Production database deployment: not provisioned; the schema, repository, migrations, roles, RLS, and local/CI proof are implemented
@@ -71,6 +71,16 @@ The campaign page and private API also expose the latest 100 production run
 projections with safe state/checkpoint/counter/timestamp fields. A status page
 links completed runs to the existing evidence and coverage inspection route;
 idempotency hashes and raw source payloads remain excluded.
+
+The collection page now exposes a reviewed-seed-only analysis start action for
+owner/editor members. The private analysis-status page and API project only
+safe Temporal/PostgreSQL state, checkpoint, bounded attempts, availability,
+failure summary, identifiers, and timestamps. Workflow-prefix validation and
+strict contracts prevent hashes, object references, source payloads, and seed
+content from crossing the read boundary. The PostgreSQL projection currently
+reports `0` attempts for queued/running rows because the existing run table
+does not persist activity-attempt history; richer attempt telemetry remains an
+operational follow-up.
 
 `pnpm analysis:sample` produces a visibly `testOnly` production-shaped CFPB
 artifact, report, deterministic score, and generic coding package under

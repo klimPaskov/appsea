@@ -46,7 +46,21 @@ export function productionWorkflowBelongsToWorkspace(
   workflowId: string,
   workspaceId: string
 ): boolean {
-  const prefix = 'workflow:production:'
+  return workflowBelongsToWorkspaceWithPrefix(workflowId, workspaceId, 'workflow:production:')
+}
+
+export function productionAnalysisWorkflowBelongsToWorkspace(
+  workflowId: string,
+  workspaceId: string
+): boolean {
+  return workflowBelongsToWorkspaceWithPrefix(workflowId, workspaceId, 'workflow:analysis:')
+}
+
+function workflowBelongsToWorkspaceWithPrefix(
+  workflowId: string,
+  workspaceId: string,
+  prefix: string
+): boolean {
   if (!workflowId.startsWith(prefix)) return false
   const remainder = workflowId.slice(prefix.length)
   const separator = remainder.lastIndexOf(':')

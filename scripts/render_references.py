@@ -444,6 +444,42 @@ def campaign_status_screen(width: int, height: int, mobile: bool) -> str:
     return shell(width, height, content, mobile)
 
 
+def analysis_status_screen(width: int, height: int, mobile: bool) -> str:
+    margin = 24 if mobile else 220
+    top = 112 if mobile else 132
+    title_size = 40 if mobile else 58
+    content = text(margin, top, 'Private research workspace', 10, 700, MUTED, letter=1.1)
+    content += text(margin, top + 54, 'Analysis status', title_size, 650, INK, letter=-2.5)
+    content += text(margin, top + (88 if mobile else 100), 'Reviewed evidence  /  opportunity package', 14, 400, MUTED)
+    status_y = top + (148 if mobile else 160)
+    content += text(width - margin, status_y, 'RUNNING', 11, 700, INK, 'end', 1.0)
+    content += line(margin, status_y + 24, width - margin, status_y + 24, INK)
+    rows = [
+        ('ANALYSIS RUN', 'analysis:billing'),
+        ('COLLECTION RUN', 'run:billing'),
+        ('CHECKPOINT', 'persisting'),
+        ('ACTIVITY ATTEMPTS', '1'),
+        ('AVAILABILITY', 'pending'),
+    ]
+    row_height = 54 if mobile else 48
+    for index, (label, value) in enumerate(rows):
+        row_y = status_y + 24 + index * row_height
+        content += text(margin, row_y + 30, label, 10, 700, MUTED, letter=1.0)
+        content += text(width - margin, row_y + 30, value, 14, 600, INK, 'end')
+        content += line(margin, row_y + row_height, width - margin, row_y + row_height)
+    action_y = status_y + 24 + row_height * len(rows) + (38 if mobile else 46)
+    content += multiline(
+        margin,
+        action_y,
+        'Refresh this private projection while the worker builds the governed report and coding plan.',
+        13 if mobile else 14,
+        44 if mobile else 74,
+        22,
+        fill=MUTED,
+    )
+    return shell(width, height, content, mobile)
+
+
 SCREENS = {
     'leaderboard': leaderboard,
     'opportunity': opportunity_screen,
@@ -453,7 +489,8 @@ SCREENS = {
     'security': security_screen,
     'seed-reviews': seed_reviews_screen,
     'campaigns': campaigns_screen,
-    'campaign-status': campaign_status_screen
+    'campaign-status': campaign_status_screen,
+    'analysis-status': analysis_status_screen
 }
 
 

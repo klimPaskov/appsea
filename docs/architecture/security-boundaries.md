@@ -60,6 +60,13 @@ for that pre-context authorization lookup.
   production rows, and omits idempotency digests, input hashes, actor details,
   and source payloads. The status page can link to evidence only after a
   completed run, preserving the collection policy/display gate.
+- The reviewed analysis handoff has a separate safe status projection. The
+  owner/editor start action sends only identifiers and an idempotency envelope;
+  the status API/page validates any workflow identifier against the workspace
+  prefix, reads Temporal or the authenticated PostgreSQL fallback, and returns
+  only state, checkpoint, bounded attempts, availability, identifiers,
+  failure summary, and timestamps. Hashes, object references, source payloads,
+  and seed content are excluded by strict contracts.
 - Migration `0032` makes complaint curation an explicit workspace boundary:
   only active workspace editors and owners can transition an active complaint
   observation from `unreviewed` to `confirmed`/`rejected` or from `confirmed`

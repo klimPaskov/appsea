@@ -709,6 +709,42 @@ a:focus-visible {
   font-size: 12px;
 }
 
+.production-analysis-start {
+  display: grid;
+  gap: 12px;
+  max-width: 560px;
+  margin-top: 22px;
+}
+
+.production-analysis-start label {
+  display: grid;
+  gap: 8px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.production-analysis-start select {
+  min-height: 40px;
+  padding: 0 10px;
+  border: 1px solid var(--line);
+  border-radius: 5px;
+  background: var(--surface);
+  color: var(--ink);
+  font: inherit;
+  letter-spacing: normal;
+  text-transform: none;
+}
+
+.production-analysis-start .quiet-button {
+  width: max-content;
+  min-height: 38px;
+  padding: 0 12px;
+  font-size: 12px;
+}
+
 .seed-review-create {
   display: grid;
   gap: 18px;

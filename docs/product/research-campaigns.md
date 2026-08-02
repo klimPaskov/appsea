@@ -77,3 +77,21 @@ campaign page links each run to the private workflow-status page
 `/workspace/:workspaceId/research/workflows/:workflowId`; completed runs also
 link to the existing evidence and coverage page at
 `/workspace/:workspaceId/research/:runId`.
+
+## Reviewed analysis handoff
+
+The collection page is also the explicit boundary between collection and
+analysis. Owners and editors can start analysis only by selecting an approved
+workspace seed review. The server validates that review, reconstructs the
+input from the completed collection, and sends only identifiers and immutable
+digests to `production-analysis-v2`; it never treats fixture content as live
+research or lets a browser supply source payloads.
+
+The response links to
+`/workspace/:workspaceId/research/analysis/:analysisRunId`. That page and
+`GET /api/workspaces/:workspaceId/analysis/:analysisRunId/status` expose a
+workspace-bound, no-store status projection with safe checkpoints, bounded
+attempts, availability, failure summaries, and timestamps. Temporal is the
+fresh path and PostgreSQL is the durable fallback. Invalid or foreign workflow
+identifiers fail closed. The completed package remains behind the existing
+private opportunity/report/plan approval boundaries.

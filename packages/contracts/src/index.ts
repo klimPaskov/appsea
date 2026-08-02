@@ -1683,6 +1683,23 @@ export const productionAnalysisAvailabilitySchema = z.enum([
   'pending'
 ])
 
+export const productionAnalysisRunStateSchema = z.enum([
+  'queued',
+  'running',
+  'completed',
+  'partial',
+  'failed',
+  'canceled'
+])
+
+export const productionAnalysisFailureCodeSchema = z.enum([
+  'analysis_input_invalid',
+  'analysis_policy_denied',
+  'analysis_budget_exceeded',
+  'analysis_activity_failed',
+  'analysis_reconciliation_required'
+])
+
 export const productionAnalysisPersistenceInputSchema = z
   .object({
     workspaceId: appseaIdentifierSchema,
@@ -2003,6 +2020,25 @@ export const workflowJobCheckpointSchema = z.enum([
   'canceled',
   'budget_rejected'
 ])
+
+/** Safe private status projection for an asynchronous production analysis. */
+export const productionAnalysisStatusReadModelSchema = z
+  .object({
+    analysisRunId: appseaIdentifierSchema,
+    collectionRunId: appseaIdentifierSchema.nullable(),
+    state: productionAnalysisRunStateSchema,
+    checkpoint: workflowJobCheckpointSchema,
+    activityAttempts: z.number().int().nonnegative().max(10),
+    availabilityState: productionAnalysisAvailabilitySchema,
+    opportunityId: appseaIdentifierSchema.nullable(),
+    opportunitySlug: opportunitySlugSchema.nullable(),
+    failureCode: productionAnalysisFailureCodeSchema.nullable(),
+    failureSummary: z.string().min(1).max(500).nullable(),
+    requestedAt: z.string().datetime().nullable(),
+    startedAt: z.string().datetime().nullable(),
+    completedAt: z.string().datetime().nullable()
+  })
+  .strict()
 
 export const workflowFailureCodeSchema = z.enum([
   'source_item_budget_exceeded',
@@ -2398,13 +2434,7 @@ export const productionAnalysisWorkflowFailedResultSchema = z
     state: z.literal('failed'),
     workflowId: workflowIdSchema,
     temporalFirstExecutionRunId: z.string().uuid(),
-    failureCode: z.enum([
-      'analysis_input_invalid',
-      'analysis_policy_denied',
-      'analysis_budget_exceeded',
-      'analysis_activity_failed',
-      'analysis_reconciliation_required'
-    ]),
+    failureCode: productionAnalysisFailureCodeSchema,
     failureSummary: z.string().min(1).max(500)
   })
   .strict()
@@ -3494,6 +3524,11 @@ export type ProductionAnalysisSnapshot = z.infer<typeof productionAnalysisSnapsh
 export type ProductionAnalysisResult = z.infer<typeof productionAnalysisResultSchema>
 export type ProductionAnalysisGovernance = z.infer<typeof productionAnalysisGovernanceSchema>
 export type ProductionAnalysisReadModel = z.infer<typeof productionAnalysisReadModelSchema>
+export type ProductionAnalysisRunState = z.infer<typeof productionAnalysisRunStateSchema>
+export type ProductionAnalysisFailureCode = z.infer<typeof productionAnalysisFailureCodeSchema>
+export type ProductionAnalysisStatusReadModel = z.infer<
+  typeof productionAnalysisStatusReadModelSchema
+>
 export type ProductionAnalysisHandoffState = z.infer<typeof productionAnalysisHandoffStateSchema>
 export type ProductionAnalysisHandoffFailureCode = z.infer<
   typeof productionAnalysisHandoffFailureCodeSchema

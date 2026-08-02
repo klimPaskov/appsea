@@ -28,6 +28,7 @@ import {
   opportunitySchema,
   productionAnalysisHandoffReadModelSchema,
   productionAnalysisGovernanceSchema,
+  productionAnalysisStatusReadModelSchema,
   productionCollectionRequestSchema,
   productionCollectionPersistenceInputSchema,
   productionCollectionResultSchema,
@@ -1421,6 +1422,32 @@ describe('contracts', () => {
       productionAnalysisHandoffReadModelSchema.safeParse({
         ...(parsed.success ? parsed.data : {}),
         idempotencyKey: 'raw-key-must-not-cross-the-status-boundary'
+      }).success
+    ).toBe(false)
+  })
+
+  it('keeps asynchronous analysis status free of workflow hashes and object references', () => {
+    const status = productionAnalysisStatusReadModelSchema.parse({
+      analysisRunId: 'analysis:one',
+      collectionRunId: 'run:one',
+      state: 'completed',
+      checkpoint: 'completed',
+      activityAttempts: 1,
+      availabilityState: 'active',
+      opportunityId: 'opportunity:one',
+      opportunitySlug: 'reviewed-opportunity',
+      failureCode: null,
+      failureSummary: null,
+      requestedAt: now,
+      startedAt: now,
+      completedAt: now
+    })
+    expect(status.opportunitySlug).toBe('reviewed-opportunity')
+    expect(
+      productionAnalysisStatusReadModelSchema.safeParse({
+        ...status,
+        inputHash: 'a'.repeat(64),
+        artifactObjectRef: { uri: 'appsea-object://private/workflow-artifact/hash' }
       }).success
     ).toBe(false)
   })

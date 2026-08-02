@@ -4,17 +4,18 @@ Version 5 combines the five dark desktop references with five matching mobile la
 
 ## Route map
 
-| Route                                                    | Desktop                                        | Mobile                                                | Purpose                        |
-| -------------------------------------------------------- | ---------------------------------------------- | ----------------------------------------------------- | ------------------------------ |
-| `/leaderboard`                                           | `design/references/desktop/leaderboard.png`    | `design/references/mobile/leaderboard.png`            | Ranked app opportunities only  |
-| `/opportunities/:slug`                                   | `design/references/desktop/opportunity.png`    | `design/references/mobile/opportunity.png`            | Focused opportunity summary    |
-| `/opportunities/:slug/complaints`                        | `design/references/desktop/complaints.png`     | `design/references/mobile/complaints.png`             | Curated complaint evidence     |
-| `/opportunities/:slug/competitors`                       | `design/references/desktop/competitors.png`    | `design/references/mobile/competitors.png`            | Competitor comparison          |
-| `/opportunities/:slug/plan`                              | `design/references/desktop/plan.png`           | `design/references/mobile/plan.png`                   | Coding-agent build plan        |
-| `/account/security`                                      | `design/references/desktop/security.png`       | `design/references/mobile/security.png`               | Private session review         |
-| `/workspace/:workspaceId/seed-reviews`                   | `design/references/source/seed-reviews.svg`    | `design/references/source/seed-reviews-mobile.svg`    | Private reviewed seed registry |
-| `/workspace/:workspaceId/campaigns`                      | `design/references/source/campaigns.svg`       | `design/references/source/campaigns-mobile.svg`       | Private campaign configuration |
-| `/workspace/:workspaceId/research/workflows/:workflowId` | `design/references/source/campaign-status.svg` | `design/references/source/campaign-status-mobile.svg` | Private collection status      |
+| Route                                                      | Desktop                                        | Mobile                                                | Purpose                        |
+| ---------------------------------------------------------- | ---------------------------------------------- | ----------------------------------------------------- | ------------------------------ |
+| `/leaderboard`                                             | `design/references/desktop/leaderboard.png`    | `design/references/mobile/leaderboard.png`            | Ranked app opportunities only  |
+| `/opportunities/:slug`                                     | `design/references/desktop/opportunity.png`    | `design/references/mobile/opportunity.png`            | Focused opportunity summary    |
+| `/opportunities/:slug/complaints`                          | `design/references/desktop/complaints.png`     | `design/references/mobile/complaints.png`             | Curated complaint evidence     |
+| `/opportunities/:slug/competitors`                         | `design/references/desktop/competitors.png`    | `design/references/mobile/competitors.png`            | Competitor comparison          |
+| `/opportunities/:slug/plan`                                | `design/references/desktop/plan.png`           | `design/references/mobile/plan.png`                   | Coding-agent build plan        |
+| `/account/security`                                        | `design/references/desktop/security.png`       | `design/references/mobile/security.png`               | Private session review         |
+| `/workspace/:workspaceId/seed-reviews`                     | `design/references/source/seed-reviews.svg`    | `design/references/source/seed-reviews-mobile.svg`    | Private reviewed seed registry |
+| `/workspace/:workspaceId/campaigns`                        | `design/references/source/campaigns.svg`       | `design/references/source/campaigns-mobile.svg`       | Private campaign configuration |
+| `/workspace/:workspaceId/research/workflows/:workflowId`   | `design/references/source/campaign-status.svg` | `design/references/source/campaign-status-mobile.svg` | Private collection status      |
+| `/workspace/:workspaceId/research/analysis/:analysisRunId` | `design/references/source/analysis-status.svg` | `design/references/source/analysis-status-mobile.svg` | Private analysis status        |
 
 Desktop references use 1440 × 1000. Normalized mobile references use 390 × 844. Original 853 × 1844 mobile exports are under `design/references/mobile/source/`.
 

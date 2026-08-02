@@ -67,6 +67,19 @@ source/policy identifiers, counters, and timestamps; completed runs link to
 the existing source evidence and coverage page. Idempotency hashes, raw source
 payloads, and caller secrets never appear in this history.
 
+After a completed private collection, an owner or editor can choose an approved
+seed review on the collection page and start the downstream analysis explicitly.
+The start request contains only the collection/analysis identifiers, approved
+seed identifier, timestamp, and idempotency envelope; the server reconstructs
+the analysis input from workspace-bound rows. The private analysis-status page
+at `/workspace/:workspaceId/research/analysis/:analysisRunId` reads a safe
+projection from Temporal when available and PostgreSQL when the workflow is
+temporarily unavailable. It exposes state, checkpoint, bounded attempt count,
+availability, identifiers, failure summary, and timestamps only. Workflow
+identifiers are accepted only when their workspace prefix matches the session,
+and hashes, object references, source payloads, and seed content never appear
+in the page or status API.
+
 Workspace members can inspect bounded cross-run operational cost accounting at
 `GET /api/workspaces/:workspaceId/costs`. The read model keeps currencies and
 cost types separate, reports exact micro-unit strings, defaults to a 30-day

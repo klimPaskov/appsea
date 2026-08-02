@@ -1,11 +1,13 @@
 import type { Pool, PoolClient, QueryResultRow } from 'pg'
 import {
+  appseaIdentifierSchema,
   objectReferenceSchema,
   productionAnalysisGovernanceSchema,
   productionAnalysisPersistenceInputSchema,
   productionAnalysisReadModelSchema,
   productionAnalysisResultSchema,
   productionAnalysisSnapshotSchema,
+  productionAnalysisStatusReadModelSchema,
   productionOpportunitySeedSchema,
   productionResearchArtifactSchema,
   type ObjectReference,
@@ -13,6 +15,7 @@ import {
   type ProductionAnalysisReadModel,
   type ProductionAnalysisResult,
   type ProductionAnalysisSnapshot,
+  type ProductionAnalysisStatusReadModel,
   type ProductionResearchArtifact,
   type WorkflowActor
 } from '@appsea/contracts'
@@ -66,6 +69,20 @@ interface AnalysisRunRow extends QueryResultRow {
   completed_at: Date | string | null
   invalidated_at: Date | string | null
   invalidation_reason: string | null
+}
+
+interface AnalysisStatusRow extends QueryResultRow {
+  analysis_run_id: string
+  collection_run_id: string
+  state: string
+  availability_state: string
+  opportunity_id: string | null
+  opportunity_slug: string | null
+  failure_code: string | null
+  failure_summary: string | null
+  requested_at: Date | string
+  started_at: Date | string
+  completed_at: Date | string | null
 }
 
 interface CollectionLineageRow extends QueryResultRow {
@@ -140,6 +157,43 @@ export class ProductionAnalysisLineageError extends Error {
 
 function iso(value: Date | string): string {
   return value instanceof Date ? value.toISOString() : new Date(value).toISOString()
+}
+
+function analysisCheckpointForState(
+  state: AnalysisStatusRow['state']
+): 'accepted' | 'persisting' | 'completed' | 'failed' | 'canceled' {
+  switch (state) {
+    case 'queued':
+      return 'accepted'
+    case 'completed':
+      return 'completed'
+    case 'failed':
+      return 'failed'
+    case 'canceled':
+      return 'canceled'
+    case 'running':
+    case 'partial':
+    default:
+      return 'persisting'
+  }
+}
+
+function mapAnalysisStatus(row: AnalysisStatusRow): ProductionAnalysisStatusReadModel {
+  return productionAnalysisStatusReadModelSchema.parse({
+    analysisRunId: row.analysis_run_id,
+    collectionRunId: row.collection_run_id,
+    state: row.state,
+    checkpoint: analysisCheckpointForState(row.state),
+    activityAttempts: row.state === 'completed' ? 1 : 0,
+    availabilityState: row.availability_state,
+    opportunityId: row.opportunity_id,
+    opportunitySlug: row.opportunity_slug,
+    failureCode: row.failure_code,
+    failureSummary: row.failure_summary,
+    requestedAt: iso(row.requested_at),
+    startedAt: iso(row.started_at),
+    completedAt: row.completed_at === null ? null : iso(row.completed_at)
+  })
 }
 
 function completionTime(input: ProductionAnalysisPersistenceInput): string {
@@ -1537,6 +1591,46 @@ export class PostgresProductionAnalysisRepository {
   ): Promise<ProductionAnalysisReadModel | undefined> {
     const row = await this.readRunRow(workspaceId, analysisRunId, userId)
     return row ? this.readModelFromRow(row) : undefined
+  }
+
+  /** Read only the durable analysis projection; hashes and object references stay private. */
+  async readStatusForUser(
+    userId: string,
+    workspaceId: string,
+    analysisRunId: string
+  ): Promise<ProductionAnalysisStatusReadModel | undefined> {
+    const parsedUserId = appseaIdentifierSchema.parse(userId)
+    const parsedWorkspaceId = appseaIdentifierSchema.parse(workspaceId)
+    const parsedAnalysisRunId = appseaIdentifierSchema.parse(analysisRunId)
+    return withAuthenticatedWorkspaceTransaction(
+      this.pool,
+      parsedUserId,
+      parsedWorkspaceId,
+      async (client) => {
+        const result = await client.query<AnalysisStatusRow>(
+          `SELECT analysis.analysis_run_id, analysis.collection_run_id,
+                  analysis.state, analysis.availability_state,
+                  analysis.opportunity_id, opportunity.slug AS opportunity_slug,
+                  analysis.failure_code, analysis.failure_summary,
+                  analysis.requested_at, analysis.started_at, analysis.completed_at
+             FROM appsea.production_analysis_runs analysis
+             LEFT JOIN appsea.opportunities opportunity
+               ON opportunity.workspace_id = analysis.workspace_id
+              AND opportunity.opportunity_id = analysis.opportunity_id
+             JOIN appsea.workspaces workspace
+               ON workspace.workspace_id = analysis.workspace_id
+            WHERE analysis.workspace_id = $1
+              AND analysis.analysis_run_id = $2
+              AND workspace.status = 'active'
+              AND workspace.visibility = 'private'
+              AND workspace.fixture_only = false`,
+          [parsedWorkspaceId, parsedAnalysisRunId]
+        )
+        const row = result.rows[0]
+        return row ? mapAnalysisStatus(row) : undefined
+      },
+      { readOnly: true }
+    )
   }
 
   async readLatestForOpportunityForUser(

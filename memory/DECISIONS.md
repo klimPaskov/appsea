@@ -55,28 +55,20 @@ review before production scheduling.
 
 ## 2026-07-24: Provider-neutral password recovery boundary
 
-Keep recovery in the global authentication boundary. Persist only a SHA-256
-reset-token hash plus an encrypted outbox copy protected by a deployment key;
-install latest-only active-token uniqueness and expose only narrow
-`SECURITY DEFINER` functions to the runtime role. The web request returns the
-same generic accepted response for known and unknown addresses and never calls
-an external provider synchronously. A bounded worker sends a fragment-only,
-HMAC-signed, idempotent delivery with redirect blocking and fixed retry codes.
-Production delivery stays kill-switched until verified identity/email policy,
-provider retention/DPA, key rotation, monitoring, and failure-drill evidence
-are approved.
+Keep recovery in the global authentication boundary with hash-only reset
+tokens, encrypted outbox material, latest-only uniqueness, narrow
+`SECURITY DEFINER` functions, generic web responses, and bounded idempotent
+worker delivery. Production delivery stays kill-switched until identity/email,
+provider DPA/retention, key rotation, monitoring, and failure evidence are
+approved.
 
 ## 2026-07-25: Existing-account workspace invitations
 
-Implement workspace invitations as a separate owner-scoped, provider-neutral
-outbox boundary. Store only a SHA-256 token hash in the invitation row and keep
-the opaque token in encrypted delivery material; use three-day expiry,
-pending-email uniqueness, bounded leases/retries, and identifier-only audit and
-outbox receipts. Require the owner password step-up for issue/revoke and require
-the accepting session's normalized email to match an existing AppSea account.
-Do not create accounts, verify email ownership, or grant owner role until the
-production identity/provider policy is reviewed. Keep both API and worker
-delivery kill-switched by default.
+Keep invitations owner-scoped and provider-neutral: store a hash-only token,
+encrypted delivery material, bounded expiry/retries, and identifier-only
+receipts. Require owner step-up and an existing account email match. Do not
+create accounts or verify ownership until identity/provider review; API and
+worker delivery remain kill-switched.
 
 ## 2026-07-25: Shared-workspace-safe account closure
 
@@ -311,10 +303,6 @@ server-clock `next_attempt_at`; claims use a 15-minute stale lease and failed
 rows retry after 60 seconds until eight attempts. Exhausted rows retain fixed
 failure metadata and cannot re-enter processing; completion remains idempotent.
 
-## 2026-08-01: Fence
-
-`0052` fences SQL mutations; external effects remain outside.
-
 ## 2026-08-01: Versioned complaint analysis snapshots
 
 `0053` stores derived analysis beside each complaint; unresolved entity types
@@ -355,3 +343,16 @@ Campaign history reuses the authenticated production workflow projection,
 bounded to 100 rows. It exposes state, checkpoint, source/policy IDs, counters,
 and timestamps only; hashes, actor details, and payloads stay private. Completed
 runs link to the existing policy-filtered evidence page.
+
+## 2026-08-02: Make reviewed analysis handoff explicit and safe
+
+Collection completion is not analysis. The private collection page
+offers owner/editor members only the approved seed reviews already scoped to
+their workspace and starts the existing production-analysis admission route.
+The status API/page validates any workflow identifier against its workspace
+prefix, and maps Temporal or PostgreSQL to a strict
+projection of state, checkpoint, bounded attempts, availability, identifiers,
+failure summary, and timestamps. Hashes, object references, source payloads,
+and seed content stay out of the read contract. The current run table does not
+persist activity-attempt history, so queued/running database fallback rows
+report zero attempts until a later migration adds that telemetry.

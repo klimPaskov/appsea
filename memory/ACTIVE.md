@@ -63,30 +63,12 @@ tokens. Source maintenance, auth retention, recovery, and invitation delivery
 renew during bounded passes, guard mutations, skip contention, and emit fixed
 lease-loss/release failures.
 
-Migration `0052_maintenance_scheduler_fencing.sql` adds a private,
-server-clock transaction fence for selected source, deletion, admission,
-retention, and delivery-state mutations. The scheduler passes its fence
-identity only in memory; PostgreSQL holds the per-scheduler advisory and
-lease-row locks through commit, and stale tokens fail closed. External
-source/provider/object-store effects and snapshot reconciliation remain outside
-the fence.
-
-Migration `0047_maintenance_scheduler_run_metrics.sql` adds
-maintenance-role-only record/list/purge functions. The wrapper records a
-generated run ID, owner/state, fixed failure code, bounded duration, and
-validated numeric counters, purges rows older than the configured retention
-window, and never persists lease tokens, source content, credentials, or raw
-exception messages. This improves durable operator telemetry but does not
-provide deployed scheduler ownership or alert routing. Migration `0048` adds the ledger time index and a
-membership-authorized private workspace cost summary that groups exact
-micro-unit totals by currency and cost type over a bounded period; it is
-operational accounting, not billing. Migration `0049` discovers committed
-source reservations without completed production results, exposes private
-member inspection at `/api/workspaces/:workspaceId/research/quota-reconciliation`,
-and permits only the standalone maintenance role to record an exact linked
-result or explicit no-result resolution. It never refunds quota or authorizes
-a re-fetch. The explicit re-collection path is separate and requires a
-completed matching tombstone.
+Scheduler leases and transaction fencing now protect selected maintenance SQL
+mutations; maintenance-run metrics, cost summaries, and quota-reconciliation
+cases are durable and private. External source/provider/object-store effects,
+deployed scheduler ownership, alert routing, and reconciliation resolution
+remain separate operations. Explicit re-collection still requires a completed
+matching tombstone.
 
 ## Validated commands
 
@@ -112,6 +94,16 @@ purpose, expiry, and optional seed review, then commits admission before
 Temporal. History exposes only state, checkpoint, counters, IDs, and times;
 hashes/payloads stay hidden. Multi-source, scheduling, source picker, live
 activation, and Docker PostgreSQL proof remain open; CFPB is disabled.
+
+The follow-on 2026-08-02 analysis tranche adds the missing reviewed handoff:
+owner/editor members choose an approved seed on the completed collection page,
+the existing analysis admission route starts `production-analysis-v2`, and a
+private status page/API reconciles a safe Temporal response with the durable
+PostgreSQL projection. Workflow prefixes are workspace-bound; hashes, object
+references, source payloads, and seed content stay outside the read contract.
+Queued/running DB rows currently report zero activity attempts because the
+existing run table has no attempt-history column. Automatic scheduling,
+production Temporal availability, and richer attempt telemetry remain open.
 
 ## Next production tranche
 

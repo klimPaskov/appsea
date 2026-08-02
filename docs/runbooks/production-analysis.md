@@ -92,6 +92,19 @@ The authenticated read route is:
 
 `GET /api/workspaces/:workspaceId/analysis/:analysisRunId`
 
+The private collection page provides the reviewed owner/editor handoff. It
+lists only approved seed reviews, starts the existing admission route, and
+links to the safe status view:
+
+`GET /api/workspaces/:workspaceId/analysis/:analysisRunId/status`
+
+`/workspace/:workspaceId/research/analysis/:analysisRunId` reads Temporal first
+when a validated workspace-bound workflow ID is present and falls back to the
+PostgreSQL status projection. It is a progress/readiness surface, not an
+artifact export: hashes, object references, source payloads, and seed content
+are intentionally absent. A completed status can link to the private
+opportunity package, whose report and plan approval gates still apply.
+
 Private opportunity pages prefer the latest active production analysis for a
 slug and otherwise retain the fixture read path. The public leaderboard remains
 fixture-only and never displays production rows.
