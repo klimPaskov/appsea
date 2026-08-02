@@ -25,6 +25,9 @@ export interface WorkerEvent {
   workspaceInvitationDeliveriesFailed?: number
   quotaReservationsExpired?: number
   quotaReservationsPurged?: number
+  sourceQuotaReconciliationOpenCases?: number
+  sourceQuotaReconciliationOldestAgeSeconds?: number
+  sourceQuotaReconciliationTruncated?: boolean
   productionWorkflowAdmissionsPurged?: number
   productionAnalysisAdmissionsPurged?: number
   sourceCollectionLeasesPurged?: number
@@ -147,6 +150,23 @@ export function emitWorkerEvent(event: WorkerEvent): void {
       : {}),
     ...(finiteInteger(event.quotaReservationsPurged) !== undefined
       ? { quotaReservationsPurged: finiteInteger(event.quotaReservationsPurged) }
+      : {}),
+    ...(finiteInteger(event.sourceQuotaReconciliationOpenCases) !== undefined
+      ? {
+          sourceQuotaReconciliationOpenCases: finiteInteger(
+            event.sourceQuotaReconciliationOpenCases
+          )
+        }
+      : {}),
+    ...(finiteInteger(event.sourceQuotaReconciliationOldestAgeSeconds) !== undefined
+      ? {
+          sourceQuotaReconciliationOldestAgeSeconds: finiteInteger(
+            event.sourceQuotaReconciliationOldestAgeSeconds
+          )
+        }
+      : {}),
+    ...(event.sourceQuotaReconciliationTruncated !== undefined
+      ? { sourceQuotaReconciliationTruncated: event.sourceQuotaReconciliationTruncated }
       : {}),
     ...(finiteInteger(event.productionWorkflowAdmissionsPurged) !== undefined
       ? {

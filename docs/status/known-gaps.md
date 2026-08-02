@@ -173,12 +173,16 @@ using exact micro-unit strings. Migration `0049` and the private
 `GET /api/workspaces/:workspaceId/research/quota-reconciliation` route now
 discover settled reservations without completed production results; the
 maintenance-only CLI records an exact linked-result or explicit no-result
-resolution without changing quota or re-fetching. Migration `0052` now fences
-selected SQL-only maintenance mutations with the server-clock lease identity;
-external source/provider/object-store effects and snapshot reconciliation remain
-outside that atomic boundary. Deployment still lacks a scheduler, alert
-ownership, provider pricing/billing controls, per-scheduler maintenance
-credentials, and a fresh Docker-backed recovery proof. The current
+resolution without changing quota or re-fetching. The repository now also
+provides `pnpm worker:source:quota:alert`, a lease-owned read-only bounded scan
+that emits fixed alert/incomplete/clear events and durable counters while
+keeping truncated coverage visible. Migration `0052` now fences selected
+SQL-only maintenance mutations with the server-clock lease identity; external
+source/provider/object-store effects and snapshot reconciliation remain outside
+that atomic boundary. Deployment still lacks scheduler process ownership,
+alert routing/incident response, provider pricing/billing controls,
+per-scheduler maintenance credentials, and a fresh Docker-backed recovery
+proof. The current
 `appsea_maintenance` coordinator is trusted across
 the four allowlisted names; production data-work role separation and optional
 per-scheduler isolation remain release gates.
@@ -309,8 +313,9 @@ are not one atomic transaction; production still needs lease-revocation drills,
 scheduler ownership, Temporal namespace authorization, and Docker-backed
 crash/retry evidence. A quota settled without
 a persisted result now creates a durable operator-reconciliation case; the
-worker does not release or re-fetch optimistically. Case alert ownership,
-incident response, and maintenance-role provisioning remain deployment work.
+worker does not release or re-fetch optimistically. The repository-level alert
+inspection is bounded and read-only; case alert routing, incident response,
+and maintenance-role provisioning remain deployment work.
 
 ## Models
 

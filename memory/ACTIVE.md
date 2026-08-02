@@ -47,12 +47,12 @@ Read models include linked report/plan approval states from PostgreSQL; the
 private opportunity mapper reflects later transitions without inferring state
 from immutable object payloads.
 
-Monitoring includes `/api/health/live`, `/api/health/ready`, and a secret-free
-30-second worker heartbeat. `pnpm production:preflight` now validates
-role-separated TLS database URLs, authenticated Temporal, signed object
+Monitoring includes health routes, a secret-free 30-second heartbeat, and a
+lease-owned quota-reconciliation alert scan. `pnpm production:preflight`
+validates role-separated TLS databases, authenticated Temporal, signed object
 storage, scheduler ownership, HTTPS origin, delivery switches, and proxy
-secret shape without network calls. Deployment topology, authorization, HA,
-retention, and failure drills remain open.
+secret shape without network calls. Deployment topology, HA, retention, alert
+routing, and failure drills remain open.
 
 Migration `0046`/`0052` leases and fences protect maintenance mutations;
 metrics, cost summaries, and quota cases are durable/private. The worker's
@@ -66,7 +66,7 @@ re-collection requires a completed matching tombstone.
 - PostgreSQL and Temporal integration are staged but Docker-blocked because the
   Docker Desktop Linux engine pipe is unavailable.
 
-- Maintenance loop tests pass; no deployed scheduler, Temporal, or source
+- Maintenance loop and quota-alert tests pass; no deployed scheduler, Temporal, or source
   activation claim.
 
 Migrations `0053` and `0054` added deterministic complaint
@@ -136,5 +136,5 @@ Missing or unapproved seeds block repair.
   and failure-drill approval.
 - Deletion retries and explicit one-record recollection exist; workspace/export
   purge, cloud storage, recomputation alerts, deployed scheduler ownership, and quota
-  case alert ownership remain open.
+  case alert routing remain open.
 - Windows/macOS release remains open.

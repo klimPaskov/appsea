@@ -21,6 +21,8 @@ import {
   sourceQuotaReconciliationCaseSchema,
   sourceQuotaReconciliationListQuerySchema,
   sourceQuotaReconciliationResolveInputSchema,
+  sourceQuotaReconciliationAlertInputSchema,
+  sourceQuotaReconciliationAlertResultSchema,
   complaintSchema,
   competitorFeatureMatrixEntrySchema,
   competitorSchema,
@@ -2205,5 +2207,56 @@ describe('contracts', () => {
       }).success
     ).toBe(false)
     expect(sourceQuotaReconciliationListQuerySchema.parse({})).toEqual({ limit: 50 })
+  })
+
+  it('bounds quota reconciliation alert inspection and coverage state', () => {
+    const input = {
+      observedAt: now,
+      maxWorkspaces: 20,
+      maxCasesPerWorkspace: 10,
+      alertAfterSeconds: 900
+    }
+    expect(sourceQuotaReconciliationAlertInputSchema.safeParse(input).success).toBe(true)
+    expect(
+      sourceQuotaReconciliationAlertInputSchema.safeParse({
+        ...input,
+        maxCasesPerWorkspace: 0
+      }).success
+    ).toBe(false)
+
+    const clear = {
+      observedAt: now,
+      alertAfterSeconds: 900,
+      workspacesScanned: 20,
+      openCases: 0,
+      oldestOpenCaseAgeSeconds: null,
+      alerted: false,
+      truncated: false,
+      state: 'clear' as const
+    }
+    expect(sourceQuotaReconciliationAlertResultSchema.safeParse(clear).success).toBe(true)
+    expect(
+      sourceQuotaReconciliationAlertResultSchema.safeParse({
+        ...clear,
+        truncated: true,
+        state: 'clear'
+      }).success
+    ).toBe(false)
+    expect(
+      sourceQuotaReconciliationAlertResultSchema.safeParse({
+        ...clear,
+        openCases: 1,
+        oldestOpenCaseAgeSeconds: 901,
+        alerted: true,
+        state: 'alert'
+      }).success
+    ).toBe(true)
+    expect(
+      sourceQuotaReconciliationAlertResultSchema.safeParse({
+        ...clear,
+        truncated: true,
+        state: 'incomplete'
+      }).success
+    ).toBe(true)
   })
 })

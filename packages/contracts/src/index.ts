@@ -3645,6 +3645,18 @@ const sourceQuotaReconciliationActorIdSchema = z
   .max(160)
   .regex(/^[a-zA-Z0-9][a-zA-Z0-9._:-]*$/)
 
+/** Bounds for the read-only scheduler alert inspection. */
+export const sourceQuotaReconciliationAlertLimits = {
+  maxWorkspaces: 10_000,
+  maxCasesPerWorkspace: 100,
+  maxOpenCases: 1_000_000,
+  maxAlertAfterSeconds: 31_536_000,
+  maxAgeSeconds: 315_360_000,
+  defaultMaxWorkspaces: 1_000,
+  defaultMaxCasesPerWorkspace: 100,
+  defaultAlertAfterSeconds: 900
+} as const
+
 export const sourceQuotaReconciliationListQuerySchema = z
   .object({
     limit: z.number().int().min(1).max(100).default(50)
@@ -3749,6 +3761,122 @@ export const sourceQuotaReconciliationResolveInputSchema = z
         path: ['linkedRunId'],
         message: 'A voided case cannot link a result'
       })
+    }
+  })
+  .strict()
+
+export const sourceQuotaReconciliationAlertInputSchema = z
+  .object({
+    observedAt: z.string().datetime(),
+    maxWorkspaces: z.number().int().min(1).max(sourceQuotaReconciliationAlertLimits.maxWorkspaces),
+    maxCasesPerWorkspace: z
+      .number()
+      .int()
+      .min(1)
+      .max(sourceQuotaReconciliationAlertLimits.maxCasesPerWorkspace),
+    alertAfterSeconds: z
+      .number()
+      .int()
+      .min(1)
+      .max(sourceQuotaReconciliationAlertLimits.maxAlertAfterSeconds)
+  })
+  .strict()
+
+export const sourceQuotaReconciliationAlertResultSchema = z
+  .object({
+    observedAt: z.string().datetime(),
+    alertAfterSeconds: z
+      .number()
+      .int()
+      .min(1)
+      .max(sourceQuotaReconciliationAlertLimits.maxAlertAfterSeconds),
+    workspacesScanned: z
+      .number()
+      .int()
+      .nonnegative()
+      .max(sourceQuotaReconciliationAlertLimits.maxWorkspaces),
+    openCases: z
+      .number()
+      .int()
+      .nonnegative()
+      .max(sourceQuotaReconciliationAlertLimits.maxOpenCases),
+    oldestOpenCaseAgeSeconds: z
+      .number()
+      .int()
+      .nonnegative()
+      .max(sourceQuotaReconciliationAlertLimits.maxAgeSeconds)
+      .nullable(),
+    alerted: z.boolean(),
+    truncated: z.boolean(),
+    state: z.enum(['clear', 'alert', 'incomplete'])
+  })
+  .superRefine((value, context) => {
+    if (value.state === 'alert' && !value.alerted) {
+      context.addIssue({
+        code: 'custom',
+        path: ['alerted'],
+        message: 'Alert state requires an alerted result'
+      })
+    }
+    if (value.alerted && value.state !== 'alert') {
+      context.addIssue({
+        code: 'custom',
+        path: ['state'],
+        message: 'Alerted results require alert state'
+      })
+    }
+    if (
+      value.state === 'clear' &&
+      (value.alerted ||
+        value.truncated ||
+        (value.oldestOpenCaseAgeSeconds !== null &&
+          value.oldestOpenCaseAgeSeconds >= value.alertAfterSeconds))
+    ) {
+      context.addIssue({
+        code: 'custom',
+        path: ['state'],
+        message: 'Clear state requires a complete non-alerted result'
+      })
+    }
+    if (value.state === 'incomplete' && !value.truncated) {
+      context.addIssue({
+        code: 'custom',
+        path: ['truncated'],
+        message: 'Incomplete state requires truncated coverage'
+      })
+    }
+    if (value.alerted && value.oldestOpenCaseAgeSeconds === null) {
+      context.addIssue({
+        code: 'custom',
+        path: ['oldestOpenCaseAgeSeconds'],
+        message: 'Alerted results require an open case age'
+      })
+    }
+    if (value.openCases === 0 && value.oldestOpenCaseAgeSeconds !== null) {
+      context.addIssue({
+        code: 'custom',
+        path: ['oldestOpenCaseAgeSeconds'],
+        message: 'An empty scan cannot have an oldest case age'
+      })
+    }
+    if (value.openCases > 0 && value.oldestOpenCaseAgeSeconds === null) {
+      context.addIssue({
+        code: 'custom',
+        path: ['oldestOpenCaseAgeSeconds'],
+        message: 'Open cases require an oldest case age'
+      })
+    }
+    if (
+      value.oldestOpenCaseAgeSeconds !== null &&
+      value.oldestOpenCaseAgeSeconds < value.alertAfterSeconds
+    ) {
+      if (value.alerted) {
+        context.addIssue({
+          code: 'custom',
+          path: ['alerted'],
+          message: 'Alerted results require an age at or above the threshold'
+        })
+      }
     }
   })
   .strict()
@@ -4203,6 +4331,12 @@ export type SourceQuotaReconciliationListQuery = z.infer<
 export type SourceQuotaReconciliationCase = z.infer<typeof sourceQuotaReconciliationCaseSchema>
 export type SourceQuotaReconciliationResolveInput = z.infer<
   typeof sourceQuotaReconciliationResolveInputSchema
+>
+export type SourceQuotaReconciliationAlertInput = z.infer<
+  typeof sourceQuotaReconciliationAlertInputSchema
+>
+export type SourceQuotaReconciliationAlertResult = z.infer<
+  typeof sourceQuotaReconciliationAlertResultSchema
 >
 export type AuthSignInResult = z.infer<typeof authSignInResultSchema>
 export type AuthUserReadModel = z.infer<typeof authUserReadModelSchema>

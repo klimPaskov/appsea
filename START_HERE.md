@@ -38,6 +38,7 @@ Open `http://localhost:3000` after the web server starts.
 - private workspace authentication with hashed/revocable sessions, authenticated active-session inventory and reauthenticated per-session revocation, password step-up for owner mutations, and membership-checked research reads
 - private workspace cost summaries over the immutable ledger, grouped by currency and cost type with exact micro-unit totals and bounded periods
 - private visibility for settled source-quota requests that lack a completed production result, with maintenance-role-only resolution and no automatic re-fetch
+- lease-owned, read-only quota-reconciliation alert inspection with bounded alert/incomplete/clear events and visible truncated coverage
 - explicit, one-record, tombstone-bound source re-collection with immutable lineage and private review; it never runs automatically and does not activate a connector
 - direct CFPB source commands use the same bounded production admission ledger through the `appsea-worker` service principal; they cannot bypass private-workspace, fixture, or source-policy gates
 - owner-scoped invitations for existing AppSea accounts with hash-only tokens, encrypted outbox delivery, acceptance/revocation, and a production kill switch
@@ -63,7 +64,7 @@ Open `http://localhost:3000` after the web server starts.
 - autonomous production deployment
 - desktop release packaging
 - automatic activation of generated skills or connectors
-- deployed ownership and alerting for quota-reconciliation cases
+- deployed scheduler ownership, incident routing, and live alert delivery for quota-reconciliation cases
 - automatic source re-collection, downstream analysis, and report/plan generation after a re-collection
 
 Read `GOAL_PROMPT.md` to start the next implementation goal.

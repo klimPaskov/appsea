@@ -38,6 +38,7 @@
     "worker:source:cfpb:reconcile": "pnpm --filter @appsea/worker source:cfpb:reconcile",
     "worker:source:cfpb:reconcile:next": "pnpm --filter @appsea/worker source:cfpb:reconcile:next",
     "worker:source:quota:reconcile": "pnpm --filter @appsea/worker source:quota:reconcile",
+    "worker:source:quota:alert": "pnpm --filter @appsea/worker source:quota:alert",
     "production:preflight": "pnpm --filter @appsea/worker production:preflight",
     "worker:source:policy:cfpb": "pnpm --filter @appsea/worker source:policy:cfpb",
     "worker:source:policy:stackexchange": "pnpm --filter @appsea/worker source:policy:stackexchange",

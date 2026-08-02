@@ -79,7 +79,10 @@ describe('worker observability', () => {
       sourceSnapshotCoverageGaps: 2,
       workspaceInvitationDeliveriesClaimed: 4,
       workspaceInvitationDeliveriesSent: 3,
-      workspaceInvitationDeliveriesFailed: 1
+      workspaceInvitationDeliveriesFailed: 1,
+      sourceQuotaReconciliationOpenCases: 2,
+      sourceQuotaReconciliationOldestAgeSeconds: 901,
+      sourceQuotaReconciliationTruncated: true
     })
     const payload = JSON.parse(String(log.mock.calls[0]?.[0])) as Record<string, unknown>
     expect(payload).toMatchObject({
@@ -106,7 +109,10 @@ describe('worker observability', () => {
       sourceSnapshotCoverageGaps: 2,
       workspaceInvitationDeliveriesClaimed: 4,
       workspaceInvitationDeliveriesSent: 3,
-      workspaceInvitationDeliveriesFailed: 1
+      workspaceInvitationDeliveriesFailed: 1,
+      sourceQuotaReconciliationOpenCases: 2,
+      sourceQuotaReconciliationOldestAgeSeconds: 901,
+      sourceQuotaReconciliationTruncated: true
     })
     expect(JSON.stringify(payload)).not.toContain('source text')
     log.mockRestore()

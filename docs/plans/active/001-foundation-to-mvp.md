@@ -97,7 +97,10 @@ projection for committed source reservations that lack a completed production
 result. Authenticated workspace inspection is bounded and no-store; the
 standalone maintenance role can record only an exact linked result or an
 explicit no-result void. The boundary never refunds quota or authorizes a
-re-fetch. Deployed alert ownership and incident response remain open.
+re-fetch. A lease-owned read-only alert inspection now emits fixed
+alert/incomplete/clear events and durable bounded counters while exposing
+truncated coverage. Deployed scheduler routing and incident response remain
+open.
 
 Migration `0050_explicit_source_recollection.sql` adds the reviewed explicit
 re-collection boundary. A completed matching deletion tombstone is required;
@@ -465,9 +468,9 @@ one lease-backed pass at a time, retries child failures with bounded backoff,
 and forwards shutdown without logging raw errors;
 the long-lived worker emits a bounded 30-second heartbeat and the web service
 exposes fail-closed liveness/readiness probes; deployed process-supervisor
-ownership, alert ownership, traces, role separation, incident drills,
-and production security review remain. Provider idempotency, object-store
-conditional-delete, deployed scheduler alerting, and Docker-backed lock
+ownership, alert routing, traces, role separation, incident drills, and
+production security review remain. Provider idempotency, object-store
+conditional-delete, deployed scheduler alert delivery, and Docker-backed lock
 recovery proof remain open.
 
 ### 7. Desktop release
