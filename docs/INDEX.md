@@ -94,6 +94,7 @@
 - [`status/auth-recovery-completion-report.md`](status/auth-recovery-completion-report.md)
 - [`status/workspace-invitation-completion-report.md`](status/workspace-invitation-completion-report.md)
 - [`status/production-readiness-audit-2026-07-25.md`](status/production-readiness-audit-2026-07-25.md)
+- [`status/production-readiness-audit-2026-08-02.md`](status/production-readiness-audit-2026-08-02.md)
 - [`status/production-analysis-completion-report-2026-07-26.md`](status/production-analysis-completion-report-2026-07-26.md)
 - [`status/production-analysis-handoff-completion-report-2026-07-26.md`](status/production-analysis-handoff-completion-report-2026-07-26.md)
 - [`status/opportunity-seed-review-completion-report-2026-07-26.md`](status/opportunity-seed-review-completion-report-2026-07-26.md)

@@ -66,10 +66,6 @@ re-collection requires a completed matching tombstone.
 - Maintenance loop, quota-alert, and recomputation-alert tests pass; no
   deployed scheduler, Temporal, or source activation claim.
 
-Migrations `0053` and `0054` added deterministic complaint
-analysis snapshots and identity/independence-bound source approvals. The CFPB
-source remains disabled pending external review.
-
 Private opportunity details now expose `competitiveResearch` and a separate
 competitors/contrary-signals page: fixture records are synthetic/unresolved,
 production seeds are reviewed-seed-only with provenance, and source-backed
@@ -116,6 +112,8 @@ The 2026-08-02 alert tranches add migrations `0064`/`0065`, maintenance-only
 recomputation/cost projections, bounded lease-aware scans, fixed states,
 secret-free counters, and explicit cost thresholds. They never mutate work;
 deployment owns scheduler routing, threshold selection, billing, and response.
+
+Current audit: `docs/status/production-readiness-audit-2026-08-02.md`.
 
 ## Next production tranche
 

@@ -2,7 +2,7 @@
 
 - Version: `0.3.0`
 - Stage: validated fixture product with production-shaped PostgreSQL persistence and a local/CI-proven durable workflow slice
-- Production-readiness: not complete; see [`production-readiness-audit-2026-07-25.md`](production-readiness-audit-2026-07-25.md)
+- Production-readiness: not complete; see the current [`production-readiness-audit-2026-08-02.md`](production-readiness-audit-2026-08-02.md) and the historical [`production-readiness-audit-2026-07-25.md`](production-readiness-audit-2026-07-25.md)
 - Website: implemented and freshly production-built; `pnpm verify` completed
   the current build, with Docker-only integration gates remaining unavailable
 - Private workspace website/API: implemented and production-built; reads are membership-authorized and cache-disabled. Completed collection reads now expose the bounded private `analysisHandoff` status when an approved-seed handoff exists.
