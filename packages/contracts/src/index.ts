@@ -2755,7 +2755,8 @@ export const researchCampaignRunReadModelSchema = z
     requestedAt: z.string().datetime(),
     startedAt: z.string().datetime(),
     updatedAt: z.string().datetime(),
-    finishedAt: z.string().datetime().nullable()
+    finishedAt: z.string().datetime().nullable(),
+    cancellationRequestedAt: z.string().datetime().nullable().default(null)
   })
   .strict()
 
@@ -2970,6 +2971,16 @@ export const researchCampaignOrchestrationCancelResultSchema = z
     state: z.enum(['requested', 'already_terminal']),
     cancellationRequestedAt: z.string().datetime().nullable(),
     activeWorkflowCount: z.number().int().nonnegative().max(16)
+  })
+  .strict()
+
+/** Result of an authenticated one-source production workflow cancellation request. */
+export const productionCollectionWorkflowCancelResultSchema = z
+  .object({
+    workflowId: workflowIdSchema,
+    campaignId: appseaIdentifierSchema,
+    state: z.enum(['requested', 'already_terminal']),
+    cancellationRequestedAt: z.string().datetime().nullable()
   })
   .strict()
 
@@ -3498,6 +3509,8 @@ export const sourceMaintenanceInputSchema = z
     campaignRefreshBatchSize: z.number().int().min(0).max(100).default(0),
     /** Maximum number of queued multi-source campaign children to dispatch. */
     campaignOrchestrationBatchSize: z.number().int().min(0).max(100).default(0),
+    /** Maximum number of one-source workflow cancellation intents to retry. */
+    productionWorkflowCancellationBatchSize: z.number().int().min(0).max(100).default(1),
     quotaRetentionDays: z.number().int().min(1).max(3_650),
     workspaceId: appseaIdentifierSchema.nullable()
   })
@@ -3529,6 +3542,10 @@ export const sourceMaintenanceResultSchema = z
     campaignOrchestrationFailed: z.number().int().nonnegative().max(100),
     campaignOrchestrationPolicyDenied: z.number().int().nonnegative().max(100),
     campaignOrchestrationReconciled: z.number().int().nonnegative().max(100),
+    productionWorkflowCancellationTargets: z.number().int().nonnegative().max(100).default(0),
+    productionWorkflowCancellationAttempted: z.number().int().nonnegative().max(100).default(0),
+    productionWorkflowCancellationDispatched: z.number().int().nonnegative().max(100).default(0),
+    productionWorkflowCancellationFailed: z.number().int().nonnegative().max(100).default(0),
     retentionTombstonesQueued: z.number().int().nonnegative().max(1_000),
     deletionTombstonesProcessed: z.number().int().nonnegative().max(1_000),
     deletionObjectsAffected: z.number().int().nonnegative().max(10_000_000),
@@ -5168,6 +5185,9 @@ export type ResearchCampaignOrchestrationReadModel = z.infer<
 >
 export type ResearchCampaignOrchestrationCancelResult = z.infer<
   typeof researchCampaignOrchestrationCancelResultSchema
+>
+export type ProductionCollectionWorkflowCancelResult = z.infer<
+  typeof productionCollectionWorkflowCancelResultSchema
 >
 export type ResearchCampaignSourceReadModel = z.infer<typeof researchCampaignSourceReadModelSchema>
 export type ResearchCampaignReadModel = z.infer<typeof researchCampaignReadModelSchema>

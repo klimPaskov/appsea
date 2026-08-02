@@ -4,6 +4,7 @@ import { appseaIdentifierSchema, workflowIdSchema } from '@appsea/contracts'
 import { PostgresProductionCollectionWorkflowRepository } from '@appsea/db/production-collection-workflow'
 import { readSession } from '../../../../../../server/auth-session'
 import { getDatabasePool } from '../../../../../../server/database'
+import { ProductionWorkflowCancelAction } from '../../../../production-workflow-cancel-action'
 
 export const dynamic = 'force-dynamic'
 
@@ -86,6 +87,12 @@ export default async function ProductionWorkflowStatusPage({
         <p className="complaint-meta">
           Workflow ID <code>{run.workflowId}</code>
         </p>
+        <ProductionWorkflowCancelAction
+          workspaceId={parsedWorkspaceId.data}
+          workflowId={run.workflowId}
+          state={run.state}
+          cancellationRequestedAt={run.cancellationRequestedAt}
+        />
         {run.state === 'completed' ? (
           <p className="workspace-actions">
             <Link

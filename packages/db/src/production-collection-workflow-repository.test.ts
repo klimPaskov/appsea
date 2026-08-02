@@ -2,7 +2,8 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 const mocks = vi.hoisted(() => ({
   query: vi.fn(),
-  withAuthenticatedCalls: [] as Array<{ userId: string; workspaceId: string }>
+  withAuthenticatedCalls: [] as Array<{ userId: string; workspaceId: string }>,
+  withServiceCalls: [] as Array<{ workspaceId: string }>
 }))
 
 vi.mock('./transaction', () => ({
@@ -19,7 +20,19 @@ vi.mock('./transaction', () => ({
     _pool: unknown,
     _workspaceId: string,
     operation: (client: unknown) => Promise<unknown>
-  ) => operation({ query: mocks.query })
+  ) => operation({ query: mocks.query }),
+  withDatabaseTransaction: async (
+    _pool: unknown,
+    operation: (client: unknown) => Promise<unknown>
+  ) => operation({ query: mocks.query }),
+  withServiceWorkspaceTransaction: async (
+    _pool: unknown,
+    workspaceId: string,
+    operation: (client: unknown) => Promise<unknown>
+  ) => {
+    mocks.withServiceCalls.push({ workspaceId })
+    return operation({ query: mocks.query })
+  }
 }))
 
 const at = '2026-08-02T00:00:00.000Z'
@@ -55,13 +68,17 @@ const row = {
   requested_at: at,
   started_at: at,
   updated_at: at,
-  finished_at: at
+  finished_at: at,
+  cancellation_requested_at: null,
+  cancellation_requested_by: null,
+  cancellation_request_id: null
 }
 
 describe('production collection workflow campaign history', () => {
   beforeEach(() => {
     mocks.query.mockReset()
     mocks.withAuthenticatedCalls.length = 0
+    mocks.withServiceCalls.length = 0
     mocks.query.mockResolvedValue({ rows: [row] })
   })
 
@@ -89,5 +106,77 @@ describe('production collection workflow campaign history', () => {
       { userId: 'user:one', workspaceId: 'workspace:one' }
     ])
     expect(mocks.query.mock.calls[0]?.[0]).toContain('LIMIT 100')
+  })
+
+  it('persists an owner/editor cancellation intent idempotently', async () => {
+    const { PostgresProductionCollectionWorkflowRepository } =
+      await import('./production-collection-workflow-repository')
+    const updatedRow = {
+      ...row,
+      state: 'running',
+      checkpoint: 'inspected',
+      finished_at: null,
+      persisted_run_id: null,
+      cancellation_requested_at: '2026-08-03T00:00:00.000Z',
+      cancellation_requested_by: 'user:one',
+      cancellation_request_id: 'cancel:production-workflow:aaaaaaaa'
+    }
+    mocks.query
+      .mockResolvedValueOnce({ rows: [{ role: 'editor' }] })
+      .mockResolvedValueOnce({
+        rows: [{ fixture_only: false, visibility: 'private', status: 'active' }]
+      })
+      .mockResolvedValueOnce({
+        rows: [
+          {
+            ...row,
+            state: 'running',
+            checkpoint: 'inspected',
+            finished_at: null,
+            persisted_run_id: null
+          }
+        ]
+      })
+      .mockResolvedValueOnce({ rows: [updatedRow] })
+      .mockResolvedValueOnce({ rows: [] })
+      .mockResolvedValueOnce({ rows: [] })
+
+    const result = await new PostgresProductionCollectionWorkflowRepository(
+      {} as never
+    ).requestCancellationForUser('user:one', 'workspace:one', row.workflow_id)
+
+    expect(result).toEqual({
+      workflowId: row.workflow_id,
+      campaignId: row.campaign_id,
+      state: 'requested',
+      cancellationRequestedAt: '2026-08-03T00:00:00.000Z'
+    })
+    expect(mocks.withAuthenticatedCalls).toEqual([
+      { userId: 'user:one', workspaceId: 'workspace:one' }
+    ])
+    expect(mocks.query.mock.calls[3]?.[0]).toContain('cancellation_requested_at')
+  })
+
+  it('does not issue an external cancellation request for terminal jobs', async () => {
+    const { PostgresProductionCollectionWorkflowRepository } =
+      await import('./production-collection-workflow-repository')
+    mocks.query
+      .mockResolvedValueOnce({ rows: [{ role: 'owner' }] })
+      .mockResolvedValueOnce({
+        rows: [{ fixture_only: false, visibility: 'private', status: 'active' }]
+      })
+      .mockResolvedValueOnce({ rows: [row] })
+
+    const result = await new PostgresProductionCollectionWorkflowRepository(
+      {} as never
+    ).requestCancellationForUser('user:one', 'workspace:one', row.workflow_id)
+
+    expect(result).toEqual({
+      workflowId: row.workflow_id,
+      campaignId: row.campaign_id,
+      state: 'already_terminal',
+      cancellationRequestedAt: null
+    })
+    expect(mocks.query).toHaveBeenCalledTimes(3)
   })
 })

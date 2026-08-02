@@ -5,7 +5,7 @@
 Fixture product, PostgreSQL persistence, durable workflows, policy-gated CFPB
 collection, private workspaces, report/plan approval/export, recovery, and
 invitations are implemented. Migrations
-`0027`-`0070` add policy evidence, collection checkpoints, deletion repair,
+`0027`-`0071` add policy evidence, collection checkpoints, deletion repair,
 leases, snapshot reconciliation, workflow admissions, source-reconciliation
 admission, retryable tombstones, maintenance-run telemetry, a durable source-
 quota case ledger, recomputation alerts, cost-threshold projection, and
@@ -27,13 +27,11 @@ coverage/redaction metadata, and requires approved non-synthetic reports and
 plans. It exposes no write or workflow tools; token management is API-only.
 See `docs/runbooks/mcp-agent-access.md` and the completion report in
 `docs/status/`.
-The 2026-08-03 cancellation tranche adds migration `0070`: owner/editor
-cancellation intent is persisted before any Temporal call, queued children are
-stopped transactionally, started children are retried through the lease-backed
-maintenance worker, and the private campaign page/API exposes the safe-boundary
-status. Dispatching claims remain claim-owned until their workflow identity is
-recorded so cancellation cannot orphan an external start. One-source run
-cancellation remains a separate gap.
+The 2026-08-03 cancellation tranches add migrations `0070`/`0071`: owner/editor
+intent is persisted before Temporal for multi-source and one-source runs,
+queued children stop transactionally, and a leased worker retries external
+cancellation. Workflows retain terminal authority; the private pages show the
+pending safe boundary and dispatching claims cannot orphan starts.
 On 2026-08-01, production analysis Temporal starts were versioned to
 `production-analysis-v2`. New starts carry only workspace, collection,
 analysis, seed-review, timestamp, and digest identifiers. `apps/worker`
@@ -53,9 +51,9 @@ Deployment topology, HA, retention, alert routing, and failure drills remain.
 
 ## Validated commands
 
-- `pnpm verify` passed 2026-08-03 after the cancellation tranche. The cancellation
-  tranche also passed focused contracts (85), db (122), workflows (29), worker
-  (97), and web (128) suites plus affected package typechecks/lints.
+- `pnpm verify` passed 2026-08-03 after the cancellation tranches. Focused
+  contracts (86), db (124), workflows (29), worker (100), and web (132) suites
+  plus affected package typechecks/lints pass.
 - PostgreSQL and Temporal integration are staged but Docker-blocked because the
   Docker Desktop Linux engine pipe is unavailable.
 
@@ -133,6 +131,6 @@ Current audit: `docs/status/production-readiness-audit-2026-08-03.md`.
 - Deletion retries and explicit one-record recollection exist; workspace/export
   purge, cloud storage, recomputation alert routing, deployed scheduler
   ownership, and quota case routing remain open.
-- Multi-source campaign cancellation now has a durable private boundary; the
-  analogous one-source production run cancellation route remains open.
+- One-/multi-source cancellation now has a durable private boundary; deployed
+  Temporal cancellation and crash-drill evidence remain open.
 - Windows/macOS release remains open.

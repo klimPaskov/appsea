@@ -1,1 +1,4 @@
-export { PostgresProductionCollectionWorkflowRepository } from './production-collection-workflow-repository'
+export {
+  PostgresProductionCollectionWorkflowRepository,
+  ProductionCollectionWorkflowPermissionError
+} from './production-collection-workflow-repository'

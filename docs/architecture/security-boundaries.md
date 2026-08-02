@@ -100,6 +100,14 @@ for that pre-context authorization lookup.
   only become terminal after safe reconciliation. A failed provider call cannot
   erase the intent or authorize a new dispatch, and the response never returns
   child workflow IDs.
+- Migration `0071` applies the same boundary to one-source production
+  collection jobs. Owner/editor intent is immutable, bound to the authenticated
+  member and active private non-fixture workspace, and committed before the
+  route attempts Temporal cancellation. The maintenance role may only read the
+  pending projection and retry the external call; it cannot mark the job
+  terminal. The workflow's non-cancellable termination activity owns that
+  transition, so a cancellation racing the persistence safe point reconciles to
+  a completed collection rather than erasing evidence.
 - The reviewed analysis handoff has a separate safe status projection. The
   owner/editor start action sends only identifiers and an idempotency envelope;
   the status API/page validates any workflow identifier against the workspace

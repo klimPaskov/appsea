@@ -6,6 +6,7 @@ import {
   productionCollectionWorkflowHashMaterialSchema,
   productionCollectionWorkflowJobInitializeInputSchema,
   productionCollectionWorkflowTerminationInputSchema,
+  productionCollectionWorkflowCancelResultSchema,
   researchCampaignRunReadModelSchema,
   type ProductionCollectionWorkflowCheckpointWrite,
   type ProductionCollectionWorkflowCompletionInput,
@@ -13,13 +14,21 @@ import {
   type ProductionCollectionWorkflowInput,
   type ProductionCollectionWorkflowPersistenceActivityResult,
   type ProductionCollectionWorkflowStatus,
+  type ProductionCollectionWorkflowCancelResult,
+  type MaintenanceSchedulerFence,
   type ResearchCampaignRunReadModel,
+  workflowIdSchema,
   workflowJobCheckpointSchema,
   workflowJobStateSchema,
   workflowActorSchema
 } from '@appsea/contracts'
 import { contentHash } from './hash'
-import { withAuthenticatedWorkspaceTransaction, withWorkspaceTransaction } from './transaction'
+import {
+  withAuthenticatedWorkspaceTransaction,
+  withDatabaseTransaction,
+  withServiceWorkspaceTransaction,
+  withWorkspaceTransaction
+} from './transaction'
 import {
   WorkflowCheckpointConflictError,
   WorkflowJobConflictError,
@@ -67,6 +76,9 @@ interface ProductionWorkflowRow extends QueryResultRow {
   started_at: Date | string
   updated_at: Date | string
   finished_at: Date | string | null
+  cancellation_requested_at: Date | string | null
+  cancellation_requested_by: string | null
+  cancellation_request_id: string | null
 }
 
 interface StoredHashRow extends QueryResultRow {
@@ -113,6 +125,7 @@ function mapRow(row: ProductionWorkflowRow): ProductionCollectionWorkflowStatus 
   startedAt: string
   updatedAt: string
   finishedAt: string | null
+  cancellationRequestedAt: string | null
 } {
   return {
     workflowId: row.workflow_id,
@@ -139,7 +152,8 @@ function mapRow(row: ProductionWorkflowRow): ProductionCollectionWorkflowStatus 
     requestedAt: asIso(row.requested_at)!,
     startedAt: asIso(row.started_at)!,
     updatedAt: asIso(row.updated_at)!,
-    finishedAt: asIso(row.finished_at)
+    finishedAt: asIso(row.finished_at),
+    cancellationRequestedAt: asIso(row.cancellation_requested_at)
   }
 }
 
@@ -160,7 +174,8 @@ function mapCampaignRun(row: ProductionWorkflowRow): ResearchCampaignRunReadMode
     requestedAt: asIso(row.requested_at)!,
     startedAt: asIso(row.started_at)!,
     updatedAt: asIso(row.updated_at)!,
-    finishedAt: asIso(row.finished_at)
+    finishedAt: asIso(row.finished_at),
+    cancellationRequestedAt: asIso(row.cancellation_requested_at)
   })
 }
 
@@ -177,6 +192,33 @@ async function readForUpdate(
     [workspaceId, workflowId]
   )
   return result.rows[0]
+}
+
+async function actorRole(
+  client: PoolClient,
+  workspaceId: string,
+  userId: string
+): Promise<string | null> {
+  const result = await client.query<{ role: string }>(
+    `SELECT role
+       FROM appsea.workspace_memberships
+      WHERE workspace_id = $1 AND user_id = $2
+      FOR SHARE`,
+    [workspaceId, userId]
+  )
+  return result.rows[0]?.role ?? null
+}
+
+export interface ProductionCollectionWorkflowCancellationTarget {
+  workspaceId: string
+  workflowId: string
+}
+
+export class ProductionCollectionWorkflowPermissionError extends Error {
+  constructor() {
+    super('The workspace role cannot manage a production collection workflow')
+    this.name = 'ProductionCollectionWorkflowPermissionError'
+  }
 }
 
 function assertIdentity(
@@ -308,6 +350,195 @@ async function insertTerminalLedger(
 
 export class PostgresProductionCollectionWorkflowRepository {
   constructor(private readonly pool: Pool) {}
+
+  /** Persist cancellation intent before attempting the external Temporal call. */
+  async requestCancellationForUser(
+    userId: string,
+    workspaceId: string,
+    workflowId: string
+  ): Promise<ProductionCollectionWorkflowCancelResult | null> {
+    const parsedUserId = appseaIdentifierSchema.parse(userId)
+    const parsedWorkspaceId = appseaIdentifierSchema.parse(workspaceId)
+    const parsedWorkflowId = workflowIdSchema.parse(workflowId)
+    return withAuthenticatedWorkspaceTransaction(
+      this.pool,
+      parsedUserId,
+      parsedWorkspaceId,
+      async (client) => {
+        const role = await actorRole(client, parsedWorkspaceId, parsedUserId)
+        if (role !== 'owner' && role !== 'editor') {
+          throw new ProductionCollectionWorkflowPermissionError()
+        }
+        const workspace = await client.query<{
+          fixture_only: boolean
+          visibility: string
+          status: string
+        }>(
+          `SELECT fixture_only, visibility, status
+             FROM appsea.workspaces
+            WHERE workspace_id = $1
+            FOR SHARE`,
+          [parsedWorkspaceId]
+        )
+        const workspaceRow = workspace.rows[0]
+        if (
+          !workspaceRow ||
+          workspaceRow.fixture_only ||
+          workspaceRow.visibility !== 'private' ||
+          workspaceRow.status !== 'active'
+        ) {
+          throw new ProductionCollectionWorkflowPermissionError()
+        }
+
+        const row = await readForUpdate(client, parsedWorkspaceId, parsedWorkflowId)
+        if (!row) return null
+        const terminal = ['completed', 'failed', 'canceled', 'budget_rejected'].includes(row.state)
+        if (terminal) {
+          return productionCollectionWorkflowCancelResultSchema.parse({
+            workflowId: parsedWorkflowId,
+            campaignId: row.campaign_id,
+            state: 'already_terminal',
+            cancellationRequestedAt: asIso(row.cancellation_requested_at)
+          })
+        }
+
+        const requestId = `cancel:production-workflow:${contentHash({
+          workspaceId: parsedWorkspaceId,
+          workflowId: parsedWorkflowId
+        }).slice(0, 48)}`
+        const updated = await client.query<ProductionWorkflowRow>(
+          `WITH clock AS (SELECT clock_timestamp() AS now)
+           UPDATE appsea.production_collection_workflow_jobs job
+              SET cancellation_requested_at = COALESCE(job.cancellation_requested_at, clock.now),
+                  cancellation_requested_by = COALESCE(job.cancellation_requested_by, $3),
+                  cancellation_request_id = COALESCE(job.cancellation_request_id, $4),
+                  updated_at = GREATEST(job.updated_at, clock.now)
+             FROM clock
+            WHERE job.workspace_id = $1
+              AND job.workflow_id = $2
+              AND job.state IN ('queued', 'running')
+            RETURNING job.*`,
+          [parsedWorkspaceId, parsedWorkflowId, parsedUserId, requestId]
+        )
+        const updatedRow = updated.rows[0] ?? row
+        if (!row.cancellation_requested_at && updated.rows[0]) {
+          const occurredAt = asIso(updatedRow.cancellation_requested_at)!
+          const metadata = JSON.stringify({
+            workflowId: parsedWorkflowId,
+            campaignId: row.campaign_id,
+            sourceId: row.source_id
+          })
+          await client.query(
+            `INSERT INTO appsea.audit_events
+               (workspace_id, audit_event_id, actor_type, actor_id, action,
+                target_type, target_id, correlation_id, metadata, occurred_at)
+             VALUES ($1, $2, 'user', $3,
+                     'research.production_workflow.cancellation_requested',
+                     'production_collection_workflow', $4, $4, $5::jsonb, $6)
+             ON CONFLICT DO NOTHING`,
+            [
+              parsedWorkspaceId,
+              `audit:production-workflow-cancel:${requestId}`,
+              parsedUserId,
+              parsedWorkflowId,
+              metadata,
+              occurredAt
+            ]
+          )
+          await client.query(
+            `INSERT INTO appsea.outbox_events
+               (workspace_id, outbox_event_id, event_type, aggregate_type,
+                aggregate_id, schema_version, correlation_id, payload, occurred_at)
+             VALUES ($1, $2, 'research.production_workflow.cancellation_requested',
+                     'production_collection_workflow', $3,
+                     'production-collection-workflow-v1', $3, $4::jsonb, $5)
+             ON CONFLICT DO NOTHING`,
+            [
+              parsedWorkspaceId,
+              `outbox:production-workflow-cancel:${requestId}`,
+              parsedWorkflowId,
+              JSON.stringify({
+                workspaceId: parsedWorkspaceId,
+                campaignId: row.campaign_id,
+                workflowId: parsedWorkflowId
+              }),
+              occurredAt
+            ]
+          )
+        }
+        return productionCollectionWorkflowCancelResultSchema.parse({
+          workflowId: parsedWorkflowId,
+          campaignId: updatedRow.campaign_id,
+          state: 'requested',
+          cancellationRequestedAt: asIso(updatedRow.cancellation_requested_at)
+        })
+      },
+      { isolationLevel: 'SERIALIZABLE' }
+    )
+  }
+
+  async listWorkspaceIdsForService(): Promise<string[]> {
+    return withDatabaseTransaction(
+      this.pool,
+      async (client) => {
+        const result = await client.query<{ workspace_id: string }>(
+          `SELECT workspace_id FROM appsea.list_active_workspaces_for_maintenance()`
+        )
+        return result.rows.map((row) => appseaIdentifierSchema.parse(row.workspace_id))
+      },
+      { readOnly: true }
+    )
+  }
+
+  async listCancellationTargetsForService(workspaceId: string, limit = 100): Promise<string[]> {
+    const parsedWorkspaceId = appseaIdentifierSchema.parse(workspaceId)
+    if (!Number.isSafeInteger(limit) || limit < 1 || limit > 100) {
+      throw new Error('Production workflow cancellation limit must be between 1 and 100')
+    }
+    return withServiceWorkspaceTransaction(
+      this.pool,
+      parsedWorkspaceId,
+      async (client) => {
+        const result = await client.query<{ workflow_id: string }>(
+          `SELECT workflow_id
+             FROM appsea.production_collection_workflow_jobs
+            WHERE workspace_id = $1
+              AND cancellation_requested_at IS NOT NULL
+              AND state IN ('queued', 'running')
+            ORDER BY cancellation_requested_at, workflow_id
+            LIMIT $2`,
+          [parsedWorkspaceId, limit]
+        )
+        return result.rows.map((row) => workflowIdSchema.parse(row.workflow_id))
+      },
+      { readOnly: true }
+    )
+  }
+
+  async prepareCancellationForService(
+    workspaceId: string,
+    workflowId: string,
+    fence?: MaintenanceSchedulerFence
+  ): Promise<ProductionCollectionWorkflowCancellationTarget | null> {
+    const parsedWorkspaceId = appseaIdentifierSchema.parse(workspaceId)
+    const parsedWorkflowId = workflowIdSchema.parse(workflowId)
+    return withServiceWorkspaceTransaction(
+      this.pool,
+      parsedWorkspaceId,
+      async (client) => {
+        const row = await readForUpdate(client, parsedWorkspaceId, parsedWorkflowId)
+        if (
+          !row ||
+          !row.cancellation_requested_at ||
+          ['completed', 'failed', 'canceled', 'budget_rejected'].includes(row.state)
+        ) {
+          return null
+        }
+        return { workspaceId: parsedWorkspaceId, workflowId: parsedWorkflowId }
+      },
+      { maintenanceFence: fence }
+    )
+  }
 
   async initialize(
     input: Parameters<typeof productionCollectionWorkflowJobInitializeInputSchema.parse>[0]

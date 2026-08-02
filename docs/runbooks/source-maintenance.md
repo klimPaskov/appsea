@@ -176,7 +176,17 @@ cancel for started children, and reconciles the parent/campaign state. A failed
 Temporal call leaves the request pending for the next leased pass; no new child
 is dispatched after the intent is visible. The pass is bounded by the existing
 `APPSEA_CAMPAIGN_ORCHESTRATION_BATCH_SIZE` and emits no source content or
-caller secrets. One-source production run cancellation is outside this path.
+caller secrets.
+
+Migration `0071_production_collection_workflow_cancellation.sql` adds the
+one-source retry pass. An owner/editor first commits an immutable intent from
+the private workflow-status route. Source maintenance reads at most
+`APPSEA_PRODUCTION_WORKFLOW_CANCELLATION_BATCH_SIZE` pending workflow IDs per
+pass, asserts the scheduler lease before each target, and retries only the
+Temporal cancel call. Provider failures leave the intent pending. The worker
+does not mutate terminal state; the workflow's non-cancellable termination
+activity persists `canceled` or reconciles `completed` if the collection
+already crossed its persistence safe point. Logs contain bounded counters only.
 
 The direct filtered collection command uses the same service-principal
 boundary. Migration `0051` makes `pnpm worker:source:cfpb` reserve and consume
@@ -217,6 +227,7 @@ Configuration is bounded by the command:
 - `APPSEA_SOURCE_SNAPSHOT_RECONCILIATION_BATCH_SIZE` (0-100, default 1)
 - `APPSEA_CAMPAIGN_REFRESH_BATCH_SIZE` (0-100, default 1)
 - `APPSEA_CAMPAIGN_ORCHESTRATION_BATCH_SIZE` (0-100, default 1)
+- `APPSEA_PRODUCTION_WORKFLOW_CANCELLATION_BATCH_SIZE` (0-100, default 1)
 - `APPSEA_SOURCE_QUOTA_RETENTION_DAYS` (1-3,650, default 30)
 - `APPSEA_DELETION_WORKSPACE_ID` (optional persistence-safe workspace ID)
 - `APPSEA_OBJECT_STORE_ROOT` (required absolute object-store adapter root)
@@ -233,7 +244,8 @@ Configuration is bounded by the command:
 The worker emits secret-free quota expiry/purge, production collection and
 analysis admission purge, source-collection-lease purge, snapshot
 reconciliation state/coverage counters, retention enqueue, deletion
-propagation, output-object purge, campaign refresh and orchestration dispatch,
+propagation, output-object purge, campaign refresh, orchestration dispatch,
+one-source cancellation retry,
 and separate bounded failure/completion events. Snapshot and campaign counters never
 include raw source content or caller idempotency keys.
 `sourceMaintenanceInputSchema` validates the configuration

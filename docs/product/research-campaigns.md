@@ -129,8 +129,19 @@ children are stopped in the workspace transaction; a child that has already
 started remains active until its workflow reaches a safe terminal cancellation
 boundary. The lease-backed worker retries external cancellation and reconciles
 the parent, while the private page shows the pending state. Cancellation does
-not delete evidence, reports, plans, exports, objects, or backups. One-source
-production run cancellation is not yet exposed.
+not delete evidence, reports, plans, exports, objects, or backups.
+
+Owners and editors can request cancellation for a one-source production run
+from its private status/history surface with same-origin `POST` to
+`/api/workspaces/:workspaceId/research/production/workflow/:workflowId`.
+Migration `0071` stores an immutable, member-bound intent and
+identifier-only audit/outbox receipt before the route attempts Temporal cancel.
+The leased source-maintenance worker retries that external call; the workflow's
+non-cancellable termination activity remains the authority for the safe
+terminal state and reconciles a collection that already crossed persistence.
+Repeated requests are idempotent, terminal jobs return `already_terminal`, and
+the UI keeps pending safe-boundary state visible. Cancellation never deletes
+evidence or changes source-policy state.
 
 ## Reviewed analysis handoff
 

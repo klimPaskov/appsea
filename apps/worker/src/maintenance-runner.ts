@@ -22,6 +22,7 @@ import type {
 } from '@appsea/db'
 import type { CampaignRefreshResult } from './campaign-refresh-runner'
 import type { CampaignOrchestrationResult } from './campaign-orchestration-runner'
+import type { ProductionWorkflowCancellationResult } from './production-workflow-cancellation-runner'
 
 const millisecondsPerDay = 24 * 60 * 60 * 1_000
 const maximumWorkspaceCount = 10_000
@@ -55,6 +56,8 @@ export interface SourceMaintenanceDependencies {
   campaignRefresh?: () => Promise<CampaignRefreshResult>
   /** Dispatch bounded, policy-gated children for multi-source campaigns. */
   campaignOrchestration?: () => Promise<CampaignOrchestrationResult>
+  /** Retry durable one-source workflow cancellation intents. */
+  productionWorkflowCancellation?: () => Promise<ProductionWorkflowCancellationResult>
 }
 
 export interface AuthRetentionDependencies {
@@ -159,6 +162,10 @@ export async function runSourceMaintenance(
   let campaignOrchestrationFailed = 0
   let campaignOrchestrationPolicyDenied = 0
   let campaignOrchestrationReconciled = 0
+  let productionWorkflowCancellationTargets = 0
+  let productionWorkflowCancellationAttempted = 0
+  let productionWorkflowCancellationDispatched = 0
+  let productionWorkflowCancellationFailed = 0
   if (dependencies.admission) {
     for (const workspaceId of deletionWorkspaceIds) {
       if (productionWorkflowAdmissionsPurged >= parsed.retentionBatchSize) break
@@ -325,6 +332,33 @@ export async function runSourceMaintenance(
       100
     )
   }
+  if (
+    dependencies.productionWorkflowCancellation &&
+    parsed.productionWorkflowCancellationBatchSize > 0
+  ) {
+    await assertLease()
+    const cancellation = await dependencies.productionWorkflowCancellation()
+    productionWorkflowCancellationTargets = countWithin(
+      cancellation.targets,
+      'productionWorkflowCancellationTargets',
+      100
+    )
+    productionWorkflowCancellationAttempted = countWithin(
+      cancellation.attempted,
+      'productionWorkflowCancellationAttempted',
+      100
+    )
+    productionWorkflowCancellationDispatched = countWithin(
+      cancellation.dispatched,
+      'productionWorkflowCancellationDispatched',
+      100
+    )
+    productionWorkflowCancellationFailed = countWithin(
+      cancellation.failed,
+      'productionWorkflowCancellationFailed',
+      100
+    )
+  }
 
   return sourceMaintenanceResultSchema.parse({
     jobId: parsed.jobId,
@@ -351,6 +385,10 @@ export async function runSourceMaintenance(
     campaignOrchestrationFailed,
     campaignOrchestrationPolicyDenied,
     campaignOrchestrationReconciled,
+    productionWorkflowCancellationTargets,
+    productionWorkflowCancellationAttempted,
+    productionWorkflowCancellationDispatched,
+    productionWorkflowCancellationFailed,
     retentionTombstonesQueued,
     deletionTombstonesProcessed,
     deletionObjectsAffected,

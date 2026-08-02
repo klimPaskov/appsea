@@ -154,6 +154,7 @@
 - [`status/research-campaign-source-picker-completion-report-2026-08-02.md`](status/research-campaign-source-picker-completion-report-2026-08-02.md)
 - [`status/research-campaign-orchestration-completion-report-2026-08-03.md`](status/research-campaign-orchestration-completion-report-2026-08-03.md)
 - [`status/research-campaign-orchestration-cancellation-completion-report-2026-08-03.md`](status/research-campaign-orchestration-cancellation-completion-report-2026-08-03.md)
+- [`status/production-workflow-cancellation-completion-report-2026-08-03.md`](status/production-workflow-cancellation-completion-report-2026-08-03.md)
 - [`status/mcp-readonly-agent-access-completion-report-2026-08-03.md`](status/mcp-readonly-agent-access-completion-report-2026-08-03.md)
 - [`status/competitor-feature-matrix-completion-report-2026-08-02.md`](status/competitor-feature-matrix-completion-report-2026-08-02.md)
 - [`status/workspace-archival-completion-report-2026-08-02.md`](status/workspace-archival-completion-report-2026-08-02.md)

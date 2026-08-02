@@ -7,6 +7,7 @@ import {
   PostgresDeletionPropagationRepository,
   PostgresProductionAnalysisAdmissionRepository,
   PostgresProductionAnalysisObjectPurgeRepository,
+  PostgresProductionCollectionWorkflowRepository,
   PostgresProductionWorkflowAdmissionRepository,
   PostgresResearchCampaignRepository,
   PostgresResearchCampaignOrchestrationRepository,
@@ -33,6 +34,7 @@ import {
 } from './production-cfpb-reconciliation'
 import { runCampaignRefresh } from './campaign-refresh-runner'
 import { runCampaignOrchestration } from './campaign-orchestration-runner'
+import { runProductionWorkflowCancellation } from './production-workflow-cancellation-runner'
 import {
   cancelProductionCollectionWorkflow,
   startProductionCollectionWorkflow,
@@ -51,6 +53,9 @@ const campaignRefreshBatchSize = Number(process.env.APPSEA_CAMPAIGN_REFRESH_BATC
 const campaignOrchestrationBatchSize = Number(
   process.env.APPSEA_CAMPAIGN_ORCHESTRATION_BATCH_SIZE ?? '1'
 )
+const productionWorkflowCancellationBatchSize = Number(
+  process.env.APPSEA_PRODUCTION_WORKFLOW_CANCELLATION_BATCH_SIZE ?? '1'
+)
 const quotaRetentionDays = Number(process.env.APPSEA_SOURCE_QUOTA_RETENTION_DAYS ?? '30')
 const input = {
   jobId:
@@ -63,6 +68,7 @@ const input = {
   snapshotReconciliationBatchSize,
   campaignRefreshBatchSize,
   campaignOrchestrationBatchSize,
+  productionWorkflowCancellationBatchSize,
   quotaRetentionDays,
   workspaceId: process.env.APPSEA_DELETION_WORKSPACE_ID ?? null
 }
@@ -120,7 +126,11 @@ try {
           campaignOrchestrationDispatched: result.campaignOrchestrationDispatched,
           campaignOrchestrationFailed: result.campaignOrchestrationFailed,
           campaignOrchestrationPolicyDenied: result.campaignOrchestrationPolicyDenied,
-          campaignOrchestrationReconciled: result.campaignOrchestrationReconciled
+          campaignOrchestrationReconciled: result.campaignOrchestrationReconciled,
+          productionWorkflowCancellationTargets: result.productionWorkflowCancellationTargets,
+          productionWorkflowCancellationAttempted: result.productionWorkflowCancellationAttempted,
+          productionWorkflowCancellationDispatched: result.productionWorkflowCancellationDispatched,
+          productionWorkflowCancellationFailed: result.productionWorkflowCancellationFailed
         })
       }
     },
@@ -129,6 +139,7 @@ try {
       const quotaRepository = new PostgresSourceQuotaRepository(pool)
       const deletionRepository = new PostgresDeletionPropagationRepository(pool)
       const admissionRepository = new PostgresProductionWorkflowAdmissionRepository(pool)
+      const productionWorkflowRepository = new PostgresProductionCollectionWorkflowRepository(pool)
       const campaignRepository = new PostgresResearchCampaignRepository(pool)
       const campaignOrchestrationRepository = new PostgresResearchCampaignOrchestrationRepository(
         pool
@@ -223,6 +234,28 @@ try {
               }
             }
           ),
+        productionWorkflowCancellation: async () =>
+          runProductionWorkflowCancellation(
+            {
+              batchSize: input.productionWorkflowCancellationBatchSize,
+              assertLease,
+              fence
+            },
+            {
+              workflows: productionWorkflowRepository,
+              cancelWorkflow: async (workflowId) => {
+                if (!temporalClient) {
+                  const config = temporalClientConfigFromEnv()
+                  temporalConnection = await Connection.connect(temporalConnectionOptions(config))
+                  temporalClient = new WorkflowClient({
+                    connection: temporalConnection,
+                    namespace: config.namespace
+                  })
+                }
+                await cancelProductionCollectionWorkflow(temporalClient, workflowId)
+              }
+            }
+          ),
         assertLease
       })
     }
@@ -253,7 +286,11 @@ try {
       campaignOrchestrationDispatched: result.campaignOrchestrationDispatched,
       campaignOrchestrationFailed: result.campaignOrchestrationFailed,
       campaignOrchestrationPolicyDenied: result.campaignOrchestrationPolicyDenied,
-      campaignOrchestrationReconciled: result.campaignOrchestrationReconciled
+      campaignOrchestrationReconciled: result.campaignOrchestrationReconciled,
+      productionWorkflowCancellationTargets: result.productionWorkflowCancellationTargets,
+      productionWorkflowCancellationAttempted: result.productionWorkflowCancellationAttempted,
+      productionWorkflowCancellationDispatched: result.productionWorkflowCancellationDispatched,
+      productionWorkflowCancellationFailed: result.productionWorkflowCancellationFailed
     })
     if (result.campaignRefreshClaims > 0) {
       emitWorkerEvent({
@@ -281,6 +318,17 @@ try {
         campaignOrchestrationFailed: result.campaignOrchestrationFailed,
         campaignOrchestrationPolicyDenied: result.campaignOrchestrationPolicyDenied,
         campaignOrchestrationReconciled: result.campaignOrchestrationReconciled
+      })
+    }
+    if (result.productionWorkflowCancellationAttempted > 0) {
+      emitWorkerEvent({
+        event: 'production_workflow_cancellation_batch_finished',
+        taskQueue,
+        jobId: result.jobId,
+        productionWorkflowCancellationTargets: result.productionWorkflowCancellationTargets,
+        productionWorkflowCancellationAttempted: result.productionWorkflowCancellationAttempted,
+        productionWorkflowCancellationDispatched: result.productionWorkflowCancellationDispatched,
+        productionWorkflowCancellationFailed: result.productionWorkflowCancellationFailed
       })
     }
     if (result.sourceSnapshotReconciliationsProcessed > 0) {
@@ -349,6 +397,10 @@ try {
       campaignOrchestrationFailed: result.campaignOrchestrationFailed,
       campaignOrchestrationPolicyDenied: result.campaignOrchestrationPolicyDenied,
       campaignOrchestrationReconciled: result.campaignOrchestrationReconciled,
+      productionWorkflowCancellationTargets: result.productionWorkflowCancellationTargets,
+      productionWorkflowCancellationAttempted: result.productionWorkflowCancellationAttempted,
+      productionWorkflowCancellationDispatched: result.productionWorkflowCancellationDispatched,
+      productionWorkflowCancellationFailed: result.productionWorkflowCancellationFailed,
       retentionTombstonesQueued: result.retentionTombstonesQueued,
       deletionTombstonesProcessed: result.deletionTombstonesProcessed,
       deletionObjectsAffected: result.deletionObjectsAffected,

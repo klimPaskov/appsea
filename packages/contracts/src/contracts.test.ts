@@ -50,6 +50,7 @@ import {
   productionCollectionPersistenceInputSchema,
   productionCollectionResultSchema,
   productionCollectionWorkflowStartRequestSchema,
+  productionCollectionWorkflowCancelResultSchema,
   productionWorkflowAdmissionDecisionSchema,
   sourceCollectionLeaseResultSchema,
   sourceSnapshotReconciliationInputSchema,
@@ -2021,6 +2022,26 @@ describe('contracts', () => {
         state: 'requested',
         cancellationRequestedAt: now,
         activeWorkflowCount: 17
+      }).success
+    ).toBe(false)
+  })
+
+  it('validates the one-source production workflow cancellation result', () => {
+    expect(
+      productionCollectionWorkflowCancelResultSchema.parse({
+        workflowId: 'workflow:production:workspace:one:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
+        campaignId: 'campaign:billing',
+        state: 'requested',
+        cancellationRequestedAt: now
+      })
+    ).toMatchObject({ state: 'requested', campaignId: 'campaign:billing' })
+    expect(
+      productionCollectionWorkflowCancelResultSchema.safeParse({
+        workflowId: 'workflow:production:workspace:one:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
+        campaignId: 'campaign:billing',
+        state: 'requested',
+        cancellationRequestedAt: null,
+        extra: true
       }).success
     ).toBe(false)
   })

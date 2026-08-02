@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import type { ResearchCampaignRunReadModel } from '@appsea/contracts'
+import { ProductionWorkflowCancelAction } from './production-workflow-cancel-action'
 
 export function ResearchCampaignRunHistory({
   workspaceId,
@@ -39,6 +40,12 @@ export function ResearchCampaignRunHistory({
                     Inspect evidence
                   </Link>
                 ) : null}
+                <ProductionWorkflowCancelAction
+                  workspaceId={workspaceId}
+                  workflowId={run.workflowId}
+                  state={run.state}
+                  cancellationRequestedAt={run.cancellationRequestedAt}
+                />
               </div>
             </li>
           ))}

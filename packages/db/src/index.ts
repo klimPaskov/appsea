@@ -92,7 +92,11 @@ export {
   type ResearchCampaignOrchestrationDispatch,
   type ResearchCampaignOrchestrationFailure
 } from './research-campaign-orchestration-repository'
-export { PostgresProductionCollectionWorkflowRepository } from './production-collection-workflow-repository'
+export {
+  PostgresProductionCollectionWorkflowRepository,
+  ProductionCollectionWorkflowPermissionError,
+  type ProductionCollectionWorkflowCancellationTarget
+} from './production-collection-workflow-repository'
 export {
   PostgresProductionWorkflowAdmissionRepository,
   ProductionWorkflowAdmissionRequiredError,

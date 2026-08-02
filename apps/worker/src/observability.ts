@@ -60,6 +60,10 @@ export interface WorkerEvent {
   campaignOrchestrationFailed?: number
   campaignOrchestrationPolicyDenied?: number
   campaignOrchestrationReconciled?: number
+  productionWorkflowCancellationTargets?: number
+  productionWorkflowCancellationAttempted?: number
+  productionWorkflowCancellationDispatched?: number
+  productionWorkflowCancellationFailed?: number
   retentionTombstonesQueued?: number
   deletionTombstonesProcessed?: number
   deletionObjectsAffected?: number
@@ -331,6 +335,34 @@ export function emitWorkerEvent(event: WorkerEvent): void {
       : {}),
     ...(finiteInteger(event.campaignOrchestrationReconciled) !== undefined
       ? { campaignOrchestrationReconciled: finiteInteger(event.campaignOrchestrationReconciled) }
+      : {}),
+    ...(finiteInteger(event.productionWorkflowCancellationTargets) !== undefined
+      ? {
+          productionWorkflowCancellationTargets: finiteInteger(
+            event.productionWorkflowCancellationTargets
+          )
+        }
+      : {}),
+    ...(finiteInteger(event.productionWorkflowCancellationAttempted) !== undefined
+      ? {
+          productionWorkflowCancellationAttempted: finiteInteger(
+            event.productionWorkflowCancellationAttempted
+          )
+        }
+      : {}),
+    ...(finiteInteger(event.productionWorkflowCancellationDispatched) !== undefined
+      ? {
+          productionWorkflowCancellationDispatched: finiteInteger(
+            event.productionWorkflowCancellationDispatched
+          )
+        }
+      : {}),
+    ...(finiteInteger(event.productionWorkflowCancellationFailed) !== undefined
+      ? {
+          productionWorkflowCancellationFailed: finiteInteger(
+            event.productionWorkflowCancellationFailed
+          )
+        }
       : {}),
     ...(finiteInteger(event.retentionTombstonesQueued) !== undefined
       ? { retentionTombstonesQueued: finiteInteger(event.retentionTombstonesQueued) }

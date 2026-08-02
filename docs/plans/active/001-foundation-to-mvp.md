@@ -25,7 +25,7 @@ Status: production-shaped foundation implemented and validated locally; producti
 
 Implemented:
 
-- PostgreSQL 18 schema and seventy forward, checksummed migrations
+- PostgreSQL 18 schema and seventy-one forward, checksummed migrations
 - normalized source, evidence, complaint, cluster, competitor, opportunity, score, report, plan, audit, cost, deletion, outbox, and lineage tables
 - no-login owner, separate migrator, and least-privilege runtime role contract
 - forced workspace RLS and transaction-scoped workspace context
@@ -292,9 +292,11 @@ private cancellation route commits the intent before a best-effort Temporal
 cancel, queued children are stopped transactionally, and the lease-backed
 worker retries started-child cancellation and reconciles the parent at a safe
 terminal boundary. Dispatching claims remain claim-owned until a workflow
-identity is recorded, preventing an orphan external start. One-source run
-cancellation, deployed scheduler/Temporal authorization, and crash-drill proof
-remain open.
+identity is recorded, preventing an orphan external start. Migration `0071`
+adds the matching owner/editor intent and maintenance retry boundary for
+one-source production workflow jobs; the workflow still owns safe terminal
+reconciliation. Deployed scheduler/Temporal authorization and crash-drill
+proof remain open.
 
 ### 2. Durable workflows
 
