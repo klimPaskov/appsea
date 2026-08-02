@@ -25,7 +25,7 @@ Status: production-shaped foundation implemented and validated locally; producti
 
 Implemented:
 
-- PostgreSQL 18 schema and fifty-six forward, checksummed migrations
+- PostgreSQL 18 schema and fifty-seven forward, checksummed migrations
 - normalized source, evidence, complaint, cluster, competitor, opportunity, score, report, plan, audit, cost, deletion, outbox, and lineage tables
 - no-login owner, separate migrator, and least-privilege runtime role contract
 - forced workspace RLS and transaction-scoped workspace context
@@ -148,9 +148,10 @@ and a legacy read union. Owners/editors can create draft campaigns and all
 members can list/read them. Source registry metadata, policy readiness,
 fixture/non-fixture compatibility, approved-purpose checks, and
 identifier-only audit/outbox receipts are enforced in the authenticated
-repository. No migration was needed because the persisted columns already
-support the additive shape; connector activation and workflow admission remain
-separate reviewed boundaries.
+repository. Migration `0057_research_campaign_lifecycle.sql` adds the archived
+lifecycle state and narrowly grants user-editable name/purpose columns;
+connector activation and workflow admission remain separate reviewed
+boundaries.
 
 The campaign run boundary now consumes that persisted intent through the
 authenticated `POST /api/workspaces/:workspaceId/campaigns/:campaignId/run`
@@ -158,7 +159,9 @@ route. It is intentionally one-source for this tranche: the route rechecks
 the current approved policy, purpose, display mode, expiry, budget, and any
 approved seed review, derives all collection inputs server-side, and commits
 the existing idempotent admission before starting Temporal. Multi-source
-orchestration, scheduling, and campaign edit/delete remain open. The private
+orchestration and scheduling remain open. Campaign edits now replace draft
+intent through a validated PATCH boundary, while DELETE archives without
+deleting run/evidence lineage. The private
 campaign surface now lists the latest 100 production workflow projections and
 links completed runs to evidence inspection without exposing workflow hashes
 or raw source payloads. Owners/editors can now choose an approved seed on the

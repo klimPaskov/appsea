@@ -17,7 +17,7 @@
   analysis-start route implemented. Production private opportunity reads also
   carry the linked report and plan approval states from PostgreSQL governance
   projections instead of inferring draft defaults from object payloads
-- PostgreSQL persistence: fifty-six forward, checksummed migrations plus least-privilege repositories, durable auth controls, owner-scoped member administration and existing-account invitations with session step-up, owner-safe account closure, complaint review plus immutable seed-review and report/plan approval guards, source quota reservations, policy-derived retention tombstones, deletion lineage, monotonic source/evidence/tombstone guards, migration-owner source-policy review/activation evidence with identity and independence attestation, a migration-owner maintenance enumerator, fixture and production-collection workflow checkpoints with principal attribution, deterministic complaint-analysis/entity snapshots, deterministic analysis handoff and deletion-triggered recomputation queues, durable production-analysis lineage/object references, immutable analysis initiator attribution, source-deletion invalidation, mutable opportunity availability repair, same-run active-evidence re-analysis recovery, and database-serialized production ingress admissions through migrations `0036`-`0056`, plus bounded monotonic production-analysis activity-attempt telemetry with server-clock attempt history, policy-bound source collection leases, identifier-only snapshot page checkpoints, warning-preserving retries, atomic full-snapshot tombstone finalization, retryable deletion propagation with bounded exhausted failure, manual analysis admission/replay limits, authenticated source-reconciliation admission, a worker-principal admission branch for the direct CFPB command, retention-aware invalidated output-object purge, a server-clock maintenance scheduler lease and transaction-fence boundary for selected SQL mutations, maintenance-role-only durable scheduler run metrics, an indexed private cross-run cost summary, a forced-RLS quota-reconciliation case ledger with maintenance-only resolution, and explicit one-record tombstone-bound re-collection lineage
+- PostgreSQL persistence: fifty-seven forward, checksummed migrations plus least-privilege repositories, durable auth controls, owner-scoped member administration and existing-account invitations with session step-up, owner-safe account closure, complaint review plus immutable seed-review and report/plan approval guards, source quota reservations, policy-derived retention tombstones, deletion lineage, monotonic source/evidence/tombstone guards, migration-owner source-policy review/activation evidence with identity and independence attestation, a migration-owner maintenance enumerator, fixture and production-collection workflow checkpoints with principal attribution, deterministic complaint-analysis/entity snapshots, deterministic analysis handoff and deletion-triggered recomputation queues, durable production-analysis lineage/object references, immutable analysis initiator attribution, source-deletion invalidation, mutable opportunity availability repair, same-run active-evidence re-analysis recovery, and database-serialized production ingress admissions through migrations `0036`-`0057`, plus bounded monotonic production-analysis activity-attempt telemetry with server-clock attempt history, policy-bound source collection leases, identifier-only snapshot page checkpoints, warning-preserving retries, atomic full-snapshot tombstone finalization, retryable deletion propagation with bounded exhausted failure, manual analysis admission/replay limits, authenticated source-reconciliation admission, a worker-principal admission branch for the direct CFPB command, retention-aware invalidated output-object purge, a server-clock maintenance scheduler lease and transaction-fence boundary for selected SQL mutations, maintenance-role-only durable scheduler run metrics, an indexed private cross-run cost summary, a forced-RLS quota-reconciliation case ledger with maintenance-only resolution, explicit one-record tombstone-bound re-collection lineage, and campaign edit/archive lifecycle receipts
 - Database verification: PostgreSQL 18 fresh-install and populated-upgrade lifecycle is covered by local/CI gates; this environment currently lacks Docker for a fresh rerun
 - Native Codex skills: 21 synchronized skills
 - Codex helper agents: 11 bounded agents
@@ -54,8 +54,8 @@ are marked `reviewed-seed-only` with seed-review provenance and an explicit gap
 until a permitted competitor source supplies retained evidence.
 
 Private campaign configuration is now available at
-`/workspace/:workspaceId/campaigns` with authenticated list/create/read APIs,
-and owners/editors can start a bounded one-source run through the page or
+`/workspace/:workspaceId/campaigns` with authenticated list/create/read/update/
+archive APIs, and owners/editors can start a bounded one-source run through the page or
 `POST /api/workspaces/:workspaceId/campaigns/:campaignId/run`. New writes use a
 strict `campaign-v1` JSONB contract, resolve source registry and policy
 readiness metadata, reject unknown or purpose-incompatible sources, and
@@ -63,7 +63,8 @@ persist only draft campaigns with identifier-only audit/outbox receipts. The
 run route accepts only an idempotency envelope, derives query/source/limit/
 budget from the stored campaign, rechecks policy/display mode/expiry and any
 approved seed review, and commits the existing admission ledger before
-Temporal. Legacy fixture/workflow campaign rows remain readable. The CFPB
+Temporal. Legacy fixture/workflow campaign rows remain readable. Archive is a
+soft lifecycle transition that preserves run/evidence lineage. The CFPB
 connector remains disabled; multi-source orchestration and scheduling remain
 open.
 

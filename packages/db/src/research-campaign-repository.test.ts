@@ -2,7 +2,8 @@ import type { Pool, PoolClient } from 'pg'
 import { describe, expect, it } from 'vitest'
 import {
   PostgresResearchCampaignRepository,
-  ResearchCampaignSourceError
+  ResearchCampaignSourceError,
+  ResearchCampaignStateError
 } from './research-campaign-repository'
 
 const now = '2026-08-01T00:00:00.000Z'
@@ -103,6 +104,25 @@ class FakeClient {
         rowCount: number
       }
     }
+    if (text.startsWith('UPDATE appsea.research_campaigns')) {
+      const current = this.campaigns.get(String(values[1] ?? ''))
+      if (!current) return { rows: [], rowCount: 0 } as unknown as { rows: T[]; rowCount: number }
+      const updated = {
+        ...current,
+        ...(text.includes("state = 'archived'")
+          ? { state: 'archived' }
+          : {
+              name: String(values[2]),
+              purpose: String(values[3]),
+              state: 'draft',
+              configuration: JSON.parse(String(values[4])),
+              budget: JSON.parse(String(values[5]))
+            }),
+        updated_at: String(values[text.includes("state = 'archived'") ? 2 : 6])
+      }
+      this.campaigns.set(updated.campaign_id, updated)
+      return { rows: [updated], rowCount: 1 } as unknown as { rows: T[]; rowCount: number }
+    }
     if (text.startsWith('INSERT INTO appsea.research_campaigns')) {
       const row = campaignRow(JSON.parse(String(values[4])))
       this.campaigns.set(row.campaign_id, row)
@@ -198,5 +218,50 @@ describe('research campaign repository', () => {
     const result = await repository.readForUser('user:one', 'workspace:one', 'campaign:billing')
     expect(result?.configuration).toEqual({ mode: 'production-collection' })
     expect(result?.state).toBe('draft')
+  })
+
+  it('updates draft intent idempotently and records mutation receipts', async () => {
+    const client = new FakeClient()
+    client.campaigns.set('campaign:billing', campaignRow())
+    const repository = new PostgresResearchCampaignRepository(fakePool(client))
+    const result = await repository.updateForUser('user:one', 'workspace:one', 'campaign:billing', {
+      name: 'Billing workflow research v2',
+      purpose: 'opportunity-research',
+      configuration: { ...configuration, goal: 'Updated goal' },
+      budget
+    })
+    expect(result?.name).toBe('Billing workflow research v2')
+    expect(result?.state).toBe('draft')
+    expect(
+      client.statements.some((statement) => statement.includes('research.campaign.updated'))
+    ).toBe(true)
+
+    const replay = await repository.updateForUser('user:one', 'workspace:one', 'campaign:billing', {
+      name: 'Billing workflow research v2',
+      purpose: 'opportunity-research',
+      configuration: { ...configuration, goal: 'Updated goal' },
+      budget
+    })
+    expect(replay?.name).toBe('Billing workflow research v2')
+  })
+
+  it('archives campaigns without deleting historical lineage and rejects active runs', async () => {
+    const client = new FakeClient()
+    client.campaigns.set('campaign:billing', campaignRow())
+    const repository = new PostgresResearchCampaignRepository(fakePool(client))
+    const archived = await repository.archiveForUser(
+      'user:one',
+      'workspace:one',
+      'campaign:billing'
+    )
+    expect(archived?.state).toBe('archived')
+    expect(client.campaigns.has('campaign:billing')).toBe(true)
+
+    const activeClient = new FakeClient()
+    activeClient.campaigns.set('campaign:billing', { ...campaignRow(), state: 'running' })
+    const activeRepository = new PostgresResearchCampaignRepository(fakePool(activeClient))
+    await expect(
+      activeRepository.archiveForUser('user:one', 'workspace:one', 'campaign:billing')
+    ).rejects.toBeInstanceOf(ResearchCampaignStateError)
   })
 })

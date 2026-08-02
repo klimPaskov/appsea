@@ -5,7 +5,7 @@
 The fixture product, PostgreSQL persistence, durable workflows, policy-gated
 CFPB collection checkpoint, authenticated private workspaces, report/plan
 approval/export, recovery, and invitations are implemented. Migrations
-`0027`-`0052` add policy evidence, collection checkpoints, deletion repair,
+`0027`-`0057` add policy evidence, collection checkpoints, deletion repair,
 leases, snapshot reconciliation, workflow admissions, source-reconciliation
 admission, retryable tombstones, maintenance-run telemetry, and a durable
 source-quota reconciliation case ledger. Migration `0050` adds explicit,
@@ -92,8 +92,10 @@ bounded history/status reads on the strict `campaign-v1` boundary. The server
 derives collection inputs from persisted intent, rechecks approved policy,
 purpose, expiry, and optional seed review, then commits admission before
 Temporal. History exposes only state, checkpoint, counters, IDs, and times;
-hashes/payloads stay hidden. Multi-source, scheduling, source picker, live
-activation, and Docker PostgreSQL proof remain open; CFPB is disabled.
+hashes/payloads stay hidden. Migration `0057` adds validated draft edits and a
+soft archive state with run/evidence lineage preserved. Multi-source,
+scheduling, source picker, live activation, and Docker PostgreSQL proof remain
+open; CFPB is disabled.
 
 The follow-on 2026-08-02 analysis tranche adds the missing reviewed handoff:
 owner/editor members choose an approved seed on the completed collection page,
@@ -110,10 +112,6 @@ The 2026-08-02 source-coverage tranche adds a private read-only registry/API
 over existing policy tables. It derives production collectibility from the
 independent approval gate and exposes quotas, deletion duties, and gaps while
 keeping payloads, hashes, reviewer identities, and activation controls out.
-
-Migration `0055` persists the highest bounded attempt without changing
-idempotency hashes; `0056` adds the bounded event history. Scheduling,
-production infrastructure, and deployment alerting remain open.
 
 ## Next production tranche
 

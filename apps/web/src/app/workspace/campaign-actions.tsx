@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import type { ResearchCampaignReadModel } from '@appsea/contracts'
 
 const initialConfiguration = {
   schemaVersion: 'campaign-v1',
@@ -98,5 +99,115 @@ export function ResearchCampaignCreateForm({ workspaceId }: { workspaceId: strin
       {status ? <p className="form-success">{status}</p> : null}
       {error ? <p className="form-error">{error}</p> : null}
     </div>
+  )
+}
+
+export function ResearchCampaignEditForm({
+  workspaceId,
+  campaign
+}: {
+  workspaceId: string
+  campaign: ResearchCampaignReadModel
+}) {
+  const [name, setName] = useState(campaign.name)
+  const [purpose, setPurpose] = useState(campaign.purpose)
+  const [configuration, setConfiguration] = useState(
+    JSON.stringify(campaign.configuration, null, 2)
+  )
+  const [budget, setBudget] = useState(JSON.stringify(campaign.budget, null, 2))
+  const [status, setStatus] = useState<string | null>(null)
+  const [error, setError] = useState<string | null>(null)
+  const [pending, setPending] = useState(false)
+
+  async function update(): Promise<void> {
+    setPending(true)
+    setStatus(null)
+    setError(null)
+    try {
+      const response = await fetch(
+        '/api/workspaces/' + workspaceId + '/campaigns/' + campaign.campaignId,
+        {
+          method: 'PATCH',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({
+            name,
+            purpose,
+            configuration: JSON.parse(configuration) as unknown,
+            budget: JSON.parse(budget) as unknown
+          })
+        }
+      )
+      const payload = (await response.json()) as { data?: { state?: string }; error?: string }
+      if (!response.ok) throw new Error(payload.error ?? 'Unable to update research campaign')
+      setStatus('Campaign updated as ' + (payload.data?.state ?? 'draft') + '.')
+      window.location.reload()
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : 'Unable to update research campaign')
+    } finally {
+      setPending(false)
+    }
+  }
+
+  async function archive(): Promise<void> {
+    if (!window.confirm('Archive this campaign? Existing runs and evidence will be preserved.')) {
+      return
+    }
+    setPending(true)
+    setStatus(null)
+    setError(null)
+    try {
+      const response = await fetch(
+        '/api/workspaces/' + workspaceId + '/campaigns/' + campaign.campaignId,
+        { method: 'DELETE' }
+      )
+      const payload = (await response.json()) as { data?: { state?: string }; error?: string }
+      if (!response.ok) throw new Error(payload.error ?? 'Unable to archive research campaign')
+      setStatus('Campaign ' + (payload.data?.state ?? 'archived') + '.')
+      window.location.reload()
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : 'Unable to archive research campaign')
+    } finally {
+      setPending(false)
+    }
+  }
+
+  return (
+    <details className="workspace-campaign-edit">
+      <summary>Edit campaign</summary>
+      <div className="seed-review-create">
+        <div className="workspace-seed-form-grid">
+          <label>
+            Name
+            <input value={name} onChange={(event) => setName(event.target.value)} />
+          </label>
+          <label>
+            Purpose
+            <input value={purpose} onChange={(event) => setPurpose(event.target.value)} />
+          </label>
+        </div>
+        <label className="seed-json-label">
+          Campaign configuration JSON
+          <textarea
+            value={configuration}
+            onChange={(event) => setConfiguration(event.target.value)}
+            rows={18}
+          />
+        </label>
+        <label className="seed-json-label">
+          Research budget JSON
+          <textarea value={budget} onChange={(event) => setBudget(event.target.value)} rows={8} />
+        </label>
+        <div className="workspace-actions">
+          <button className="quiet-button" type="button" disabled={pending} onClick={update}>
+            {pending ? 'Saving campaign...' : 'Save campaign changes'}
+          </button>
+          <button className="quiet-button" type="button" disabled={pending} onClick={archive}>
+            Archive campaign
+          </button>
+        </div>
+        {status ? <p className="form-success">{status}</p> : null}
+        {error ? <p className="form-error">{error}</p> : null}
+      </div>
+    </details>
   )
 }

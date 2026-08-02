@@ -887,7 +887,8 @@ export class PostgresProductionCollectionRepository {
                  END,
                  configuration = EXCLUDED.configuration,
                  budget = EXCLUDED.budget,
-                 updated_at = GREATEST(appsea.research_campaigns.updated_at, EXCLUDED.updated_at)`,
+                 updated_at = GREATEST(appsea.research_campaigns.updated_at, EXCLUDED.updated_at)
+           WHERE appsea.research_campaigns.state <> 'archived'`,
             [
               parsed.request.workspaceId,
               parsed.request.campaignId,
@@ -1244,7 +1245,8 @@ export class PostgresProductionCollectionRepository {
           await client.query(
             `UPDATE appsea.research_campaigns
                 SET state = 'completed', updated_at = GREATEST(updated_at, $3)
-              WHERE workspace_id = $1 AND campaign_id = $2`,
+              WHERE workspace_id = $1 AND campaign_id = $2
+                AND state <> 'archived'`,
             [parsed.request.workspaceId, parsed.request.campaignId, parsed.observedAt]
           )
           await client.query(

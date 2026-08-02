@@ -44,6 +44,7 @@ import {
   researchCampaignConfigurationSchema,
   researchCampaignCreateInputSchema,
   researchCampaignReadModelSchema,
+  researchCampaignUpdateInputSchema,
   researchCampaignRunInputSchema,
   researchCampaignRunReadModelSchema,
   sourcePolicySchema,
@@ -1320,6 +1321,23 @@ describe('contracts', () => {
         maxActivityAttempts: 3
       }
     })
+    expect(
+      researchCampaignUpdateInputSchema.parse({
+        name: 'Billing workflow research v2',
+        purpose: input.purpose,
+        configuration: input.configuration,
+        budget: input.budget
+      })
+    ).toMatchObject({ name: 'Billing workflow research v2' })
+    expect(
+      researchCampaignUpdateInputSchema.safeParse({
+        campaignId: input.campaignId,
+        name: input.name,
+        purpose: input.purpose,
+        configuration: input.configuration,
+        budget: input.budget
+      }).success
+    ).toBe(false)
     expect(
       researchCampaignReadModelSchema.parse({
         workspaceId: 'workspace:one',

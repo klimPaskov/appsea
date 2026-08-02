@@ -3,14 +3,20 @@ import {
   GET as listCampaigns,
   POST as createCampaign
 } from './api/workspaces/[workspaceId]/campaigns/route'
-import { GET as readCampaign } from './api/workspaces/[workspaceId]/campaigns/[campaignId]/route'
+import {
+  DELETE as archiveCampaign,
+  GET as readCampaign,
+  PATCH as updateCampaign
+} from './api/workspaces/[workspaceId]/campaigns/[campaignId]/route'
 
 const mocks = vi.hoisted(() => ({
   readSession: vi.fn(),
   sameOriginRequest: vi.fn(),
   listForUser: vi.fn(),
   createForUser: vi.fn(),
-  readForUser: vi.fn()
+  readForUser: vi.fn(),
+  updateForUser: vi.fn(),
+  archiveForUser: vi.fn()
 }))
 
 vi.mock('../server/auth-session', () => ({
@@ -26,10 +32,13 @@ vi.mock('@appsea/db/research-campaign', () => ({
     listForUser = mocks.listForUser
     createForUser = mocks.createForUser
     readForUser = mocks.readForUser
+    updateForUser = mocks.updateForUser
+    archiveForUser = mocks.archiveForUser
   },
   ResearchCampaignConflictError: class extends Error {},
   ResearchCampaignPermissionError: class extends Error {},
-  ResearchCampaignSourceError: class extends Error {}
+  ResearchCampaignSourceError: class extends Error {},
+  ResearchCampaignStateError: class extends Error {}
 }))
 vi.mock('../server/database', () => ({ getDatabasePool: () => ({}) }))
 
@@ -91,11 +100,15 @@ describe('research campaign routes', () => {
     mocks.listForUser.mockReset()
     mocks.createForUser.mockReset()
     mocks.readForUser.mockReset()
+    mocks.updateForUser.mockReset()
+    mocks.archiveForUser.mockReset()
     mocks.readSession.mockResolvedValue(session)
     mocks.sameOriginRequest.mockReturnValue(true)
     mocks.listForUser.mockResolvedValue([campaign])
     mocks.createForUser.mockResolvedValue(campaign)
     mocks.readForUser.mockResolvedValue(campaign)
+    mocks.updateForUser.mockResolvedValue({ ...campaign, name: 'Updated campaign' })
+    mocks.archiveForUser.mockResolvedValue({ ...campaign, state: 'archived' })
   })
 
   it('keeps campaign listing and reads private', async () => {
@@ -153,5 +166,45 @@ describe('research campaign routes', () => {
       configuration,
       budget
     })
+  })
+
+  it('supports same-origin draft edits and lineage-preserving archive', async () => {
+    const update = await updateCampaign(
+      request(
+        {
+          name: 'Updated campaign',
+          purpose: campaign.purpose,
+          configuration,
+          budget
+        },
+        'PATCH'
+      ),
+      {
+        params: Promise.resolve({ workspaceId: 'workspace:one', campaignId: 'campaign:one' })
+      }
+    )
+    expect(update.status).toBe(200)
+    expect(mocks.updateForUser).toHaveBeenCalledWith(
+      'user:editor',
+      'workspace:one',
+      'campaign:one',
+      {
+        name: 'Updated campaign',
+        purpose: campaign.purpose,
+        configuration,
+        budget
+      }
+    )
+
+    const archived = await archiveCampaign(request({}, 'DELETE'), {
+      params: Promise.resolve({ workspaceId: 'workspace:one', campaignId: 'campaign:one' })
+    })
+    expect(archived.status).toBe(200)
+    await expect(archived.json()).resolves.toEqual({ data: { ...campaign, state: 'archived' } })
+    expect(mocks.archiveForUser).toHaveBeenCalledWith(
+      'user:editor',
+      'workspace:one',
+      'campaign:one'
+    )
   })
 })

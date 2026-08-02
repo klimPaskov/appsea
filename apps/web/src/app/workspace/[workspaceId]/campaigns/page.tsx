@@ -1,15 +1,24 @@
 import Link from 'next/link'
 import { notFound, redirect } from 'next/navigation'
-import { appseaIdentifierSchema } from '@appsea/contracts'
+import { appseaIdentifierSchema, type ResearchCampaignReadModel } from '@appsea/contracts'
 import { PostgresResearchCampaignRepository } from '@appsea/db/research-campaign'
 import { PostgresProductionCollectionWorkflowRepository } from '@appsea/db/production-collection-workflow'
 import { readSession } from '../../../../server/auth-session'
 import { getDatabasePool } from '../../../../server/database'
-import { ResearchCampaignCreateForm } from '../../campaign-actions'
+import { ResearchCampaignCreateForm, ResearchCampaignEditForm } from '../../campaign-actions'
 import { ResearchCampaignRunAction } from '../../campaign-run-action'
 import { ResearchCampaignRunHistory } from '../../campaign-run-history'
 
 export const dynamic = 'force-dynamic'
+
+function supportsCampaignEdit(campaign: ResearchCampaignReadModel): boolean {
+  return (
+    typeof campaign.configuration === 'object' &&
+    campaign.configuration !== null &&
+    'schemaVersion' in campaign.configuration &&
+    campaign.configuration.schemaVersion === 'campaign-v1'
+  )
+}
 
 export default async function ResearchCampaignsPage({
   params
@@ -101,6 +110,7 @@ export default async function ResearchCampaignsPage({
                     workspaceId={parsedWorkspaceId.data}
                     campaignId={campaign.campaignId}
                     ready={
+                      campaign.state !== 'archived' &&
                       campaign.sources.length === 1 &&
                       campaign.sources[0]?.enabled === true &&
                       campaign.sources[0]?.policyState === 'approved'
@@ -110,6 +120,14 @@ export default async function ResearchCampaignsPage({
                     workspaceId={parsedWorkspaceId.data}
                     runs={runHistoryByCampaignId.get(campaign.campaignId) ?? []}
                   />
+                  {(workspace.role === 'owner' || workspace.role === 'editor') &&
+                  campaign.state !== 'archived' &&
+                  supportsCampaignEdit(campaign) ? (
+                    <ResearchCampaignEditForm
+                      workspaceId={parsedWorkspaceId.data}
+                      campaign={campaign}
+                    />
+                  ) : null}
                   <details>
                     <summary>Configuration snapshot</summary>
                     <pre className="plan-file-preview">

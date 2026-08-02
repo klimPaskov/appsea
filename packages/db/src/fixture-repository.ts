@@ -282,7 +282,8 @@ export class PostgresFixtureResearchRepository {
              (workspace_id, campaign_id, name, purpose, state, configuration, budget, synthetic, created_at, updated_at)
            VALUES ($1, $2, $3, 'internal_quality', 'running', $4::jsonb, $5::jsonb, true, $6, $6)
            ON CONFLICT (workspace_id, campaign_id) DO UPDATE
-             SET state = 'running', configuration = EXCLUDED.configuration, updated_at = EXCLUDED.updated_at`,
+             SET state = 'running', configuration = EXCLUDED.configuration, updated_at = EXCLUDED.updated_at
+           WHERE appsea.research_campaigns.state <> 'archived'`,
             [
               parsed.workspaceId,
               parsed.campaignId,
@@ -862,7 +863,8 @@ export class PostgresFixtureResearchRepository {
           await client.query(
             `UPDATE appsea.research_campaigns
               SET state = 'completed', updated_at = $3
-            WHERE workspace_id = $1 AND campaign_id = $2`,
+            WHERE workspace_id = $1 AND campaign_id = $2
+              AND state <> 'archived'`,
             [parsed.workspaceId, parsed.campaignId, parsed.requestedAt]
           )
           await client.query(

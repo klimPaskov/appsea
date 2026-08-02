@@ -1273,7 +1273,8 @@ export const researchCampaignStateSchema = z.enum([
   'completed',
   'partial',
   'failed',
-  'canceled'
+  'canceled',
+  'archived'
 ])
 
 export const researchCampaignConfigurationSchema = z
@@ -1325,6 +1326,16 @@ const legacyResearchCampaignBudgetSchema = z.record(z.string(), z.unknown())
 export const researchCampaignCreateInputSchema = z
   .object({
     campaignId: appseaIdentifierSchema,
+    name: z.string().min(1).max(160),
+    purpose: z.string().min(1).max(120),
+    configuration: researchCampaignConfigurationSchema,
+    budget: researchJobBudgetSchema
+  })
+  .strict()
+
+/** Replacement input for editing a draft campaign. The campaign ID is path-bound. */
+export const researchCampaignUpdateInputSchema = z
+  .object({
     name: z.string().min(1).max(160),
     purpose: z.string().min(1).max(120),
     configuration: researchCampaignConfigurationSchema,
@@ -3567,6 +3578,7 @@ export type Opportunity = z.infer<typeof opportunitySchema>
 export type ResearchCampaignState = z.infer<typeof researchCampaignStateSchema>
 export type ResearchCampaignConfiguration = z.infer<typeof researchCampaignConfigurationSchema>
 export type ResearchCampaignCreateInput = z.infer<typeof researchCampaignCreateInputSchema>
+export type ResearchCampaignUpdateInput = z.infer<typeof researchCampaignUpdateInputSchema>
 export type ResearchCampaignRunInput = z.infer<typeof researchCampaignRunInputSchema>
 export type ResearchCampaignSourceReadModel = z.infer<typeof researchCampaignSourceReadModelSchema>
 export type ResearchCampaignReadModel = z.infer<typeof researchCampaignReadModelSchema>

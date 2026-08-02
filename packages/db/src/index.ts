@@ -66,7 +66,8 @@ export {
   PostgresResearchCampaignRepository,
   ResearchCampaignConflictError,
   ResearchCampaignPermissionError,
-  ResearchCampaignSourceError
+  ResearchCampaignSourceError,
+  ResearchCampaignStateError
 } from './research-campaign-repository'
 export { PostgresProductionCollectionWorkflowRepository } from './production-collection-workflow-repository'
 export {

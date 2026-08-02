@@ -7,9 +7,10 @@ No live social platform is enabled. Fixture data cannot estimate market size, co
 Private campaign configuration is now persisted and source-policy readiness is
 visible. Owners/editors can start a bounded one-source run from the campaign
 page; the route derives collection inputs from the stored campaign and admits
-the idempotency digest before Temporal. Edit/delete, pagination, scheduled
-refresh, multi-source orchestration, and a source-picker control are not
-implemented. The read-only source registry now exposes policy readiness,
+the idempotency digest before Temporal. Owners/editors can now replace draft
+intent through a validated PATCH boundary, and DELETE archives without
+removing run or evidence lineage. Pagination, scheduled refresh, multi-source
+orchestration, and a source-picker control are not implemented. The read-only source registry now exposes policy readiness,
 quotas, deletion duties, and coverage notes, but it cannot activate a source.
 The page now lists the latest 100 production run projections and
 links completed runs to evidence inspection without exposing hashes or source

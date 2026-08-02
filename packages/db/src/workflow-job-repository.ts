@@ -438,7 +438,8 @@ export class PostgresWorkflowJobRepository {
             await client.query(
               `UPDATE appsea.research_campaigns
                   SET state = 'running', updated_at = GREATEST(updated_at, $3)
-                WHERE workspace_id = $1 AND campaign_id = $2`,
+                WHERE workspace_id = $1 AND campaign_id = $2
+                  AND state <> 'archived'`,
               [parsed.input.workspaceId, parsed.input.campaignId, parsed.occurredAt]
             )
           }
@@ -670,7 +671,8 @@ export class PostgresWorkflowJobRepository {
         await client.query(
           `UPDATE appsea.research_campaigns
               SET state = 'completed', updated_at = GREATEST(updated_at, $3)
-            WHERE workspace_id = $1 AND campaign_id = $2`,
+            WHERE workspace_id = $1 AND campaign_id = $2
+              AND state <> 'archived'`,
           [parsed.workspaceId, row.campaign_id, parsed.occurredAt]
         )
         await insertTerminalLedger(
@@ -789,7 +791,8 @@ export class PostgresWorkflowJobRepository {
           `UPDATE appsea.research_campaigns
               SET state = CASE WHEN state = 'completed' THEN state ELSE $3 END,
                   updated_at = GREATEST(updated_at, $4)
-            WHERE workspace_id = $1 AND campaign_id = $2`,
+            WHERE workspace_id = $1 AND campaign_id = $2
+              AND state <> 'archived'`,
           [parsed.input.workspaceId, row.campaign_id, campaignState, parsed.occurredAt]
         )
         await insertTerminalLedger(

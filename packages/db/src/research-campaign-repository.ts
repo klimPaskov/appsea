@@ -4,9 +4,11 @@ import {
   researchCampaignCreateInputSchema,
   researchCampaignReadModelSchema,
   researchCampaignSourceReadModelSchema,
+  researchCampaignUpdateInputSchema,
   type ResearchCampaignCreateInput,
   type ResearchCampaignReadModel,
-  type ResearchCampaignSourceReadModel
+  type ResearchCampaignSourceReadModel,
+  type ResearchCampaignUpdateInput
 } from '@appsea/contracts'
 import { contentHash } from './hash'
 import { withAuthenticatedWorkspaceTransaction } from './transaction'
@@ -40,7 +42,7 @@ interface SourceRow extends QueryResultRow {
 
 export class ResearchCampaignPermissionError extends Error {
   constructor() {
-    super('The workspace role cannot create a research campaign')
+    super('The workspace role cannot manage a research campaign')
     this.name = 'ResearchCampaignPermissionError'
   }
 }
@@ -56,6 +58,13 @@ export class ResearchCampaignSourceError extends Error {
   constructor(message: string) {
     super(message)
     this.name = 'ResearchCampaignSourceError'
+  }
+}
+
+export class ResearchCampaignStateError extends Error {
+  constructor(message = 'The research campaign state does not allow this operation') {
+    super(message)
+    this.name = 'ResearchCampaignStateError'
   }
 }
 
@@ -149,6 +158,48 @@ async function readSources(
   })
 }
 
+async function validateCampaignSources(
+  client: PoolClient,
+  workspaceFixtureOnly: boolean,
+  purpose: string,
+  sourceIds: string[]
+): Promise<void> {
+  const sourceRows = await client.query<SourceRow>(
+    `SELECT source.source_id, source.display_name, source.source_type,
+            source.lifecycle_state, policy.policy_version, policy.policy_state,
+            policy.permitted_purposes, policy.display_mode, policy.coverage_notes,
+            policy.reviewed_at, policy.expires_at
+       FROM appsea.sources source
+       LEFT JOIN appsea.source_policy_versions policy
+         ON policy.source_id = source.source_id
+        AND policy.policy_version = source.current_policy_version
+      WHERE source.source_id = ANY($1::text[])
+      ORDER BY source.source_id
+      FOR SHARE OF source`,
+    [sourceIds]
+  )
+  const sourceIdsFound = new Set(sourceRows.rows.map((row) => row.source_id))
+  const missing = sourceIds.filter((id) => !sourceIdsFound.has(id))
+  if (missing.length > 0) {
+    throw new ResearchCampaignSourceError(`Unknown campaign source: ${missing[0]}`)
+  }
+  for (const source of sourceRows.rows) {
+    if (workspaceFixtureOnly !== (source.source_type === 'fixture')) {
+      throw new ResearchCampaignSourceError(
+        'Fixture and non-fixture sources cannot be mixed with this workspace'
+      )
+    }
+    if (
+      source.policy_state === 'approved' &&
+      !(source.permitted_purposes ?? []).includes(purpose)
+    ) {
+      throw new ResearchCampaignSourceError(
+        `Source ${source.source_id} is not approved for campaign purpose ${purpose}`
+      )
+    }
+  }
+}
+
 async function readModel(client: PoolClient, row: CampaignRow): Promise<ResearchCampaignReadModel> {
   const sourceIds = sourceIdsFromConfiguration(row.configuration)
   return researchCampaignReadModelSchema.parse({
@@ -168,6 +219,16 @@ async function readModel(client: PoolClient, row: CampaignRow): Promise<Research
 
 function eventId(prefix: string, workspaceId: string, campaignId: string): string {
   return `${prefix}:campaign:${contentHash({ workspaceId, campaignId }).slice(0, 32)}`
+}
+
+function mutationEventId(
+  prefix: string,
+  workspaceId: string,
+  campaignId: string,
+  operation: string,
+  content: unknown = null
+): string {
+  return `${prefix}:campaign:${contentHash({ workspaceId, campaignId, operation, content }).slice(0, 32)}`
 }
 
 export class PostgresResearchCampaignRepository {
@@ -204,40 +265,12 @@ export class PostgresResearchCampaignRepository {
           throw new ResearchCampaignPermissionError()
         }
 
-        const sourceRows = await client.query<SourceRow>(
-          `SELECT source.source_id, source.display_name, source.source_type,
-                  source.lifecycle_state, policy.policy_version, policy.policy_state,
-                  policy.permitted_purposes, policy.display_mode, policy.coverage_notes,
-                  policy.reviewed_at, policy.expires_at
-             FROM appsea.sources source
-             LEFT JOIN appsea.source_policy_versions policy
-               ON policy.source_id = source.source_id
-              AND policy.policy_version = source.current_policy_version
-            WHERE source.source_id = ANY($1::text[])
-            ORDER BY source.source_id
-            FOR SHARE OF source`,
-          [parsedInput.configuration.sourceIds]
+        await validateCampaignSources(
+          client,
+          workspace.fixture_only,
+          parsedInput.purpose,
+          parsedInput.configuration.sourceIds
         )
-        const sourceIds = new Set(sourceRows.rows.map((row) => row.source_id))
-        const missing = parsedInput.configuration.sourceIds.filter((id) => !sourceIds.has(id))
-        if (missing.length > 0) {
-          throw new ResearchCampaignSourceError(`Unknown campaign source: ${missing[0]}`)
-        }
-        for (const source of sourceRows.rows) {
-          if (workspace.fixture_only !== (source.source_type === 'fixture')) {
-            throw new ResearchCampaignSourceError(
-              'Fixture and non-fixture sources cannot be mixed with this workspace'
-            )
-          }
-          if (
-            source.policy_state === 'approved' &&
-            !(source.permitted_purposes ?? []).includes(parsedInput.purpose)
-          ) {
-            throw new ResearchCampaignSourceError(
-              `Source ${source.source_id} is not approved for campaign purpose ${parsedInput.purpose}`
-            )
-          }
-        }
 
         const existingResult = await client.query<CampaignRow>(
           `${selectCampaignColumns()}
@@ -328,6 +361,242 @@ export class PostgresResearchCampaignRepository {
           ]
         )
         return model
+      },
+      { isolationLevel: 'SERIALIZABLE' }
+    )
+  }
+
+  /**
+   * Replace a campaign's editable draft intent. A changed validated campaign
+   * returns to draft so a future admission must re-check the new inputs.
+   * Completed/running history is never rewritten through this boundary.
+   */
+  async updateForUser(
+    userId: string,
+    workspaceId: string,
+    campaignId: string,
+    input: ResearchCampaignUpdateInput
+  ): Promise<ResearchCampaignReadModel | null> {
+    const parsedUserId = appseaIdentifierSchema.parse(userId)
+    const parsedWorkspaceId = appseaIdentifierSchema.parse(workspaceId)
+    const parsedCampaignId = appseaIdentifierSchema.parse(campaignId)
+    const parsedInput = researchCampaignUpdateInputSchema.parse(input)
+    return withAuthenticatedWorkspaceTransaction(
+      this.pool,
+      parsedUserId,
+      parsedWorkspaceId,
+      async (client) => {
+        const role = await actorRole(client, parsedWorkspaceId, parsedUserId)
+        if (role !== 'owner' && role !== 'editor') throw new ResearchCampaignPermissionError()
+
+        const workspaceResult = await client.query<{
+          fixture_only: boolean
+          visibility: string
+          status: string
+        }>(
+          `SELECT fixture_only, visibility, status
+             FROM appsea.workspaces
+            WHERE workspace_id = $1`,
+          [parsedWorkspaceId]
+        )
+        const workspace = workspaceResult.rows[0]
+        if (!workspace || workspace.visibility !== 'private' || workspace.status !== 'active') {
+          throw new ResearchCampaignPermissionError()
+        }
+
+        const existingResult = await client.query<CampaignRow>(
+          `${selectCampaignColumns()}
+             WHERE workspace_id = $1 AND campaign_id = $2
+             FOR UPDATE`,
+          [parsedWorkspaceId, parsedCampaignId]
+        )
+        const existing = existingResult.rows[0]
+        if (!existing) return null
+
+        await validateCampaignSources(
+          client,
+          workspace.fixture_only,
+          parsedInput.purpose,
+          parsedInput.configuration.sourceIds
+        )
+        const requestedHash = campaignContentHash({
+          name: parsedInput.name,
+          purpose: parsedInput.purpose,
+          configuration: parsedInput.configuration,
+          budget: parsedInput.budget,
+          synthetic: workspace.fixture_only
+        })
+        const existingHash = campaignContentHash({
+          name: existing.name,
+          purpose: existing.purpose,
+          configuration: existing.configuration,
+          budget: existing.budget,
+          synthetic: existing.synthetic
+        })
+        if (existingHash === requestedHash) return readModel(client, existing)
+        if (existing.state === 'archived') {
+          throw new ResearchCampaignStateError('Archived campaigns cannot be edited')
+        }
+        if (!['draft', 'validated'].includes(existing.state)) {
+          throw new ResearchCampaignStateError(`Campaign state ${existing.state} cannot be edited`)
+        }
+
+        const updated = await client.query<CampaignRow>(
+          `UPDATE appsea.research_campaigns
+              SET name = $3,
+                  purpose = $4,
+                  state = 'draft',
+                  configuration = $5::jsonb,
+                  budget = $6::jsonb,
+                  updated_at = $7
+            WHERE workspace_id = $1 AND campaign_id = $2
+            RETURNING workspace_id, campaign_id, name, purpose, state, configuration,
+                      budget, synthetic, created_at, updated_at`,
+          [
+            parsedWorkspaceId,
+            parsedCampaignId,
+            parsedInput.name,
+            parsedInput.purpose,
+            JSON.stringify(parsedInput.configuration),
+            JSON.stringify(parsedInput.budget),
+            new Date().toISOString()
+          ]
+        )
+        const row = updated.rows[0]
+        if (!row) return null
+        const model = await readModel(client, row)
+        const metadata = JSON.stringify({
+          sourceIds: parsedInput.configuration.sourceIds,
+          purpose: parsedInput.purpose,
+          synthetic: workspace.fixture_only,
+          contentHash: requestedHash
+        })
+        const operation = `updated:${requestedHash}`
+        await client.query(
+          `INSERT INTO appsea.audit_events
+             (workspace_id, audit_event_id, actor_type, actor_id, action,
+              target_type, target_id, correlation_id, metadata, occurred_at)
+           VALUES ($1, $2, 'user', $3, 'research.campaign.updated',
+                   'research_campaign', $4, $4, $5::jsonb, $6)
+           ON CONFLICT DO NOTHING`,
+          [
+            parsedWorkspaceId,
+            mutationEventId('audit', parsedWorkspaceId, parsedCampaignId, operation),
+            parsedUserId,
+            parsedCampaignId,
+            metadata,
+            row.updated_at
+          ]
+        )
+        await client.query(
+          `INSERT INTO appsea.outbox_events
+             (workspace_id, outbox_event_id, event_type, aggregate_type,
+              aggregate_id, schema_version, correlation_id, payload, occurred_at)
+           VALUES ($1, $2, 'research.campaign.updated', 'research_campaign',
+                   $3, '1.0.0', $3, $4::jsonb, $5)
+           ON CONFLICT DO NOTHING`,
+          [
+            parsedWorkspaceId,
+            mutationEventId('outbox', parsedWorkspaceId, parsedCampaignId, operation),
+            parsedCampaignId,
+            JSON.stringify({
+              workspaceId: parsedWorkspaceId,
+              campaignId: parsedCampaignId,
+              sourceIds: parsedInput.configuration.sourceIds,
+              synthetic: workspace.fixture_only
+            }),
+            row.updated_at
+          ]
+        )
+        return model
+      },
+      { isolationLevel: 'SERIALIZABLE' }
+    )
+  }
+
+  /** Archive a campaign without deleting its runs, evidence, or lineage. */
+  async archiveForUser(
+    userId: string,
+    workspaceId: string,
+    campaignId: string
+  ): Promise<ResearchCampaignReadModel | null> {
+    const parsedUserId = appseaIdentifierSchema.parse(userId)
+    const parsedWorkspaceId = appseaIdentifierSchema.parse(workspaceId)
+    const parsedCampaignId = appseaIdentifierSchema.parse(campaignId)
+    return withAuthenticatedWorkspaceTransaction(
+      this.pool,
+      parsedUserId,
+      parsedWorkspaceId,
+      async (client) => {
+        const role = await actorRole(client, parsedWorkspaceId, parsedUserId)
+        if (role !== 'owner' && role !== 'editor') throw new ResearchCampaignPermissionError()
+        const existingResult = await client.query<CampaignRow>(
+          `${selectCampaignColumns()}
+             WHERE workspace_id = $1 AND campaign_id = $2
+             FOR UPDATE`,
+          [parsedWorkspaceId, parsedCampaignId]
+        )
+        const existing = existingResult.rows[0]
+        if (!existing) return null
+        if (existing.state === 'archived') return readModel(client, existing)
+        if (['queued', 'running', 'paused'].includes(existing.state)) {
+          throw new ResearchCampaignStateError(
+            `Campaign state ${existing.state} must stop before it can be archived`
+          )
+        }
+        const occurredAt = new Date().toISOString()
+        const updated = await client.query<CampaignRow>(
+          `UPDATE appsea.research_campaigns
+              SET state = 'archived', updated_at = $3
+            WHERE workspace_id = $1 AND campaign_id = $2
+            RETURNING workspace_id, campaign_id, name, purpose, state, configuration,
+                      budget, synthetic, created_at, updated_at`,
+          [parsedWorkspaceId, parsedCampaignId, occurredAt]
+        )
+        const row = updated.rows[0]
+        if (!row) return null
+        const operation = `archived:${row.updated_at instanceof Date ? row.updated_at.toISOString() : row.updated_at}`
+        const metadata = JSON.stringify({
+          previousState: existing.state,
+          preservedLineage: true,
+          synthetic: existing.synthetic
+        })
+        await client.query(
+          `INSERT INTO appsea.audit_events
+             (workspace_id, audit_event_id, actor_type, actor_id, action,
+              target_type, target_id, correlation_id, metadata, occurred_at)
+           VALUES ($1, $2, 'user', $3, 'research.campaign.archived',
+                   'research_campaign', $4, $4, $5::jsonb, $6)
+           ON CONFLICT DO NOTHING`,
+          [
+            parsedWorkspaceId,
+            mutationEventId('audit', parsedWorkspaceId, parsedCampaignId, operation),
+            parsedUserId,
+            parsedCampaignId,
+            metadata,
+            row.updated_at
+          ]
+        )
+        await client.query(
+          `INSERT INTO appsea.outbox_events
+             (workspace_id, outbox_event_id, event_type, aggregate_type,
+              aggregate_id, schema_version, correlation_id, payload, occurred_at)
+           VALUES ($1, $2, 'research.campaign.archived', 'research_campaign',
+                   $3, '1.0.0', $3, $4::jsonb, $5)
+           ON CONFLICT DO NOTHING`,
+          [
+            parsedWorkspaceId,
+            mutationEventId('outbox', parsedWorkspaceId, parsedCampaignId, operation),
+            parsedCampaignId,
+            JSON.stringify({
+              workspaceId: parsedWorkspaceId,
+              campaignId: parsedCampaignId,
+              synthetic: existing.synthetic
+            }),
+            row.updated_at
+          ]
+        )
+        return readModel(client, row)
       },
       { isolationLevel: 'SERIALIZABLE' }
     )

@@ -9,10 +9,21 @@ use; creating a campaign does not collect evidence or activate a connector.
 Workspace members can list and read campaigns at
 `GET /api/workspaces/:workspaceId/campaigns` and
 `GET /api/workspaces/:workspaceId/campaigns/:campaignId`. Owners and editors
-can create a draft through the same-origin `POST` route. The page is
+can create a draft through the same-origin `POST` route, replace a draft
+through `PATCH /api/workspaces/:workspaceId/campaigns/:campaignId`, and archive
+a campaign through same-origin `DELETE` on that route. The page is
 `/workspace/:workspaceId/campaigns` and is linked from the private workspace
 home. All responses are authenticated, membership-checked, and private
 no-store responses.
+
+Campaign edits are full replacements of the name, purpose, validated
+`campaign-v1` configuration, and USD budget. An idempotent replacement with the
+same content is a read-only replay; a changed validated campaign returns to
+`draft` so a later admission re-checks its inputs. Queued, running, paused,
+completed, failed, partial, and canceled campaign history is not rewritten.
+DELETE is intentionally a soft archive transition. It rejects active runs,
+preserves every run/evidence/audit lineage, and leaves the archived record
+visible as a coverage and history boundary.
 
 The private workspace home also links to
 `/workspace/:workspaceId/sources`, a read-only source-coverage registry. Use it
