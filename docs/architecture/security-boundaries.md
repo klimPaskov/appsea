@@ -39,6 +39,13 @@ for that pre-context authorization lookup.
   trigger rejects unattested or self-owned approvals, and pre-0054 approvals
   are conservatively disabled until re-reviewed. This strengthens the gate but
   does not grant legal, privacy, or security approval or activate a source.
+- The private source-registry read is a separate authenticated, read-only
+  projection. `GET /api/workspaces/:workspaceId/sources` requires private
+  workspace membership and a transaction-local authorization check; the
+  repository derives enabled/collectible state from lifecycle, current
+  approved policy, expiry, and independent review. It excludes policy
+  payloads, content hashes, reviewer identities, and activation methods, and
+  never mutates the global source registry.
 - Research campaign creation is a separate private boundary. The web route
   requires an authenticated owner/editor and same-origin request; the
   repository repeats membership and private-workspace checks inside an RLS

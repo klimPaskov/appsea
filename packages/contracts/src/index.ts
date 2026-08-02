@@ -69,6 +69,14 @@ export const sourceDeletionPolicySchema = z
 
 export const sourcePolicyStateSchema = z.enum(['approved', 'pending_review', 'expired', 'revoked'])
 
+const policyDocumentRefSchema = z
+  .string()
+  .url()
+  .refine((value) => {
+    const protocol = new URL(value).protocol
+    return protocol === 'http:' || protocol === 'https:'
+  }, 'Policy document references must use HTTP(S)')
+
 export const sourcePolicySchema = z.object({
   sourceId: z.string().min(1),
   displayName: z.string().min(1),
@@ -87,7 +95,7 @@ export const sourcePolicySchema = z.object({
   coverageNotes: z.array(z.string()),
   reviewedAt: z.string().datetime(),
   policyOwner: z.string().min(1).max(160).default('unassigned'),
-  policyDocumentRef: z.string().url().nullable().default(null),
+  policyDocumentRef: policyDocumentRefSchema.nullable().default(null),
   expiresAt: z.string().datetime().nullable().default(null),
   quota: sourceQuotaSchema.default({
     requestsPerMinute: 60,
@@ -293,6 +301,41 @@ export const appseaIdentifierSchema = z
   .min(3)
   .max(160)
   .regex(/^[a-z][a-z0-9_:-]*$/)
+
+/** Safe private source-registry metadata; policy payloads and review identities stay out. */
+export const workspaceSourceReadModelSchema = z
+  .object({
+    sourceId: appseaIdentifierSchema,
+    displayName: z.string().min(1).max(160),
+    sourceType: z.enum(['fixture', 'api', 'export', 'licensed-feed', 'manual']),
+    lifecycleState: z.enum([
+      'active',
+      'disabled_pending_review',
+      'disabled_policy',
+      'disabled_operator',
+      'retired'
+    ]),
+    currentPolicyVersion: z.string().min(1).max(80).nullable(),
+    policyVersion: z.string().min(1).max(80).nullable(),
+    policyState: sourcePolicyStateSchema.nullable(),
+    permittedPurposes: z.array(z.string().min(1).max(120)).max(100),
+    commercialUse: z.enum(['allowed', 'restricted', 'unknown']).nullable(),
+    accessMethod: z.string().min(1).max(500).nullable(),
+    retentionDays: z.number().int().nonnegative().max(36_500).nullable(),
+    deletionRequired: z.boolean().nullable(),
+    attributionRequired: z.boolean().nullable(),
+    displayMode: z.enum(['excerpt', 'metadata-only', 'aggregate-only', 'fixture']).nullable(),
+    coverageNotes: z.array(z.string().max(500)).max(100),
+    policyDocumentRef: policyDocumentRefSchema.nullable(),
+    reviewedAt: z.string().datetime().nullable(),
+    expiresAt: z.string().datetime().nullable(),
+    quota: sourceQuotaSchema.nullable(),
+    deletion: sourceDeletionPolicySchema.nullable(),
+    enabled: z.boolean(),
+    synthetic: z.boolean(),
+    collectible: z.boolean()
+  })
+  .strict()
 
 export const sourcePolicyReviewerRoleSchema = z.enum([
   'legal',
@@ -3472,6 +3515,7 @@ export type SourceDeletionPolicy = z.infer<typeof sourceDeletionPolicySchema>
 export type SourcePolicyState = z.infer<typeof sourcePolicyStateSchema>
 export type SourcePolicyReviewerRole = z.infer<typeof sourcePolicyReviewerRoleSchema>
 export type SourcePolicyApprovalInput = z.infer<typeof sourcePolicyApprovalInputSchema>
+export type WorkspaceSourceReadModel = z.infer<typeof workspaceSourceReadModelSchema>
 export type SourceDeletionEvent = z.infer<typeof sourceDeletionEventSchema>
 export type Complaint = z.infer<typeof complaintSchema>
 export type ComplaintReviewState = z.infer<typeof complaintReviewStateSchema>

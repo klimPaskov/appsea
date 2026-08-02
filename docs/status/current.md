@@ -23,7 +23,7 @@
 - Codex helper agents: 11 bounded agents
 - Project memory: implemented and validated
 - Documentation system: implemented and linked
-- UI references: twenty deterministic sparse desktop/mobile reference
+- UI references: twenty-two deterministic sparse desktop/mobile reference
   sources; raster export awaits the local `cairosvg` dependency
 - Real source connectors: CFPB connector boundary and policy metadata implemented, disabled pending legal/privacy/security approval; migrations `0027` and `0054` add operator-only draft/approval evidence with canonical reviewer identity and independence attestation, and the production collection checkpoint persists policy-bound non-synthetic source/evidence/complaint lineage when a reviewed version is explicitly activated. The direct CFPB command now uses migration `0051`'s worker-principal admission branch and cannot bypass the bounded production ingress ledger; no source is activated in this repository
 - Production database deployment: not provisioned; the schema, repository, migrations, roles, RLS, and local/CI proof are implemented
@@ -66,6 +66,14 @@ approved seed review, and commits the existing admission ledger before
 Temporal. Legacy fixture/workflow campaign rows remain readable. The CFPB
 connector remains disabled; multi-source orchestration and scheduling remain
 open.
+
+The private workspace now also exposes a read-only source registry at
+`/workspace/:workspaceId/sources` and
+`GET /api/workspaces/:workspaceId/sources`. It projects existing policy rows
+without a migration, derives enabled/collectible state from the database
+approval gate, and keeps quotas, deletion duties, and coverage notes visible.
+Policy payloads, hashes, reviewer identities, and activation controls remain
+outside the contract; fixture sources stay explicitly synthetic.
 
 The campaign page and private API also expose the latest 100 production run
 projections with safe state/checkpoint/counter/timestamp fields. A status page

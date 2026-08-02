@@ -17,6 +17,17 @@ A source record tracks:
 
 A blocked source remains visible as a gap. Missing data must never be described as proof that complaints do not exist.
 
+Private members can inspect the read-only source registry at
+`/workspace/:workspaceId/sources` or
+`GET /api/workspaces/:workspaceId/sources`. The registry exposes source and
+policy identifiers, lifecycle/readiness, permitted purposes, access method,
+quota, retention/deletion duties, expiry, and coverage notes. It derives
+`collectible` from the active current policy plus an independent approval
+review; it never trusts a draft payload flag. Policy payloads, content hashes,
+reviewer identities, and activation controls remain outside the read model.
+Fixture sources are labeled synthetic and are never collectible production
+sources. The route is private, membership-authorized, no-store, and read-only.
+
 Approved-source collection checkpoints expose the recorded source policy,
 observation counts, coverage gaps, and policy-allowed evidence only inside the
 authenticated workspace route. The public leaderboard remains fixture-only

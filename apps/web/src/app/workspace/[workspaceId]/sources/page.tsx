@@ -1,0 +1,179 @@
+import Link from 'next/link'
+import { notFound, redirect } from 'next/navigation'
+import { appseaIdentifierSchema, type WorkspaceSourceReadModel } from '@appsea/contracts'
+import { PostgresSourcePolicyRepository } from '@appsea/db/source-policy'
+import { readSession } from '../../../../server/auth-session'
+import { getDatabasePool } from '../../../../server/database'
+
+export const dynamic = 'force-dynamic'
+
+function formatQuota(source: WorkspaceSourceReadModel): string {
+  if (!source.quota) return 'Not recorded'
+  return `${source.quota.requestsPerMinute.toLocaleString('en-US')} requests/minute · ${source.quota.maxRecordsPerRun.toLocaleString('en-US')} records/run`
+}
+
+function formatRetention(source: WorkspaceSourceReadModel): string {
+  if (source.retentionDays === null) return 'Not recorded'
+  return `${source.retentionDays.toLocaleString('en-US')} days${source.deletionRequired ? ' · deletion required' : ''}`
+}
+
+function statusLabel(source: WorkspaceSourceReadModel): string {
+  if (source.collectible) return 'Collectible'
+  if (source.synthetic && source.enabled) return 'Fixture enabled'
+  if (source.policyState === 'pending_review') return 'Pending review'
+  if (source.policyState === 'expired') return 'Policy expired'
+  if (source.policyState === 'revoked') return 'Policy revoked'
+  return 'Not collectible'
+}
+
+export default async function WorkspaceSourcesPage({
+  params
+}: {
+  params: Promise<{ workspaceId: string }>
+}) {
+  const session = await readSession()
+  if (!session) redirect('/login')
+  const { workspaceId } = await params
+  const parsedWorkspaceId = appseaIdentifierSchema.safeParse(workspaceId)
+  if (!parsedWorkspaceId.success) notFound()
+  const workspace = session.workspaces.find(
+    (candidate) => candidate.workspaceId === parsedWorkspaceId.data
+  )
+  if (!workspace || workspace.visibility !== 'private') notFound()
+
+  let sources: WorkspaceSourceReadModel[] | null = null
+  try {
+    sources = await new PostgresSourcePolicyRepository(getDatabasePool()).listForUser(
+      session.user.userId,
+      parsedWorkspaceId.data
+    )
+  } catch (error) {
+    console.error('AppSea source coverage page read failed', {
+      name: error instanceof Error ? error.name : 'unknown'
+    })
+  }
+
+  return (
+    <main className="workspace-page">
+      <p className="breadcrumb">
+        <Link href="/workspace">Workspace</Link>
+        <span aria-hidden="true">/</span>
+        <span>Source coverage</span>
+      </p>
+      <div className="workspace-toolbar workspace-opportunity-heading">
+        <div>
+          <p className="eyebrow">Private research workspace</p>
+          <h1>Source coverage</h1>
+          <p className="auth-intro">
+            Review the permitted source registry, policy state, quotas, deletion duties, and known
+            coverage gaps before planning research.
+          </p>
+        </div>
+        <strong className="workspace-score">{sources?.length ?? '—'}</strong>
+      </div>
+      <section className="workspace-section" aria-labelledby="source-registry-heading">
+        <div className="section-intro">
+          <h2 id="source-registry-heading">Registered sources</h2>
+          <p>
+            This is a read-only policy view. It cannot activate connectors or override legal,
+            privacy, security, quota, or deletion review.
+          </p>
+        </div>
+        {sources === null ? (
+          <p className="empty-state">
+            Source coverage is temporarily unavailable. Refresh after the private research service
+            reconnects.
+          </p>
+        ) : sources.length === 0 ? (
+          <p className="empty-state">No source policy records are registered yet.</p>
+        ) : (
+          <ul className="source-registry-list">
+            {sources.map((source) => (
+              <li key={source.sourceId}>
+                <article className="source-registry-card">
+                  <div className="source-registry-heading">
+                    <div>
+                      <div className="complaint-meta">
+                        <span>{source.sourceId}</span>
+                        <span>{source.synthetic ? 'Synthetic fixture' : 'Production source'}</span>
+                      </div>
+                      <h3>{source.displayName}</h3>
+                    </div>
+                    <strong
+                      className={`source-registry-state${source.enabled ? ' is-enabled' : ''}`}
+                    >
+                      {statusLabel(source)}
+                    </strong>
+                  </div>
+                  <p className="muted-note">
+                    {source.collectible
+                      ? 'The current approved policy and independent review gate permit production collection.'
+                      : source.synthetic
+                        ? 'Synthetic fixture evidence is available only inside a fixture workspace and is not market research.'
+                        : 'This source remains visible as a coverage gap until its current policy gate permits collection.'}
+                  </p>
+                  <dl className="detail-grid source-registry-details">
+                    <div>
+                      <dt className="label">Lifecycle</dt>
+                      <dd>{source.lifecycleState}</dd>
+                    </div>
+                    <div>
+                      <dt className="label">Policy</dt>
+                      <dd>
+                        {source.policyVersion ?? 'No current policy'}
+                        {source.policyState ? ` · ${source.policyState}` : ''}
+                      </dd>
+                    </div>
+                    <div>
+                      <dt className="label">Access method</dt>
+                      <dd>{source.accessMethod ?? 'Not recorded'}</dd>
+                    </div>
+                    <div>
+                      <dt className="label">Permitted purposes</dt>
+                      <dd>{source.permittedPurposes.join(' · ') || 'Not recorded'}</dd>
+                    </div>
+                    <div>
+                      <dt className="label">Quota</dt>
+                      <dd>{formatQuota(source)}</dd>
+                    </div>
+                    <div>
+                      <dt className="label">Retention and deletion</dt>
+                      <dd>{formatRetention(source)}</dd>
+                    </div>
+                    <div>
+                      <dt className="label">Reviewed</dt>
+                      <dd>{source.reviewedAt ?? 'Not reviewed'}</dd>
+                    </div>
+                    <div>
+                      <dt className="label">Policy expiry</dt>
+                      <dd>{source.expiresAt ?? 'No expiry recorded'}</dd>
+                    </div>
+                  </dl>
+                  <div className="source-coverage-notes">
+                    <p className="label">Coverage notes</p>
+                    {source.coverageNotes.length > 0 ? (
+                      <ul>
+                        {source.coverageNotes.map((note) => (
+                          <li key={note}>{note}</li>
+                        ))}
+                      </ul>
+                    ) : (
+                      <p className="muted-note">No additional source-specific gap is recorded.</p>
+                    )}
+                  </div>
+                  {source.policyDocumentRef ? (
+                    <p className="source-policy-link">
+                      <a href={source.policyDocumentRef} target="_blank" rel="noopener noreferrer">
+                        Open policy document
+                      </a>
+                    </p>
+                  ) : null}
+                </article>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
+    </main>
+  )
+}

@@ -415,6 +415,62 @@ def campaigns_screen(width: int, height: int, mobile: bool) -> str:
     return shell(width, height, content, mobile)
 
 
+def source_coverage_screen(width: int, height: int, mobile: bool) -> str:
+    margin = 24 if mobile else 220
+    top = 112 if mobile else 132
+    title_size = 38 if mobile else 56
+    content = text(margin, top, 'Private research workspace', 10, 700, MUTED, letter=1.1)
+    content += text(margin, top + 54, 'Source coverage', title_size, 650, INK, letter=-2.5)
+    content += multiline(
+        margin,
+        top + (88 if mobile else 100),
+        'Review policy readiness, quotas, deletion duties, and visible gaps before planning research.',
+        14 if mobile else 16,
+        43 if mobile else 72,
+        22 if mobile else 25,
+        fill=MUTED,
+    )
+    list_y = top + (184 if mobile else 176)
+    content += text(margin, list_y, 'REGISTERED SOURCES', 10, 700, MUTED, letter=1.1)
+    content += line(margin, list_y + 20, width - margin, list_y + 20, INK)
+    rows = [
+        ('CFPB Consumer Complaint Database', 'cfpb-consumer-complaints', 'Pending review'),
+        ('Synthetic community fixture', 'fixture-community-feed', 'Fixture enabled'),
+    ]
+    row_height = 166 if mobile else 126
+    for index, (name, identifier, state) in enumerate(rows):
+        row_y = list_y + 20 + index * row_height
+        content += text(margin, row_y + 30, name, 17 if mobile else 21, 650)
+        content += text(margin, row_y + 54, identifier, 11, 400, MUTED)
+        content += text(width - margin, row_y + 32, state, 11, 650, INK, 'end')
+        content += multiline(
+            margin,
+            row_y + (84 if mobile else 80),
+            'Official API · 6 requests/minute · deletion required' if index == 0 else 'Synthetic only · not market research',
+            12,
+            43 if mobile else 82,
+            20,
+            fill='#41444a',
+        )
+        if index == 0:
+            content += text(margin, row_y + (126 if mobile else 106), 'Coverage gap: historical export is not covered.', 11, 400, MUTED)
+        content += line(margin, row_y + row_height, width - margin, row_y + row_height)
+    note_y = list_y + 20 + row_height * len(rows) + (34 if mobile else 44)
+    note_height = 118 if mobile else 92
+    content += rect(margin, note_y, width - margin * 2, note_height, SURFACE, 6, LINE)
+    content += text(margin + 18, note_y + 28, 'READ-ONLY POLICY VIEW', 10, 700, MUTED, letter=1.0)
+    content += multiline(
+        margin + 18,
+        note_y + 55,
+        'This page cannot activate a connector or override legal, privacy, security, quota, or deletion review.',
+        12,
+        43 if mobile else 88,
+        20,
+        fill='#41444a',
+    )
+    return shell(width, height, content, mobile)
+
+
 def campaign_status_screen(width: int, height: int, mobile: bool) -> str:
     margin = 24 if mobile else 220
     top = 112 if mobile else 132
@@ -489,6 +545,7 @@ SCREENS = {
     'security': security_screen,
     'seed-reviews': seed_reviews_screen,
     'campaigns': campaigns_screen,
+    'source-coverage': source_coverage_screen,
     'campaign-status': campaign_status_screen,
     'analysis-status': analysis_status_screen
 }

@@ -159,6 +159,14 @@ validates workflow workspace prefixes, and excludes hashes, object references,
 source payloads, and seed content. Activity attempts remain a bounded
 projection placeholder until the run table records durable attempt history.
 
+The source coverage tranche adds a strict `workspaceSourceReadModel` and an
+authenticated read-only registry at `/workspace/:workspaceId/sources` plus
+`GET /api/workspaces/:workspaceId/sources`. It projects existing source-policy
+rows without a migration, derives production collectibility from independent
+approval evidence, and keeps quota, deletion duties, and coverage gaps
+visible. No policy payload, reviewer identity, hash, or activation control
+crosses the private read boundary.
+
 ### 2. Durable workflows
 
 Status: fixture and production-collection workflow boundaries plus an

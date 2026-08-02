@@ -105,6 +105,11 @@ Queued/running DB rows currently report zero activity attempts because the
 existing run table has no attempt-history column. Automatic scheduling,
 production Temporal availability, and richer attempt telemetry remain open.
 
+The 2026-08-02 source-coverage tranche adds a private read-only registry/API
+over existing policy tables. It derives production collectibility from the
+independent approval gate and exposes quotas, deletion duties, and gaps while
+keeping payloads, hashes, reviewer identities, and activation controls out.
+
 ## Next production tranche
 
 1. Legal/privacy/security approval and CFPB policy activation.

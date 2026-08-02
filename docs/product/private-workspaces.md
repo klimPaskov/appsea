@@ -53,6 +53,14 @@ gap. Draft creation writes identifier-only audit/outbox receipts but never
 starts a workflow or activates a connector; collection admission rechecks
 policy, quota, deletion, and budget constraints. Existing fixture/workflow
 campaign JSON remains readable through a legacy compatibility shape.
+
+The workspace home links to a read-only source registry at
+`/workspace/:workspaceId/sources` with the corresponding private API. Members
+can inspect current policy readiness, quotas, retention/deletion duties, and
+coverage notes without seeing policy payloads, reviewer identities, hashes, or
+activation controls. A production source is marked collectible only when its
+current active policy is approved, unexpired, and backed by an independent
+review; fixture sources remain explicitly synthetic.
 Owners and editors can start a one-source production collection from the same
 page or `POST /api/workspaces/:workspaceId/campaigns/:campaignId/run`. The
 server derives all collection inputs from the stored campaign, checks approved

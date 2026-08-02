@@ -8,8 +8,10 @@ Private campaign configuration is now persisted and source-policy readiness is
 visible. Owners/editors can start a bounded one-source run from the campaign
 page; the route derives collection inputs from the stored campaign and admits
 the idempotency digest before Temporal. Edit/delete, pagination, scheduled
-refresh, multi-source orchestration, and a source-registry picker are not
-implemented. The page now lists the latest 100 production run projections and
+refresh, multi-source orchestration, and a source-picker control are not
+implemented. The read-only source registry now exposes policy readiness,
+quotas, deletion duties, and coverage notes, but it cannot activate a source.
+The page now lists the latest 100 production run projections and
 links completed runs to evidence inspection without exposing hashes or source
 payloads. Pending policies can be named to make coverage gaps explicit;
 they cannot be collected or treated as enabled sources. The CFPB connector
@@ -197,6 +199,13 @@ least-privilege credential deployment, backup purge, workspace-closure purge,
 and fresh Docker-backed proof remain open.
 
 ## Sources
+
+The private source registry at `/workspace/:workspaceId/sources` and its
+no-store API make current policy readiness, quotas, retention/deletion duties,
+and coverage notes visible to workspace members. It is intentionally a
+read-only projection over existing source-policy tables: it does not activate
+connectors or expose policy payloads, hashes, or reviewer identities. A source
+remains a visible gap until the independent approval gate is satisfied.
 
 The CFPB Consumer Complaint Database connector is implemented with an explicit
 typed policy, conservative quotas, narrative-only mapping, bounded request

@@ -14,6 +14,7 @@ Version 5 combines the five dark desktop references with five matching mobile la
 | `/account/security`                                        | `design/references/desktop/security.png`       | `design/references/mobile/security.png`               | Private session review         |
 | `/workspace/:workspaceId/seed-reviews`                     | `design/references/source/seed-reviews.svg`    | `design/references/source/seed-reviews-mobile.svg`    | Private reviewed seed registry |
 | `/workspace/:workspaceId/campaigns`                        | `design/references/source/campaigns.svg`       | `design/references/source/campaigns-mobile.svg`       | Private campaign configuration |
+| `/workspace/:workspaceId/sources`                          | `design/references/source/source-coverage.svg` | `design/references/source/source-coverage-mobile.svg` | Private source policy coverage |
 | `/workspace/:workspaceId/research/workflows/:workflowId`   | `design/references/source/campaign-status.svg` | `design/references/source/campaign-status-mobile.svg` | Private collection status      |
 | `/workspace/:workspaceId/research/analysis/:analysisRunId` | `design/references/source/analysis-status.svg` | `design/references/source/analysis-status-mobile.svg` | Private analysis status        |
 

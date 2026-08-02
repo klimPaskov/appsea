@@ -14,6 +14,12 @@ can create a draft through the same-origin `POST` route. The page is
 home. All responses are authenticated, membership-checked, and private
 no-store responses.
 
+The private workspace home also links to
+`/workspace/:workspaceId/sources`, a read-only source-coverage registry. Use it
+to inspect policy readiness, quotas, deletion duties, and visible gaps before
+choosing a source identifier. The registry does not activate connectors or
+expose policy payloads, approval hashes, or reviewer identities.
+
 ## Configuration contract
 
 New records use the strict `campaign-v1` configuration contract in

@@ -47,6 +47,7 @@ import {
   researchCampaignRunReadModelSchema,
   sourcePolicySchema,
   sourcePolicyApprovalInputSchema,
+  workspaceSourceReadModelSchema,
   sourceMaintenanceInputSchema,
   sourceMaintenanceResultSchema,
   maintenanceSchedulerNameSchema,
@@ -367,6 +368,54 @@ describe('contracts', () => {
     ).toBe(false)
     expect(
       sourcePolicyApprovalInputSchema.safeParse({ ...valid, independenceAttested: false }).success
+    ).toBe(false)
+  })
+
+  it('keeps the private source registry bounded and policy-safe', () => {
+    const source = workspaceSourceReadModelSchema.parse({
+      sourceId: 'cfpb-consumer-complaints',
+      displayName: 'CFPB Consumer Complaint Database',
+      sourceType: 'api',
+      lifecycleState: 'disabled_pending_review',
+      currentPolicyVersion: 'cfpb-policy-v1',
+      policyVersion: 'cfpb-policy-v1',
+      policyState: 'pending_review',
+      permittedPurposes: ['opportunity-research'],
+      commercialUse: 'allowed',
+      accessMethod: 'Official API',
+      retentionDays: 30,
+      deletionRequired: true,
+      attributionRequired: true,
+      displayMode: 'excerpt',
+      coverageNotes: ['Historical export is not covered.'],
+      policyDocumentRef: 'https://example.com/policy',
+      reviewedAt: now,
+      expiresAt: null,
+      quota: {
+        requestsPerMinute: 6,
+        maxRecordsPerRequest: 1000,
+        maxRecordsPerRun: 1000,
+        costPerRequestMicros: 0
+      },
+      deletion: {
+        sourceRecordIdField: 'complaint_id',
+        supportsTombstones: false,
+        deletionPollIntervalHours: 24,
+        retentionAction: 'redact'
+      },
+      enabled: false,
+      synthetic: false,
+      collectible: false
+    })
+    expect(source.collectible).toBe(false)
+    expect(workspaceSourceReadModelSchema.safeParse({ ...source, policyPayload: {} }).success).toBe(
+      false
+    )
+    expect(
+      workspaceSourceReadModelSchema.safeParse({
+        ...source,
+        policyDocumentRef: 'javascript:alert(1)'
+      }).success
     ).toBe(false)
   })
 
