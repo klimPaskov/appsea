@@ -137,4 +137,20 @@ describe('worker observability', () => {
       /between 1000 and 3600000/
     )
   })
+
+  it('keeps maintenance loop counters bounded', () => {
+    const log = vi.spyOn(console, 'log').mockImplementation(() => undefined)
+    emitWorkerEvent({
+      event: 'maintenance_loop_stopped',
+      taskQueue: 'appsea-source-maintenance-v1',
+      maintenancePasses: 3,
+      maintenanceFailures: 1
+    })
+    const payload = JSON.parse(String(log.mock.calls[0]?.[0])) as Record<string, unknown>
+    expect(payload).toMatchObject({
+      maintenancePasses: 3,
+      maintenanceFailures: 1
+    })
+    log.mockRestore()
+  })
 })

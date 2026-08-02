@@ -22,6 +22,10 @@ log sink and alert on:
 - `APPSEA_MAINTENANCE_SCHEDULER_METRICS_FAILED` events, which indicate that
   durable scheduler telemetry needs operator repair without implying that the
   underlying job failed;
+- `maintenance_loop_started`, `maintenance_loop_pass_failed`, and
+  `maintenance_loop_stopped` events. The loop's failure event carries only a
+  consecutive-attempt counter and the fixed
+  `APPSEA_MAINTENANCE_LOOP_PASS_FAILED` code; it never forwards child errors;
 - `source_quota_reconciliation_failed` events and open-case age from the
   private reconciliation read model; these require an explicit maintenance-role
   decision and never justify an automatic re-fetch;

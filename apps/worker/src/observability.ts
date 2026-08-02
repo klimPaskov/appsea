@@ -44,6 +44,8 @@ export interface WorkerEvent {
   deletionObjectsAffected?: number
   deletionOpportunitiesInvalidated?: number
   recomputationJobsQueued?: number
+  maintenancePasses?: number
+  maintenanceFailures?: number
   failureCode?: string
 }
 
@@ -232,6 +234,12 @@ export function emitWorkerEvent(event: WorkerEvent): void {
       : {}),
     ...(finiteInteger(event.recomputationJobsQueued) !== undefined
       ? { recomputationJobsQueued: finiteInteger(event.recomputationJobsQueued) }
+      : {}),
+    ...(finiteInteger(event.maintenancePasses) !== undefined
+      ? { maintenancePasses: finiteInteger(event.maintenancePasses) }
+      : {}),
+    ...(finiteInteger(event.maintenanceFailures) !== undefined
+      ? { maintenanceFailures: finiteInteger(event.maintenanceFailures) }
       : {}),
     ...(event.failureCode ? { failureCode: event.failureCode } : {})
   }

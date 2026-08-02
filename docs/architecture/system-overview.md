@@ -123,6 +123,13 @@ codes. The worker writes only operational metadata, so retries become visible
 in private status reads without changing the content hash or exposing workflow
 payloads.
 
+The source-maintenance worker also exposes a supervised `maintenance:loop`
+entrypoint. It starts one existing lease-backed pass at a time, applies a
+bounded interval or failure backoff, forwards shutdown to the child, and emits
+fixed loop counters. The loop is only deployment scheduling glue; PostgreSQL
+leases, transaction fencing, and idempotent repositories remain the durable
+recovery boundary.
+
 Production evolution still requires authenticated/TLS-protected Temporal,
 production identity/recovery policy and scheduled/distributed validation of the
 new login/source maintenance jobs, approved live connectors, production

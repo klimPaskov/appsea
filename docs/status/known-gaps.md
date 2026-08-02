@@ -136,7 +136,12 @@ operations are idempotent for safe reruns. The long-lived worker now emits a
 bounded `worker_heartbeat` event every 30 seconds, and the web service exposes
 no-store liveness/readiness probes that fail closed on PostgreSQL, authenticated
 Temporal, or object-store dependency checks. These signals improve deployment
-validation. Migration `0047` now persists each acquired, contended, or failed
+validation. The worker also exposes a deployment-owned `maintenance:loop`
+supervisor that starts one existing lease-backed pass at a time, retries child
+failures with bounded backoff, and forwards shutdown without logging raw
+errors. It improves repository-level ownership but still requires a production
+process supervisor, alert routing, and deployment liveness policy. Migration
+`0047` now persists each acquired, contended, or failed
 maintenance invocation through maintenance-role-only record/list/purge
 functions, with generated run IDs, fixed states/codes, bounded durations, and
 numeric counters; it purges rows on the configured retention window and never

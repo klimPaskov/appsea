@@ -400,11 +400,14 @@ numeric counters, fixed failure codes, and retention purge;
 `0048` adds an indexed, membership-authorized private workspace cost summary
 over the immutable ledger with exact micro-unit aggregates by currency and
 cost type;
+the worker also exposes a supervised `maintenance:loop` command that starts
+one lease-backed pass at a time, retries child failures with bounded backoff,
+and forwards shutdown without logging raw errors;
 the long-lived worker emits a bounded 30-second heartbeat and the web service
-exposes fail-closed liveness/readiness probes; deployed scheduler ownership,
-alert ownership, traces, role separation, incident drills,
+exposes fail-closed liveness/readiness probes; deployed process-supervisor
+ownership, alert ownership, traces, role separation, incident drills,
 and production security review remain. Provider idempotency, object-store
-conditional-delete, deployed scheduler ownership, and Docker-backed lock
+conditional-delete, deployed scheduler alerting, and Docker-backed lock
 recovery proof remain open.
 
 ### 7. Desktop release

@@ -8,6 +8,23 @@ policy-derived retention tombstones, and deletion propagation:
 pnpm --filter @appsea/worker source:maintenance
 ```
 
+For a deployment-owned scheduler, run the supervised loop instead of wiring a
+second implementation around the repositories:
+
+```text
+pnpm --filter @appsea/worker maintenance:loop
+```
+
+The loop starts one bounded `source:maintenance` child pass at a time. Each
+pass still acquires the PostgreSQL server-clock lease, renews it through the
+fenced work, and releases it before the next interval. A failed child pass is
+recorded as a fixed `APPSEA_MAINTENANCE_LOOP_PASS_FAILED` event and retried
+after the bounded failure backoff; the loop does not log the child error or
+source content. `SIGTERM`/`SIGINT` abort the child, wait for shutdown, and
+emit a stopped event. Run the loop under a process supervisor with restart and
+alert policy; the loop is not a replacement for deployment ownership,
+Temporal authorization, or operator response.
+
 The command enumerates active workspaces through
 `appsea.list_active_workspaces_for_maintenance()`, a narrowly granted
 migration-owner security-definer function; it does not rely on a runtime
@@ -178,6 +195,8 @@ Configuration is bounded by the command:
 - `APPSEA_SCHEDULER_OWNER_ID` (required stable process identity in production;
   development/test commands generate an ephemeral identity)
 - `APPSEA_MAINTENANCE_LEASE_SECONDS` (30-3,600, default 900)
+- `APPSEA_MAINTENANCE_INTERVAL_SECONDS` (10-86,400, default 60; loop only)
+- `APPSEA_MAINTENANCE_FAILURE_BACKOFF_SECONDS` (10-3,600, default 30; loop only)
 - `APPSEA_MAINTENANCE_METRICS_RETENTION_DAYS` (1-3,650, default 30)
 - `APPSEA_MAINTENANCE_METRICS_PURGE_BATCH_SIZE` (1-10,000, default 1,000)
 

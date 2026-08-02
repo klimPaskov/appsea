@@ -59,8 +59,11 @@ lease-loss/release failures.
 Scheduler leases and transaction fencing now protect selected maintenance SQL
 mutations; maintenance-run metrics, cost summaries, and quota-reconciliation
 cases are durable and private. External source/provider/object-store effects,
-deployed scheduler ownership, alert routing, and reconciliation resolution
-remain separate operations. Explicit re-collection still requires a completed
+deployed scheduler alert routing, and reconciliation resolution remain separate
+operations. The worker now exposes `maintenance:loop`, which supervises the
+existing one-shot lease-backed pass with bounded interval/backoff and
+signal-safe child shutdown; a production process supervisor and alert policy
+are required. Explicit re-collection requires a completed
 matching tombstone.
 
 ## Validated commands
@@ -69,6 +72,9 @@ matching tombstone.
   guidance, formatting, memory, and docs checks pass.
 - PostgreSQL and Temporal integration are staged but Docker-blocked because the
   Docker Desktop Linux engine pipe is unavailable.
+
+- Maintenance loop tests pass; no deployed scheduler, Temporal, or source
+  policy activation claim.
 
 On 2026-08-01, migrations `0053` and `0054` added deterministic complaint
 analysis snapshots and identity/independence-bound source approvals. The CFPB
