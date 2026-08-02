@@ -18,6 +18,12 @@ approval, role separation, non-fixture outputs, and identity-provider approval
 remain open. Fixture and production collection routes are Temporal gateways;
 signup workspaces remain non-fixture by design.
 
+On 2026-08-02, the production collection activity was generalized to select
+the CFPB or Stack Exchange connector only after `readCollectible` returns a
+matching approved source-policy snapshot. The scheduled campaign-refresh worker
+uses the same production connector allowlist. The Stack Exchange policy remains
+unregistered and disabled, so this adds no activation or market-research claim.
+
 On 2026-08-01, production analysis Temporal starts were versioned to
 `production-analysis-v2`. New starts carry only workspace, collection,
 analysis, seed-review, timestamp, and digest identifiers. `apps/worker`
@@ -76,7 +82,8 @@ evidence IDs and an observation time. Migration `0059` persists bounded
 per-claim provenance and owner/editor review; no approved competitor source is
 connected, and feature matrices remain open. Complaint/source-item provenance
 now carries an HTTPS canonical locator for attribution; a disabled,
-fixture-tested Stack Exchange candidate remains pending independent review.
+fixture-tested Stack Exchange candidate remains pending independent review;
+the worker now has a registry-selected path but no active source row.
 Migration `0060` adds a database-level HTTP(S) host/path check for those
 locators, while policy still controls whether a locator may be displayed.
 
@@ -115,7 +122,8 @@ keeping payloads, hashes, reviewer identities, and activation controls out.
    review.
 5. Supply a separately reviewed competitor/contrary-signal source under the
    `competitor-research` purpose before treating any competitive output as
-   source-backed; the Stack Exchange candidate is not registered or active.
+   source-backed; the Stack Exchange candidate is not registered or active,
+   though its reviewed-policy worker path is now present.
 
 ## Current blockers
 

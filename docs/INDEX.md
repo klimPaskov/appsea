@@ -134,3 +134,4 @@
 - [`status/research-campaign-refresh-scheduler-completion-report-2026-08-02.md`](status/research-campaign-refresh-scheduler-completion-report-2026-08-02.md)
 - [`status/competitive-evidence-observation-completion-report-2026-08-02.md`](status/competitive-evidence-observation-completion-report-2026-08-02.md)
 - [`status/stackexchange-attribution-completion-report-2026-08-02.md`](status/stackexchange-attribution-completion-report-2026-08-02.md)
+- [`status/production-connector-registry-runner-completion-report-2026-08-02.md`](status/production-connector-registry-runner-completion-report-2026-08-02.md)

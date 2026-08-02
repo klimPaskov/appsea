@@ -22,6 +22,23 @@ not activate the connector. Review the policy document, intended purpose,
 commercial use, display representation, retention, attribution, quotas, and
 deletion behavior before continuing.
 
+The Stack Exchange candidate uses the same operator boundary with its own
+review CLI and version variable:
+
+```powershell
+$env:APPSEA_SOURCE_POLICY_ACTION = 'draft'
+$env:APPSEA_STACKEXCHANGE_POLICY_VERSION = 'stackexchange-2026-08-v1'
+$env:APPSEA_POLICY_DATABASE_URL = '<migration-role-url>'
+$env:APPSEA_POLICY_RECORDED_AT = '2026-08-02T00:00:00.000Z'
+pnpm worker:source:policy:stackexchange
+```
+
+To approve that candidate, set `APPSEA_SOURCE_POLICY_ACTION=approve`, keep the
+same `APPSEA_STACKEXCHANGE_POLICY_VERSION`, provide all reviewer/attestation
+variables shown below, and run `pnpm worker:source:policy:stackexchange`.
+Approval remains an external legal/privacy/security decision; the engineering
+draft is not an activation claim.
+
 ## Approve a reviewed version
 
 Record the external decision reference and reviewer identity. The function

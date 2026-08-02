@@ -1,4 +1,5 @@
 import { randomUUID } from 'node:crypto'
+import { isProductionConnectorSourceId } from '@appsea/connectors'
 import {
   productionCollectionWorkflowStartRequestSchema,
   type ResearchCampaignConfiguration,
@@ -17,7 +18,6 @@ import {
 import type { MaintenanceSchedulerFence } from '@appsea/contracts'
 import { prepareProductionCollectionWorkflowStart } from '@appsea/workflows'
 
-const supportedSourceId = 'cfpb-consumer-complaints'
 const maximumRefreshBatch = 100
 
 export interface CampaignRefreshInput {
@@ -189,13 +189,17 @@ export async function runCampaignRefresh(
     try {
       await assertLease()
       const sourceId = claim.configuration.sourceIds[0]
-      if (claim.configuration.sourceIds.length !== 1 || sourceId !== supportedSourceId) {
+      if (
+        claim.configuration.sourceIds.length !== 1 ||
+        !sourceId ||
+        !isProductionConnectorSourceId(sourceId)
+      ) {
         const error = new Error('Scheduled refresh has no supported legally permitted source')
         error.name = 'ResearchCampaignRefreshSourceUnsupportedError'
         throw error
       }
       const collectible = await dependencies.policies.readCollectible(sourceId)
-      if (!collectible || collectible.policy.sourceId !== supportedSourceId) {
+      if (!collectible || !isProductionConnectorSourceId(collectible.policy.sourceId)) {
         const error = new Error('The current source policy is not approved and collectible')
         error.name = 'ResearchCampaignRefreshPolicyDeniedError'
         throw error

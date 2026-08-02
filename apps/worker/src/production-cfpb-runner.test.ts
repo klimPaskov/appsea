@@ -3,6 +3,7 @@ import { ProductionCollectionLeaseAssertionError } from '@appsea/db'
 
 const state = vi.hoisted(() => ({
   completed: undefined as unknown,
+  policySourceId: 'cfpb-consumer-complaints',
   policyCostMicros: 0,
   lease: {
     decision: 'acquired' as 'acquired' | 'replayed',
@@ -19,29 +20,33 @@ const state = vi.hoisted(() => ({
   recollectionTarget: undefined as unknown,
   serviceAdmissionInput: undefined as unknown,
   serviceAdmissionConsumed: true,
+  connectorKind: undefined as string | undefined,
   asserted: false,
   released: false
 }))
 
-vi.mock('@appsea/connectors', () => ({
-  CfpbConnector: class {
+vi.mock('@appsea/connectors', () => {
+  class MockConnector {
     private readonly now: () => string
+    private readonly kind: string
 
-    constructor(options: { now: () => string }) {
+    constructor(options: { now: () => string }, kind: string) {
       this.now = options.now
+      this.kind = kind
     }
 
     async collect(request: unknown) {
       state.connectorObservedAt = this.now()
       state.connectorRequest = request
+      state.connectorKind = this.kind
       return {
         policy: {
-          sourceId: 'cfpb-consumer-complaints',
+          sourceId: state.policySourceId,
           displayName: 'CFPB Consumer Complaint Database',
           sourceType: 'api',
           enabled: true,
           policyState: 'approved',
-          permittedPurposes: ['opportunity-research'],
+          permittedPurposes: ['opportunity-research', 'competitor-research'],
           commercialUse: 'allowed',
           accessMethod: 'official API',
           retentionDays: 30,
@@ -64,9 +69,24 @@ vi.mock('@appsea/connectors', () => ({
         costMicros: state.policyCostMicros
       }
     }
-  },
-  SourceQuotaReservationReplayError: class extends Error {}
-}))
+  }
+
+  return {
+    isProductionConnectorSourceId: (sourceId: string) =>
+      sourceId === 'cfpb-consumer-complaints' || sourceId === 'stackexchange-stackoverflow',
+    CfpbConnector: class extends MockConnector {
+      constructor(options: { now: () => string }) {
+        super(options, 'cfpb')
+      }
+    },
+    StackExchangeConnector: class extends MockConnector {
+      constructor(options: { now: () => string }) {
+        super(options, 'stackexchange')
+      }
+    },
+    SourceQuotaReservationReplayError: class extends Error {}
+  }
+})
 
 vi.mock('@appsea/db', () => ({
   contentHash: () => 'a'.repeat(64),
@@ -90,8 +110,9 @@ vi.mock('@appsea/db', () => ({
         campaignId: 'campaign:one',
         runId: 'run:one',
         artifactId: 'production-collection:artifact',
-        sourceId: 'cfpb-consumer-complaints',
-        policyVersion: 'cfpb-v1',
+        sourceId: state.policySourceId,
+        policyVersion:
+          state.policySourceId === 'stackexchange-stackoverflow' ? 'stack-v1' : 'cfpb-v1',
         sourceItemCount: 0,
         evidenceCount: 0,
         complaintCount: 0,
@@ -109,12 +130,12 @@ vi.mock('@appsea/db', () => ({
     async readCollectible() {
       return {
         policy: {
-          sourceId: 'cfpb-consumer-complaints',
+          sourceId: state.policySourceId,
           displayName: 'CFPB Consumer Complaint Database',
           sourceType: 'api',
           enabled: true,
           policyState: 'approved',
-          permittedPurposes: ['opportunity-research'],
+          permittedPurposes: ['opportunity-research', 'competitor-research'],
           commercialUse: 'allowed',
           accessMethod: 'official API',
           retentionDays: 30,
@@ -131,7 +152,8 @@ vi.mock('@appsea/db', () => ({
             costPerRequestMicros: state.policyCostMicros
           }
         },
-        policyVersion: 'cfpb-v1',
+        policyVersion:
+          state.policySourceId === 'stackexchange-stackoverflow' ? 'stack-v1' : 'cfpb-v1',
         contentHash: 'b'.repeat(64)
       }
     }
@@ -171,7 +193,7 @@ vi.mock('@appsea/db', () => ({
   }
 }))
 
-import { runProductionCfpbCollection } from './production-cfpb-runner'
+import { runProductionCfpbCollection, runProductionCollection } from './production-cfpb-runner'
 
 const request = {
   workspaceId: 'workspace:one',
@@ -381,5 +403,44 @@ describe('production CFPB runner lease lifecycle', () => {
     ).rejects.toThrow('operator reconciliation is required')
     expect(state.released).toBe(false)
     state.persistError = undefined
+  })
+
+  it('selects Stack Exchange only from the approved source-policy snapshot', async () => {
+    state.policySourceId = 'stackexchange-stackoverflow'
+    state.connectorKind = undefined
+    state.lease = {
+      decision: 'acquired',
+      replayed: false,
+      observedAt: '2026-07-10T00:00:00.000Z',
+      expiresAt: '2026-07-10T00:30:00.000Z'
+    }
+
+    await runProductionCollection(
+      {} as never,
+      {
+        ...request,
+        sourceId: 'stackexchange-stackoverflow',
+        policyVersion: 'stack-v1',
+        purpose: 'competitor-research'
+      },
+      { observedAt: '2026-07-10T00:00:00.000Z' }
+    )
+
+    expect(state.connectorKind).toBe('stackexchange')
+    expect(state.connectorRequest).toMatchObject({ purpose: 'competitor-research' })
+    state.policySourceId = 'cfpb-consumer-complaints'
+  })
+
+  it('rejects a source-policy identity cross-wire before acquiring a lease', async () => {
+    state.policySourceId = 'stackexchange-stackoverflow'
+    state.acquireInput = undefined
+
+    await expect(
+      runProductionCollection({} as never, request, {
+        observedAt: '2026-07-10T00:00:00.000Z'
+      })
+    ).rejects.toMatchObject({ name: 'ProductionCollectionPolicyDeniedError' })
+    expect(state.acquireInput).toBeUndefined()
+    state.policySourceId = 'cfpb-consumer-complaints'
   })
 })

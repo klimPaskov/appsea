@@ -13,6 +13,8 @@ import {
   fixtureSourcePolicy,
   mapStackExchangeQuestion,
   mapCfpbRecord,
+  isProductionConnectorSourceId,
+  productionConnectorSourceIds,
   stackExchangeSourcePolicy,
   syncCfpbDeletions
 } from './index'
@@ -52,6 +54,16 @@ const stackExchangeQuestion = {
 }
 
 describe('connector policy gate', () => {
+  it('exposes only reviewed production connector identities to the worker registry', () => {
+    expect(productionConnectorSourceIds).toEqual([
+      'cfpb-consumer-complaints',
+      'stackexchange-stackoverflow'
+    ])
+    expect(isProductionConnectorSourceId('cfpb-consumer-complaints')).toBe(true)
+    expect(isProductionConnectorSourceId('stackexchange-stackoverflow')).toBe(true)
+    expect(isProductionConnectorSourceId('fixture-community-feed')).toBe(false)
+  })
+
   it('collects labeled fixture records through an allowed request', async () => {
     const result = await new FixtureConnector().collect({
       query: 'handoff',

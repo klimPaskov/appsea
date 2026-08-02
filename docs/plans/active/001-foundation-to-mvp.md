@@ -308,6 +308,10 @@ Implemented:
   attribution locators, optional secret-bound API key, quotas, and explicit
   no-tombstone coverage warnings; see
   `docs/product/stackexchange-source-policy.md`
+- the production collection workflow and scheduled refresh dispatcher select
+  only the CFPB or Stack Exchange connector after the database returns a
+  matching approved source-policy snapshot; the Stack Exchange review CLI
+  registers or approves it only through the operator boundary
 
 Remaining: assign legal/privacy/security owners, confirm intended commercial use
 and retention/display terms, approve a policy version, then activate only through
@@ -339,8 +343,8 @@ review-start route now reconstructs the confirmed collection subset and starts
 the durable workflow explicitly; the local adapter does not
 authorize a production source activation. Stack Exchange remains unregistered
 and pending independent attribution, privacy, deletion, and commercial-use
-review; its connector is fixture-tested only and is not wired into the
-production source runner yet.
+review; its connector is fixture-tested and registry-selected in the worker,
+but no source-policy row is registered or active in this repository.
 
 ### 4. Workspaces and authentication
 

@@ -28,7 +28,7 @@ import {
   ProductionCollectionCostBudgetExceededError,
   ProductionCollectionReconciliationError,
   ProductionCollectionRecollectionUnavailableError,
-  runProductionCfpbCollection
+  runProductionCollection
 } from './production-cfpb-runner'
 import { emitWorkerEvent } from './observability'
 
@@ -146,7 +146,7 @@ export function createProductionCollectionActivities(pool: Pool): ProductionColl
           consumedCostMicros: 0,
           occurredAt: parsed.occurredAt
         })
-        const persistence = await runProductionCfpbCollection(
+        const persistence = await runProductionCollection(
           pool,
           {
             workspaceId: parsed.input.workspaceId,

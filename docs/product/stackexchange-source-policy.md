@@ -79,5 +79,12 @@ and attribute the claim.
 6. Production deployment proves the durable quota ledger, retention worker,
    attribution UI, and failure/rollback monitoring before enabling the source.
 
+The operator-only `pnpm worker:source:policy:stackexchange` command can register
+the disabled draft or record an independent approval using
+the same migration-owner review boundary as CFPB. The production collection
+activity and scheduled refresh worker select the Stack Exchange connector only
+when that database snapshot is active, current, unexpired, and independently
+approved; neither the CLI nor the worker bypasses the review gate.
+
 Until every item passes, Stack Exchange remains a fixture-backed connector
 test surface only and cannot create non-synthetic production evidence.

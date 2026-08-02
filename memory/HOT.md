@@ -4,7 +4,7 @@
 - Fixture mode is the complete persisted path; approved collection stores non-synthetic evidence separately. Leaderboard is leaderboard-only.
 - PostgreSQL/RLS: `packages/db`; Temporal: `packages/workflows` and `apps/worker`.
 - Fixture/collection workflows are package-tested; Temporal deployment/Docker proof and cloud/backup purge remain pending. `0043` queues output purge; `0044` retries tombstones.
-- `CfpbConnector` is typed and quota/deletion-aware but disabled pending legal/privacy/security approval; `0027` records operator-only policy evidence. `StackExchangeConnector` is a disabled, attribution-bound candidate for competitor/contrary research; no real source is active.
+- `CfpbConnector` is typed and quota/deletion-aware but disabled pending legal/privacy/security approval; `0027` records operator-only policy evidence. `StackExchangeConnector` is a disabled, attribution-bound candidate for competitor/contrary research; the production worker selects it only from an approved registry snapshot, and no real source is active.
 - Web research uses scrypt credentials, revocable sessions, membership-before-RLS, owner mutations, and 15-minute step-up; invitation/recovery delivery is kill-switched; MFA/OIDC remain open.
 - Production collection persists policy-bound evidence, complaints, tombstones, gaps, cost, and lineage; private reads: `/workspace/:workspaceId/research/:runId`; outputs use filesystem/S3.
 - Migrations `0033`-`0060` add seed/admission/deletion, analysis, policy, campaign-refresh, competitor-observation provenance, and an HTTP(S) canonical-locator guard; locators are retained for attribution; CFPB/Stack Exchange disabled.

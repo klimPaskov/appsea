@@ -35,18 +35,21 @@ const budget = {
 function claimFor(
   overrides: Partial<ResearchCampaignRefreshClaim> = {}
 ): ResearchCampaignRefreshClaim {
+  const effectiveConfiguration = overrides.configuration ?? configuration
+  const sourceId = effectiveConfiguration.sourceIds[0] ?? 'cfpb-consumer-complaints'
+  const purpose = overrides.purpose ?? 'market-research'
   const request = {
     workspaceId: 'workspace:one',
     campaignId: 'campaign:one',
     runId: 'run:campaign-refresh:one',
     idempotencyKey: `campaign-refresh:${'a'.repeat(64)}`,
     workflowVersion: 'production-collection-v1' as const,
-    sourceId: 'cfpb-consumer-complaints',
+    sourceId,
     policyVersion: 'cfpb-v1',
-    query: configuration.query,
+    query: effectiveConfiguration.query,
     limit: 25,
-    purpose: 'market-research',
-    requestedDisplayMode: configuration.requestedDisplayMode,
+    purpose,
+    requestedDisplayMode: effectiveConfiguration.requestedDisplayMode,
     budget,
     requestedAt: now,
     requestedBy: { actorType: 'service' as const, actorId: 'appsea-worker' as const }
@@ -57,7 +60,7 @@ function claimFor(
     workspaceId: request.workspaceId,
     campaignId: request.campaignId,
     purpose: request.purpose,
-    configuration,
+    configuration: effectiveConfiguration,
     budget,
     dueAt: now,
     runId: request.runId,
@@ -83,18 +86,21 @@ function dependencies(claim: ResearchCampaignRefreshClaim) {
     policies: {
       readCollectible: vi.fn().mockResolvedValue({
         policy: {
-          sourceId: 'cfpb-consumer-complaints',
+          sourceId: claim.configuration.sourceIds[0] ?? 'cfpb-consumer-complaints',
           displayName: 'CFPB complaints',
           sourceType: 'api',
           enabled: true,
           policyState: 'approved',
-          permittedPurposes: ['market-research'],
+          permittedPurposes: ['market-research', 'competitor-research'],
           commercialUse: 'allowed',
           accessMethod: 'api',
           retentionDays: 30,
           deletionRequired: true,
           attributionRequired: false,
-          displayMode: 'metadata-only',
+          displayMode:
+            claim.configuration.sourceIds[0] === 'stackexchange-stackoverflow'
+              ? 'excerpt'
+              : 'metadata-only',
           coverageNotes: [],
           reviewedAt: now,
           quota: {
@@ -110,7 +116,10 @@ function dependencies(claim: ResearchCampaignRefreshClaim) {
             retentionAction: 'tombstone'
           }
         },
-        policyVersion: 'cfpb-v1',
+        policyVersion:
+          claim.configuration.sourceIds[0] === 'stackexchange-stackoverflow'
+            ? 'stack-v1'
+            : 'cfpb-v1',
         contentHash: 'b'.repeat(64)
       })
     },
@@ -154,6 +163,44 @@ describe('runCampaignRefresh', () => {
     expect(deps.admission.admitForService).toHaveBeenCalledTimes(1)
     expect(deps.campaigns.markRefreshDispatchedForService).toHaveBeenCalledTimes(1)
     expect(deps.campaigns.markRefreshFailedForService).not.toHaveBeenCalled()
+  })
+
+  it('dispatches a Stack Exchange refresh only when its approved policy snapshot matches', async () => {
+    const claim = claimFor({
+      purpose: 'competitor-research',
+      configuration: {
+        ...configuration,
+        sourceIds: ['stackexchange-stackoverflow'],
+        requestedDisplayMode: 'excerpt'
+      }
+    })
+    const deps = dependencies(claim)
+    const result = await runCampaignRefresh(
+      {
+        batchSize: 1,
+        claimOwner: 'worker:host-1:123',
+        claimLeaseSeconds: 60,
+        retryAfterSeconds: 300,
+        occurredAt: now
+      },
+      deps
+    )
+
+    expect(result).toEqual({
+      workspacesScanned: 1,
+      claims: 1,
+      dispatched: 1,
+      failed: 0,
+      policyDenied: 0
+    })
+    expect(deps.startWorkflow).toHaveBeenCalledWith(
+      expect.objectContaining({
+        sourceId: 'stackexchange-stackoverflow',
+        purpose: 'competitor-research',
+        requestedDisplayMode: 'excerpt',
+        policyVersion: 'stack-v1'
+      })
+    )
   })
 
   it('records a policy denial without starting a workflow', async () => {

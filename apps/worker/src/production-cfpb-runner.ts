@@ -1,6 +1,13 @@
-import { CfpbConnector, SourceQuotaReservationReplayError } from '@appsea/connectors'
+import {
+  CfpbConnector,
+  isProductionConnectorSourceId,
+  SourceQuotaReservationReplayError,
+  StackExchangeConnector
+} from '@appsea/connectors'
+import type { SourceQuotaLedger } from '@appsea/connectors'
 import {
   productionCollectionRequestSchema,
+  type SourcePolicy,
   type ProductionCollectionRequest,
   type ProductionCollectionResult
 } from '@appsea/contracts'
@@ -23,6 +30,27 @@ export class ProductionCollectionPolicyDeniedError extends Error {
   constructor(message: string) {
     super(message)
     this.name = 'ProductionCollectionPolicyDeniedError'
+  }
+}
+
+interface ProductionConnectorOptions {
+  policy: SourcePolicy
+  quotaLedger: SourceQuotaLedger
+  now: () => string
+}
+
+function createProductionConnector(
+  options: ProductionConnectorOptions
+): CfpbConnector | StackExchangeConnector {
+  switch (options.policy.sourceId) {
+    case 'cfpb-consumer-complaints':
+      return new CfpbConnector(options)
+    case 'stackexchange-stackoverflow':
+      return new StackExchangeConnector(options)
+    default:
+      throw new ProductionCollectionPolicyDeniedError(
+        'The production worker has no connector for this source'
+      )
   }
 }
 
@@ -54,7 +82,7 @@ export class ProductionCollectionCostBudgetExceededError extends Error {
   }
 }
 
-export interface ProductionCfpbCollectionOptions {
+export interface ProductionCollectionOptions {
   /** Workflow/server-observed timestamp used to make capture provenance stable across retries. */
   observedAt?: string
   /**
@@ -67,16 +95,19 @@ export interface ProductionCfpbCollectionOptions {
   }
 }
 
+/** Backwards-compatible name for the explicit CFPB command wrapper. */
+export type ProductionCfpbCollectionOptions = ProductionCollectionOptions
+
 /**
- * Run one approved CFPB collection. A completed database result is checked
+ * Run one approved source collection. A completed database result is checked
  * before touching the connector so a replay never spends a second source
  * request or quota reservation. The connector and persistence boundaries both
  * retain their own idempotency checks for concurrent callers.
  */
-export async function runProductionCfpbCollection(
+export async function runProductionCollection(
   pool: Pool,
   request: ProductionCollectionRequest,
-  options: ProductionCfpbCollectionOptions = {}
+  options: ProductionCollectionOptions = {}
 ): Promise<ProductionCollectionResult> {
   const parsedRequest = productionCollectionRequestSchema.parse(request)
   if (!/^[a-f0-9]{64}$/.test(parsedRequest.idempotencyKey)) {
@@ -121,10 +152,13 @@ export async function runProductionCfpbCollection(
   )
   if (!collectible) {
     throw new ProductionCollectionPolicyDeniedError(
-      'No approved, active CFPB policy snapshot is available; register and approve it through the operator review boundary first'
+      'No approved, active source policy snapshot is available; register and approve it through the operator review boundary first'
     )
   }
-  if (collectible.policy.sourceId !== 'cfpb-consumer-complaints') {
+  if (
+    collectible.policy.sourceId !== effectiveRequest.sourceId ||
+    !isProductionConnectorSourceId(collectible.policy.sourceId)
+  ) {
     throw new ProductionCollectionPolicyDeniedError(
       'The production worker has no connector for this source'
     )
@@ -204,11 +238,12 @@ export async function runProductionCfpbCollection(
         throw new ProductionWorkflowAdmissionRequiredError()
       }
     }
-    const connector = new CfpbConnector({
+    const connectorOptions = {
       policy: collectible.policy,
       quotaLedger: new PostgresSourceQuotaRepository(pool),
       now: () => stableObservedAt
-    })
+    }
+    const connector = createProductionConnector(connectorOptions)
     const collected = await connector.collect({
       query: parsedRequest.query,
       limit: effectiveRequest.limit,
@@ -257,7 +292,7 @@ export async function runProductionCfpbCollection(
       )
       if (replayed) return { ...replayed.result, replayed: true }
       throw new ProductionCollectionReconciliationError(
-        'CFPB quota was already settled but no completed collection result exists; operator reconciliation is required before retry',
+        'Source quota was already settled but no completed collection result exists; operator reconciliation is required before retry',
         { cause: error }
       )
     }
@@ -273,4 +308,18 @@ export async function runProductionCfpbCollection(
     }
     throw error
   }
+}
+
+/** Preserve the explicit CFPB CLI boundary while the workflow uses the generic registry-selected runner. */
+export async function runProductionCfpbCollection(
+  pool: Pool,
+  request: ProductionCollectionRequest,
+  options: ProductionCfpbCollectionOptions = {}
+): Promise<ProductionCollectionResult> {
+  if (request.sourceId !== 'cfpb-consumer-complaints') {
+    throw new ProductionCollectionPolicyDeniedError(
+      'The CFPB command accepts only the CFPB source identifier'
+    )
+  }
+  return runProductionCollection(pool, request, options)
 }

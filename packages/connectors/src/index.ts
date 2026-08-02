@@ -319,6 +319,18 @@ const stackExchangeSourcePolicy = freezePolicy(
 
 export { stackExchangeSourcePolicy }
 
+/** Production worker connector identities; fixture sources are intentionally excluded. */
+export const productionConnectorSourceIds = [
+  cfpbSourcePolicy.sourceId,
+  stackExchangeSourcePolicy.sourceId
+] as const
+
+export function isProductionConnectorSourceId(sourceId: string): boolean {
+  return productionConnectorSourceIds.includes(
+    sourceId as (typeof productionConnectorSourceIds)[number]
+  )
+}
+
 const STACKEXCHANGE_API_BASE_URL = 'https://api.stackexchange.com/2.3/'
 const STACKEXCHANGE_REQUEST_TIMEOUT_MS = 30_000
 const STACKEXCHANGE_MAX_RESPONSE_BYTES = 8 * 1024 * 1024
