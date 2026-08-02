@@ -73,7 +73,7 @@ policy review.
 
 ## Infrastructure
 
-The PostgreSQL schema, repository, migrations, RLS, local role bootstrap, and CI integration suite exist. Production role provisioning, secrets, verified TLS, backups, high availability, deployment, and migration approval automation do not.
+The PostgreSQL schema, repository, migrations, RLS, local role bootstrap, and CI integration suite exist. `pnpm production:preflight` now rejects missing or role-confused production URLs, insecure endpoints, incomplete Temporal/object-store settings, and unsafe delivery switches before startup. Production role provisioning, secrets, verified TLS trust, backups, high availability, deployment, live dependency proof, and migration approval automation do not.
 
 The fixture and production-collection workflow boundaries are durable locally
 and in CI. Web and worker clients now fail closed and support a non-loopback

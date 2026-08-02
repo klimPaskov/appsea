@@ -25,7 +25,7 @@ Status: production-shaped foundation implemented and validated locally; producti
 
 Implemented:
 
-- PostgreSQL 18 schema and sixty-two forward, checksummed migrations
+- PostgreSQL 18 schema and sixty-three forward, checksummed migrations
 - normalized source, evidence, complaint, cluster, competitor, opportunity, score, report, plan, audit, cost, deletion, outbox, and lineage tables
 - no-login owner, separate migrator, and least-privilege runtime role contract
 - forced workspace RLS and transaction-scoped workspace context
@@ -79,6 +79,10 @@ Implemented:
   delivery outbox, security events, narrow security-definer functions, bounded
   purge, and a retryable signed provider worker; delivery remains kill-switched
   pending identity/provider approval
+- secret-free `pnpm production:preflight` validates production database role
+  separation/TLS, authenticated Temporal, signed object storage, scheduler
+  ownership, HTTPS origin, delivery switches, and trusted-proxy configuration
+  without contacting dependencies or activating a source
 
 The invalidated production-analysis output queue is a deliberate narrow slice:
 it does not claim source-wide retention purge, cloud backup deletion, or

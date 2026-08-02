@@ -44,6 +44,8 @@ Open `http://localhost:3000` after the web server starts.
 - provider-neutral password recovery mechanics with hash-only reset tokens,
   encrypted outbox delivery, fragment links, and a production kill switch
 - native Codex skills and bounded subagents
+- secret-free `pnpm production:preflight` configuration gate for production
+  role, TLS, Temporal, object-store, scheduler, delivery, and proxy settings
 - checked-in project memory with a local search index
 - deep product specifications and machine-readable schemas
 

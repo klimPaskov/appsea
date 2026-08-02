@@ -47,11 +47,12 @@ Read models include linked report/plan approval states from PostgreSQL; the
 private opportunity mapper reflects later transitions without inferring state
 from immutable object payloads.
 
-Operational monitoring includes `/api/health/live`, `/api/health/ready`, and a
-secret-free worker heartbeat every 30 seconds. Web and durable worker share a
-fail-closed Temporal endpoint contract: production requires non-loopback
-address, namespace, API key, and pinned CA. Deployment topology, authorization,
-HA, retention, and failure drills remain open.
+Monitoring includes `/api/health/live`, `/api/health/ready`, and a secret-free
+30-second worker heartbeat. `pnpm production:preflight` now validates
+role-separated TLS database URLs, authenticated Temporal, signed object
+storage, scheduler ownership, HTTPS origin, delivery switches, and proxy
+secret shape without network calls. Deployment topology, authorization, HA,
+retention, and failure drills remain open.
 
 Migration `0046`/`0052` leases and fences protect maintenance mutations;
 metrics, cost summaries, and quota cases are durable/private. The worker's
