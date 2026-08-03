@@ -615,7 +615,8 @@ Implemented:
   one-shot production preflight, keeps migrations behind an explicit profile,
   binds web to loopback by default, and drops capabilities on long-lived
   services.
-- GitHub CI validates the Compose model and builds both images.
+- GitHub CI validates the Compose model, builds both images, smoke-tests web
+  liveness/health, and checks fail-closed worker preflight.
 
 Remaining: push signed images through an approved registry, provision the
 role-separated external services and secrets, run deployment/restore/crash

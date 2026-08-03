@@ -18,7 +18,9 @@ not claimed.
   production environment contract without shipping credentials.
 - `docs/runbooks/production-deployment.md` records image build, preflight,
   migration, rollout, health, recovery, and rollback responsibilities.
-- GitHub CI validates the Compose model and builds both images.
+- GitHub CI validates the Compose model, builds both images, starts the web
+  image for liveness/healthcheck smoke, and verifies worker preflight fails
+  closed without production settings.
 
 ## Validation
 

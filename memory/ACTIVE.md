@@ -90,13 +90,12 @@ memory.
   binding to loopback, and uses non-root/read-only/capability-dropped
   services. GitHub Actions run `30822047661` passed both image builds and
   Compose validation for commit `bd713ee`; external provider provisioning,
-  image signing/registry, and source-policy activation remain blockers.
-- Desktop shell now has a Tauri build hook, committed Rust lockfile,
-  deterministic Windows icon, minimal capability, restrictive local CSP, and
-  a Windows CI compile job. GitHub Actions run `30824653661` passed for
-  commit `98ef62e`; bundling remains disabled; hosted-origin review, updater
-  trust, signing, notarization, installation tests, and desktop security
-  evidence remain open.
+  image signing/registry, and source-policy activation remain blockers. CI
+  also smoke-tests web liveness/health and fail-closed worker preflight.
+- Desktop shell has a Tauri hook, Rust lockfile, Windows icon, minimal
+  capability, restrictive CSP, and Windows CI compile. Run `30824653661`
+  passed for `98ef62e`; bundling remains disabled; hosted-origin, updater,
+  signing, notarization, installation, and security evidence remain open.
 
 ## Next production tranche
 

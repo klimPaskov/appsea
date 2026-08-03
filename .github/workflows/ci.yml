@@ -66,6 +66,43 @@ jobs:
       - run: docker compose --file infra/production/compose.yaml config --quiet
       - run: docker build --file Dockerfile.web --tag appsea-web:ci .
       - run: docker build --file Dockerfile.worker --tag appsea-worker:ci .
+      - name: Start the web image
+        run: docker run --detach --name appsea-web-ci --publish 127.0.0.1:3000:3000 appsea-web:ci
+      - name: Exercise web liveness and healthcheck
+        run: |
+          set -eu
+          for attempt in $(seq 1 30); do
+            if curl --fail --silent --show-error http://127.0.0.1:3000/api/health/live >/dev/null; then
+              break
+            fi
+            if [ "$attempt" -eq 30 ]; then
+              docker logs appsea-web-ci
+              exit 1
+            fi
+            sleep 2
+          done
+          for attempt in $(seq 1 30); do
+            status="$(docker inspect --format '{{.State.Health.Status}}' appsea-web-ci)"
+            if [ "$status" = healthy ]; then
+              exit 0
+            fi
+            if [ "$status" = unhealthy ]; then
+              docker logs appsea-web-ci
+              exit 1
+            fi
+            sleep 2
+          done
+          docker logs appsea-web-ci
+          exit 1
+      - name: Assert worker preflight fails closed without production settings
+        run: |
+          if docker run --rm appsea-worker:ci production:preflight; then
+            echo 'Expected production preflight to reject an empty environment.'
+            exit 1
+          fi
+      - name: Remove the web container
+        if: always()
+        run: docker rm --force appsea-web-ci || true
 
   desktop:
     runs-on: windows-latest

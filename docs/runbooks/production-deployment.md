@@ -64,6 +64,12 @@ for process liveness. Confirm the worker heartbeat and maintenance metrics
 through the deployment's approved log/metric sink. The readiness route does not
 run migrations, start workflows, or test object bodies.
 
+The release CI container job also starts the web image, calls the liveness
+route, waits for the Docker healthcheck to become `healthy`, and verifies that
+worker preflight rejects an empty production environment. This is a packaging
+smoke test, not proof that external providers or a deployed migration are
+healthy.
+
 The web service is bound to loopback by default. Put a reviewed TLS reverse
 proxy or private ingress in front of it; do not expose the container directly
 to the public network without the deployment security review.
