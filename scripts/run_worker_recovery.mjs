@@ -287,8 +287,17 @@ async function main() {
               (SELECT count(*) FROM appsea.cost_ledger_entries WHERE workspace_id = '${workspaceId}') || ':' ||
               (SELECT count(*) FROM appsea.outbox_events WHERE workspace_id = '${workspaceId}')`
     )
-    if (rowCounts !== '1:1:7:1:1') {
+    if (rowCounts !== '1:1:7:1:2') {
       throw new Error(`Worker replacement produced unexpected durable rows: ${rowCounts}`)
+    }
+    const outboxEvents = await query(
+      `SELECT count(*) || ':' || count(DISTINCT outbox_event_id) || ':' ||
+              string_agg(event_type, ',' ORDER BY event_type)
+         FROM appsea.outbox_events
+        WHERE workspace_id = '${workspaceId}'`
+    )
+    if (outboxEvents !== '2:2:research.run.completed,workflow.job.completed') {
+      throw new Error(`Worker replacement produced unexpected outbox receipts: ${outboxEvents}`)
     }
     const workflowIdentity = await query(
       `SELECT workflow_id FROM appsea.workflow_job_executions WHERE workspace_id = '${workspaceId}'`
@@ -325,7 +334,9 @@ async function main() {
     if (fixtureSourceExcerpts.some((excerpt) => history.includes(excerpt))) {
       throw new Error('Raw fixture source text leaked into Temporal history')
     }
-    console.log(`worker replacement integration verified: ${jobState}; rows=${rowCounts}`)
+    console.log(
+      `worker replacement integration verified: ${jobState}; rows=${rowCounts}; outbox=${outboxEvents}`
+    )
   } finally {
     await terminateProcess(workflowClient)
     await terminateProcess(firstWorker)

@@ -40,7 +40,8 @@ The long-lived worker has an idempotent SIGINT/SIGTERM lifecycle. The new
 `pnpm verify:worker:recovery` drill proves local/CI process replacement: a
 separate fixture client observes a persisted checkpoint, the first worker is
 stopped during persistence, and a replacement resumes the same execution with
-one job/run/output/checkpoint/cost/outbox effect plus sanitized history. Its
+one job/run/output/checkpoint/cost effect, distinct outbox rows, and
+sanitized history. Its
 pause is bounded and production-rejected; hosted restore/failover and topology
 proof remain open.
 

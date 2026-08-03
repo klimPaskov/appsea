@@ -145,9 +145,9 @@ The previously missing process-level recovery proof is now implemented in
 a separate workflow client, uses a bounded non-production pause after the
 `persisting` checkpoint, force-stops the worker, starts a replacement on the
 same task queue, and asserts one completed workflow job, one research run,
-seven immutable checkpoints (including the retry), one cost ledger row, one
-outbox row, and no raw idempotency key or known fixture excerpt in Temporal
-history. Worker unit tests reject the pause setting in production. The local
+seven immutable checkpoints (including the retry), one cost ledger row, two
+distinct outbox receipts, and no raw idempotency key or known fixture excerpt
+in Temporal history. Worker unit tests reject the pause setting in production. The local
 Docker-backed run remains unavailable on the current host; the CI workflow is
 the hosted execution proof.
 

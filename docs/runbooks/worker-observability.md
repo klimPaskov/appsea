@@ -140,7 +140,8 @@ repository now includes a local/CI process-replacement drill:
 workflow from a separate client, pauses after the persisted `persisting`
 checkpoint, force-stops the worker, starts a replacement on the same task
 queue, and verifies one completed job/run/checkpoint output plus one cost and
-outbox receipt. The drill also decodes Temporal history to prove the raw
+two distinct outbox receipts (research completion and workflow completion).
+The drill also decodes Temporal history to prove the raw
 idempotency key and a known fixture excerpt are absent. Its pause is bounded
 and rejected when `NODE_ENV=production`; it is test evidence, not a production
 fault-injection switch.
