@@ -25,7 +25,7 @@ Status: production-shaped foundation implemented and validated locally; producti
 
 Implemented:
 
-- PostgreSQL 18 schema and seventy-nine forward, checksummed migrations
+- PostgreSQL 18 schema and eighty-one forward, checksummed migrations
 - normalized source, evidence, complaint, cluster, competitor, opportunity, score, report, plan, audit, cost, deletion, outbox, and lineage tables
 - no-login owner, separate migrator, and least-privilege runtime role contract
 - forced workspace RLS and transaction-scoped workspace context
@@ -474,20 +474,22 @@ Implemented:
 - owner-safe account closure at `/account/security`: recent step-up plus typed confirmation, session/reset revocation, profile anonymization, and workspace-owner blockers while shared research remains retained
 - private workspace opportunity/evidence/report/plan reads behind web API routes
 - migration `0081_auth_mfa_step_up.sql` and the private MFA step-up route now
-  require a fresh second factor before owner agent-token issue/revoke when
+  require a fresh second factor before password-gated high-risk mutations when
   MFA is enabled; the marker is session-bound and expires with the existing
-  fifteen-minute step-up window
+  fifteen-minute step-up window. This covers account closure, session
+  revocation, membership/invitation changes, workspace archival, purge intent,
+  evidence redaction, and owner agent-token issue/revoke.
 - private campaign configuration page and list/create/read API with source
   policy readiness metadata and draft-only, non-activating writes
 - public leaderboard remains database-free and explicitly synthetic
 
 Remaining: verified account recovery/delivery policy, production
 secret/session-retention operations, OIDC/verified identity, provider-backed
-step-up, MFA key rotation, and enforcement for high-risk mutations outside
-agent-token issue/revoke. The AppSea-owned TOTP boundary is implemented in
+step-up, MFA key rotation, and explicit contracts for high-impact mutations
+that do not already require password step-up. The AppSea-owned TOTP boundary is implemented in
 migrations `0080`/`0081` with encrypted enrollment secrets, hash-only recovery
 codes, expiring login challenges, a session-bound MFA step-up marker for
-agent-token mutations, and account-security routes; external
+password-gated high-risk mutations, and account-security routes; external
 identity-provider operations remain separate.
 Recovery and invitation mechanics exist behind explicit production kill
 switches; invitations intentionally do not create accounts until identity policy

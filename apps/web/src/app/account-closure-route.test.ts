@@ -5,7 +5,8 @@ import { DELETE } from './api/auth/account/route'
 const mocks = vi.hoisted(() => ({
   repository: {
     closeAccount: vi.fn(),
-    hasRecentReauthentication: vi.fn()
+    hasRecentReauthentication: vi.fn(),
+    hasRecentMfaReauthentication: vi.fn()
   },
   allowAuthAttempt: vi.fn(),
   readSession: vi.fn(),
@@ -22,6 +23,11 @@ vi.mock('../server/auth-session', () => ({
       { status: 400, headers: { 'cache-control': 'private, no-store' } }
     ),
   privateResponseHeaders: { 'cache-control': 'private, no-store' },
+  mfaReauthenticationRequiredResponse: () =>
+    Response.json(
+      { error: 'Recent MFA verification required' },
+      { status: 428, headers: { 'cache-control': 'private, no-store' } }
+    ),
   readSession: mocks.readSession,
   readSessionToken: mocks.readSessionToken,
   reauthenticationRequiredResponse: () =>
@@ -63,6 +69,7 @@ describe('account closure route', () => {
   beforeEach(() => {
     mocks.repository.closeAccount.mockReset()
     mocks.repository.hasRecentReauthentication.mockReset()
+    mocks.repository.hasRecentMfaReauthentication.mockReset()
     mocks.allowAuthAttempt.mockReset()
     mocks.readSession.mockReset()
     mocks.readSessionToken.mockReset()
@@ -72,6 +79,7 @@ describe('account closure route', () => {
     mocks.sameOriginRequest.mockReturnValue(true)
     mocks.allowAuthAttempt.mockResolvedValue(true)
     mocks.repository.hasRecentReauthentication.mockResolvedValue(true)
+    mocks.repository.hasRecentMfaReauthentication.mockResolvedValue(true)
     mocks.repository.closeAccount.mockResolvedValue({ closed: true, blockingWorkspaceIds: [] })
   })
 
@@ -87,6 +95,14 @@ describe('account closure route', () => {
     const stepUp = await DELETE(request({ confirmation: 'DELETE MY ACCOUNT' }))
     expect(stepUp.status).toBe(428)
     expect(mocks.repository.closeAccount).not.toHaveBeenCalled()
+
+    mocks.repository.hasRecentReauthentication.mockResolvedValue(true)
+    mocks.repository.hasRecentMfaReauthentication.mockResolvedValue(false)
+    const mfaStepUp = await DELETE(request({ confirmation: 'DELETE MY ACCOUNT' }))
+    expect(mfaStepUp.status).toBe(428)
+    expect(mocks.repository.closeAccount).not.toHaveBeenCalled()
+
+    mocks.repository.hasRecentMfaReauthentication.mockResolvedValue(true)
 
     const invalid = await DELETE(request({ confirmation: 'delete my account' }))
     expect(invalid.status).toBe(400)

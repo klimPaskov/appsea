@@ -12,9 +12,11 @@ deletion/recomputation repair, leases, admissions, campaign orchestration and
 cancellation, source reconciliation, analysis history, report/plan governance,
 cost and alert projections, object references, workspace archival/purge intent,
 field-level evidence redaction, agent access tokens, and global-auth TOTP MFA.
-Migration `0081` adds a session-bound MFA step-up marker. Owner agent-token
-issue/revoke requires recent password step-up plus a fresh MFA proof when MFA is
-enabled; the MCP surface remains read-only.
+Migration `0081` adds a session-bound MFA step-up marker. Password-gated
+high-risk mutations require recent password step-up plus a fresh MFA proof when
+MFA is enabled; this covers account/session, membership/invitation, archival,
+purge-intent, evidence-redaction, and agent-token issue/revoke. The MCP surface
+remains read-only.
 
 The fixture workflow is the complete persisted path. Production collection and
 identifier-only analysis v2 are policy-gated, durable, and replay-safe, but
@@ -44,10 +46,11 @@ memory.
 - `pnpm verify` passed 2026-08-03 for the MFA step-up tranche; it covered
   package lint/typecheck/test/build, fixture worker, sample plan, smoke web,
   and repository checks.
-- The current tranche passes contracts (89), db (135), and web (144) focused
-  suites plus affected typechecks and lints. Its PostgreSQL integration test
-  covers marker creation and recovery-code replay; GitHub Actions run
-  `30785696385` passed the fresh PostgreSQL and Temporal gates.
+- The prior MFA step-up tranche passed contracts (89), db (135), and web (144)
+  focused suites plus affected typechecks and lints; GitHub Actions run
+  `30785696385` passed the fresh PostgreSQL and Temporal gates. The current
+  conditional-MFA route slice passes the web suite (144), web typecheck, and
+  web lint locally; its repository-wide gate is still pending.
 - PostgreSQL and Temporal fresh integration is staged but local Docker is
   blocked by the unavailable Docker Desktop Linux engine pipe. Remote CI is the
   authoritative fresh-install/upgrade and workflow proof; that remote gate is
@@ -59,8 +62,8 @@ memory.
 2. Provision role-separated PostgreSQL and authenticated Temporal; run restore,
    crash/retry/cancellation, legacy-history, and backup drills.
 3. Approve OIDC/verified identity, delivery/DPA, MFA key rotation, provider
-   step-up, and enforcement for high-risk mutations outside agent-token
-   issue/revoke.
+   step-up, and explicit contracts for high-impact mutations without a
+   password-step-up boundary.
 4. Deploy encrypted object storage, lifecycle/versioning, export/workspace and
    backup purge, pricing/billing controls, alert endpoint rotation, and
    incident routing.
@@ -74,8 +77,8 @@ memory.
 - Production DB/Temporal, role separation, HA, backups, scheduler ownership,
   endpoint operation, alerting, billing, and deployment validation remain.
 - Recovery/invitations are provider-kill-switched; OIDC, verified identity,
-  delivery/DPA, key rotation, provider-backed step-up, and other high-risk
-  action enforcement remain open.
+  delivery/DPA, key rotation, provider-backed step-up, and high-impact action
+  contracts without a password boundary remain open.
 - Cloud/object/export/backup purge and automatic source re-collection remain
   separate reviewed operations; workspace archival and purge intent do not
   delete research.

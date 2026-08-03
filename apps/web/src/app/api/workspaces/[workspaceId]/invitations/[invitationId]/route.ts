@@ -8,6 +8,7 @@ import {
   authRepository,
   forbiddenResponse,
   invalidRequest,
+  mfaReauthenticationRequiredResponse,
   privateResponseHeaders,
   readSession,
   readSessionToken,
@@ -46,6 +47,9 @@ export async function DELETE(
     if (!token) return unauthorizedResponse()
     if (!(await authRepository().hasRecentReauthentication(token))) {
       return reauthenticationRequiredResponse()
+    }
+    if (!(await authRepository().hasRecentMfaReauthentication(token))) {
+      return mfaReauthenticationRequiredResponse()
     }
     await authRepository().revokeWorkspaceInvitation(
       session.user.userId,

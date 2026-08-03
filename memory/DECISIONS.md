@@ -369,11 +369,10 @@ backup-deletion, and provider approval are verified; it cannot authorize
 deletion. Repeating an active request is idempotent and cancellation is
 explicit.
 
-## 2026-08-03: Require MFA step-up for agent-token mutations
+## 2026-08-03: Require conditional MFA for password-gated mutations
 
-Agent bearer credentials are a high-impact mutation even though MCP reads are
-read-only. Migration `0081` adds a session-bound MFA timestamp; the step-up
-route consumes a TOTP or recovery code before agent-token issue/revoke, while
-the password marker remains required. Accounts without MFA keep the reviewed
-password-only path; provider identity, key rotation, and other high-risk gates
-remain separate.
+Migration `0081` adds a session MFA timestamp; the step-up route consumes a
+TOTP/recovery code before password-gated high-risk mutations: agent tokens,
+account/session, membership/invitation, archival, purge intent, and redaction.
+Without MFA, password-only remains; provider identity, key rotation, and
+mutations without a password boundary stay separate.

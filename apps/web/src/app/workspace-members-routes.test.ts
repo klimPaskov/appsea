@@ -16,6 +16,7 @@ const mocks = vi.hoisted(() => ({
     updateWorkspaceMemberRole: vi.fn(),
     removeWorkspaceMember: vi.fn(),
     hasRecentReauthentication: vi.fn(),
+    hasRecentMfaReauthentication: vi.fn(),
     reauthenticateSession: vi.fn()
   },
   readSession: vi.fn(),
@@ -29,6 +30,8 @@ vi.mock('../server/auth-session', () => ({
   allowAuthAttempt: mocks.allowAuthAttempt,
   forbiddenResponse: () => Response.json({ error: 'Workspace access denied' }, { status: 403 }),
   invalidRequest: (message: string) => Response.json({ error: message }, { status: 400 }),
+  mfaReauthenticationRequiredResponse: () =>
+    Response.json({ error: 'Recent MFA verification required' }, { status: 428 }),
   privateResponseHeaders: { 'cache-control': 'private, no-store' },
   readSession: mocks.readSession,
   readSessionToken: mocks.readSessionToken,
@@ -53,7 +56,9 @@ describe('workspace membership routes', () => {
     mocks.repository.updateWorkspaceMemberRole.mockReset()
     mocks.repository.removeWorkspaceMember.mockReset()
     mocks.repository.hasRecentReauthentication.mockReset()
+    mocks.repository.hasRecentMfaReauthentication.mockReset()
     mocks.repository.hasRecentReauthentication.mockResolvedValue(true)
+    mocks.repository.hasRecentMfaReauthentication.mockResolvedValue(true)
     mocks.repository.reauthenticateSession.mockReset()
   })
 
@@ -117,6 +122,19 @@ describe('workspace membership routes', () => {
       { params: Promise.resolve({ workspaceId: 'workspace:one', userId: 'user:member' }) }
     )
     expect(updated.status).toBe(200)
+
+    mocks.repository.hasRecentMfaReauthentication.mockResolvedValue(false)
+    const mfaBlocked = await updateMember(
+      new Request('https://appsea.example', {
+        method: 'PATCH',
+        body: JSON.stringify({ role: 'viewer' }),
+        headers: { 'content-type': 'application/json' }
+      }),
+      { params: Promise.resolve({ workspaceId: 'workspace:one', userId: 'user:member' }) }
+    )
+    expect(mfaBlocked.status).toBe(428)
+    expect(mocks.repository.updateWorkspaceMemberRole).toHaveBeenCalledTimes(1)
+    mocks.repository.hasRecentMfaReauthentication.mockResolvedValue(true)
   })
 
   it('maps last-owner deletion conflicts to a private conflict response', async () => {
@@ -131,6 +149,16 @@ describe('workspace membership routes', () => {
     await expect(response.json()).resolves.toEqual({
       error: 'The workspace must retain at least one owner'
     })
+
+    mocks.repository.hasRecentMfaReauthentication.mockResolvedValue(false)
+    const mfaBlocked = await deleteMember(
+      new Request('https://appsea.example', { method: 'DELETE' }),
+      {
+        params: Promise.resolve({ workspaceId: 'workspace:one', userId: 'user:owner' })
+      }
+    )
+    expect(mfaBlocked.status).toBe(428)
+    mocks.repository.hasRecentMfaReauthentication.mockResolvedValue(true)
   })
 
   it('requires same-origin session reauthentication and never returns password data', async () => {

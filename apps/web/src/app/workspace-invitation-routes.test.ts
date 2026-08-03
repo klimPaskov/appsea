@@ -13,7 +13,8 @@ const mocks = vi.hoisted(() => ({
     createWorkspaceInvitation: vi.fn(),
     revokeWorkspaceInvitation: vi.fn(),
     acceptWorkspaceInvitation: vi.fn(),
-    hasRecentReauthentication: vi.fn()
+    hasRecentReauthentication: vi.fn(),
+    hasRecentMfaReauthentication: vi.fn()
   },
   readSession: vi.fn(),
   readSessionToken: vi.fn(),
@@ -26,6 +27,8 @@ vi.mock('../server/auth-session', () => ({
   allowAuthAttempt: mocks.allowAuthAttempt,
   forbiddenResponse: () => Response.json({ error: 'Workspace access denied' }, { status: 403 }),
   invalidRequest: (message: string) => Response.json({ error: message }, { status: 400 }),
+  mfaReauthenticationRequiredResponse: () =>
+    Response.json({ error: 'Recent MFA verification required' }, { status: 428 }),
   privateResponseHeaders: { 'cache-control': 'private, no-store' },
   readSession: mocks.readSession,
   readSessionToken: mocks.readSessionToken,
@@ -52,7 +55,9 @@ describe('workspace invitation routes', () => {
     mocks.repository.revokeWorkspaceInvitation.mockReset()
     mocks.repository.acceptWorkspaceInvitation.mockReset()
     mocks.repository.hasRecentReauthentication.mockReset()
+    mocks.repository.hasRecentMfaReauthentication.mockReset()
     mocks.repository.hasRecentReauthentication.mockResolvedValue(true)
+    mocks.repository.hasRecentMfaReauthentication.mockResolvedValue(true)
   })
 
   it('lists and creates owner invitations behind step-up and rate limits', async () => {
@@ -133,6 +138,19 @@ describe('workspace invitation routes', () => {
     )
     expect(unstepped.status).toBe(428)
 
+    mocks.repository.hasRecentReauthentication.mockResolvedValue(true)
+    mocks.repository.hasRecentMfaReauthentication.mockResolvedValue(false)
+    const mfaBlocked = await createInvitation(
+      new Request('https://appsea.example', {
+        method: 'POST',
+        body: JSON.stringify({ email: 'new@example.com', role: 'viewer' }),
+        headers: { 'content-type': 'application/json' }
+      }),
+      { params: Promise.resolve({ workspaceId: 'workspace:one' }) }
+    )
+    expect(mfaBlocked.status).toBe(428)
+    mocks.repository.hasRecentMfaReauthentication.mockResolvedValue(true)
+
     vi.stubEnv('NODE_ENV', 'production')
     vi.stubEnv('APPSEA_AUTH_INVITATIONS_ENABLED', 'false')
     const disabled = await createInvitation(
@@ -155,6 +173,16 @@ describe('workspace invitation routes', () => {
       'workspace:one',
       'invite:one'
     )
+
+    mocks.repository.hasRecentMfaReauthentication.mockResolvedValue(false)
+    const mfaBlocked = await revokeInvitation(
+      new Request('https://appsea.example', { method: 'DELETE' }),
+      {
+        params: Promise.resolve({ workspaceId: 'workspace:one', invitationId: 'invite:one' })
+      }
+    )
+    expect(mfaBlocked.status).toBe(428)
+    mocks.repository.hasRecentMfaReauthentication.mockResolvedValue(true)
 
     mocks.allowAuthAttempt.mockResolvedValue(false)
     const limited = await acceptInvitation(

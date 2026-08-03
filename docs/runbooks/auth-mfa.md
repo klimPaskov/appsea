@@ -53,12 +53,19 @@ longer needed before revoking the old key.
 5. Disabling MFA requires both recent password step-up and a current TOTP or
    unused recovery code. The secret and recovery rows are deleted on success.
 
-## High-risk agent-token step-up
+## Conditional MFA step-up for high-risk mutations
 
-Issuing or revoking a workspace-scoped read-only MCP bearer at
-`/api/workspaces/:workspaceId/agent-tokens` requires the existing fifteen-minute
-password step-up. When MFA is enabled for the account, it also requires a fresh
-MFA proof from `POST /api/auth/mfa/step-up`:
+Mutations that already require the existing fifteen-minute password step-up
+also require a fresh MFA proof when MFA is enabled. This includes account
+closure, revoking another session, owner membership role/removal, invitation
+create/revoke, workspace archival, purge-intent request/cancel, evidence
+redaction, and issuing or revoking a workspace-scoped read-only MCP bearer at
+`/api/workspaces/:workspaceId/agent-tokens`. The server checks both markers
+before calling the mutation repository; UI state is never an authorization
+grant. Other mutation routes retain their separately reviewed role and policy
+boundaries until they receive an explicit step-up contract.
+
+The fresh proof comes from `POST /api/auth/mfa/step-up`:
 
 ```json
 { "code": "123456" }
@@ -82,8 +89,9 @@ TOTP timestep and rejects a previously used timestep.
 - `packages/db/src/auth-mfa.test.ts` covers base32, RFC 6238 vectors, replay,
   recovery-code normalization, and provisioning URIs.
 - `apps/web/src/app/mfa-routes.test.ts` covers same-origin, step-up, bounded
-  status, challenge rate limiting, enrollment, confirmation, disable, and
-  high-risk agent-token step-up paths.
+  status, challenge rate limiting, enrollment, confirmation, and disable; the
+  owner/session/workspace route suites cover conditional MFA enforcement for
+  each listed mutation.
 - `packages/db/integration/db.integration.test.ts` covers enrollment, a
   challenged login, recovery-code consumption, MFA step-up replay rejection,
   and disable behavior when the PostgreSQL integration gate is available.

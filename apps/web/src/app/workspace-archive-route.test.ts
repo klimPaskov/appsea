@@ -5,7 +5,8 @@ import { DELETE } from './api/workspaces/[workspaceId]/route'
 const mocks = vi.hoisted(() => ({
   repository: {
     archiveWorkspace: vi.fn(),
-    hasRecentReauthentication: vi.fn()
+    hasRecentReauthentication: vi.fn(),
+    hasRecentMfaReauthentication: vi.fn()
   },
   readSession: vi.fn(),
   readSessionToken: vi.fn(),
@@ -23,6 +24,11 @@ vi.mock('../server/auth-session', () => ({
     Response.json(
       { error: message },
       { status: 400, headers: { 'cache-control': 'private, no-store' } }
+    ),
+  mfaReauthenticationRequiredResponse: () =>
+    Response.json(
+      { error: 'Recent MFA verification required' },
+      { status: 428, headers: { 'cache-control': 'private, no-store' } }
     ),
   privateResponseHeaders: { 'cache-control': 'private, no-store' },
   readSession: mocks.readSession,
@@ -59,6 +65,7 @@ describe('workspace archival route', () => {
   beforeEach(() => {
     mocks.repository.archiveWorkspace.mockReset()
     mocks.repository.hasRecentReauthentication.mockReset()
+    mocks.repository.hasRecentMfaReauthentication.mockReset()
     mocks.readSession.mockReset()
     mocks.readSessionToken.mockReset()
     mocks.sameOriginRequest.mockReset()
@@ -66,6 +73,7 @@ describe('workspace archival route', () => {
     mocks.readSessionToken.mockResolvedValue('a'.repeat(48))
     mocks.sameOriginRequest.mockReturnValue(true)
     mocks.repository.hasRecentReauthentication.mockResolvedValue(true)
+    mocks.repository.hasRecentMfaReauthentication.mockResolvedValue(true)
     mocks.repository.archiveWorkspace.mockResolvedValue({
       workspaceId: 'workspace:one',
       state: 'archived',
@@ -94,6 +102,12 @@ describe('workspace archival route', () => {
     ).resolves.toHaveProperty('status', 428)
 
     mocks.repository.hasRecentReauthentication.mockResolvedValue(true)
+    mocks.repository.hasRecentMfaReauthentication.mockResolvedValue(false)
+    await expect(
+      DELETE(request({ confirmation: 'ARCHIVE WORKSPACE' }), context)
+    ).resolves.toHaveProperty('status', 428)
+
+    mocks.repository.hasRecentMfaReauthentication.mockResolvedValue(true)
     await expect(
       DELETE(request({ confirmation: 'archive workspace' }), context)
     ).resolves.toHaveProperty('status', 400)

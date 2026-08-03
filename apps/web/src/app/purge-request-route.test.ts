@@ -10,6 +10,7 @@ const mocks = vi.hoisted(() => ({
   repository: {
     cancelWorkspacePurge: vi.fn(),
     hasRecentReauthentication: vi.fn(),
+    hasRecentMfaReauthentication: vi.fn(),
     readWorkspacePurgeRequest: vi.fn(),
     requestWorkspacePurge: vi.fn()
   },
@@ -29,6 +30,11 @@ vi.mock('../server/auth-session', () => ({
     Response.json(
       { error: message },
       { status: 400, headers: { 'cache-control': 'private, no-store' } }
+    ),
+  mfaReauthenticationRequiredResponse: () =>
+    Response.json(
+      { error: 'Recent MFA verification required' },
+      { status: 428, headers: { 'cache-control': 'private, no-store' } }
     ),
   privateResponseHeaders: { 'cache-control': 'private, no-store' },
   readSession: mocks.readSession,
@@ -93,6 +99,7 @@ describe('workspace purge request route', () => {
   beforeEach(() => {
     mocks.repository.cancelWorkspacePurge.mockReset()
     mocks.repository.hasRecentReauthentication.mockReset()
+    mocks.repository.hasRecentMfaReauthentication.mockReset()
     mocks.repository.readWorkspacePurgeRequest.mockReset()
     mocks.repository.requestWorkspacePurge.mockReset()
     mocks.readSession.mockReset()
@@ -102,6 +109,7 @@ describe('workspace purge request route', () => {
     mocks.readSessionToken.mockResolvedValue('a'.repeat(48))
     mocks.sameOriginRequest.mockReturnValue(true)
     mocks.repository.hasRecentReauthentication.mockResolvedValue(true)
+    mocks.repository.hasRecentMfaReauthentication.mockResolvedValue(true)
     mocks.repository.readWorkspacePurgeRequest.mockResolvedValue(requestModel)
     mocks.repository.requestWorkspacePurge.mockResolvedValue(requestModel)
     mocks.repository.cancelWorkspacePurge.mockResolvedValue({
@@ -140,6 +148,12 @@ describe('workspace purge request route', () => {
     ).resolves.toHaveProperty('status', 428)
 
     mocks.repository.hasRecentReauthentication.mockResolvedValue(true)
+    mocks.repository.hasRecentMfaReauthentication.mockResolvedValue(false)
+    await expect(
+      POST(request('POST', { confirmation: 'REQUEST WORKSPACE PURGE' }), context)
+    ).resolves.toHaveProperty('status', 428)
+
+    mocks.repository.hasRecentMfaReauthentication.mockResolvedValue(true)
     await expect(
       POST(request('POST', { confirmation: 'request workspace purge' }), context)
     ).resolves.toHaveProperty('status', 400)
@@ -193,6 +207,17 @@ describe('workspace purge request route', () => {
       'workspace:one',
       { requestId: requestModel.requestId, confirmation: 'CANCEL WORKSPACE PURGE' }
     )
+
+    mocks.repository.hasRecentMfaReauthentication.mockResolvedValue(false)
+    const mfaBlocked = await DELETE(
+      request('DELETE', {
+        requestId: requestModel.requestId,
+        confirmation: 'CANCEL WORKSPACE PURGE'
+      }),
+      context
+    )
+    expect(mfaBlocked.status).toBe(428)
+    mocks.repository.hasRecentMfaReauthentication.mockResolvedValue(true)
   })
 
   it('maps owner authorization failures and never treats them as successful requests', async () => {

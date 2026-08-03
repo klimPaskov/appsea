@@ -5,6 +5,7 @@ import {
   allowAuthAttempt,
   authRepository,
   invalidRequest,
+  mfaReauthenticationRequiredResponse,
   privateResponseHeaders,
   readSession,
   readSessionToken,
@@ -44,6 +45,9 @@ export async function DELETE(request: Request): Promise<Response> {
     }
     if (!(await authRepository().hasRecentReauthentication(token))) {
       return reauthenticationRequiredResponse()
+    }
+    if (!(await authRepository().hasRecentMfaReauthentication(token))) {
+      return mfaReauthenticationRequiredResponse()
     }
 
     const result = await authRepository().closeAccount(session.user.userId, parsed.data)

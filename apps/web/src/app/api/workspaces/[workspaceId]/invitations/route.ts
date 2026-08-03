@@ -9,6 +9,7 @@ import {
   authRepository,
   forbiddenResponse,
   invalidRequest,
+  mfaReauthenticationRequiredResponse,
   privateResponseHeaders,
   readSession,
   readSessionToken,
@@ -103,6 +104,9 @@ export async function POST(
     if (!token) return unauthorizedResponse()
     if (!(await authRepository().hasRecentReauthentication(token))) {
       return reauthenticationRequiredResponse()
+    }
+    if (!(await authRepository().hasRecentMfaReauthentication(token))) {
+      return mfaReauthenticationRequiredResponse()
     }
     const result = await authRepository().createWorkspaceInvitation(
       session.user.userId,

@@ -6,6 +6,7 @@ const mocks = vi.hoisted(() => ({
   readSession: vi.fn(),
   readSessionToken: vi.fn(),
   hasRecentReauthentication: vi.fn(),
+  hasRecentMfaReauthentication: vi.fn(),
   sameOriginRequest: vi.fn(),
   errors: {
     EvidenceRedactionConflictError: class extends Error {},
@@ -16,9 +17,14 @@ const mocks = vi.hoisted(() => ({
 }))
 
 vi.mock('../server/auth-session', () => ({
-  authRepository: () => ({ hasRecentReauthentication: mocks.hasRecentReauthentication }),
+  authRepository: () => ({
+    hasRecentReauthentication: mocks.hasRecentReauthentication,
+    hasRecentMfaReauthentication: mocks.hasRecentMfaReauthentication
+  }),
   forbiddenResponse: () => Response.json({ error: 'Workspace access denied' }, { status: 403 }),
   invalidRequest: (message: string) => Response.json({ error: message }, { status: 400 }),
+  mfaReauthenticationRequiredResponse: () =>
+    Response.json({ error: 'Recent MFA verification required' }, { status: 428 }),
   privateResponseHeaders: { 'cache-control': 'private, no-store' },
   readSession: mocks.readSession,
   readSessionToken: mocks.readSessionToken,
@@ -67,6 +73,8 @@ describe('evidence redaction route', () => {
     mocks.readSession.mockResolvedValue(session)
     mocks.readSessionToken.mockResolvedValue('a'.repeat(48))
     mocks.hasRecentReauthentication.mockResolvedValue(true)
+    mocks.hasRecentMfaReauthentication.mockReset()
+    mocks.hasRecentMfaReauthentication.mockResolvedValue(true)
     mocks.sameOriginRequest.mockReturnValue(true)
     mocks.redact.mockReset()
   })
@@ -94,6 +102,20 @@ describe('evidence redaction route', () => {
     ).resolves.toHaveProperty('status', 428)
 
     mocks.hasRecentReauthentication.mockResolvedValue(true)
+    mocks.hasRecentMfaReauthentication.mockResolvedValue(false)
+    await expect(
+      POST(
+        request({
+          evidenceId: 'evidence:one',
+          redactionId: 'redaction:one',
+          fields: ['text'],
+          reason: 'pii'
+        }),
+        path
+      )
+    ).resolves.toHaveProperty('status', 428)
+
+    mocks.hasRecentMfaReauthentication.mockResolvedValue(true)
     const invalid = await POST(
       request({
         evidenceId: 'evidence:one',

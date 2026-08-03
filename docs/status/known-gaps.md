@@ -11,9 +11,10 @@ and coverage gaps, but it is not a general REST/MCP write API. Token issue and
 revoke now require the existing password step-up plus a fresh MFA proof when
 MFA is enabled; accounts without MFA retain the password-only path. Token
 management is API-only, and HTTPS termination, external secret storage, rate
-limiting, OIDC/provider identity, key rotation, MFA enforcement for other
-high-risk mutations, rotation automation, and deployment monitoring remain
-open.
+limiting, OIDC/provider identity, key rotation, rotation automation, and
+deployment monitoring remain open. Password-gated high-risk mutations now
+share the conditional MFA marker; mutations without a password-step-up
+boundary still need their own reviewed step-up contract.
 
 Private campaign configuration is now persisted and source-policy readiness is
 visible. Owners/editors can start a bounded one-source run from the campaign
@@ -120,7 +121,7 @@ TOTP MFA is now implemented at the global-auth boundary: enrollment requires
 recent password step-up, the encrypted secret never enters a read model, login
 issues a short-lived hash-only challenge, and recovery codes are one-time
 hashes. Migration `0081` adds a fifteen-minute session marker for an additional
-MFA proof on agent-token issue/revoke; the proof consumes a TOTP or one
+MFA proof on password-gated high-risk mutations; the proof consumes a TOTP or one
 recovery code transactionally. Production requires a separate
 `APPSEA_AUTH_MFA_ENCRYPTION_KEY`.
 Account recovery mechanics
@@ -144,7 +145,8 @@ implemented through the same route: it blocks active workflow/run/lease work,
 retains lineage, and records identifier-only receipts. OIDC and a production
 identity-provider control plane remain open; the TOTP implementation does not
 prove verified email ownership, external OIDC operations, provider-backed
-step-up, or MFA enforcement for unrelated high-risk mutations.
+step-up, or a step-up contract for unrelated mutations that lack a password
+boundary.
 
 The owner-only `GET /api/workspaces/:workspaceId/purge-readiness` projection and
 members-page inventory now expose bounded active-work and raw/analysis/report/

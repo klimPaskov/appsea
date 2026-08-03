@@ -3,6 +3,7 @@ import { AuthSessionConflictError, AuthSessionNotFoundError } from '@appsea/db/a
 import {
   authRepository,
   invalidRequest,
+  mfaReauthenticationRequiredResponse,
   privateResponseHeaders,
   readSession,
   readSessionToken,
@@ -36,6 +37,9 @@ export async function DELETE(
   try {
     if (!(await authRepository().hasRecentReauthentication(token))) {
       return reauthenticationRequiredResponse()
+    }
+    if (!(await authRepository().hasRecentMfaReauthentication(token))) {
+      return mfaReauthenticationRequiredResponse()
     }
     await authRepository().revokeSessionById(token, parsedSessionId.data)
     return Response.json({ data: { revoked: true } }, { headers: privateResponseHeaders })

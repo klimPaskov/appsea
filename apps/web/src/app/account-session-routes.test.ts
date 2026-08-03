@@ -7,6 +7,7 @@ const mocks = vi.hoisted(() => ({
   repository: {
     listActiveSessions: vi.fn(),
     hasRecentReauthentication: vi.fn(),
+    hasRecentMfaReauthentication: vi.fn(),
     revokeSessionById: vi.fn()
   },
   readSession: vi.fn(),
@@ -22,6 +23,11 @@ vi.mock('../server/auth-session', () => ({
       { status: 400, headers: { 'cache-control': 'private, no-store' } }
     ),
   privateResponseHeaders: { 'cache-control': 'private, no-store' },
+  mfaReauthenticationRequiredResponse: () =>
+    Response.json(
+      { error: 'Recent MFA verification required' },
+      { status: 428, headers: { 'cache-control': 'private, no-store' } }
+    ),
   readSession: mocks.readSession,
   readSessionToken: mocks.readSessionToken,
   reauthenticationRequiredResponse: () =>
@@ -49,11 +55,13 @@ describe('authentication session routes', () => {
     mocks.sameOriginRequest.mockReset()
     mocks.repository.listActiveSessions.mockReset()
     mocks.repository.hasRecentReauthentication.mockReset()
+    mocks.repository.hasRecentMfaReauthentication.mockReset()
     mocks.repository.revokeSessionById.mockReset()
     mocks.readSession.mockResolvedValue(session)
     mocks.readSessionToken.mockResolvedValue('a'.repeat(48))
     mocks.sameOriginRequest.mockReturnValue(true)
     mocks.repository.hasRecentReauthentication.mockResolvedValue(true)
+    mocks.repository.hasRecentMfaReauthentication.mockResolvedValue(true)
     mocks.repository.revokeSessionById.mockResolvedValue(undefined)
   })
 
@@ -109,6 +117,17 @@ describe('authentication session routes', () => {
     expect(mocks.repository.revokeSessionById).not.toHaveBeenCalled()
 
     mocks.repository.hasRecentReauthentication.mockResolvedValue(true)
+    mocks.repository.hasRecentMfaReauthentication.mockResolvedValue(false)
+    const mfaStepUp = await revokeSession(
+      new Request('https://appsea.example', { method: 'DELETE' }),
+      {
+        params: Promise.resolve({ sessionId: 'session:other' })
+      }
+    )
+    expect(mfaStepUp.status).toBe(428)
+    expect(mocks.repository.revokeSessionById).not.toHaveBeenCalled()
+
+    mocks.repository.hasRecentMfaReauthentication.mockResolvedValue(true)
     mocks.repository.revokeSessionById.mockRejectedValue(new AuthSessionConflictError())
     const conflict = await revokeSession(
       new Request('https://appsea.example', { method: 'DELETE' }),

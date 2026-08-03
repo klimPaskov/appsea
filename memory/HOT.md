@@ -5,7 +5,7 @@
 - PostgreSQL/RLS: `packages/db`; Temporal: `packages/workflows` and `apps/worker`.
 - Fixture/collection workflows are package-tested; Temporal/Docker proof and cloud/backup purge remain pending. `0043` queues output purge; `0044` retries tombstones.
 - `CfpbConnector` is disabled pending legal/privacy/security approval; `StackExchangeConnector` is a disabled candidate for competitor/contrary research; no real source is active.
-- Web auth uses scrypt, revocable sessions, membership-before-RLS, and step-up; TOTP MFA uses encrypted secrets, hash recovery codes, expiring challenges, and migration `0081` session markers for agent-token issue/revoke. Recovery/delivery, OIDC/provider identity, key rotation, provider-backed step-up, and other high-risk token enforcement remain open.
+- Web auth uses scrypt, revocable sessions, membership-before-RLS, and step-up; TOTP MFA uses encrypted secrets, hash recovery codes, expiring challenges, and migration `0081` session markers for password-gated high-risk mutations. Recovery/delivery, OIDC/provider identity, key rotation, provider-backed step-up, and mutations without a password-step-up boundary remain open.
 - Production collection persists policy-bound evidence, complaints, tombstones, gaps, cost, and lineage; private reads: `/workspace/:workspaceId/research/:runId`; outputs use filesystem/S3.
 - `0067` adds step-up owner/editor redaction receipts and masks; provenance, hashes, snapshots, raw deletion, and cloud/backup purge remain separate.
 - Analysis v2 carries IDs/digests; the worker rebuilds artifacts in-activity. Private reads carry approval state; legacy v1 drain, cloud/backup purge, role rotation, and scheduler ownership remain open. Collection writes lock leases; `0037` recovers stale dispatches.
