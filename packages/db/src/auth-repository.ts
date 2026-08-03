@@ -1176,7 +1176,7 @@ export class PostgresAuthRepository {
               AND app_user.account_state = 'active'
               AND challenge.expires_at > clock_timestamp()
               AND challenge.consumed_at IS NULL
-            FOR UPDATE`,
+            FOR UPDATE OF challenge`,
           [sha256(parsed.challengeToken)]
         )
         const challengeRow = challenge.rows[0]
@@ -1197,7 +1197,7 @@ export class PostgresAuthRepository {
              JOIN appsea.users app_user ON app_user.user_id = mfa.user_id
             WHERE mfa.user_id = $1
               AND mfa.status = 'enabled'
-            FOR UPDATE`,
+            FOR UPDATE OF mfa`,
           [challengeRow.user_id]
         )
         const mfaRow = totp.rows[0]
@@ -1370,7 +1370,7 @@ export class PostgresAuthRepository {
             WHERE mfa.user_id = $1
               AND mfa.status = 'pending'
               AND mfa.created_at > $2
-            FOR UPDATE`,
+             FOR UPDATE OF mfa`,
           [current.user_id, new Date(Date.now() - mfaChallengeLifetimeMs)]
         )
         const row = result.rows[0]
@@ -1409,7 +1409,7 @@ export class PostgresAuthRepository {
              JOIN appsea.users app_user ON app_user.user_id = mfa.user_id
             WHERE mfa.user_id = $1
               AND mfa.status = 'enabled'
-            FOR UPDATE`,
+             FOR UPDATE OF mfa`,
           [current.user_id]
         )
         const row = result.rows[0]
@@ -1583,7 +1583,7 @@ export class PostgresAuthRepository {
         WHERE session.token_hash = $1
           AND session.revoked_at IS NULL
           AND session.expires_at > clock_timestamp()
-        FOR SHARE`,
+        FOR KEY SHARE OF session`,
       [sha256(token)]
     )
     return result.rows[0] ?? null
