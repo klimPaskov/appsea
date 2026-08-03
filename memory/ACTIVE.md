@@ -84,8 +84,8 @@ memory.
   worker (118) focused tests plus affected typechecks. Migration `0086` adds
   ciphertext key versions and `0087` records rewrap events; the status and
   rewrap commands expose only aggregate counts. GitHub Actions run
-  `30813209982` is green for `39e8bcd`, including fresh PostgreSQL and Temporal
-  proof; the new tranche still needs its own fresh CI proof.
+  `30816541495` is green for `8b9b19a`, including fresh PostgreSQL and Temporal
+  proof.
 
 ## Next production tranche
 

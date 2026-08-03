@@ -33,7 +33,9 @@ deployment-gated.
 - Focused repository tests cover bounded input, lease/fence propagation,
   encrypted previous-key rewrap, no plaintext logging, and the migration
   catalog. PostgreSQL integration covers a real enrolled account's rotation
-  path when the guarded Docker gate is available.
+  path. GitHub Actions run `30816541495` passed fresh PostgreSQL persistence,
+  fresh Temporal workflows, and the full repository verification job for
+  commit `8b9b19a`; local Docker Desktop remains unavailable.
 
 ## Remaining gates and simplifications
 
@@ -42,8 +44,6 @@ deployment-gated.
   review remain deployment responsibilities.
 - No automatic key deletion, source activation, identity-provider change,
   production migration, or deployment was performed.
-- Fresh PostgreSQL and Temporal proof must run in CI or an available local
-  Docker engine before this tranche has external-environment completion proof.
 - OIDC/verified identity, delivery/DPA, provider-backed step-up, production
   role provisioning, cloud purge, and signed desktop release remain outside
   this tranche and outside any AppSea completion claim.

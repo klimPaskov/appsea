@@ -30,12 +30,12 @@ Passing on 2026-08-03:
   non-failing Node.js 20 action-runtime deprecation annotation; action-runtime
   upgrades remain a maintenance follow-up.
 - The MFA key-rotation tranche passed `pnpm --filter @appsea/contracts test`
-  (95), `pnpm --filter @appsea/db test` (144), and
+  (94), `pnpm --filter @appsea/db test` (143), and
   `pnpm --filter @appsea/worker test` (118), plus affected package
   typechecks. Migration `0086` defaults existing ciphertext to version 1;
   migration `0087` adds identifier-only rewrap events; the status and bounded
   rewrap commands expose no key material. The latest release-proof run
-  is GitHub Actions `30813209982` for commit `39e8bcd`.
+  is GitHub Actions `30816541495` for commit `8b9b19a`.
 - MFA-focused contract, PostgreSQL repository/migration, web-route, worker
   preflight, and retention tests pass; the conditional-MFA route scenario
   passed in GitHub Actions run `30786965857` for commit `b9cb95e`.
