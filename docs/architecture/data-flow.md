@@ -23,10 +23,11 @@ visible on that child; it is never inferred as absence of complaints.
 
 The private campaign page and run-history API read the existing production
 workflow projection through an authenticated workspace transaction. History is
-bounded to the latest 100 rows and maps only operational state, checkpoint,
-source/policy identifiers, counters, and timestamps. The status page links a
-completed run to the existing collection evidence read; hashes, actor details,
-and source payloads remain outside the read model.
+cursor-paginated with a bounded limit and stable request-time/identifier
+ordering; each page maps only operational state, checkpoint, source/policy
+identifiers, counters, and timestamps. The status page links a completed run
+to the existing collection evidence read; hashes, actor details, and source
+payloads remain outside the read model.
 
 After collection, the same page offers an explicit reviewed-analysis handoff
 for owner/editor members. The browser submits only a new analysis identifier,

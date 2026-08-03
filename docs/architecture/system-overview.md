@@ -176,8 +176,10 @@ policy, consumes the service production-workflow admission, and starts the
 existing one-source Temporal workflow. Reconciliation reads the durable
 workflow projection and updates child, parent, and campaign state in one
 workspace transaction. The private history/detail routes expose only the
-bounded read model; no raw complaint content, caller key, policy hash, or
-workflow input is returned. Paused or archived campaigns cannot receive new
+bounded read model. History pages use validated opaque request-time plus
+identifier cursors, so pagination cannot cross workspaces or expose hashes; no
+raw complaint content, caller key, policy hash, or workflow input is returned.
+Paused or archived campaigns cannot receive new
 claims, and failed policy checks remain visible rather than being treated as
 coverage absence. Deployed Temporal/scheduler ownership, live policy approval,
 and crash/retry integration proof remain release gates.

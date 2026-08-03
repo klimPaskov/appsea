@@ -2760,6 +2760,39 @@ export const researchCampaignRunReadModelSchema = z
   })
   .strict()
 
+/** Bounded cursor used by private campaign history pages. */
+export const campaignHistoryCursorSchema = z
+  .object({
+    version: z.literal(1),
+    requestedAt: z.string().datetime(),
+    itemId: z
+      .string()
+      .min(3)
+      .max(240)
+      .regex(/^[a-z][a-z0-9_:-]*$/)
+  })
+  .strict()
+
+/** Query boundary for authenticated campaign history reads. */
+export const campaignHistoryPageQuerySchema = z
+  .object({
+    limit: z.number().int().min(1).max(100).default(25),
+    cursor: z
+      .string()
+      .min(1)
+      .max(512)
+      .regex(/^[A-Za-z0-9_-]+$/)
+      .optional()
+  })
+  .strict()
+
+export const researchCampaignRunHistoryPageSchema = z
+  .object({
+    data: z.array(researchCampaignRunReadModelSchema).max(100),
+    nextCursor: z.string().min(1).max(512).nullable()
+  })
+  .strict()
+
 /** Durable parent state for a multi-source campaign collection request. */
 export const researchCampaignOrchestrationStateSchema = z.enum([
   'queued',
@@ -2960,6 +2993,13 @@ export const researchCampaignOrchestrationReadModelSchema = z
         message: 'Terminal non-success orchestrations require fixed failure metadata'
       })
     }
+  })
+  .strict()
+
+export const researchCampaignOrchestrationHistoryPageSchema = z
+  .object({
+    data: z.array(researchCampaignOrchestrationReadModelSchema).max(100),
+    nextCursor: z.string().min(1).max(512).nullable()
   })
   .strict()
 
@@ -5168,6 +5208,9 @@ export type ResearchCampaignRefreshScheduleReadModel = z.infer<
   typeof researchCampaignRefreshScheduleReadModelSchema
 >
 export type ResearchCampaignRunInput = z.infer<typeof researchCampaignRunInputSchema>
+export type CampaignHistoryCursor = z.infer<typeof campaignHistoryCursorSchema>
+export type CampaignHistoryPageQuery = z.infer<typeof campaignHistoryPageQuerySchema>
+export type ResearchCampaignRunHistoryPage = z.infer<typeof researchCampaignRunHistoryPageSchema>
 export type ResearchCampaignOrchestrationState = z.infer<
   typeof researchCampaignOrchestrationStateSchema
 >
@@ -5182,6 +5225,9 @@ export type ResearchCampaignOrchestrationSourceReadModel = z.infer<
 >
 export type ResearchCampaignOrchestrationReadModel = z.infer<
   typeof researchCampaignOrchestrationReadModelSchema
+>
+export type ResearchCampaignOrchestrationHistoryPage = z.infer<
+  typeof researchCampaignOrchestrationHistoryPageSchema
 >
 export type ResearchCampaignOrchestrationCancelResult = z.infer<
   typeof researchCampaignOrchestrationCancelResultSchema

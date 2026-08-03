@@ -1,13 +1,16 @@
 import type { Pool, PoolClient, QueryResultRow } from 'pg'
 import {
   appseaIdentifierSchema,
+  campaignHistoryPageQuerySchema,
   productionCollectionWorkflowCheckpointWriteSchema,
   productionCollectionWorkflowCompletionInputSchema,
   productionCollectionWorkflowHashMaterialSchema,
   productionCollectionWorkflowJobInitializeInputSchema,
   productionCollectionWorkflowTerminationInputSchema,
   productionCollectionWorkflowCancelResultSchema,
+  researchCampaignRunHistoryPageSchema,
   researchCampaignRunReadModelSchema,
+  type CampaignHistoryPageQuery,
   type ProductionCollectionWorkflowCheckpointWrite,
   type ProductionCollectionWorkflowCompletionInput,
   type ProductionCollectionWorkflowExecutionMetadata,
@@ -42,6 +45,10 @@ import {
   assertProductionWorkflowAdmissionConsumed,
   consumeProductionWorkflowAdmissionInTransaction
 } from './production-workflow-admission-repository'
+import {
+  decodeCampaignHistoryCursor,
+  encodeCampaignHistoryCursor
+} from './campaign-history-pagination'
 
 interface ProductionWorkflowRow extends QueryResultRow {
   workspace_id: string
@@ -1057,6 +1064,71 @@ export class PostgresProductionCollectionWorkflowRepository {
       userId,
       workspaceId,
       (client) => this.readInTransaction(client, workspaceId, workflowId),
+      { readOnly: true }
+    )
+  }
+
+  async listPageForCampaignForUser(
+    userId: string,
+    workspaceId: string,
+    campaignId: string,
+    query: Partial<CampaignHistoryPageQuery> = {}
+  ): Promise<ReturnType<typeof researchCampaignRunHistoryPageSchema.parse>> {
+    const parsedUserId = appseaIdentifierSchema.parse(userId)
+    const parsedWorkspaceId = appseaIdentifierSchema.parse(workspaceId)
+    const parsedCampaignId = appseaIdentifierSchema.parse(campaignId)
+    const parsedQuery = campaignHistoryPageQuerySchema.parse(query)
+    const cursor = parsedQuery.cursor
+      ? decodeCampaignHistoryCursor(parsedQuery.cursor, 'runs')
+      : null
+    return withAuthenticatedWorkspaceTransaction(
+      this.pool,
+      parsedUserId,
+      parsedWorkspaceId,
+      async (client) => {
+        const result = await client.query<ProductionWorkflowRow>(
+          `SELECT job.*
+             FROM appsea.production_collection_workflow_jobs job
+             JOIN appsea.workspaces workspace
+               ON workspace.workspace_id = job.workspace_id
+            WHERE job.workspace_id = $1
+              AND job.campaign_id = $2
+              AND workspace.status = 'active'
+              AND workspace.visibility = 'private'
+              AND workspace.fixture_only = false
+              AND (
+                $3::timestamptz IS NULL
+                OR job.requested_at < $3::timestamptz
+                OR (job.requested_at = $3::timestamptz AND job.workflow_id > $4)
+              )
+            ORDER BY job.requested_at DESC, job.workflow_id
+            LIMIT $5`,
+          [
+            parsedWorkspaceId,
+            parsedCampaignId,
+            cursor?.requestedAt ?? null,
+            cursor?.itemId ?? null,
+            parsedQuery.limit + 1
+          ]
+        )
+        const hasNext = result.rows.length > parsedQuery.limit
+        const rows = hasNext ? result.rows.slice(0, parsedQuery.limit) : result.rows
+        const data = rows.map(mapCampaignRun)
+        const last = rows.at(-1)
+        return researchCampaignRunHistoryPageSchema.parse({
+          data,
+          nextCursor:
+            hasNext && last
+              ? encodeCampaignHistoryCursor(
+                  'runs',
+                  last.requested_at instanceof Date
+                    ? last.requested_at.toISOString()
+                    : new Date(last.requested_at).toISOString(),
+                  last.workflow_id
+                )
+              : null
+        })
+      },
       { readOnly: true }
     )
   }

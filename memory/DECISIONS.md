@@ -293,16 +293,14 @@ approvals require re-review.
 
 Private opportunity reads separate competitive-research state from competitor
 rows: fixtures are synthetic/unresolved, approved seeds are reviewed-seed-only,
-and source-backed requires permitted source IDs, retained evidence IDs, and an
-observation time. This prevents missing coverage becoming a market claim.
+and source-backed requires permitted source IDs and retained evidence IDs.
 
 ## 2026-08-01: Persist campaign intent before collection
 
 Use existing `research_campaigns` JSONB for strict `campaign-v1` intent and a
-bounded legacy read union. Draft writes resolve policy readiness, reject source
-or purpose mismatches, record identifier-only receipts, and never start
-Temporal or activate a connector; admission rechecks quota, deletion, and
-budget. No migration was needed.
+bounded legacy read union. Draft writes resolve policy readiness, reject
+mismatches, record identifier-only receipts, and never start Temporal or
+activate a connector; admission rechecks quota, deletion, and budget.
 
 ## 2026-08-02: Make reviewed analysis handoff explicit and safe
 
@@ -325,26 +323,29 @@ Keep the existing one-source workflow/admission as the execution boundary.
 Migration `0068` adds a forced-RLS parent and one child per configured
 non-fixture source (two to sixteen), with deterministic identity, leases,
 bounded attempts, and fixed failures. Maintenance rechecks policy and
-reconciles child projections into parent/campaign state, preserving partial
-outcomes without treating policy denial as missing evidence.
+reconciles child projections into parent/campaign state without treating
+policy denial as missing evidence.
 
 ## 2026-08-03: Keep coding-agent access workspace-scoped and read-only
 
-Migration `0069` and `/api/mcp` provide the first agent-access boundary. A
-private-workspace owner issues an expiring, hash-only token after step-up;
-MCP is workspace-bound, scope-filtered, read-only, and preserves coverage,
-redaction, and approved report/plan state. Workflow, activation, policy,
-deletion, deployment, and credential tools remain outside MCP; deployment
-secret storage and rate limiting remain release work.
+Migration `0069` and `/api/mcp` provide an expiring, hash-only owner token
+after step-up. MCP is workspace-bound, scope-filtered, read-only, and
+preserves coverage, redaction, and approved report/plan state; workflow,
+activation, deletion, deployment, and credentials remain outside MCP.
 
 ## 2026-08-03: Persist cancellation intent before calling Temporal
 
-Migrations `0070`/`0071` record immutable owner/editor cancellation intent
-before Temporal for both run types. Queued children stop;
-dispatching claims stay owned until their workflow identity is recorded.
-Worker retries the external call; each workflow remains
-the non-cancellable terminal authority and reconciles a persistence race. Intent
-remains durable during Temporal outages.
+Migrations `0070`/`0071` record immutable owner/editor intent before Temporal
+for both run types. Queued children stop; dispatching claims stay owned until
+their workflow identity is recorded. The worker retries external cancellation;
+each workflow remains terminal authority during Temporal outages.
+
+## 2026-08-03: Paginate private campaign history with stable cursors
+
+Use bounded request-time plus identifier cursors, not offsets. A base64url
+cursor is validated as identifier-only and carries no hash, source content, or
+authorization state; authenticated transactions bind every page to its
+workspace, with one- and multi-source histories advancing independently.
 
 ## 2026-08-02: Reuse the recomputation queue for complaint corrections
 

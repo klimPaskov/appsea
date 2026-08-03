@@ -65,7 +65,11 @@ import {
   researchCampaignRefreshScheduleReadModelSchema,
   researchCampaignRunInputSchema,
   researchCampaignRunReadModelSchema,
+  campaignHistoryCursorSchema,
+  campaignHistoryPageQuerySchema,
+  researchCampaignRunHistoryPageSchema,
   researchCampaignOrchestrationReadModelSchema,
+  researchCampaignOrchestrationHistoryPageSchema,
   researchCampaignOrchestrationCancelResultSchema,
   sourcePolicySchema,
   sourcePolicyApprovalInputSchema,
@@ -2044,6 +2048,27 @@ describe('contracts', () => {
         extra: true
       }).success
     ).toBe(false)
+  })
+
+  it('keeps private campaign history pagination bounded and identifier-only', () => {
+    const cursor =
+      'eyJ2ZXJzaW9uIjoxLCJyZXF1ZXN0ZWRBdCI6IjIwMjYtMDgtMDJUMDA6MDA6MDAuMDAwWiIsIml0ZW1JZCI6IndvcmtmbG93OnByb2R1Y3Rpb246b25lIn0'
+    expect(
+      campaignHistoryCursorSchema.parse({
+        version: 1,
+        requestedAt: now,
+        itemId: 'workflow:production:one'
+      })
+    ).toMatchObject({ version: 1, itemId: 'workflow:production:one' })
+    expect(campaignHistoryPageQuerySchema.parse({})).toEqual({ limit: 25 })
+    expect(campaignHistoryPageQuerySchema.safeParse({ limit: 101, cursor }).success).toBe(false)
+    expect(
+      researchCampaignRunHistoryPageSchema.safeParse({ data: [], nextCursor: null }).success
+    ).toBe(true)
+    expect(
+      researchCampaignOrchestrationHistoryPageSchema.safeParse({ data: [], nextCursor: null })
+        .success
+    ).toBe(true)
   })
 
   it('accepts an explicit approved-seed reference for automatic analysis handoff', () => {

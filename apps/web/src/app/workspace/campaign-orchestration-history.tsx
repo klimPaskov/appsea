@@ -1,19 +1,31 @@
+import Link from 'next/link'
 import type { ResearchCampaignOrchestrationReadModel } from '@appsea/contracts'
 import { ResearchCampaignOrchestrationCancelAction } from './campaign-orchestration-cancel-action'
 
 export function ResearchCampaignOrchestrationHistory({
   orchestrations,
   workspaceId,
-  canCancel
+  canCancel,
+  fullHistoryHref,
+  nextPageHref
 }: {
   orchestrations: ResearchCampaignOrchestrationReadModel[]
   workspaceId: string
   canCancel: boolean
+  fullHistoryHref?: string | undefined
+  nextPageHref?: string | undefined
 }) {
   if (orchestrations.length === 0) return null
   return (
     <details className="workspace-campaign-orchestration-history">
-      <summary>Multi-source run history ({orchestrations.length})</summary>
+      <summary>
+        Multi-source run history ({orchestrations.length})
+        {fullHistoryHref ? (
+          <Link className="quiet-button" href={fullHistoryHref}>
+            View all history
+          </Link>
+        ) : null}
+      </summary>
       <ul className="seed-review-list">
         {orchestrations.map((orchestration) => (
           <li key={orchestration.orchestrationId}>
@@ -49,6 +61,13 @@ export function ResearchCampaignOrchestrationHistory({
           </li>
         ))}
       </ul>
+      {nextPageHref ? (
+        <p className="workspace-actions">
+          <Link className="quiet-button" href={nextPageHref}>
+            Older multi-source runs
+          </Link>
+        </p>
+      ) : null}
     </details>
   )
 }

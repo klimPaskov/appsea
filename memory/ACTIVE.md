@@ -5,7 +5,7 @@
 Fixture product, PostgreSQL persistence, durable workflows, policy-gated CFPB
 collection, private workspaces, report/plan approval/export, recovery, and
 invitations are implemented. Migrations
-`0027`-`0071` add policy evidence, collection checkpoints, deletion repair,
+`0027`-`0072` add policy evidence, collection checkpoints, deletion repair,
 leases, snapshot reconciliation, workflow admissions, source-reconciliation
 admission, retryable tombstones, maintenance-run telemetry, a durable source-
 quota case ledger, recomputation alerts, cost-threshold projection, and
@@ -22,26 +22,25 @@ reconciles safe child state. No connector was activated.
 The 2026-08-03 agent-access tranche adds migration `0069` and a private
 read-only MCP-over-HTTP boundary. Workspace owners issue expiring scoped
 bearers after recent step-up authentication; only token hashes are persisted.
-The handler binds every tool/resource read to the token workspace, preserves
+The handler binds every read to the token workspace, preserves
 coverage/redaction metadata, and requires approved non-synthetic reports and
-plans. It exposes no write or workflow tools; token management is API-only.
-See `docs/runbooks/mcp-agent-access.md` and the completion report in
-`docs/status/`.
+plans; it exposes no write or workflow tools.
 The 2026-08-03 cancellation tranches add migrations `0070`/`0071`: owner/editor
 intent is persisted before Temporal for multi-source and one-source runs,
 queued children stop transactionally, and a leased worker retries external
 cancellation. Workflows retain terminal authority; the private pages show the
 pending safe boundary and dispatching claims cannot orphan starts.
+The 2026-08-03 history-pagination tranche adds migration `0072` and closes the campaign-history cap:
+strict cursor/page contracts, authenticated one-/multi-source repository pages,
+private paginated APIs, and a dedicated history route. Cursors carry only a
+version, request timestamp, and stable identifier; hashes and source payloads
+remain outside the read boundary.
 On 2026-08-01, production analysis Temporal starts were versioned to
 `production-analysis-v2`. New starts carry only workspace, collection,
 analysis, seed-review, timestamp, and digest identifiers. `apps/worker`
 reconstructs the policy-validated artifact from workspace-bound rows inside the
 persistence activity, preserving the no-raw-source-in-history boundary. Legacy
 v1 executions need a drain/retention plan.
-
-Retention uses server-observed activity time and rejects future caller times.
-Final lineage locks current policy and confirmed redacted evidence; collection
-initialization fails closed without a consumed admission reservation.
 
 Monitoring includes health routes, a secret-free heartbeat, and lease-owned
 quota/recomputation/cost scans. `pnpm production:preflight` validates
@@ -51,14 +50,14 @@ Deployment topology, HA, retention, alert routing, and failure drills remain.
 
 ## Validated commands
 
-- `pnpm verify` passed 2026-08-03 after the cancellation tranches. Focused
-  contracts (86), db (124), workflows (29), worker (100), and web (132) suites
+- `pnpm verify` passed 2026-08-03 after the pagination tranche. Focused latest
+  contracts (87), db (128), workflows (29), worker (100), and web (135) suites
   plus affected package typechecks/lints pass.
 - PostgreSQL and Temporal integration are staged but Docker-blocked because the
   Docker Desktop Linux engine pipe is unavailable.
 
-- Maintenance loop, quota-alert, and recomputation-alert tests pass; no
-  deployed scheduler, Temporal, or source activation claim.
+- Maintenance loop, quota-alert, and recomputation-alert tests pass; deployment
+  scheduler, Temporal, and source activation remain unclaimed.
 
 Competitive research remains synthetic/reviewed-seed-only until an approved
 competitor source supplies retained evidence; the Stack Exchange candidate is

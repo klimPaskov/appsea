@@ -93,6 +93,11 @@ export {
   type ResearchCampaignOrchestrationFailure
 } from './research-campaign-orchestration-repository'
 export {
+  decodeCampaignHistoryCursor,
+  encodeCampaignHistoryCursor,
+  type CampaignHistoryCursorKind
+} from './campaign-history-pagination'
+export {
   PostgresProductionCollectionWorkflowRepository,
   ProductionCollectionWorkflowPermissionError,
   type ProductionCollectionWorkflowCancellationTarget

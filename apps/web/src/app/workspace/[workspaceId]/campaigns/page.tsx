@@ -79,36 +79,48 @@ export default async function ResearchCampaignsPage({
   }
   const runHistoryByCampaignId = new Map<
     string,
-    Awaited<ReturnType<PostgresProductionCollectionWorkflowRepository['listForCampaignForUser']>>
+    Awaited<
+      ReturnType<PostgresProductionCollectionWorkflowRepository['listPageForCampaignForUser']>
+    >
   >()
   const orchestrationHistoryByCampaignId = new Map<
     string,
-    Awaited<ReturnType<PostgresResearchCampaignOrchestrationRepository['listForCampaignForUser']>>
+    Awaited<
+      ReturnType<PostgresResearchCampaignOrchestrationRepository['listPageForCampaignForUser']>
+    >
   >()
   if (!workspace.fixtureOnly) {
     const runLists = await Promise.all(
       campaigns.map((campaign) =>
-        new PostgresProductionCollectionWorkflowRepository(pool).listForCampaignForUser(
+        new PostgresProductionCollectionWorkflowRepository(pool).listPageForCampaignForUser(
           session.user.userId,
           parsedWorkspaceId.data,
-          campaign.campaignId
+          campaign.campaignId,
+          { limit: 25 }
         )
       )
     )
     campaigns.forEach((campaign, index) => {
-      runHistoryByCampaignId.set(campaign.campaignId, runLists[index] ?? [])
+      runHistoryByCampaignId.set(
+        campaign.campaignId,
+        runLists[index] ?? { data: [], nextCursor: null }
+      )
     })
     const orchestrationLists = await Promise.all(
       campaigns.map((campaign) =>
-        new PostgresResearchCampaignOrchestrationRepository(pool).listForCampaignForUser(
+        new PostgresResearchCampaignOrchestrationRepository(pool).listPageForCampaignForUser(
           session.user.userId,
           parsedWorkspaceId.data,
-          campaign.campaignId
+          campaign.campaignId,
+          { limit: 25 }
         )
       )
     )
     campaigns.forEach((campaign, index) => {
-      orchestrationHistoryByCampaignId.set(campaign.campaignId, orchestrationLists[index] ?? [])
+      orchestrationHistoryByCampaignId.set(
+        campaign.campaignId,
+        orchestrationLists[index] ?? { data: [], nextCursor: null }
+      )
     })
   }
 
@@ -178,12 +190,26 @@ export default async function ResearchCampaignsPage({
                   />
                   <ResearchCampaignRunHistory
                     workspaceId={parsedWorkspaceId.data}
-                    runs={runHistoryByCampaignId.get(campaign.campaignId) ?? []}
+                    runs={runHistoryByCampaignId.get(campaign.campaignId)?.data ?? []}
+                    fullHistoryHref={`/workspace/${parsedWorkspaceId.data}/campaigns/${campaign.campaignId}/runs`}
+                    nextPageHref={
+                      runHistoryByCampaignId.get(campaign.campaignId)?.nextCursor
+                        ? `/workspace/${parsedWorkspaceId.data}/campaigns/${campaign.campaignId}/runs?cursor=${encodeURIComponent(runHistoryByCampaignId.get(campaign.campaignId)!.nextCursor!)}`
+                        : undefined
+                    }
                   />
                   <ResearchCampaignOrchestrationHistory
                     workspaceId={parsedWorkspaceId.data}
                     canCancel={workspace.role === 'owner' || workspace.role === 'editor'}
-                    orchestrations={orchestrationHistoryByCampaignId.get(campaign.campaignId) ?? []}
+                    orchestrations={
+                      orchestrationHistoryByCampaignId.get(campaign.campaignId)?.data ?? []
+                    }
+                    fullHistoryHref={`/workspace/${parsedWorkspaceId.data}/campaigns/${campaign.campaignId}/runs`}
+                    nextPageHref={
+                      orchestrationHistoryByCampaignId.get(campaign.campaignId)?.nextCursor
+                        ? `/workspace/${parsedWorkspaceId.data}/campaigns/${campaign.campaignId}/runs?orchestrationCursor=${encodeURIComponent(orchestrationHistoryByCampaignId.get(campaign.campaignId)!.nextCursor!)}`
+                        : undefined
+                    }
                   />
                   {(workspace.role === 'owner' || workspace.role === 'editor') &&
                   campaign.state !== 'archived' &&

@@ -84,7 +84,8 @@ describe('database foundation', () => {
       '0068',
       '0069',
       '0070',
-      '0071'
+      '0071',
+      '0072'
     ])
     expect(migrations[0]?.checksum).toMatch(/^[a-f0-9]{64}$/)
     expect(migrations[0]?.sql).toContain('CREATE TABLE appsea.evidence_records')
@@ -106,6 +107,13 @@ describe('database foundation', () => {
       'enforce_production_collection_workflow_cancellation'
     )
     expect(oneSourceCancellationMigration?.sql).toContain('cancellation_requested_by')
+    const historyIndexMigration = migrations.find((migration) => migration.version === '0072')
+    expect(historyIndexMigration?.sql).toContain(
+      'production_collection_workflow_jobs_campaign_history_idx'
+    )
+    expect(historyIndexMigration?.sql).toContain(
+      'research_campaign_orchestrations_campaign_history_idx'
+    )
     const authMigration = migrations.find((migration) => migration.version === '0008')
     const privacyMigration = migrations.find((migration) => migration.version === '0009')
     const retentionMigration = migrations.find((migration) => migration.version === '0010')

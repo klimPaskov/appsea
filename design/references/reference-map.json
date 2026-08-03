@@ -69,6 +69,13 @@
       "purpose": "Private reviewed opportunity-seed registry",
       "desktop": "source/seed-reviews.svg",
       "mobile": "source/seed-reviews-mobile.svg"
+    },
+    {
+      "id": "campaign-history",
+      "route": "/workspace/:workspaceId/campaigns/:campaignId/runs",
+      "purpose": "Private cursor-paginated campaign run history",
+      "desktop": "source/campaign-history.svg",
+      "mobile": "source/campaign-history-mobile.svg"
     }
   ]
 }

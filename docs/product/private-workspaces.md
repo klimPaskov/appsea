@@ -89,12 +89,15 @@ lease-backed source-maintenance worker after the current source policy is
 approved and collectible. Deployment-level Temporal, scheduler ownership, and
 CFPB approval remain open.
 
-Private members can inspect the latest 100 production runs for a campaign at
+Private members can inspect cursor-paginated production runs for a campaign at
 `GET /api/workspaces/:workspaceId/campaigns/:campaignId/runs` or through the
-campaign page. The workflow-status page shows only safe state, checkpoint,
-source/policy identifiers, counters, and timestamps; completed runs link to
-the existing source evidence and coverage page. Idempotency hashes, raw source
-payloads, and caller secrets never appear in this history.
+campaign page. The endpoint accepts a bounded `limit` and opaque cursor and
+returns `data` plus `nextCursor`; the dedicated private history page advances
+older one-source and multi-source pages independently. The workflow-status
+page shows only safe state, checkpoint, source/policy identifiers, counters,
+and timestamps; completed runs link to the existing source evidence and
+coverage page. Idempotency hashes, raw source payloads, and caller secrets
+never appear in this history.
 
 After a completed private collection, an owner or editor can choose an approved
 seed review on the collection page and start the downstream analysis explicitly.

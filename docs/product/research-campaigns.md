@@ -104,23 +104,29 @@ uses fixture data as production evidence, or hides a coverage gap.
 
 ## Run history and inspection
 
-Private members can list the latest 100 production runs at
-`GET /api/workspaces/:workspaceId/campaigns/:campaignId/runs`. The read model
-contains only the campaign/run/workflow identifiers, source and policy IDs,
-state, checkpoint, bounded counters, and timestamps. It deliberately excludes
-idempotency digests, input hashes, actor details, and source payloads. The
-campaign page links each run to the private workflow-status page
+Private members can list production runs at
+`GET /api/workspaces/:workspaceId/campaigns/:campaignId/runs`. The endpoint
+accepts a bounded `limit` (1-100, default 25) and an opaque `cursor`, and
+returns `{ data, nextCursor }` ordered by request time plus a stable workflow
+identifier. The read model contains only the campaign/run/workflow identifiers,
+source and policy IDs, state, checkpoint, bounded counters, and timestamps. It
+deliberately excludes idempotency digests, input hashes, actor details, and
+source payloads. The campaign page shows the first page and links to the
+private paginated history route at
+`/workspace/:workspaceId/campaigns/:campaignId/runs`; each run links to the
+private workflow-status page
 `/workspace/:workspaceId/research/workflows/:workflowId`; completed runs also
 link to the existing evidence and coverage page at
 `/workspace/:workspaceId/research/:runId`.
 
 Multi-source parent/child history is available only inside the private campaign
 surface. `GET /api/workspaces/:workspaceId/campaigns/:campaignId/orchestrations`
-lists at most 100 parent requests, and the detail route adds bounded child
-state, attempt count, policy/workflow identifiers, and fixed failure summaries.
-These read models omit caller keys, hashes, policy-review hashes, raw source
-payloads, and imported instructions. The public leaderboard remains a ranked
-list only; research detail belongs on private campaign and opportunity routes.
+uses the same bounded `limit`/`cursor` contract and returns `{ data,
+nextCursor }`. The detail route adds bounded child state, attempt count,
+policy/workflow identifiers, and fixed failure summaries. These read models
+omit caller keys, hashes, policy-review hashes, raw source payloads, and
+imported instructions. The public leaderboard remains a ranked list only;
+research detail belongs on private campaign and opportunity routes.
 
 Owners and editors can request cancellation for a multi-source orchestration
 with same-origin `POST` to its detail route. The database commits an immutable

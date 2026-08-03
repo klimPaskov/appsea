@@ -4,14 +4,25 @@ import { ProductionWorkflowCancelAction } from './production-workflow-cancel-act
 
 export function ResearchCampaignRunHistory({
   workspaceId,
-  runs
+  runs,
+  fullHistoryHref,
+  nextPageHref
 }: {
   workspaceId: string
   runs: ResearchCampaignRunReadModel[]
+  fullHistoryHref?: string | undefined
+  nextPageHref?: string | undefined
 }) {
   return (
     <div className="workspace-campaign-runs">
-      <p className="label">Recent production runs</p>
+      <div className="workspace-actions">
+        <p className="label">Recent production runs</p>
+        {fullHistoryHref ? (
+          <Link className="quiet-button" href={fullHistoryHref}>
+            View all history
+          </Link>
+        ) : null}
+      </div>
       {runs.length === 0 ? (
         <p className="muted-note">No production collection runs have been recorded.</p>
       ) : (
@@ -51,6 +62,13 @@ export function ResearchCampaignRunHistory({
           ))}
         </ul>
       )}
+      {nextPageHref ? (
+        <p className="workspace-actions">
+          <Link className="quiet-button" href={nextPageHref}>
+            Older runs
+          </Link>
+        </p>
+      ) : null}
     </div>
   )
 }

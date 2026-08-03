@@ -16,7 +16,9 @@ visible. Owners/editors can start a bounded one-source run from the campaign
 page; the route derives collection inputs from the stored campaign and admits
 the idempotency digest before Temporal. Owners/editors can now replace draft
 intent through a validated PATCH boundary, and DELETE archives without
-removing run or evidence lineage. Pagination remains open. Migration `0068`
+removing run or evidence lineage. Cursor pagination is now available for
+one-source and multi-source history APIs and the private campaign history
+page. Migration `0068`
 now adds a forced-RLS multi-source parent/child orchestration queue for two to
 sixteen approved non-fixture sources. The run route is idempotent; the existing
 lease-backed maintenance worker claims children, rechecks policy, reserves the
@@ -31,9 +33,9 @@ durable campaign claim/dispatch boundary in the existing lease-backed source
 maintenance worker; deployment-level scheduler ownership and Temporal remain
 open. The read-only source registry now exposes policy readiness,
 quotas, deletion duties, and coverage notes, but it cannot activate a source.
-The page now lists the latest 100 production run projections and
-links completed runs to evidence inspection without exposing hashes or source
-payloads. Pending policies can be named to make coverage gaps explicit;
+The page now lists a bounded first history page and links to older pages or
+completed-run evidence inspection without exposing hashes or source payloads.
+Pending policies can be named to make coverage gaps explicit;
 they cannot be collected or treated as enabled sources. The CFPB connector
 remains disabled pending external legal, privacy, and security approval.
 Migrations `0070` and `0071` now add owner/editor cancellation intent for multi-source

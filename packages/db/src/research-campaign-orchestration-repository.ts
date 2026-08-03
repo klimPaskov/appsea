@@ -1,11 +1,13 @@
 import type { Pool, PoolClient, QueryResultRow } from 'pg'
 import {
   appseaIdentifierSchema,
+  campaignHistoryPageQuerySchema,
   maintenanceSchedulerLeaseTokenSchema,
   maintenanceSchedulerOwnerIdSchema,
   researchCampaignConfigurationSchema,
   researchCampaignOrchestrationFailureCodeSchema,
   researchCampaignOrchestrationReadModelSchema,
+  researchCampaignOrchestrationHistoryPageSchema,
   researchCampaignOrchestrationSourceReadModelSchema,
   researchCampaignRunInputSchema,
   researchJobBudgetSchema,
@@ -13,6 +15,7 @@ import {
   type ResearchCampaignConfiguration,
   type ResearchCampaignOrchestrationFailureCode,
   type ResearchCampaignOrchestrationReadModel,
+  type CampaignHistoryPageQuery,
   type ResearchCampaignOrchestrationSourceReadModel,
   type ResearchCampaignRunInput,
   type ResearchJobBudget
@@ -23,6 +26,10 @@ import {
   withDatabaseTransaction,
   withServiceWorkspaceTransaction
 } from './transaction'
+import {
+  decodeCampaignHistoryCursor,
+  encodeCampaignHistoryCursor
+} from './campaign-history-pagination'
 
 interface OrchestrationRow extends QueryResultRow {
   workspace_id: string
@@ -668,6 +675,71 @@ export class PostgresResearchCampaignOrchestrationRepository {
           [parsedWorkspaceId, parsedOrchestrationId]
         )
         return row.rows[0] ? mapParent(client, row.rows[0]) : null
+      },
+      { readOnly: true }
+    )
+  }
+
+  async listPageForCampaignForUser(
+    userId: string,
+    workspaceId: string,
+    campaignId: string,
+    query: Partial<CampaignHistoryPageQuery> = {}
+  ): Promise<ReturnType<typeof researchCampaignOrchestrationHistoryPageSchema.parse>> {
+    const parsedUserId = appseaIdentifierSchema.parse(userId)
+    const parsedWorkspaceId = appseaIdentifierSchema.parse(workspaceId)
+    const parsedCampaignId = appseaIdentifierSchema.parse(campaignId)
+    const parsedQuery = campaignHistoryPageQuerySchema.parse(query)
+    const cursor = parsedQuery.cursor
+      ? decodeCampaignHistoryCursor(parsedQuery.cursor, 'orchestrations')
+      : null
+    return withAuthenticatedWorkspaceTransaction(
+      this.pool,
+      parsedUserId,
+      parsedWorkspaceId,
+      async (client) => {
+        const rows = await client.query<OrchestrationRow>(
+          `SELECT workspace_id, orchestration_id, campaign_id, idempotency_digest,
+                  input_hash, requested_by_actor_type, requested_by_actor_id,
+                  analysis_seed_review_id, state, source_count, completed_source_count,
+                  failed_source_count, failure_code, failure_summary, requested_at,
+                  started_at, updated_at, finished_at, cancellation_requested_at,
+                  cancellation_requested_by, cancellation_request_id
+             FROM appsea.research_campaign_orchestrations
+            WHERE workspace_id = $1
+              AND campaign_id = $2
+              AND (
+                $3::timestamptz IS NULL
+                OR requested_at < $3::timestamptz
+                OR (requested_at = $3::timestamptz AND orchestration_id > $4)
+              )
+            ORDER BY requested_at DESC, orchestration_id
+            LIMIT $5`,
+          [
+            parsedWorkspaceId,
+            parsedCampaignId,
+            cursor?.requestedAt ?? null,
+            cursor?.itemId ?? null,
+            parsedQuery.limit + 1
+          ]
+        )
+        const hasNext = rows.rows.length > parsedQuery.limit
+        const pageRows = hasNext ? rows.rows.slice(0, parsedQuery.limit) : rows.rows
+        const data = await Promise.all(pageRows.map((row) => mapParent(client, row)))
+        const last = pageRows.at(-1)
+        return researchCampaignOrchestrationHistoryPageSchema.parse({
+          data,
+          nextCursor:
+            hasNext && last
+              ? encodeCampaignHistoryCursor(
+                  'orchestrations',
+                  last.requested_at instanceof Date
+                    ? last.requested_at.toISOString()
+                    : new Date(last.requested_at).toISOString(),
+                  last.orchestration_id
+                )
+              : null
+        })
       },
       { readOnly: true }
     )

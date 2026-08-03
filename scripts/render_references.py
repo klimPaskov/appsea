@@ -433,6 +433,50 @@ def campaigns_screen(width: int, height: int, mobile: bool) -> str:
     return shell(width, height, content, mobile)
 
 
+def campaign_history_screen(width: int, height: int, mobile: bool) -> str:
+    margin = 24 if mobile else 220
+    top = 112 if mobile else 132
+    title_size = 38 if mobile else 56
+    content = text(margin, top, 'Private research workspace', 10, 700, MUTED, letter=1.1)
+    content += text(margin, top + 54, 'Billing workflow history', title_size, 650, INK, letter=-2.5)
+    content += multiline(
+        margin,
+        top + (88 if mobile else 100),
+        'Browse durable collection runs without exposing source payloads or workflow hashes.',
+        14 if mobile else 16,
+        43 if mobile else 72,
+        22 if mobile else 25,
+        fill=MUTED,
+    )
+    list_y = top + (184 if mobile else 176)
+    content += text(margin, list_y, 'SINGLE-SOURCE RUNS', 10, 700, MUTED, letter=1.1)
+    content += line(margin, list_y + 20, width - margin, list_y + 20, INK)
+    rows = [
+        ('completed  ·  10 items', 'run:billing', '2026-08-02 00:01'),
+        ('running  ·  4 items', 'run:billing:next', '2026-08-03 09:14'),
+    ]
+    row_height = 102 if mobile else 86
+    for index, (state, run_id, requested) in enumerate(rows):
+        row_y = list_y + 20 + index * row_height
+        content += text(margin, row_y + 28, state, 13 if mobile else 15, 600)
+        content += text(margin, row_y + 52, run_id, 11, 400, MUTED)
+        content += text(width - margin, row_y + 30, requested, 11, 400, MUTED, 'end')
+        content += line(margin, row_y + row_height, width - margin, row_y + row_height)
+    multi_y = list_y + 20 + row_height * len(rows) + (42 if mobile else 52)
+    content += text(margin, multi_y, 'MULTI-SOURCE RUNS', 10, 700, MUTED, letter=1.1)
+    content += line(margin, multi_y + 20, width - margin, multi_y + 20, INK)
+    content += multiline(
+        margin,
+        multi_y + 58,
+        'Parent and child states use the same private cursor boundary. Older pages remain available without changing the public leaderboard.',
+        13 if mobile else 15,
+        43 if mobile else 78,
+        21 if mobile else 24,
+        fill='#41444a',
+    )
+    return shell(width, height, content, mobile)
+
+
 def source_coverage_screen(width: int, height: int, mobile: bool) -> str:
     margin = 24 if mobile else 220
     top = 112 if mobile else 132
@@ -563,6 +607,7 @@ SCREENS = {
     'security': security_screen,
     'seed-reviews': seed_reviews_screen,
     'campaigns': campaigns_screen,
+    'campaign-history': campaign_history_screen,
     'source-coverage': source_coverage_screen,
     'campaign-status': campaign_status_screen,
     'analysis-status': analysis_status_screen

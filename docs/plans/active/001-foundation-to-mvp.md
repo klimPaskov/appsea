@@ -25,7 +25,7 @@ Status: production-shaped foundation implemented and validated locally; producti
 
 Implemented:
 
-- PostgreSQL 18 schema and seventy-one forward, checksummed migrations
+- PostgreSQL 18 schema and seventy-two forward, checksummed migrations
 - normalized source, evidence, complaint, cluster, competitor, opportunity, score, report, plan, audit, cost, deletion, outbox, and lineage tables
 - no-login owner, separate migrator, and least-privilege runtime role contract
 - forced workspace RLS and transaction-scoped workspace context
@@ -250,9 +250,11 @@ service-principal admission, existing Temporal starts, and child-to-parent
 reconciliation. Campaign edits now replace draft
 intent through a validated PATCH boundary, while DELETE archives without
 deleting run/evidence lineage. The private
-campaign surface now lists the latest 100 production workflow projections and
-links completed runs to evidence inspection without exposing workflow hashes
-or raw source payloads. Owners/editors can now choose an approved seed on the
+campaign surface now exposes bounded cursor-paginated one-source and
+multi-source workflow history, with a dedicated private history route and
+stable request-time/identifier cursors; completed runs still link to evidence
+inspection without exposing workflow hashes or raw source payloads.
+Owners/editors can now choose an approved seed on the
 collection page and launch an explicit downstream analysis. The linked private
 status page/API reconciles safe Temporal state with a PostgreSQL projection,
 validates workflow workspace prefixes, and excludes hashes, object references,

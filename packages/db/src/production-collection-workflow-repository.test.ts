@@ -108,6 +108,60 @@ describe('production collection workflow campaign history', () => {
     expect(mocks.query.mock.calls[0]?.[0]).toContain('LIMIT 100')
   })
 
+  it('returns a bounded cursor page without exposing workflow hashes', async () => {
+    const { PostgresProductionCollectionWorkflowRepository } =
+      await import('./production-collection-workflow-repository')
+    const page = await new PostgresProductionCollectionWorkflowRepository(
+      {} as never
+    ).listPageForCampaignForUser('user:one', 'workspace:one', 'campaign:billing', {
+      limit: 1
+    })
+
+    expect(page).toEqual({
+      data: [expect.objectContaining({ workflowId: row.workflow_id })],
+      nextCursor: null
+    })
+    expect(mocks.query.mock.calls[0]?.[0]).toContain('LIMIT $5')
+    expect(mocks.query.mock.calls[0]?.[1]).toEqual([
+      'workspace:one',
+      'campaign:billing',
+      null,
+      null,
+      2
+    ])
+  })
+
+  it('emits a stable cursor when another history row exists', async () => {
+    const { PostgresProductionCollectionWorkflowRepository } =
+      await import('./production-collection-workflow-repository')
+    const { decodeCampaignHistoryCursor } = await import('./campaign-history-pagination')
+    mocks.query.mockResolvedValueOnce({
+      rows: [
+        row,
+        {
+          ...row,
+          workflow_id: 'workflow:production:workspace:one:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb',
+          requested_research_run_id: 'run:older',
+          requested_at: '2026-08-01T00:00:00.000Z'
+        }
+      ]
+    })
+
+    const page = await new PostgresProductionCollectionWorkflowRepository(
+      {} as never
+    ).listPageForCampaignForUser('user:one', 'workspace:one', 'campaign:billing', {
+      limit: 1
+    })
+
+    expect(page.data).toHaveLength(1)
+    expect(page.nextCursor).not.toBeNull()
+    expect(decodeCampaignHistoryCursor(page.nextCursor!, 'runs')).toEqual({
+      version: 1,
+      requestedAt: at,
+      itemId: row.workflow_id
+    })
+  })
+
   it('persists an owner/editor cancellation intent idempotently', async () => {
     const { PostgresProductionCollectionWorkflowRepository } =
       await import('./production-collection-workflow-repository')

@@ -3,13 +3,13 @@ import { GET } from './api/workspaces/[workspaceId]/campaigns/[campaignId]/runs/
 
 const mocks = vi.hoisted(() => ({
   readSession: vi.fn(),
-  listForCampaignForUser: vi.fn(),
+  listPageForCampaignForUser: vi.fn(),
   getDatabasePool: vi.fn()
 }))
 
 vi.mock('@appsea/db/production-collection-workflow', () => ({
   PostgresProductionCollectionWorkflowRepository: class {
-    listForCampaignForUser = mocks.listForCampaignForUser
+    listPageForCampaignForUser = mocks.listPageForCampaignForUser
   }
 }))
 
@@ -72,10 +72,10 @@ function request(): Request {
 describe('campaign run history route', () => {
   beforeEach(() => {
     mocks.readSession.mockReset()
-    mocks.listForCampaignForUser.mockReset()
+    mocks.listPageForCampaignForUser.mockReset()
     mocks.getDatabasePool.mockReset()
     mocks.readSession.mockResolvedValue(session)
-    mocks.listForCampaignForUser.mockResolvedValue([run])
+    mocks.listPageForCampaignForUser.mockResolvedValue({ data: [run], nextCursor: null })
     mocks.getDatabasePool.mockReturnValue({})
   })
 
@@ -84,11 +84,12 @@ describe('campaign run history route', () => {
       params: Promise.resolve({ workspaceId: 'workspace:one', campaignId: 'campaign:billing' })
     })
     expect(response.status).toBe(200)
-    expect(await response.json()).toEqual({ data: [run] })
-    expect(mocks.listForCampaignForUser).toHaveBeenCalledWith(
+    expect(await response.json()).toEqual({ data: [run], nextCursor: null })
+    expect(mocks.listPageForCampaignForUser).toHaveBeenCalledWith(
       'user:one',
       'workspace:one',
-      'campaign:billing'
+      'campaign:billing',
+      { limit: 25 }
     )
   })
 
@@ -101,7 +102,7 @@ describe('campaign run history route', () => {
       params: Promise.resolve({ workspaceId: 'workspace:one', campaignId: 'campaign:billing' })
     })
     expect(response.status).toBe(403)
-    expect(mocks.listForCampaignForUser).not.toHaveBeenCalled()
+    expect(mocks.listPageForCampaignForUser).not.toHaveBeenCalled()
   })
 
   it('does not expose production history from a public workspace', async () => {
@@ -113,15 +114,46 @@ describe('campaign run history route', () => {
       params: Promise.resolve({ workspaceId: 'workspace:one', campaignId: 'campaign:billing' })
     })
     expect(response.status).toBe(403)
-    expect(mocks.listForCampaignForUser).not.toHaveBeenCalled()
+    expect(mocks.listPageForCampaignForUser).not.toHaveBeenCalled()
   })
 
   it('maps repository failure to a private retryable response', async () => {
-    mocks.listForCampaignForUser.mockRejectedValue(new Error('database unavailable'))
+    mocks.listPageForCampaignForUser.mockRejectedValue(new Error('database unavailable'))
     const response = await GET(request(), {
       params: Promise.resolve({ workspaceId: 'workspace:one', campaignId: 'campaign:billing' })
     })
     expect(response.status).toBe(503)
     expect(response.headers.get('cache-control')).toBe('private, no-store')
+  })
+
+  it('passes a bounded cursor query to the repository', async () => {
+    const response = await GET(
+      new Request(
+        'https://appsea.example/api/workspaces/workspace:one/campaigns/campaign:billing/runs?limit=10&cursor=eyJ2ZXJzaW9uIjoxfQ'
+      ),
+      {
+        params: Promise.resolve({ workspaceId: 'workspace:one', campaignId: 'campaign:billing' })
+      }
+    )
+    expect(response.status).toBe(200)
+    expect(mocks.listPageForCampaignForUser).toHaveBeenCalledWith(
+      'user:one',
+      'workspace:one',
+      'campaign:billing',
+      { limit: 10, cursor: 'eyJ2ZXJzaW9uIjoxfQ' }
+    )
+  })
+
+  it('rejects unsupported history query keys before opening the repository', async () => {
+    const response = await GET(
+      new Request(
+        'https://appsea.example/api/workspaces/workspace:one/campaigns/campaign:billing/runs?source=private'
+      ),
+      {
+        params: Promise.resolve({ workspaceId: 'workspace:one', campaignId: 'campaign:billing' })
+      }
+    )
+    expect(response.status).toBe(400)
+    expect(mocks.listPageForCampaignForUser).not.toHaveBeenCalled()
   })
 })

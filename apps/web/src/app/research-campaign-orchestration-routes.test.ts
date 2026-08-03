@@ -7,7 +7,7 @@ import {
 
 const mocks = vi.hoisted(() => ({
   readSession: vi.fn(),
-  listForCampaignForUser: vi.fn(),
+  listPageForCampaignForUser: vi.fn(),
   readForUser: vi.fn(),
   requestCancellationForUser: vi.fn(),
   cancelProductionCollectionWorkflow: vi.fn(),
@@ -17,7 +17,7 @@ const mocks = vi.hoisted(() => ({
 
 vi.mock('@appsea/db/research-campaign-orchestration', () => ({
   PostgresResearchCampaignOrchestrationRepository: class {
-    listForCampaignForUser = mocks.listForCampaignForUser
+    listPageForCampaignForUser = mocks.listPageForCampaignForUser
     readForUser = mocks.readForUser
     requestCancellationForUser = mocks.requestCancellationForUser
   }
@@ -126,14 +126,17 @@ const params = {
 describe('campaign orchestration routes', () => {
   beforeEach(() => {
     mocks.readSession.mockReset()
-    mocks.listForCampaignForUser.mockReset()
+    mocks.listPageForCampaignForUser.mockReset()
     mocks.readForUser.mockReset()
     mocks.requestCancellationForUser.mockReset()
     mocks.cancelProductionCollectionWorkflow.mockReset()
     mocks.getTemporalWorkflowClient.mockReset()
     mocks.getDatabasePool.mockReset()
     mocks.readSession.mockResolvedValue(session)
-    mocks.listForCampaignForUser.mockResolvedValue([orchestration])
+    mocks.listPageForCampaignForUser.mockResolvedValue({
+      data: [orchestration],
+      nextCursor: null
+    })
     mocks.readForUser.mockResolvedValue(orchestration)
     mocks.requestCancellationForUser.mockResolvedValue(null)
     mocks.getTemporalWorkflowClient.mockResolvedValue({})
@@ -145,11 +148,12 @@ describe('campaign orchestration routes', () => {
       params: Promise.resolve(params)
     })
     expect(response.status).toBe(200)
-    expect(await response.json()).toEqual({ data: [orchestration] })
-    expect(mocks.listForCampaignForUser).toHaveBeenCalledWith(
+    expect(await response.json()).toEqual({ data: [orchestration], nextCursor: null })
+    expect(mocks.listPageForCampaignForUser).toHaveBeenCalledWith(
       'user:one',
       'workspace:one',
-      'campaign:billing'
+      'campaign:billing',
+      { limit: 25 }
     )
   })
 
@@ -176,7 +180,21 @@ describe('campaign orchestration routes', () => {
       params: Promise.resolve(params)
     })
     expect(response.status).toBe(403)
-    expect(mocks.listForCampaignForUser).not.toHaveBeenCalled()
+    expect(mocks.listPageForCampaignForUser).not.toHaveBeenCalled()
+  })
+
+  it('passes a bounded cursor query to the parent history repository', async () => {
+    const response = await list(
+      new Request('https://appsea.example?limit=5&cursor=eyJ2ZXJzaW9uIjoxfQ'),
+      { params: Promise.resolve(params) }
+    )
+    expect(response.status).toBe(200)
+    expect(mocks.listPageForCampaignForUser).toHaveBeenCalledWith(
+      'user:one',
+      'workspace:one',
+      'campaign:billing',
+      { limit: 5, cursor: 'eyJ2ZXJzaW9uIjoxfQ' }
+    )
   })
 
   it('persists cancellation and best-effort cancels started child workflows', async () => {

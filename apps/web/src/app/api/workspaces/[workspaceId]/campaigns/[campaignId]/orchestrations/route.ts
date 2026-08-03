@@ -1,4 +1,4 @@
-import { appseaIdentifierSchema } from '@appsea/contracts'
+import { appseaIdentifierSchema, campaignHistoryPageQuerySchema } from '@appsea/contracts'
 import { PostgresResearchCampaignOrchestrationRepository } from '@appsea/db/research-campaign-orchestration'
 import {
   forbiddenResponse,
@@ -18,7 +18,7 @@ export const dynamic = 'force-dynamic'
 
 /** Return safe private parent/child history for multi-source campaign runs. */
 export async function GET(
-  _request: Request,
+  request: Request,
   context: { params: Promise<{ workspaceId: string; campaignId: string }> }
 ): Promise<Response> {
   const session = await readSession()
@@ -38,11 +38,31 @@ export async function GET(
   ) {
     return forbiddenResponse()
   }
+  const url = new URL(request.url)
+  const keys = [...new Set([...url.searchParams.keys()])]
+  if (
+    keys.some((key) => key !== 'limit' && key !== 'cursor') ||
+    ['limit', 'cursor'].some((key) => url.searchParams.getAll(key).length > 1)
+  ) {
+    return invalidRequest('Unsupported campaign orchestration history query')
+  }
+  const rawLimit = url.searchParams.get('limit')
+  const rawCursor = url.searchParams.get('cursor')
+  const parsedQuery = campaignHistoryPageQuerySchema.safeParse({
+    ...(rawLimit === null ? {} : { limit: Number(rawLimit) }),
+    ...(rawCursor === null ? {} : { cursor: rawCursor })
+  })
+  if (!parsedQuery.success) return invalidRequest('Invalid campaign orchestration history query')
   try {
-    const data = await new PostgresResearchCampaignOrchestrationRepository(
+    const page = await new PostgresResearchCampaignOrchestrationRepository(
       getDatabasePool()
-    ).listForCampaignForUser(session.user.userId, parsedWorkspaceId.data, parsedCampaignId.data)
-    return Response.json({ data }, { headers: privateResponseHeaders })
+    ).listPageForCampaignForUser(
+      session.user.userId,
+      parsedWorkspaceId.data,
+      parsedCampaignId.data,
+      parsedQuery.data
+    )
+    return Response.json(page, { headers: privateResponseHeaders })
   } catch (error) {
     console.error('AppSea campaign orchestration history read failed', {
       name: error instanceof Error ? error.name : 'unknown'
