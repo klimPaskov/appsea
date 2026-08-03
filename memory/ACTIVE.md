@@ -90,8 +90,9 @@ memory.
   binding to loopback, and uses non-root/read-only/capability-dropped
   services. GitHub Actions run `30822047661` passed both image builds and
   Compose validation for commit `bd713ee`; external provider provisioning,
-  image signing/registry, and source-policy activation remain blockers. CI
-  also smoke-tests web liveness/health and fail-closed worker preflight.
+  image signing/registry, and source-policy activation remain blockers. Run
+  `30827192223` passed web liveness/health smoke and fail-closed worker
+  preflight without production settings.
 - Desktop shell has a Tauri hook, Rust lockfile, Windows icon, minimal
   capability, restrictive CSP, and Windows CI compile. Run `30824653661`
   passed for `98ef62e`; bundling remains disabled; hosted-origin, updater,

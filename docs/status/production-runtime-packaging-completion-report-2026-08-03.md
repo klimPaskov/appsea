@@ -31,6 +31,9 @@ not claimed.
 - GitHub Actions run `30822047661` passed for commit `bd713ee`, including the
   full verification, fresh PostgreSQL and Temporal checks, Compose validation,
   and both container image builds.
+- GitHub Actions run `30827192223` passed for commit `b089fd4`, including web
+  image liveness/healthcheck smoke and fail-closed worker preflight without
+  production settings.
 
 ## Explicit limits
 
