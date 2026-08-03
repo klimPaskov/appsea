@@ -86,6 +86,7 @@
 - [`adrs/0016-temporal-legacy-history-drain.md`](adrs/0016-temporal-legacy-history-drain.md)
 - [`adrs/0017-durable-worker-shutdown.md`](adrs/0017-durable-worker-shutdown.md)
 - [`adrs/0018-operational-alert-outbox.md`](adrs/0018-operational-alert-outbox.md)
+- [`adrs/0019-workspace-purge-manifest.md`](adrs/0019-workspace-purge-manifest.md)
 
 ## Generated references
 
@@ -110,6 +111,7 @@
 - [`status/temporal-legacy-history-drain-completion-report-2026-08-03.md`](status/temporal-legacy-history-drain-completion-report-2026-08-03.md)
 - [`status/durable-worker-shutdown-completion-report-2026-08-03.md`](status/durable-worker-shutdown-completion-report-2026-08-03.md)
 - [`status/operational-alert-outbox-completion-report-2026-08-04.md`](status/operational-alert-outbox-completion-report-2026-08-04.md)
+- [`status/workspace-purge-manifest-completion-report-2026-08-04.md`](status/workspace-purge-manifest-completion-report-2026-08-04.md)
 - [`status/workspace-invitation-completion-report.md`](status/workspace-invitation-completion-report.md)
 - [`status/production-readiness-audit-2026-07-25.md`](status/production-readiness-audit-2026-07-25.md)
 - [`status/production-readiness-audit-2026-08-02.md`](status/production-readiness-audit-2026-08-02.md)

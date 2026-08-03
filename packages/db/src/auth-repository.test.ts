@@ -22,7 +22,9 @@ import {
   WorkspaceAuthorizationError,
   WorkspacePlanNotApprovedError,
   WorkspacePurgeRequestNotReadyError,
-  WorkspacePurgeRequestPermissionError
+  WorkspacePurgeRequestPermissionError,
+  WorkspacePurgeManifestNotReadyError,
+  WorkspacePurgeManifestPermissionError
 } from './auth-repository'
 import type { AuthAccountDeletionBlockedError } from './auth-repository'
 import { sha256 } from './hash'
@@ -751,6 +753,76 @@ function workspacePurgeRequestPool(
   }
 }
 
+function workspacePurgeManifestPool(options: { owner?: boolean; archived?: boolean } = {}): {
+  pool: Pool
+  statements: Array<{ text: string; values: unknown[] }>
+} {
+  const statements: Array<{ text: string; values: unknown[] }> = []
+  const objects = [
+    {
+      uri: `appsea-object://workspace:one/report-json/${'a'.repeat(64)}`,
+      kind: 'report-json'
+    },
+    {
+      uri: `appsea-object://workspace:one/plan-package/${'b'.repeat(64)}`,
+      kind: 'plan-package'
+    }
+  ]
+  const row = {
+    workspace_id: 'workspace:one',
+    manifest_id: `workspace-purge-manifest:${'c'.repeat(32)}`,
+    generated_by: 'user:owner',
+    generated_at: '2026-08-02T20:01:00.000Z',
+    expires_at: '2026-08-03T20:01:00.000Z',
+    manifest_hash: 'd'.repeat(64),
+    object_count: objects.length,
+    object_entries: objects,
+    external_requirements: [
+      'cloud_object_store_purge',
+      'export_retention_purge',
+      'backup_deletion_verification'
+    ],
+    replayed: false
+  }
+  const client = {
+    query: async (text: string, values: unknown[] = []) => {
+      statements.push({ text, values })
+      if (text.includes('FROM appsea.workspace_memberships')) {
+        if (options.owner === false) return { rows: [{ role: 'editor' }], rowCount: 1 }
+        return { rows: [{ role: 'owner' }], rowCount: 1 }
+      }
+      if (text.includes('FROM appsea.workspaces') && !text.includes('workspace workspace')) {
+        return {
+          rows:
+            options.archived === false
+              ? [{ archived_at: null }]
+              : [{ archived_at: row.generated_at }],
+          rowCount: 1
+        }
+      }
+      if (text.includes('jsonb_agg(')) {
+        return { rows: [{ object_entries: objects }], rowCount: 1 }
+      }
+      if (text.includes('clock_timestamp() AS generated_at')) {
+        return { rows: [{ generated_at: row.generated_at }], rowCount: 1 }
+      }
+      if (text.includes('FROM appsea.create_workspace_purge_manifest')) {
+        return { rows: [row], rowCount: 1 }
+      }
+      if (text.includes('FROM appsea.read_workspace_purge_manifest')) {
+        if (options.owner === false) throw new WorkspacePurgeManifestPermissionError()
+        return { rows: [row], rowCount: 1 }
+      }
+      return { rows: [], rowCount: 0 }
+    },
+    release: () => undefined
+  } as unknown as PoolClient
+  return {
+    pool: { connect: async () => client } as unknown as Pool,
+    statements
+  }
+}
+
 describe('PostgresAuthRepository', () => {
   it('reads an active session and only stores token hashes in SQL parameters', async () => {
     const token = 'a'.repeat(48)
@@ -1142,6 +1214,42 @@ describe('PostgresAuthRepository', () => {
     expect(
       inspected.statements.some((entry) => entry.text.includes('cancel_workspace_purge'))
     ).toBe(true)
+  })
+
+  it('prepares and reads a metadata-only purge manifest for archived owners', async () => {
+    const prepared = workspacePurgeManifestPool()
+    const repository = new PostgresAuthRepository(prepared.pool)
+    await expect(
+      repository.prepareWorkspacePurgeManifest('user:owner', 'workspace:one', {
+        confirmation: 'PREPARE WORKSPACE PURGE MANIFEST'
+      })
+    ).resolves.toMatchObject({
+      workspaceId: 'workspace:one',
+      objectCount: 2,
+      objects: [
+        expect.objectContaining({ kind: 'report-json' }),
+        expect.objectContaining({ kind: 'plan-package' })
+      ]
+    })
+    expect(
+      prepared.statements.some((entry) => entry.text.includes('create_workspace_purge_manifest'))
+    ).toBe(true)
+    await expect(
+      repository.readWorkspacePurgeManifest('user:owner', 'workspace:one')
+    ).resolves.toMatchObject({ manifestId: `workspace-purge-manifest:${'c'.repeat(32)}` })
+
+    await expect(
+      new PostgresAuthRepository(
+        workspacePurgeManifestPool({ owner: false }).pool
+      ).readWorkspacePurgeManifest('user:editor', 'workspace:one')
+    ).rejects.toBeInstanceOf(WorkspacePurgeManifestPermissionError)
+    await expect(
+      new PostgresAuthRepository(
+        workspacePurgeManifestPool({ archived: false }).pool
+      ).prepareWorkspacePurgeManifest('user:owner', 'workspace:one', {
+        confirmation: 'PREPARE WORKSPACE PURGE MANIFEST'
+      })
+    ).rejects.toBeInstanceOf(WorkspacePurgeManifestNotReadyError)
   })
 
   it('lists members for owners and records role/removal changes durably', async () => {

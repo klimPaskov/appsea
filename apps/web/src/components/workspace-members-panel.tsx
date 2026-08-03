@@ -5,12 +5,14 @@ import {
   workspaceInvitationReadModelSchema,
   workspaceInvitationRoleSchema,
   workspaceArchiveResultSchema,
+  workspacePurgeManifestSchema,
   workspacePurgeRequestSchema,
   workspacePurgeReadinessSchema,
   workspaceMemberReadModelSchema,
   workspaceRoleSchema,
   type WorkspaceInvitationReadModel,
   type WorkspaceMemberReadModel,
+  type WorkspacePurgeManifest,
   type WorkspacePurgeRequest,
   type WorkspacePurgeReadiness
 } from '@appsea/contracts'
@@ -22,6 +24,7 @@ type WorkspaceMembersPanelProps = {
   initialInvitations: WorkspaceInvitationReadModel[]
   initialPurgeReadiness: WorkspacePurgeReadiness | null
   initialPurgeRequest: WorkspacePurgeRequest | null
+  initialPurgeManifest: WorkspacePurgeManifest | null
   canManage: boolean
 }
 
@@ -32,6 +35,7 @@ export function WorkspaceMembersPanel({
   initialInvitations,
   initialPurgeReadiness,
   initialPurgeRequest,
+  initialPurgeManifest,
   canManage
 }: WorkspaceMembersPanelProps) {
   const [members, setMembers] = useState(initialMembers)
@@ -47,6 +51,7 @@ export function WorkspaceMembersPanel({
   const [archiving, setArchiving] = useState(false)
   const [requestingPurge, setRequestingPurge] = useState(false)
   const [cancelingPurge, setCancelingPurge] = useState(false)
+  const [preparingPurgeManifest, setPreparingPurgeManifest] = useState(false)
   const [purgeReadiness, setPurgeReadiness] = useState<WorkspacePurgeReadiness | null>(() =>
     initialPurgeReadiness === null
       ? null
@@ -54,6 +59,9 @@ export function WorkspaceMembersPanel({
   )
   const [purgeRequest, setPurgeRequest] = useState<WorkspacePurgeRequest | null>(() =>
     initialPurgeRequest === null ? null : workspacePurgeRequestSchema.parse(initialPurgeRequest)
+  )
+  const [purgeManifest, setPurgeManifest] = useState<WorkspacePurgeManifest | null>(() =>
+    initialPurgeManifest === null ? null : workspacePurgeManifestSchema.parse(initialPurgeManifest)
   )
 
   async function reauthenticate(event: FormEvent<HTMLFormElement>) {
@@ -301,6 +309,44 @@ export function WorkspaceMembersPanel({
       setError(cause instanceof Error ? cause.message : 'Unable to cancel workspace purge request')
     } finally {
       setCancelingPurge(false)
+    }
+  }
+
+  async function prepareWorkspacePurgeManifest() {
+    if (!reauthenticated || purgeReadiness?.archivedAt === null) return
+    const confirmation = window.prompt(
+      'Type PREPARE WORKSPACE PURGE MANIFEST to prepare a metadata-only retention inventory.'
+    )
+    if (confirmation !== 'PREPARE WORKSPACE PURGE MANIFEST') return
+    setPreparingPurgeManifest(true)
+    setError(null)
+    try {
+      const response = await fetch(`/api/workspaces/${workspaceId}/purge-manifest`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ confirmation })
+      })
+      const body = (await response.json()) as { data?: unknown; error?: unknown }
+      if (response.status === 428) {
+        setReauthenticated(false)
+        throw new Error('Verify your password before preparing a purge manifest')
+      }
+      if (response.status === 409) {
+        throw new Error(
+          typeof body.error === 'string'
+            ? body.error
+            : 'Archive the workspace before preparing a purge manifest'
+        )
+      }
+      if (!response.ok)
+        throw new Error(
+          typeof body.error === 'string' ? body.error : 'Unable to prepare purge manifest'
+        )
+      setPurgeManifest(workspacePurgeManifestSchema.parse(body.data))
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : 'Unable to prepare purge manifest')
+    } finally {
+      setPreparingPurgeManifest(false)
     }
   }
 
@@ -561,6 +607,38 @@ export function WorkspaceMembersPanel({
                 </button>
               ) : null}
             </div>
+          ) : null}
+          {purgeManifest ? (
+            <div className="workspace-purge-request-status">
+              <strong>Metadata-only retention manifest prepared</strong>
+              <p>
+                {purgeManifest.objectCount} object reference
+                {purgeManifest.objectCount === 1 ? '' : 's'} are listed. This manifest expires{' '}
+                {new Date(purgeManifest.expiresAt).toLocaleString()} and does not authorize
+                deletion.
+              </p>
+              <p className="member-policy">
+                Manifest {purgeManifest.manifestId} · SHA-256 {purgeManifest.manifestHash}
+              </p>
+              <a
+                className="quiet-button"
+                href={`/api/workspaces/${workspaceId}/purge-manifest`}
+                target="_blank"
+                rel="noreferrer"
+              >
+                View manifest JSON
+              </a>
+            </div>
+          ) : null}
+          {purgeReadiness.archivedAt !== null ? (
+            <button
+              className="quiet-button"
+              type="button"
+              disabled={preparingPurgeManifest || !reauthenticated}
+              onClick={() => void prepareWorkspacePurgeManifest()}
+            >
+              {preparingPurgeManifest ? 'Preparing manifest…' : 'Prepare retention manifest'}
+            </button>
           ) : null}
           {purgeReadiness.state === 'database_ready' &&
           purgeRequest?.state !== 'awaiting_external_controls' ? (

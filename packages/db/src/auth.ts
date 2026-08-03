@@ -4,6 +4,8 @@ export {
   AuthenticationError,
   AuthAccountDeletionBlockedError,
   WorkspaceArchivePermissionError,
+  WorkspacePurgeManifestNotReadyError,
+  WorkspacePurgeManifestPermissionError,
   WorkspacePurgeRequestNotReadyError,
   WorkspacePurgeRequestPermissionError,
   AuthPasswordResetConfigurationError,

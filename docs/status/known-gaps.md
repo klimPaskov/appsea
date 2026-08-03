@@ -162,6 +162,15 @@ can snapshot a `database_ready` inventory into a durable
 `awaiting_external_controls` intent, or cancel that intent. The handoff is not
 an authorization to delete and does not perform destructive deletion.
 
+Migration `0083_workspace_purge_manifests.sql` now adds the narrower coordination
+step: an archived workspace owner can prepare or read a deterministic,
+24-hour metadata-only manifest of deduplicated workspace-bound object URI/kind
+pairs. The manifest is forced-RLS, idempotent, private, and recorded with
+identifier-only receipts; it contains no object bodies or provider credentials
+and cannot authorize deletion. Provider-side object-store, export, and backup
+retention controls, manifest consumption, and any destructive purge workflow
+remain deployment and approval work.
+
 The repository refuses to auto-create fixture workspaces when `NODE_ENV` is
 `production`; deployment must provision fixture-enabled workspaces explicitly.
 
@@ -193,7 +202,8 @@ through the existing analysis workflow. Automatic re-collection, object
 storage/backups, destructive workspace purge, export purge, and deployed
 scheduler alerting are not implemented. Workspace archival is a separate,
 non-destructive lifecycle boundary and does not satisfy those purge duties. The
-durable purge intent documents the owner handoff but does not change this gap.
+durable purge intent and metadata-only manifest document owner handoffs but do
+not change this gap.
 Complaint review transitions and the
 explicit reviewed analysis-start route are implemented. Migration `0034` also
 provides an opt-in, seed-bound post-collection handoff with stale-claim

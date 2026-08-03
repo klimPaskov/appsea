@@ -46,6 +46,7 @@ Open `http://localhost:3000` after the web server starts.
 - lease-owned, read-only production-analysis recomputation alert inspection with bounded alert/incomplete/clear events and visible truncated coverage; it never dispatches or retries a repair
 - lease-owned, read-only workspace cost-threshold inspection with exact micro-unit aggregates, explicit currency gaps, and bounded alert/incomplete/clear events; it never blocks work or performs billing
 - scalar-only, maintenance-owned operational-alert outbox with idempotent enqueue, stale-claim recovery, bounded retry/exhaustion, retention purge, and the `pnpm worker:alerts:deliver` drain command
+- archived-owner, private, deterministic metadata-only workspace purge manifests with 24-hour expiry and visible object/export/backup requirements; they never authorize deletion
 - explicit, one-record, tombstone-bound source re-collection with immutable lineage and private review; it never runs automatically and does not activate a connector
 - direct CFPB source commands use the same bounded production admission ledger through the `appsea-worker` service principal; they cannot bypass private-workspace, fixture, or source-policy gates
 - owner-scoped invitations for existing AppSea accounts with hash-only tokens, encrypted outbox delivery, acceptance/revocation, and a production kill switch
@@ -68,7 +69,7 @@ Open `http://localhost:3000` after the web server starts.
   delivery approval, MFA/OIDC, and provider policy remain; owner-safe account
   closure is implemented but intentionally retains shared workspace research)
 - production database provisioning and production Temporal infrastructure (TLS/authentication, HA, backups, retention, deployment, and alerts)
-- production encrypted object-storage deployment, lifecycle/versioning rules, destructive workspace/object/backup/export purge wiring (workspace archival is implemented separately)
+- production encrypted object-storage deployment, lifecycle/versioning rules, provider consumption of purge manifests, and destructive workspace/object/backup/export purge wiring (workspace archival is implemented separately)
 - production deployment must still run the legacy production-analysis v1
   history checker, complete approved archive/retention actions, and prove the
   remaining Temporal security controls; it must also configure a worker drain

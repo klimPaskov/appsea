@@ -222,6 +222,8 @@ export {
   AuthAccountDeletionBlockedError,
   WorkspacePurgeRequestNotReadyError,
   WorkspacePurgeRequestPermissionError,
+  WorkspacePurgeManifestNotReadyError,
+  WorkspacePurgeManifestPermissionError,
   AuthPasswordResetConfigurationError,
   AuthPasswordResetError,
   AuthMfaAlreadyEnabledError,

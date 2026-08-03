@@ -25,7 +25,7 @@ Status: production-shaped foundation implemented and validated locally; producti
 
 Implemented:
 
-- PostgreSQL 18 schema and eighty-one forward, checksummed migrations
+- PostgreSQL 18 schema and eighty-three forward, checksummed migrations
 - normalized source, evidence, complaint, cluster, competitor, opportunity, score, report, plan, audit, cost, deletion, outbox, and lineage tables
 - no-login owner, separate migrator, and least-privilege runtime role contract
 - forced workspace RLS and transaction-scoped workspace context
@@ -109,6 +109,15 @@ forced-RLS owner-confirmed purge-intent ledger with idempotent request and
 cancellation functions, identifier-only audit/outbox receipts, and private
 members-page/API controls. The intent snapshots `database_ready` but remains
 `awaiting_external_controls`; it never queues or performs destructive deletion.
+
+Migration `0083_workspace_purge_manifests.sql` adds a separate archived-owner
+manifest boundary. The private members page and API collect only sorted,
+deduplicated workspace-bound object URI/kind pairs from persisted source,
+report, plan, and production-analysis references. A deterministic SHA-256 hash
+and manifest ID make replay idempotent; the database-generated manifest expires
+after 24 hours, and audit/outbox receipts store only identifiers, hash, count,
+and expiry. The manifest is metadata for external coordination, not approval
+and not a delete command.
 
 The invalidated production-analysis output queue is a deliberate narrow slice:
 it does not claim source-wide retention purge, cloud backup deletion, or

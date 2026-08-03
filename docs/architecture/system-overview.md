@@ -103,6 +103,12 @@ fixed-code retry/exhaustion state, and purges terminal rows after retention.
 The outbox table is not directly readable by either runtime role, and the v2
 scheduler functions extend the allowlist for the three alert scans and the
 bounded drain without rewriting released migration history.
+
+Migration `0083` adds the owner-scoped workspace purge-manifest ledger. An
+archived owner can prepare a deterministic, expiring inventory of persisted
+workspace-bound object references for external retention coordination. The
+manifest is metadata-only, forced-RLS, and idempotent; it never performs or
+authorizes provider, export, backup, or database deletion.
 Migration `0050` adds explicit, one-record tombstone-bound re-collection
 lineage across workflow projections, research runs, and source items. Completed
 deletion state is required by database triggers; deleted history is preserved

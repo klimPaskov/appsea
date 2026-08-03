@@ -12,6 +12,8 @@ import {
   workspaceArchiveResultSchema,
   workspacePurgeRequestCancelInputSchema,
   workspacePurgeRequestInputSchema,
+  workspacePurgeManifestInputSchema,
+  workspacePurgeManifestSchema,
   workspacePurgeRequestSchema,
   workspacePurgeReadinessSchema,
   authPasswordResetAcceptedReadModelSchema,
@@ -424,6 +426,58 @@ describe('contracts', () => {
         requestedAt: now,
         canceledAt: null,
         readiness: { ...readiness, state: 'blocked', blockers: ['workspace_not_archived'] }
+      }).success
+    ).toBe(false)
+  })
+
+  it('validates a workspace-bound metadata-only purge manifest', () => {
+    const objects = [
+      {
+        uri: `appsea-object://workspace:one/report-json/${'a'.repeat(64)}`,
+        kind: 'report-json' as const
+      },
+      {
+        uri: `appsea-object://workspace:one/plan-package/${'b'.repeat(64)}`,
+        kind: 'plan-package' as const
+      }
+    ]
+    const manifest = {
+      workspaceId: 'workspace:one',
+      manifestId: `workspace-purge-manifest:${'c'.repeat(32)}`,
+      generatedAt: now,
+      expiresAt: '2026-08-10T00:00:00.000Z',
+      manifestHash: 'd'.repeat(64),
+      objectCount: objects.length,
+      objects,
+      externalRequirements: [
+        'cloud_object_store_purge',
+        'export_retention_purge',
+        'backup_deletion_verification'
+      ] as const
+    }
+    expect(
+      workspacePurgeManifestInputSchema.safeParse({
+        confirmation: 'PREPARE WORKSPACE PURGE MANIFEST'
+      }).success
+    ).toBe(true)
+    expect(workspacePurgeManifestSchema.safeParse(manifest).success).toBe(true)
+    expect(
+      workspacePurgeManifestSchema.safeParse({
+        ...manifest,
+        objectCount: objects.length + 1
+      }).success
+    ).toBe(false)
+    expect(
+      workspacePurgeManifestSchema.safeParse({
+        ...manifest,
+        objects: [
+          ...objects,
+          {
+            uri: `appsea-object://workspace:other/evidence/${'e'.repeat(64)}`,
+            kind: 'evidence' as const
+          }
+        ],
+        objectCount: objects.length + 1
       }).success
     ).toBe(false)
   })

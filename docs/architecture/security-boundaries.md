@@ -359,6 +359,16 @@ for that pre-context authorization lookup.
   `awaiting_external_controls`; it cannot authorize object, export, backup, or
   database deletion. A separate owner cancellation function is equally
   non-destructive.
+- Migration `0083_workspace_purge_manifests.sql` adds a separate,
+  owner-only, archived-workspace manifest boundary. The security-definer
+  function validates a sorted/deduplicated list of workspace-bound object URI
+  and kind pairs, derives a deterministic manifest ID from the workspace and
+  SHA-256 content hash, bounds expiry to seven days (the repository uses 24
+  hours), and records only identifier/hash/count/expiry metadata in
+  audit/outbox receipts. Forced RLS and direct-table revocation keep the
+  manifest private. It is idempotent metadata for provider coordination; it
+  never authorizes or performs database, object-store, export, or backup
+  deletion.
 - Migration `0067_field_level_evidence_redaction.sql` adds the privacy
   projection boundary. An authenticated owner/editor calls a narrow
   security-definer function after a recent web step-up; PostgreSQL repeats the

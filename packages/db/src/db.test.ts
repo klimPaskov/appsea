@@ -95,7 +95,8 @@ describe('database foundation', () => {
       '0079',
       '0080',
       '0081',
-      '0082'
+      '0082',
+      '0083'
     ])
     expect(migrations[0]?.checksum).toMatch(/^[a-f0-9]{64}$/)
     expect(migrations[0]?.sql).toContain('CREATE TABLE appsea.evidence_records')
@@ -174,6 +175,14 @@ describe('database foundation', () => {
     expect(operationalAlertMigration?.sql).toContain('CREATE TABLE appsea.operational_alert_outbox')
     expect(operationalAlertMigration?.sql).toContain('claim_operational_alerts')
     expect(operationalAlertMigration?.sql).toContain('acquire_maintenance_scheduler_lease_v2')
+    const workspacePurgeManifestMigration = migrations.find(
+      (migration) => migration.version === '0083'
+    )
+    expect(workspacePurgeManifestMigration?.sql).toContain(
+      'CREATE TABLE appsea.workspace_purge_manifests'
+    )
+    expect(workspacePurgeManifestMigration?.sql).toContain('create_workspace_purge_manifest')
+    expect(workspacePurgeManifestMigration?.sql).toContain('read_workspace_purge_manifest')
     const authMigration = migrations.find((migration) => migration.version === '0008')
     const privacyMigration = migrations.find((migration) => migration.version === '0009')
     const retentionMigration = migrations.find((migration) => migration.version === '0010')

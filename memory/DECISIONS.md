@@ -161,21 +161,16 @@ just because its report was approved.
 
 ## 2026-07-26: Review complaints before downstream analysis
 
-Treat collection persistence and complaint curation as separate boundaries.
-Migration `0032` permits only active workspace editors/owners to confirm or
-reject active observations, records identifier-only receipts, and makes the
-review state part of the evidence read contract. Downstream production
-analysis must consume the confirmed subset; no review action changes source
-policy or deletes provenance.
+Migration `0032` keeps curation separate: only active workspace editors/owners
+change review state, identifier-only receipts preserve provenance, and
+production analysis consumes confirmed observations without changing source
+policy.
 
 ## 2026-07-26: Start analysis from persisted reviewed evidence
 
-Keep downstream analysis explicit after collection and curation. The private
-analysis-start route reconstructs request and approved-policy lineage in the
-workspace transaction, admits only active confirmed excerpt evidence, and
-passes a reviewed seed to the existing idempotent Temporal workflow. It never
-accepts caller-supplied complaint payloads; collections without an explicit
-handoff seed retain the manual route.
+The private analysis-start route reconstructs policy/evidence lineage in one
+workspace transaction, accepts only active confirmed excerpt evidence plus a
+reviewed seed, and never accepts caller-supplied complaint payloads.
 
 ## 2026-07-26: Persist and approve opportunity seeds before analysis
 
@@ -217,14 +212,10 @@ Scheduling, alerting, and source re-collection remain separate deployment work.
 
 ## 2026-08-01: Gate production workflow starts before Temporal
 
-Authenticated production collection starts must not create unbounded failed
-Temporal executions while source policy or infrastructure is pending. Migration
-`0038` keeps a digest-only admission row, serializes a workspace rate bucket
-under advisory lock, and fixes five starts/15 minutes plus two active
-jobs/reservations. Replays consume no slot; initialization consumes the
-reservation and maintenance purges terminal/expired rows. Missing consumption
-fails closed, and ambiguous Temporal errors do not release a reservation.
-Deployment configuration and Temporal authorization remain open.
+Migration `0038` adds a digest-only, advisory-locked admission ledger with
+fixed workspace rate/active-job limits. Replays consume no slot; initialization
+must consume the reservation or fail closed; maintenance purges terminal/
+expired rows. Deployment configuration and Temporal authorization remain open.
 
 ## 2026-08-01: Bind external collection to a policy lease
 
@@ -365,6 +356,17 @@ Migration `0073` records an owner-confirmed database-ready snapshot as an
 `awaiting_external_controls` intent with identifier-only receipts; it never
 authorizes cloud/object/export/backup deletion, and replay/cancellation remain
 explicit.
+
+## 2026-08-04: Keep purge manifests metadata-only and provider-neutral
+
+Migration `0083` stores one deterministic, expiring inventory per workspace
+and object-list hash after archival. The repository gathers only persisted
+object URI/kind references, deduplicates them, and records identifier-only
+audit/outbox receipts. Owner membership, password step-up, MFA step-up, forced
+RLS, and an exact confirmation protect the web boundary. The manifest is a
+coordination artifact for separately operated object-store/export/backup
+controls; it cannot authorize or perform deletion, refresh an expired replay,
+or contain object bodies, source payloads, or credentials.
 
 ## 2026-08-03: Require conditional MFA for password-gated mutations
 

@@ -2,6 +2,7 @@ import { promisify } from 'node:util'
 import {
   createCipheriv,
   createDecipheriv,
+  createHash,
   randomBytes,
   scrypt as scryptCallback,
   timingSafeEqual,
@@ -23,6 +24,9 @@ import {
   authAccountDeletionResultSchema,
   workspaceArchiveInputSchema,
   workspaceArchiveResultSchema,
+  workspacePurgeManifestInputSchema,
+  workspacePurgeManifestObjectSchema,
+  workspacePurgeManifestSchema,
   workspacePurgeRequestCancelInputSchema,
   workspacePurgeRequestInputSchema,
   workspacePurgeRequestSchema,
@@ -76,6 +80,8 @@ import {
   type AuthAccountDeletionResult,
   type WorkspaceArchiveInput,
   type WorkspaceArchiveResult,
+  type WorkspacePurgeManifest,
+  type WorkspacePurgeManifestInput,
   type WorkspacePurgeRequest,
   type WorkspacePurgeRequestCancelInput,
   type WorkspacePurgeRequestInput,
@@ -109,7 +115,7 @@ import {
 } from '@appsea/contracts'
 import { decodeOpportunityReport, decodePlanPackage } from '@appsea/reports'
 import type { ObjectStore } from '@appsea/object-store'
-import { sha256 } from './hash'
+import { contentHash, sha256 } from './hash'
 import {
   buildMfaOtpAuthUri,
   generateMfaRecoveryCodes,
@@ -243,6 +249,20 @@ export class WorkspacePurgeRequestNotReadyError extends Error {
     super('Workspace purge request is blocked by the current database readiness inventory')
     this.name = 'WorkspacePurgeRequestNotReadyError'
     this.readiness = readiness
+  }
+}
+
+export class WorkspacePurgeManifestPermissionError extends Error {
+  constructor() {
+    super('Only the workspace owner can prepare or read a workspace purge manifest')
+    this.name = 'WorkspacePurgeManifestPermissionError'
+  }
+}
+
+export class WorkspacePurgeManifestNotReadyError extends Error {
+  constructor() {
+    super('Workspace purge manifests require an archived workspace')
+    this.name = 'WorkspacePurgeManifestNotReadyError'
   }
 }
 
@@ -463,6 +483,19 @@ interface WorkspacePurgeRequestRow extends QueryResultRow {
   replayed: boolean
 }
 
+interface WorkspacePurgeManifestRow extends QueryResultRow {
+  workspace_id: string
+  manifest_id: string
+  generated_by: string
+  generated_at: Date | string
+  expires_at: Date | string
+  manifest_hash: string
+  object_count: number | string
+  object_entries: unknown
+  external_requirements: string[]
+  replayed: boolean
+}
+
 interface WorkspaceMemberRow extends QueryResultRow {
   user_id: string
   email: string
@@ -587,6 +620,20 @@ function mapWorkspacePurgeRequest(row: WorkspacePurgeRequestRow): WorkspacePurge
     requestedAt: iso(row.requested_at),
     canceledAt: row.canceled_at === null ? null : iso(row.canceled_at),
     readiness: workspacePurgeReadinessSchema.parse(row.readiness_snapshot)
+  })
+}
+
+function mapWorkspacePurgeManifest(row: WorkspacePurgeManifestRow): WorkspacePurgeManifest {
+  const objects = workspacePurgeManifestObjectSchema.array().parse(row.object_entries)
+  return workspacePurgeManifestSchema.parse({
+    workspaceId: row.workspace_id,
+    manifestId: row.manifest_id,
+    generatedAt: iso(row.generated_at),
+    expiresAt: iso(row.expires_at),
+    manifestHash: row.manifest_hash,
+    objectCount: Number(row.object_count),
+    objects,
+    externalRequirements: row.external_requirements
   })
 }
 
@@ -2031,6 +2078,174 @@ export class PostgresAuthRepository {
       ],
       checkedAt: iso(row.checked_at)
     })
+  }
+
+  /**
+   * Prepare a deterministic, metadata-only object inventory for external
+   * retention controls. The manifest is owner-scoped and archived-workspace
+   * only; it never returns object bodies or provider credentials and never
+   * authorizes deletion.
+   */
+  async prepareWorkspacePurgeManifest(
+    userId: string,
+    workspaceId: string,
+    input: WorkspacePurgeManifestInput
+  ): Promise<WorkspacePurgeManifest> {
+    const parsedUserId = appseaIdentifierSchema.parse(userId)
+    const parsedWorkspaceId = appseaIdentifierSchema.parse(workspaceId)
+    workspacePurgeManifestInputSchema.parse(input)
+    try {
+      const result = await withDatabaseTransaction(
+        this.pool,
+        async (client) => {
+          await client.query("SELECT set_config('appsea.auth_user_id', $1, true)", [parsedUserId])
+          const membership = await client.query<{ role: string }>(
+            `SELECT role
+               FROM appsea.workspace_memberships
+              WHERE workspace_id = $1 AND user_id = $2`,
+            [parsedWorkspaceId, parsedUserId]
+          )
+          if (membership.rows[0]?.role !== 'owner') {
+            throw new WorkspacePurgeManifestPermissionError()
+          }
+          await client.query("SELECT set_config('appsea.workspace_id', $1, true)", [
+            parsedWorkspaceId
+          ])
+          const workspace = await client.query<{ archived_at: Date | string | null }>(
+            `SELECT archived_at
+               FROM appsea.workspaces
+              WHERE workspace_id = $1`,
+            [parsedWorkspaceId]
+          )
+          if (!workspace.rows[0] || workspace.rows[0].archived_at === null) {
+            throw new WorkspacePurgeManifestNotReadyError()
+          }
+
+          const objectsResult = await client.query<{ object_entries: unknown }>(
+            `SELECT COALESCE(
+                      jsonb_agg(
+                        jsonb_build_object('uri', object_references.object_uri, 'kind', object_references.object_kind)
+                        ORDER BY object_references.object_uri
+                      ),
+                      '[]'::jsonb
+                    ) AS object_entries
+               FROM (
+                 SELECT source_item.raw_object_ref AS object_uri,
+                        split_part(source_item.raw_object_ref, '/', 4) AS object_kind
+                   FROM appsea.source_items source_item
+                  WHERE source_item.workspace_id = $1
+                    AND source_item.raw_object_ref LIKE 'appsea-object://%'
+                 UNION
+                 SELECT report.markdown_object_ref AS object_uri,
+                        split_part(report.markdown_object_ref, '/', 4) AS object_kind
+                   FROM appsea.report_versions report
+                  WHERE report.workspace_id = $1
+                    AND report.markdown_object_ref LIKE 'appsea-object://%'
+                 UNION
+                 SELECT report.structured_object_ref AS object_uri,
+                        split_part(report.structured_object_ref, '/', 4) AS object_kind
+                   FROM appsea.report_versions report
+                  WHERE report.workspace_id = $1
+                    AND report.structured_object_ref LIKE 'appsea-object://%'
+                 UNION
+                 SELECT plan.package_object_ref AS object_uri,
+                        split_part(plan.package_object_ref, '/', 4) AS object_kind
+                   FROM appsea.plan_package_versions plan
+                  WHERE plan.workspace_id = $1
+                    AND plan.package_object_ref LIKE 'appsea-object://%'
+                 UNION
+                 SELECT output.object_ref->>'uri' AS object_uri,
+                        output.object_ref->>'kind' AS object_kind
+                   FROM appsea.production_analysis_runs analysis
+                   CROSS JOIN LATERAL jsonb_array_elements(
+                     jsonb_build_array(
+                       analysis.artifact_object_ref,
+                       analysis.report_object_ref,
+                       analysis.plan_object_ref
+                     )
+                   ) AS output(object_ref)
+                  WHERE analysis.workspace_id = $1
+                    AND output.object_ref ? 'uri'
+                    AND output.object_ref->>'uri' LIKE 'appsea-object://%'
+               ) object_references`,
+            [parsedWorkspaceId]
+          )
+          const objects = workspacePurgeManifestObjectSchema
+            .array()
+            .parse(objectsResult.rows[0]?.object_entries ?? [])
+          const generatedAtResult = await client.query<{ generated_at: Date | string }>(
+            `SELECT clock_timestamp() AS generated_at`
+          )
+          const generatedAt = iso(generatedAtResult.rows[0]!.generated_at)
+          const expiresAt = new Date(Date.parse(generatedAt) + 24 * 60 * 60 * 1_000).toISOString()
+          const manifestHash = contentHash({ workspaceId: parsedWorkspaceId, objects })
+          const manifestId =
+            'workspace-purge-manifest:' +
+            createHash('md5')
+              .update(parsedWorkspaceId + ':' + manifestHash, 'utf8')
+              .digest('hex')
+          const created = await client.query<WorkspacePurgeManifestRow>(
+            `SELECT workspace_id, manifest_id, generated_by, generated_at, expires_at,
+                    manifest_hash, object_count, object_entries, external_requirements, replayed
+               FROM appsea.create_workspace_purge_manifest(
+                 $1, $2, $3, $4, $5::jsonb, $6::timestamptz, $7::timestamptz
+               )`,
+            [
+              parsedWorkspaceId,
+              parsedUserId,
+              manifestId,
+              manifestHash,
+              JSON.stringify(objects),
+              generatedAt,
+              expiresAt
+            ]
+          )
+          const row = created.rows[0]
+          if (!row) throw new Error('Workspace purge manifest was not recorded')
+          return mapWorkspacePurgeManifest(row)
+        },
+        { maxSerializationRetries: 0 }
+      )
+      return result
+    } catch (error) {
+      if (error instanceof WorkspacePurgeManifestPermissionError) throw error
+      if (error instanceof WorkspacePurgeManifestNotReadyError) throw error
+      throw error
+    }
+  }
+
+  /** Read the latest owner-visible metadata-only purge manifest. */
+  async readWorkspacePurgeManifest(
+    userId: string,
+    workspaceId: string
+  ): Promise<WorkspacePurgeManifest | null> {
+    const parsedUserId = appseaIdentifierSchema.parse(userId)
+    const parsedWorkspaceId = appseaIdentifierSchema.parse(workspaceId)
+    try {
+      const result = await withDatabaseTransaction(
+        this.pool,
+        async (client) => {
+          await client.query("SELECT set_config('appsea.auth_user_id', $1, true)", [parsedUserId])
+          await client.query("SELECT set_config('appsea.workspace_id', $1, true)", [
+            parsedWorkspaceId
+          ])
+          const read = await client.query<WorkspacePurgeManifestRow>(
+            `SELECT workspace_id, manifest_id, generated_by, generated_at, expires_at,
+                    manifest_hash, object_count, object_entries, external_requirements, replayed
+               FROM appsea.read_workspace_purge_manifest($1, $2)`,
+            [parsedWorkspaceId, parsedUserId]
+          )
+          return read.rows[0] ? mapWorkspacePurgeManifest(read.rows[0]) : null
+        },
+        { readOnly: true, maxSerializationRetries: 0 }
+      )
+      return result
+    } catch (error) {
+      if (isWorkspaceArchivePermissionError(error)) {
+        throw new WorkspacePurgeManifestPermissionError()
+      }
+      throw error
+    }
   }
 
   /**

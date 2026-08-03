@@ -29,6 +29,7 @@ import {
   AuthSessionConflictError,
   WorkspaceMembershipConflictError,
   WorkspaceMembershipManagementError,
+  WorkspacePurgeManifestPermissionError,
   WorkspaceReportNotApprovedError,
   PostgresFixtureResearchRepository,
   PostgresAuthRepository,
@@ -511,7 +512,8 @@ describe.sequential('PostgreSQL fixture persistence lifecycle', () => {
       '0079',
       '0080',
       '0081',
-      '0082'
+      '0082',
+      '0083'
     ])
     expect(secondMigrationResult.applied).toEqual([])
     expect(secondMigrationResult.alreadyApplied).toEqual([
@@ -596,7 +598,8 @@ describe.sequential('PostgreSQL fixture persistence lifecycle', () => {
       '0079',
       '0080',
       '0081',
-      '0082'
+      '0082',
+      '0083'
     ])
   })
 
@@ -4265,6 +4268,118 @@ describe.sequential('PostgreSQL fixture persistence lifecycle', () => {
           await client.query('ROLLBACK')
           throw error
         }
+      })
+    }
+  })
+
+  it('creates an idempotent owner-scoped purge manifest without authorizing deletion', async () => {
+    const workspaceId = 'workspace-purge-manifest'
+    const ownerId = 'user:purge-manifest-owner'
+    const editorId = 'user:purge-manifest-editor'
+    const emptyObjects: never[] = []
+
+    try {
+      await withOwnerClient(async (client) => {
+        await client.query(
+          `INSERT INTO appsea.users
+             (user_id, email, display_name, password_hash, created_at, updated_at)
+           VALUES
+             ($1, 'purge-manifest-owner@example.test', 'Purge Manifest Owner', repeat('x', 64), $3, $3),
+             ($2, 'purge-manifest-editor@example.test', 'Purge Manifest Editor', repeat('x', 64), $3, $3)`,
+          [ownerId, editorId, fixedAt]
+        )
+        await client.query(
+          `INSERT INTO appsea.workspaces
+             (workspace_id, slug, display_name, visibility, fixture_only, status, created_at, updated_at)
+           VALUES ($1, 'purge-manifest', 'Purge Manifest', 'private', false, 'active', $2, $2)`,
+          [workspaceId, fixedAt]
+        )
+        await client.query(
+          `INSERT INTO appsea.workspace_memberships
+             (workspace_id, user_id, role, created_at, updated_at)
+           VALUES ($1, $2, 'owner', $3, $3), ($1, $4, 'editor', $3, $3)`,
+          [workspaceId, ownerId, fixedAt, editorId]
+        )
+      })
+
+      await expect(
+        authRepository.archiveWorkspace(ownerId, workspaceId, {
+          confirmation: 'ARCHIVE WORKSPACE'
+        })
+      ).resolves.toMatchObject({ state: 'archived', activeWorkCount: 0 })
+
+      const first = await authRepository.prepareWorkspacePurgeManifest(ownerId, workspaceId, {
+        confirmation: 'PREPARE WORKSPACE PURGE MANIFEST'
+      })
+      expect(first).toMatchObject({
+        workspaceId,
+        objectCount: 0,
+        objects: [],
+        externalRequirements: [
+          'cloud_object_store_purge',
+          'export_retention_purge',
+          'backup_deletion_verification'
+        ]
+      })
+      expect(first.manifestHash).toBe(contentHash({ workspaceId, objects: emptyObjects }))
+
+      const replay = await authRepository.prepareWorkspacePurgeManifest(ownerId, workspaceId, {
+        confirmation: 'PREPARE WORKSPACE PURGE MANIFEST'
+      })
+      expect(replay.manifestId).toBe(first.manifestId)
+      await expect(
+        authRepository.readWorkspacePurgeManifest(ownerId, workspaceId)
+      ).resolves.toEqual(first)
+      await expect(
+        authRepository.prepareWorkspacePurgeManifest(editorId, workspaceId, {
+          confirmation: 'PREPARE WORKSPACE PURGE MANIFEST'
+        })
+      ).rejects.toBeInstanceOf(WorkspacePurgeManifestPermissionError)
+      await expect(
+        authRepository.readWorkspacePurgeManifest(editorId, workspaceId)
+      ).rejects.toBeInstanceOf(WorkspacePurgeManifestPermissionError)
+
+      const receipts = await withWorkspaceTransaction(
+        servicePool,
+        workspaceId,
+        async (client) => {
+          const result = await client.query<{ action: string; event_type: string }>(
+            `SELECT audit.action, outbox.event_type
+               FROM appsea.audit_events audit
+               JOIN appsea.outbox_events outbox
+                 ON outbox.workspace_id = audit.workspace_id
+                AND outbox.aggregate_id = audit.target_id
+              WHERE audit.workspace_id = $1
+                AND audit.target_id = $2`,
+            [workspaceId, first.manifestId]
+          )
+          return result.rows
+        },
+        { readOnly: true }
+      )
+      expect(receipts).toEqual([
+        {
+          action: 'workspace.purge_manifest_prepared',
+          event_type: 'workspace.purge_manifest_prepared'
+        }
+      ])
+    } finally {
+      await withOwnerClient(async (client) => {
+        await client.query('DELETE FROM appsea.workspace_purge_manifests WHERE workspace_id = $1', [
+          workspaceId
+        ])
+        await client.query('DELETE FROM appsea.outbox_events WHERE workspace_id = $1', [
+          workspaceId
+        ])
+        await client.query('DELETE FROM appsea.audit_events WHERE workspace_id = $1', [workspaceId])
+        await client.query('DELETE FROM appsea.workspace_memberships WHERE workspace_id = $1', [
+          workspaceId
+        ])
+        await client.query('DELETE FROM appsea.workspaces WHERE workspace_id = $1', [workspaceId])
+        await client.query('DELETE FROM appsea.users WHERE user_id IN ($1, $2)', [
+          ownerId,
+          editorId
+        ])
       })
     }
   })

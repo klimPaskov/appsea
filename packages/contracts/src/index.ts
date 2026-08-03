@@ -4180,6 +4180,106 @@ export const workspacePurgeRequestInputSchema = z
   })
   .strict()
 
+export const workspacePurgeExternalRequirementSchema = z.enum([
+  'cloud_object_store_purge',
+  'export_retention_purge',
+  'backup_deletion_verification'
+])
+
+// Preparing a manifest is a metadata-only, owner-scoped handoff. It does not
+// authorize deletion; the exact phrase keeps the high-impact intent visible
+// in the web boundary and in audit receipts.
+export const workspacePurgeManifestInputSchema = z
+  .object({
+    confirmation: z.literal('PREPARE WORKSPACE PURGE MANIFEST')
+  })
+  .strict()
+
+export const workspacePurgeManifestIdSchema = z
+  .string()
+  .regex(/^workspace-purge-manifest:[a-f0-9]{32}$/, 'Invalid workspace purge manifest id')
+
+export const workspacePurgeManifestObjectSchema = z
+  .object({
+    uri: z
+      .string()
+      .min(32)
+      .max(512)
+      .regex(
+        /^appsea-object:\/\/[a-z][a-z0-9_:-]*\/(?:evidence|report-json|report-markdown|plan-package|workflow-artifact|export)\/[a-f0-9]{64}$/,
+        'Invalid workspace purge object URI'
+      ),
+    kind: objectStorageKindSchema
+  })
+  .strict()
+
+export const workspacePurgeManifestSchema = z
+  .object({
+    workspaceId: appseaIdentifierSchema,
+    manifestId: workspacePurgeManifestIdSchema,
+    generatedAt: z.string().datetime(),
+    expiresAt: z.string().datetime(),
+    manifestHash: contentHashSchema,
+    objectCount: z.number().int().nonnegative().max(10_000),
+    objects: z.array(workspacePurgeManifestObjectSchema).max(10_000),
+    externalRequirements: z
+      .array(workspacePurgeExternalRequirementSchema)
+      .length(3)
+      .refine(
+        (requirements) =>
+          JSON.stringify(requirements) ===
+          JSON.stringify([
+            'cloud_object_store_purge',
+            'export_retention_purge',
+            'backup_deletion_verification'
+          ]),
+        'Purge manifest requirements must remain complete and ordered'
+      )
+  })
+  .strict()
+  .superRefine((value, context) => {
+    if (value.objectCount !== value.objects.length) {
+      context.addIssue({
+        code: 'custom',
+        path: ['objectCount'],
+        message: 'Purge manifest object count must match its object list'
+      })
+    }
+    if (value.expiresAt <= value.generatedAt) {
+      context.addIssue({
+        code: 'custom',
+        path: ['expiresAt'],
+        message: 'Purge manifest expiry must be after generation'
+      })
+    }
+    const seen = new Set<string>()
+    for (const [index, object] of value.objects.entries()) {
+      if (seen.has(object.uri)) {
+        context.addIssue({
+          code: 'custom',
+          path: ['objects', index, 'uri'],
+          message: 'Purge manifest objects must be unique'
+        })
+      }
+      seen.add(object.uri)
+      const expectedPrefix = `appsea-object://${value.workspaceId}/`
+      if (!object.uri.startsWith(expectedPrefix)) {
+        context.addIssue({
+          code: 'custom',
+          path: ['objects', index, 'uri'],
+          message: 'Purge manifest objects must belong to the workspace'
+        })
+      }
+      if (!object.uri.includes(`/${object.kind}/`)) {
+        context.addIssue({
+          code: 'custom',
+          path: ['objects', index, 'kind'],
+          message: 'Purge manifest object kind must match its URI'
+        })
+      }
+    }
+  })
+
 export const workspacePurgeRequestIdSchema = z
   .string()
   .regex(/^workspace-purge:[a-f0-9]{32}$/, 'Invalid workspace purge request id')
@@ -4227,12 +4327,6 @@ export const workspacePurgeReadinessBlockerSchema = z.enum([
   'analysis_objects',
   'report_objects',
   'plan_objects'
-])
-
-export const workspacePurgeExternalRequirementSchema = z.enum([
-  'cloud_object_store_purge',
-  'export_retention_purge',
-  'backup_deletion_verification'
 ])
 
 export const workspacePurgeReadinessSchema = z
@@ -5942,6 +6036,10 @@ export type AuthAccountDeletionInput = z.infer<typeof authAccountDeletionInputSc
 export type WorkspaceArchiveInput = z.infer<typeof workspaceArchiveInputSchema>
 export type WorkspacePurgeRequestInput = z.infer<typeof workspacePurgeRequestInputSchema>
 export type WorkspacePurgeRequestId = z.infer<typeof workspacePurgeRequestIdSchema>
+export type WorkspacePurgeManifestInput = z.infer<typeof workspacePurgeManifestInputSchema>
+export type WorkspacePurgeManifestId = z.infer<typeof workspacePurgeManifestIdSchema>
+export type WorkspacePurgeManifestObject = z.infer<typeof workspacePurgeManifestObjectSchema>
+export type WorkspacePurgeManifest = z.infer<typeof workspacePurgeManifestSchema>
 export type WorkspacePurgeRequestCancelInput = z.infer<
   typeof workspacePurgeRequestCancelInputSchema
 >

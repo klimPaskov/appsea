@@ -7,10 +7,11 @@ Temporal, source-policy, private-workspace, report/plan, and maintenance
 boundaries. The public leaderboard is intentionally synthetic and sparse; no
 real source is enabled.
 
-Migrations `0027`-`0082` cover policy evidence, collection checkpoints,
+Migrations `0027`-`0083` cover policy evidence, collection checkpoints,
 deletion/recomputation repair, leases, admissions, campaign orchestration and
 cancellation, source reconciliation, analysis history, report/plan governance,
-cost and alert projections, object references, workspace archival/purge intent,
+cost and alert projections, object references, workspace archival/purge intent/
+manifest,
 field-level evidence redaction, agent access tokens, and global-auth TOTP MFA.
 Migration `0081` adds a session-bound MFA step-up marker. Password-gated
 high-risk mutations require recent password step-up plus a fresh MFA proof when
@@ -52,39 +53,25 @@ exhaustion, retention purge, and a durable `alerts:deliver` drain. Deployment
 scheduler ownership, incident routing, provider billing, cloud/backup purge,
 and production topology remain open.
 
+Migration `0083` adds an archived-owner, forced-RLS purge-manifest boundary.
+`PostgresAuthRepository.prepareWorkspacePurgeManifest` inventories sorted,
+deduplicated object URI/kind pairs from persisted source/report/plan and
+production-analysis references, hashes the canonical workspace/object list,
+and persists a deterministic 24-hour manifest with identifier-only
+audit/outbox receipts. The private members page and
+`/api/workspaces/:workspaceId/purge-manifest` require owner membership, recent
+password step-up, recent MFA step-up, and the exact confirmation phrase. The
+manifest contains no bodies or credentials and never authorizes deletion;
+provider object/export/backup retention and a destructive workflow remain open.
+
 Imported complaints, pages, reports, and model output remain untrusted data;
 they cannot update code, skills, instructions, permissions, or repository
 memory.
 
 ## Validated commands
 
-- `pnpm verify` passed 2026-08-03 for the MFA step-up tranche; it covered
-  package lint/typecheck/test/build, fixture worker, sample plan, smoke web,
-  and repository checks. GitHub Actions run `30786965857` for commit
-  `b9cb95e` also passed aggregate verification, fresh PostgreSQL persistence,
-  and fresh Temporal workflow gates.
-- The prior MFA step-up tranche passed contracts (89), db (135), and web (144)
-  focused suites plus affected typechecks and lints. The current
-  conditional-MFA route slice passes the web suite (144), web typecheck, and
-  web lint locally; GitHub Actions run `30786965857` passed the aggregate,
-  fresh PostgreSQL, and fresh Temporal gates for commit `b9cb95e`.
-- PostgreSQL and Temporal fresh integration is staged but local Docker is
-  blocked by the unavailable Docker Desktop Linux engine pipe. Remote CI is the
-  authoritative fresh-install/upgrade and workflow proof; that remote gate is
-  green for commit `b9cb95e`.
-- The history-safety slice passes contracts (92), workflows (30), and worker
-  (110) tests plus affected typechecks/lint locally. The external Temporal
-  checker, archive/retention operation, and deployment proof remain pending.
-  GitHub Actions run `30788668850` is green for commit `bf1756e` across
-  aggregate verification, fresh PostgreSQL persistence, and fresh Temporal
-  workflow gates.
-- The durable-worker shutdown slice passes the focused lifecycle tests plus
-  worker typecheck and lint locally. Full `pnpm verify` also passes all 56
-  package tasks, fixture worker, sample plan/analysis generation, web smoke,
-  and repository validation. GitHub Actions run `30790024810` is green for
-  commit `557ec62`, including aggregate verification, fresh PostgreSQL
-  persistence, and fresh Temporal workflow gates. A deployed drain/crash drill
-  remains pending.
+- Prior tranches passed the aggregate repository, fresh PostgreSQL, and fresh
+  Temporal CI gates; local Docker Desktop remains unavailable for reruns.
 - The operational-alert outbox slice passes contracts (93), database (137),
   and worker (116) tests plus affected typechecks and lints locally. Migration
   `0082` integration coverage exercises maintenance-role function access,
@@ -93,6 +80,11 @@ memory.
   commit `4fa2fb5`, including aggregate verification/build, fresh PostgreSQL
   persistence, and fresh Temporal workflow gates. Local Docker Desktop remains
   unavailable.
+- The purge-manifest slice passes contracts (94), database (138), and web (147)
+  focused suites plus affected typechecks and lints locally. Migration `0083`
+  adds archived-owner integration coverage for deterministic replay, read
+  authorization, and identifier-only receipts. A fresh PostgreSQL CI rerun is
+  pending; local Docker Desktop remains unavailable.
 
 ## Next production tranche
 
@@ -121,8 +113,8 @@ memory.
   delivery/DPA, key rotation, provider-backed step-up, and high-impact action
   contracts without a password boundary remain open.
 - Cloud/object/export/backup purge and automatic source re-collection remain
-  separate reviewed operations; workspace archival and purge intent do not
-  delete research.
+  separate reviewed operations; workspace archival, purge intent, and the
+  metadata-only manifest do not delete research.
 - One-/multi-source cancellation and recomputation are durable repository
   boundaries, and the worker now has an idempotent signal-driven drain path,
   but deployed Temporal cancellation, graceful replacement, and crash-drill

@@ -4,6 +4,7 @@ import {
   appseaIdentifierSchema,
   type WorkspaceInvitationReadModel,
   type WorkspaceMemberReadModel,
+  type WorkspacePurgeManifest,
   type WorkspacePurgeRequest,
   type WorkspacePurgeReadiness
 } from '@appsea/contracts'
@@ -32,6 +33,7 @@ export default async function WorkspaceMembersPage({
   let invitations: WorkspaceInvitationReadModel[] = []
   let purgeReadiness: WorkspacePurgeReadiness | null = null
   let purgeRequest: WorkspacePurgeRequest | null = null
+  let purgeManifest: WorkspacePurgeManifest | null = null
   let canManage = workspace.role === 'owner'
   if (canManage) {
     try {
@@ -48,6 +50,10 @@ export default async function WorkspaceMembersPage({
         parsedWorkspaceId.data
       )
       purgeRequest = await authRepository().readWorkspacePurgeRequest(
+        session.user.userId,
+        parsedWorkspaceId.data
+      )
+      purgeManifest = await authRepository().readWorkspacePurgeManifest(
         session.user.userId,
         parsedWorkspaceId.data
       )
@@ -92,6 +98,7 @@ export default async function WorkspaceMembersPage({
             initialInvitations={invitations}
             initialPurgeReadiness={purgeReadiness}
             initialPurgeRequest={purgeRequest}
+            initialPurgeManifest={purgeManifest}
             canManage
           />
         ) : (
