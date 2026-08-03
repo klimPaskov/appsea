@@ -27,6 +27,7 @@ import type {
 } from '@appsea/workflows'
 import { fixtureResearchTaskQueue } from '@appsea/workflows'
 import { emitWorkerEvent } from './observability'
+import { pauseForWorkerRecoveryDrill } from './worker-test-faults'
 
 function errorName(error: unknown): string {
   return typeof error === 'object' && error !== null && 'name' in error ? String(error.name) : ''
@@ -155,6 +156,12 @@ export function createFixtureResearchActivities(pool: Pool): FixtureResearchActi
           consumedCostMicros: 0,
           occurredAt: parsed.occurredAt
         })
+
+        // The pause is only enabled by the local/CI worker replacement drill.
+        // It gives the harness a deterministic window to terminate the worker
+        // after the durable persisting checkpoint and before the write. The
+        // helper rejects the setting in production.
+        await pauseForWorkerRecoveryDrill()
 
         const artifact = await buildFixtureResearchArtifact(parsed.input.fixtureAt)
         const planPackage = generatePlanPackage(artifact, parsed.input.fixtureAt)

@@ -44,3 +44,7 @@ The long-lived Temporal worker must keep SIGINT/SIGTERM handling idempotent:
 request worker shutdown, stop heartbeat and dispatch loops, await their drain,
 then close database and Temporal connections. Do not add a signal path that
 logs raw errors, skips the worker safe point, or exits before cleanup.
+
+The `APPSEA_TEST_WORKER_PERSIST_PAUSE_MS` setting belongs only to the bounded
+local/CI replacement drill. Its parser must reject `NODE_ENV=production`; do
+not expose fault-injection settings through production configuration or logs.

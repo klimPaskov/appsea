@@ -603,9 +603,12 @@ and forwards shutdown without logging raw errors;
 the long-lived worker emits a bounded 30-second heartbeat and the web service
 exposes fail-closed liveness/readiness probes; deployed process-supervisor
 ownership, alert endpoint operations, traces, role separation, incident drills,
-and production security review remain. Provider idempotency, object-store
-conditional-delete, deployed scheduler ownership, and Docker-backed lock
-recovery proof remain open.
+and production security review remain. A local/CI worker replacement drill now
+force-stops a real worker during fixture persistence and verifies replacement
+recovery, one-time PostgreSQL effects, and sanitized Temporal history through
+`pnpm verify:worker:recovery`; hosted restore/failover proof remains open.
+Provider idempotency, object-store conditional-delete, and deployed scheduler
+ownership remain deployment responsibilities.
 
 ### 7. Desktop release
 

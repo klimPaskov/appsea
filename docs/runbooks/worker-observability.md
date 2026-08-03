@@ -134,10 +134,20 @@ should inspect the workflow ID and checkpoint state before retrying a terminal
 request; never replay a request with a new idempotency key to work around a
 conflict.
 
-The local fixture worker is intentionally not a production deployment.
+The local fixture worker is intentionally not a production deployment. The
+repository now includes a local/CI process-replacement drill:
+`pnpm verify:worker:recovery` starts the durable worker, starts a fixture
+workflow from a separate client, pauses after the persisted `persisting`
+checkpoint, force-stops the worker, starts a replacement on the same task
+queue, and verifies one completed job/run/checkpoint output plus one cost and
+outbox receipt. The drill also decodes Temporal history to prove the raw
+idempotency key and a known fixture excerpt are absent. Its pause is bounded
+and rejected when `NODE_ENV=production`; it is test evidence, not a production
+fault-injection switch.
+
 Production still requires a TLS-protected Temporal endpoint, durable log/metric
 retention, the configured alert endpoint, secret redaction verification, and a
-documented worker replacement drill. The private workspace cost summary
+deployment-owned replacement/restore drill using the hosted topology. The private workspace cost summary
 provides bounded cross-run ledger accounting; migration `0065` and the
 cost-alert command add repository-level threshold inspection, while the three
 alert commands route only bounded alert/incomplete/failure payloads through

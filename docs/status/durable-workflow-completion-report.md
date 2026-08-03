@@ -137,10 +137,24 @@ non-cancellable safe point; and local Temporal is development-only.
 - The CFPB connector is disabled pending review and therefore provides no live
   market coverage. Synthetic fixture content remains labeled and is not research.
 
+## Follow-up: worker replacement proof (2026-08-03)
+
+The previously missing process-level recovery proof is now implemented in
+`scripts/run_worker_recovery.mjs` and exposed as
+`pnpm verify:worker:recovery`. It starts the long-lived worker entry point and
+a separate workflow client, uses a bounded non-production pause after the
+`persisting` checkpoint, force-stops the worker, starts a replacement on the
+same task queue, and asserts one completed workflow job, one research run,
+seven immutable checkpoints (including the retry), one cost ledger row, one
+outbox row, and no raw idempotency key or known fixture excerpt in Temporal
+history. Worker unit tests reject the pause setting in production. The local
+Docker-backed run remains unavailable on the current host; the CI workflow is
+the hosted execution proof.
+
 ## Current blockers and next actions
 
 1. Provision an authenticated/TLS-protected Temporal topology and API gateway;
-   add worker replacement and adapter fault-injection proof.
+   add hosted restore/failover and adapter fault-injection proof.
 2. Add account recovery/invitations and the remaining identity operations
    behind an authenticated gateway; operate the new auth retention job on a
    schedule and validate distributed rate-limit behavior.

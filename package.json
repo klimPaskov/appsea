@@ -33,6 +33,8 @@
     "verify:persistence:fresh": "node scripts/run_db_integration.mjs --fresh",
     "verify:workflows": "node scripts/run_workflow_integration.mjs",
     "verify:workflows:fresh": "node scripts/run_workflow_integration.mjs --fresh",
+    "verify:worker:recovery": "node scripts/run_worker_recovery.mjs",
+    "verify:worker:recovery:fresh": "node scripts/run_worker_recovery.mjs --fresh",
     "worker:fixture": "pnpm --filter @appsea/worker fixture",
     "worker:fixture:persist": "pnpm --filter @appsea/worker fixture:persist",
     "worker:source:cfpb": "pnpm --filter @appsea/worker source:cfpb",

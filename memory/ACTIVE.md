@@ -27,20 +27,22 @@ handling and identifier-only audit events. Previous-key removal still requires
 operator review and live deployment evidence.
 
 The fixture workflow is the complete persisted path. Production collection and
-identifier-only analysis v2 are policy-gated, durable, and replay-safe, but
-CFPB and Stack Exchange remain disabled or unregistered pending independent
-approval. Reports and coding plans preserve provenance, visible coverage gaps,
-approval state, synthetic disclosure, and object-store references.
+analysis v2 are policy-gated/replay-safe; CFPB and Stack Exchange remain
+disabled pending independent approval. Reports/plans preserve provenance,
+coverage gaps, approval state, synthetic disclosure, and object references.
 
 New production-analysis v2 executions carry only the reviewed, non-sensitive
 history memo. `pnpm worker:workflow:analysis:history:check` inspects Temporal
 visibility metadata without fetching history and requires a reviewed manifest
 for visible legacy/unknown executions; it never performs archive or deletion.
 
-The long-lived worker has an idempotent SIGINT/SIGTERM lifecycle: it stops new
-scans, requests Temporal shutdown, drains heartbeat/scan work, emits a bounded
-stop event, and closes PostgreSQL/Temporal connections. Deployment drain and
-crash/replacement proof remain unproven.
+The long-lived worker has an idempotent SIGINT/SIGTERM lifecycle. The new
+`pnpm verify:worker:recovery` drill proves local/CI process replacement: a
+separate fixture client observes a persisted checkpoint, the first worker is
+stopped during persistence, and a replacement resumes the same execution with
+one job/run/output/checkpoint/cost/outbox effect plus sanitized history. Its
+pause is bounded and production-rejected; hosted restore/failover and topology
+proof remain open.
 
 Authentication uses scrypt password hashes, revocable opaque sessions,
 membership-before-RLS, password reauthentication, TOTP enrollment/login,
@@ -126,6 +128,6 @@ memory.
 - Cloud/object/export/backup purge and automatic source re-collection remain
   separate reviewed operations; workspace archival, purge intent, and the
   metadata-only manifest do not delete research.
-- Deployed Temporal cancellation, graceful replacement, and crash-drill
-  evidence are not claimed.
+- Deployed Temporal cancellation, restore, and hosted crash-drill evidence are
+  not claimed; the repository-level process replacement proof is now present.
 - Signed Windows/macOS release evidence remains open.

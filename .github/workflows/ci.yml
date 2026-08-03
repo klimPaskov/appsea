@@ -57,6 +57,7 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - run: pnpm verify:workflows:fresh
+      - run: pnpm verify:worker:recovery
 
   containers:
     runs-on: ubuntu-latest

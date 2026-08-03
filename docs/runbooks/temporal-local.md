@@ -39,6 +39,20 @@ pnpm verify:workflows:fresh
 The command is intentionally destructive to local AppSea test data. It does not
 target the repository or any other Docker project.
 
+To exercise process loss rather than only a Temporal service restart, run the
+worker-replacement drill. It uses a unique synthetic workspace, a temporary
+filesystem object store, and a separate workflow client. The first worker is
+terminated during the persistence activity; a replacement worker resumes the
+same Temporal execution and the script checks idempotent PostgreSQL output,
+cost/outbox receipts, checkpoints, and sanitized history:
+
+```bash
+pnpm verify:worker:recovery
+```
+
+Use `pnpm verify:worker:recovery:fresh` only for a disposable Compose stack.
+The drill's pause setting is rejected by the worker in production.
+
 To run one fixture request after the services and migrations are ready:
 
 ```bash
@@ -63,6 +77,8 @@ production requires a non-loopback address, namespace, API key, and pinned CA.
 - authenticated web starts bind the session user; local service starts record
   the explicit `appsea-worker` actor in the job and terminal audit event
 - Temporal restart recovery and one-time output/cost/audit/outbox effects
+- worker process replacement during a persistence activity, followed by
+  one-job/one-run/checkpoint/cost/outbox assertions
 - decoded history inspection proving the raw fixture idempotency key is absent
 - idempotent SIGINT/SIGTERM worker shutdown with heartbeat/dispatch drain
 
