@@ -24,6 +24,11 @@ CFPB and Stack Exchange remain disabled or unregistered pending independent
 approval. Reports and coding plans preserve provenance, visible coverage gaps,
 approval state, synthetic disclosure, and object-store references.
 
+New production-analysis v2 executions carry only the reviewed, non-sensitive
+history memo. `pnpm worker:workflow:analysis:history:check` inspects Temporal
+visibility metadata without fetching history and requires a reviewed manifest
+for visible legacy/unknown executions; it never performs archive or deletion.
+
 Authentication uses scrypt password hashes, revocable opaque sessions,
 membership-before-RLS, password reauthentication, TOTP enrollment/login,
 hash-only recovery codes, MFA step-up, recovery/invitation outboxes, owner-safe
@@ -57,6 +62,9 @@ memory.
   blocked by the unavailable Docker Desktop Linux engine pipe. Remote CI is the
   authoritative fresh-install/upgrade and workflow proof; that remote gate is
   green for commit `b9cb95e`.
+- The history-safety slice passes contracts (92), workflows (30), and worker
+  (110) tests plus affected typechecks/lint locally. The external Temporal
+  checker, archive/retention operation, and deployment proof remain pending.
 
 ## Next production tranche
 

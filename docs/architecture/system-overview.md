@@ -124,7 +124,11 @@ The post-collection production analysis workflow is versioned as `v2`: only
 workspace/collection/analysis/seed identifiers and immutable digests cross
 Temporal, while the worker rebuilds the evidence-backed artifact inside its
 activity. This keeps complaint text and source payloads out of new workflow
-histories; legacy v1 executions require a controlled drain/retention plan.
+histories. New starts carry a strict non-sensitive history memo, and the
+visibility-only checker plus reviewed manifest in
+[`temporal-history-drain.md`](../runbooks/temporal-history-drain.md) account for
+legacy v1 executions without decoding their payloads. Deployment-owned
+archive, retention, and deletion still require an external approved operation.
 Migration `0055` adds a bounded, monotonic activity-attempt projection to the
 analysis run. Migration `0056` adds forced-RLS attempt history with
 server-clock timing, bounded stage heartbeats, and fixed terminal failure

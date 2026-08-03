@@ -264,8 +264,11 @@ consumed analysis digest replays without consuming another slot.
 
 Production analysis workflow version `v2` now carries only identifiers and
 immutable digests into Temporal; the worker reconstructs its redacted artifact
-from workspace-bound rows inside the activity. This closes new raw-history
-leakage, but v1 histories need a controlled drain/retention plan. The activity
+from workspace-bound rows inside the activity and records a strict
+non-sensitive history memo. The visibility-only checker and reviewed manifest
+provide the controlled drain/retention plan without decoding old payloads. The
+authenticated deployment must still run it and complete the external
+archive/retention operation. The activity
 still persists object-backed outputs before finalization; migration `0043` and
 the maintenance worker now cover invalidated output-object marking, retention,
 bounded retry, and local orphan cleanup. Cloud object-store/backup deletion and

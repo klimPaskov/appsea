@@ -45,6 +45,7 @@
     "worker:source:policy:cfpb": "pnpm --filter @appsea/worker source:policy:cfpb",
     "worker:source:policy:stackexchange": "pnpm --filter @appsea/worker source:policy:stackexchange",
     "worker:workflow:fixture": "pnpm --filter @appsea/worker workflow:fixture",
+    "worker:workflow:analysis:history:check": "pnpm --filter @appsea/worker workflow:analysis:history:check",
     "plan:sample": "pnpm --filter @appsea/worker plan:sample",
     "analysis:sample": "pnpm --filter @appsea/worker analysis:sample",
     "ui:references": "node scripts/run_python.mjs scripts/render_references.py",

@@ -14,6 +14,7 @@ import {
   productionCollectionWorkflowInputSchema,
   productionCollectionWorkflowStartRequestSchema,
   workflowIdSchema,
+  productionAnalysisWorkflowHistoryMemoSchema,
   productionAnalysisWorkflowInputSchema,
   productionAnalysisWorkflowStartRequestSchema,
   type FixtureResearchWorkflowInput,
@@ -37,6 +38,13 @@ import {
   productionAnalysisStatusQueryName,
   productionCollectionStatusQueryName
 } from './constants'
+
+const productionAnalysisWorkflowHistoryMemo = productionAnalysisWorkflowHistoryMemoSchema.parse({
+  schemaVersion: 'appsea-temporal-history-memo-v1',
+  workflowType: 'productionAnalysisWorkflow',
+  workflowVersion: 'production-analysis-v2',
+  historyClass: 'identifier-only'
+})
 
 function canonicalJson(value: unknown): string {
   if (value === null || typeof value !== 'object') return JSON.stringify(value)
@@ -283,6 +291,7 @@ export async function startProductionAnalysisWorkflow(
       workflowIdReusePolicy: WorkflowIdReusePolicy.REJECT_DUPLICATE,
       workflowIdConflictPolicy: WorkflowIdConflictPolicy.USE_EXISTING,
       workflowExecutionTimeout: '30 minutes',
+      memo: productionAnalysisWorkflowHistoryMemo,
       args: [prepared.input]
     })
   } catch (error) {

@@ -3106,6 +3106,86 @@ export const productionAnalysisWorkflowStartRequestSchema = z
   .strict()
 
 /**
+ * Non-sensitive Temporal memo written on new production-analysis executions.
+ * The memo lets an operator distinguish identifier-only v2 histories from
+ * older executions without decoding workflow arguments or history payloads.
+ */
+export const productionAnalysisWorkflowHistoryMemoSchema = z
+  .object({
+    schemaVersion: z.literal('appsea-temporal-history-memo-v1'),
+    workflowType: z.literal('productionAnalysisWorkflow'),
+    workflowVersion: z.literal('production-analysis-v2'),
+    historyClass: z.literal('identifier-only')
+  })
+  .strict()
+
+const productionAnalysisHistoryDispositionSchema = z.enum(['retained', 'drained'])
+
+/** A reviewed operator disposition for one legacy Temporal execution. */
+export const productionAnalysisHistoryManifestEntrySchema = z
+  .object({
+    workflowId: workflowIdSchema,
+    runId: z.string().uuid(),
+    disposition: productionAnalysisHistoryDispositionSchema,
+    reviewedAt: z.string().datetime(),
+    approvalReference: z
+      .string()
+      .min(1)
+      .max(200)
+      .regex(/^[A-Za-z0-9._:/#-]+$/),
+    retentionUntil: z.string().datetime().nullable()
+  })
+  .strict()
+  .superRefine((entry, context) => {
+    if (entry.disposition === 'retained' && entry.retentionUntil === null) {
+      context.addIssue({
+        code: 'custom',
+        path: ['retentionUntil'],
+        message: 'A retained legacy history requires an explicit retention deadline'
+      })
+    }
+    if (entry.disposition === 'drained' && entry.retentionUntil !== null) {
+      context.addIssue({
+        code: 'custom',
+        path: ['retentionUntil'],
+        message: 'A drained legacy history cannot carry a future retention deadline'
+      })
+    }
+  })
+
+/**
+ * An external, reviewed inventory used by the bounded history checker. It is
+ * evidence of operator disposition only; it never authorizes deletion.
+ */
+export const productionAnalysisHistoryManifestSchema = z
+  .object({
+    schemaVersion: z.literal('appsea-temporal-legacy-history-v1'),
+    reviewedAt: z.string().datetime(),
+    approvalReference: z
+      .string()
+      .min(1)
+      .max(200)
+      .regex(/^[A-Za-z0-9._:/#-]+$/),
+    entries: z.array(productionAnalysisHistoryManifestEntrySchema).max(1_000)
+  })
+  .strict()
+  .superRefine((manifest, context) => {
+    const keys = new Set<string>()
+    for (const entry of manifest.entries) {
+      const key = `${entry.workflowId}\u0000${entry.runId}`
+      if (keys.has(key)) {
+        context.addIssue({
+          code: 'custom',
+          path: ['entries'],
+          message: 'Legacy history manifest entries must be unique by workflow and run'
+        })
+        break
+      }
+      keys.add(key)
+    }
+  })
+
+/**
  * Private, human-initiated bridge from a completed collection to the durable
  * analysis workflow. The server reads the collection, approved policy
  * lineage, and approved seed envelope; callers provide only the seed-review
@@ -5530,6 +5610,15 @@ export type ProductionAnalysisReviewStartRequest = z.infer<
   typeof productionAnalysisReviewStartRequestSchema
 >
 export type ProductionAnalysisWorkflowInput = z.infer<typeof productionAnalysisWorkflowInputSchema>
+export type ProductionAnalysisWorkflowHistoryMemo = z.infer<
+  typeof productionAnalysisWorkflowHistoryMemoSchema
+>
+export type ProductionAnalysisHistoryManifestEntry = z.infer<
+  typeof productionAnalysisHistoryManifestEntrySchema
+>
+export type ProductionAnalysisHistoryManifest = z.infer<
+  typeof productionAnalysisHistoryManifestSchema
+>
 export type ProductionAnalysisWorkflowExecutionMetadata = z.infer<
   typeof productionAnalysisWorkflowExecutionMetadataSchema
 >

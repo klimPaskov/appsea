@@ -3,6 +3,7 @@ import { complaintAnalysisSchema, productionResearchArtifactSchema } from '@apps
 import {
   prepareFixtureResearchWorkflowStart,
   prepareProductionAnalysisWorkflowStart,
+  startProductionAnalysisWorkflow,
   prepareProductionCollectionWorkflowStart,
   productionCollectionIdempotencyDigest,
   cancelProductionCollectionWorkflow
@@ -424,6 +425,35 @@ describe('production workflow client boundary', () => {
       actorType: 'service',
       actorId: 'appsea-worker'
     })
+  })
+
+  it('tags new analysis executions with only the reviewed history-safety memo', async () => {
+    const request = {
+      workspaceId: 'workspace-analysis-memo',
+      collectionRunId: analysisArtifact.runId,
+      analysisRunId: analysisArtifact.analysisRunId,
+      idempotencyKey: 'sentinel-analysis-memo-idempotency-key',
+      workflowVersion: 'production-analysis-v2' as const,
+      requestedAt: analysisAt,
+      seedReviewId: analysisArtifact.opportunitySeedReview.reviewId
+    }
+    const prepared = prepareProductionAnalysisWorkflowStart(request)
+    const query = vi.fn().mockResolvedValue({ inputHash: prepared.input.inputHash })
+    const start = vi.fn().mockResolvedValue({ query })
+    const client = { start, getHandle: vi.fn() }
+
+    await startProductionAnalysisWorkflow(client as never, request)
+
+    expect(start.mock.calls[0]?.[1]).toMatchObject({
+      workflowId: prepared.workflowId,
+      memo: {
+        schemaVersion: 'appsea-temporal-history-memo-v1',
+        workflowType: 'productionAnalysisWorkflow',
+        workflowVersion: 'production-analysis-v2',
+        historyClass: 'identifier-only'
+      }
+    })
+    expect(JSON.stringify(start.mock.calls[0]?.[1]?.memo)).not.toContain(request.idempotencyKey)
   })
 
   it('binds a user initiator into the identifier-only analysis envelope', () => {

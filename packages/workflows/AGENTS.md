@@ -13,3 +13,9 @@ Activities in `apps/worker` own external effects and PostgreSQL access. Map
 failures to fixed sanitized types and preserve the persistence safe point. A
 local Temporal proof never authorizes production deployment or implies TLS,
 authentication, HA, backup, or retention controls.
+
+Production-analysis v2 starts may carry only the reviewed, non-sensitive history
+memo from `packages/contracts`; never add evidence, source payloads, caller
+secrets, or arbitrary memo values. Legacy v1 histories are handled by the
+worker's visibility-only drain checker and an operator manifest, not by
+decoding or deleting history inside workflow code.

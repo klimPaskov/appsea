@@ -361,18 +361,20 @@ object reference exists. Receipt replay is idempotent and conflicts on reuse.
 
 ## 2026-08-03: Persist purge intent without authorizing deletion
 
-Workspace archival and destructive retention are separate. Migration `0073`
-lets an owner with recent password step-up record a strict database-ready purge
-intent with a readiness snapshot and identifier-only receipts. It remains
-`awaiting_external_controls` until cloud object-store, export-retention,
-backup-deletion, and provider approval are verified; it cannot authorize
-deletion. Repeating an active request is idempotent and cancellation is
+Migration `0073` records an owner-confirmed database-ready snapshot as an
+`awaiting_external_controls` intent with identifier-only receipts; it never
+authorizes cloud/object/export/backup deletion, and replay/cancellation remain
 explicit.
 
 ## 2026-08-03: Require conditional MFA for password-gated mutations
 
-Migration `0081` adds a session MFA timestamp; the step-up route consumes a
-TOTP/recovery code before password-gated high-risk mutations: agent tokens,
-account/session, membership/invitation, archival, purge intent, and redaction.
-Without MFA, password-only remains; provider identity, key rotation, and
-mutations without a password boundary stay separate.
+Migration `0081` adds a session MFA timestamp consumed by password-gated
+high-risk mutations; accounts without MFA retain password-only auth, while
+provider identity/key rotation and unrelated mutation contracts stay separate.
+
+## 2026-08-03: Drain legacy Temporal histories without decoding them
+
+New production-analysis v2 starts carry a strict identifier-only memo. A
+visibility-only checker and reviewed manifest classify legacy/unknown runs and
+fail closed before the v1 worker is removed; archive/deletion stays an approved
+deployment operation and never occurs in workflow code.

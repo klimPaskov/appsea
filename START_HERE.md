@@ -35,7 +35,8 @@ Open `http://localhost:3000` after the web server starts.
 - policy-bound production source collection leases with stable server-observed capture timestamps, post-fetch policy rechecks, and bounded lease retention
 - identifier-only production-analysis workflow v2; the worker reconstructs
   reviewed artifacts inside the activity so complaint text is absent from new
-  Temporal histories
+  Temporal histories, and a bounded visibility-only checker distinguishes new
+  v2 histories from legacy executions without decoding payloads
 - private workspace authentication with hashed/revocable sessions, authenticated active-session inventory and reauthenticated per-session revocation, password step-up for owner mutations, AppSea-owned TOTP MFA, conditional MFA step-up for password-gated high-risk mutations, and membership-checked research reads
 - private workspace cost summaries over the immutable ledger, grouped by currency and cost type with exact micro-unit totals and bounded periods
 - private visibility for settled source-quota requests that lack a completed production result, with maintenance-role-only resolution and no automatic re-fetch
@@ -65,8 +66,9 @@ Open `http://localhost:3000` after the web server starts.
   closure is implemented but intentionally retains shared workspace research)
 - production database provisioning and production Temporal infrastructure (TLS/authentication, HA, backups, retention, deployment, and alerts)
 - production encrypted object-storage deployment, lifecycle/versioning rules, destructive workspace/object/backup/export purge wiring (workspace archival is implemented separately)
-- legacy production-analysis v1 history drain/retention and other deployment
-  security controls
+- production deployment must still run the legacy production-analysis v1
+  history checker, complete approved archive/retention actions, and prove the
+  remaining Temporal security controls
 - autonomous production deployment
 - desktop release packaging
 - automatic activation of generated skills or connectors

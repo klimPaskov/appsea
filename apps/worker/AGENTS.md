@@ -28,3 +28,9 @@ Scheduler outcome telemetry must use the migration `0047` maintenance-role
 functions through the repository; persist only generated run IDs, fixed states
 or failure codes, durations, and bounded numeric counters. Never persist lease
 tokens, source content, credentials, database URLs, or raw exception messages.
+
+Use `workflow:analysis:history:check` before changing production Temporal worker
+versions. It may inspect visibility metadata only, must not fetch or print
+arbitrary workflow memos/history, and must fail closed for unresolved or
+truncated legacy executions. Temporal archive/deletion remains an explicitly
+approved deployment operation.

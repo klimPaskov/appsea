@@ -332,7 +332,9 @@ Implemented:
 - post-collection `productionAnalysisWorkflow` v2 and worker activity that pass
   only a hashed idempotency digest plus workspace/collection/analysis/seed
   identifiers to Temporal; the activity reconstructs the artifact from
-  workspace-bound rows before calling the idempotent analysis repository
+  workspace-bound rows before calling the idempotent analysis repository; new
+  starts carry a strict identifier-only history memo and the bounded
+  visibility-only legacy-history checker refuses an unreviewed worker drain
 - migration `0038_production_workflow_ingress_admission.sql` adds a database-
   serialized per-workspace start rate/concurrency gate before Temporal;
   replayed digests do not consume another slot, workflow initialization
@@ -374,8 +376,9 @@ Implemented:
   retry, and failure metadata without exposing raw idempotency keys or source
   payloads.
 
-Remaining production work: legacy v1 history drain/retention for the analysis
-workflow, deployed Temporal topology and namespace/task-queue authorization,
+Remaining production work: run the legacy v1 history checker against the
+authenticated deployment and complete its separately approved archive/
+retention operation; deployed Temporal topology and namespace/task-queue authorization,
 HA, provider object-store/backups retention and purge, deployment, metric
 aggregation/alerts, deployed
 snapshot scheduler ownership, and worker crash fault-injection proof. Migrations

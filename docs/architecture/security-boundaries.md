@@ -450,9 +450,12 @@ for that pre-context authorization lookup.
   workspace, collection, analysis, seed-review, digest, and timestamp
   identifiers. The worker reconstructs the reviewed artifact inside the
   persistence activity from workspace-bound rows, so complaint excerpts and
-  source payloads cannot enter Temporal history. The previous v1 input shape
-  is not accepted by new starts; deployments must drain or explicitly retain
-  legacy v1 histories before removing their workers.
+  source payloads cannot enter Temporal history. New starts carry only the
+  strict `appsea-temporal-history-memo-v1` version marker. The visibility-only
+  legacy-history checker classifies tagged v2, tagged v1, and unknown metadata
+  without fetching history; a reviewed manifest is required for visible legacy
+  executions before the v1 worker can be removed. Archive/deletion remains a
+  separately approved deployment operation.
 - Production analysis retention is anchored to the server-observed activity
   timestamp, not caller-supplied `requestedAt`; the persistence repository also
   rejects materially future timestamps. This prevents a caller from extending
