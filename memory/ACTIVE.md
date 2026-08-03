@@ -93,9 +93,10 @@ memory.
   image signing/registry, and source-policy activation remain blockers.
 - Desktop shell now has a Tauri build hook, committed Rust lockfile,
   deterministic Windows icon, minimal capability, restrictive local CSP, and
-  a Windows CI compile job. Bundling remains disabled; hosted-origin review,
-  updater trust, signing, notarization, installation tests, and desktop
-  security evidence remain open.
+  a Windows CI compile job. GitHub Actions run `30824653661` passed for
+  commit `98ef62e`; bundling remains disabled; hosted-origin review, updater
+  trust, signing, notarization, installation tests, and desktop security
+  evidence remain open.
 
 ## Next production tranche
 

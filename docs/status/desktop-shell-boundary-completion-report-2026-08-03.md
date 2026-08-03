@@ -20,8 +20,10 @@ claimed.
 - `pnpm --filter @appsea/desktop build` passed locally.
 - `pnpm desktop:check` passed locally on Windows after the Tauri build hook
   and icon were added.
-- The Windows CI job is the authoritative cross-platform proof for the pushed
-  change; it does not build or sign an installer.
+- GitHub Actions run `30824653661` passed for commit `98ef62e`, including the
+  Windows desktop boundary/Rust compile job, full verification, fresh
+  PostgreSQL and Temporal checks, Compose validation, and both container image
+  builds. It does not build or sign an installer.
 
 ## Explicit limits
 
