@@ -4,7 +4,7 @@
 -- material, and pending login challenges cannot authorize a workspace read.
 CREATE TABLE appsea.auth_mfa_totp (
   user_id text PRIMARY KEY REFERENCES appsea.users(user_id) ON DELETE CASCADE,
-  secret_ciphertext text NOT NULL CHECK (secret_ciphertext ~ '^[A-Za-z0-9_-]{1,256}$'),
+  secret_ciphertext text NOT NULL CHECK (secret_ciphertext ~ '^[A-Za-z0-9_-]{1,255}$'),
   secret_nonce text NOT NULL CHECK (secret_nonce ~ '^[A-Za-z0-9_-]{16,64}$'),
   secret_tag text NOT NULL CHECK (secret_tag ~ '^[A-Za-z0-9_-]{16,64}$'),
   status text NOT NULL CHECK (status IN ('pending', 'enabled')),
