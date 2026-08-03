@@ -48,7 +48,8 @@ END
 $$;
 
 REVOKE ALL ON appsea.maintenance_scheduler_leases FROM PUBLIC, appsea_service, appsea_maintenance;
-REVOKE appsea_maintenance FROM appsea_service;
+-- Role membership is provisioned outside migrations; the invariant check above
+-- rejects any pre-existing membership because the migration role cannot revoke it.
 GRANT USAGE ON SCHEMA appsea TO appsea_maintenance;
 
 CREATE OR REPLACE FUNCTION appsea.acquire_maintenance_scheduler_lease(
