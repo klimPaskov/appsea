@@ -76,16 +76,6 @@ memory.
 
 - Prior tranches passed the aggregate repository, fresh PostgreSQL, and fresh
   Temporal CI gates; local Docker Desktop remains unavailable for reruns.
-- CI now runs full `pnpm verify` (fixture/sample/build/smoke/repository), with
-  `contents: read`, stale-run cancellation, and 30-minute job bounds. GitHub
-  run `30810550754` is green for `54a045e`, including fresh PostgreSQL/Temporal;
-  only a non-failing Node.js 20 action-runtime deprecation was annotated.
-- The MFA key-rotation tranche passes contracts (94), database (143), and
-  worker (118) focused tests plus affected typechecks. Migration `0086` adds
-  ciphertext key versions and `0087` records rewrap events; the status and
-  rewrap commands expose only aggregate counts. GitHub Actions run
-  `30816541495` is green for `8b9b19a`, including fresh PostgreSQL and Temporal
-  proof.
 - Dependency security hardening updates Next.js to `16.2.12`, locks patched
   PostCSS/`fast-uri`/sharp transitive versions, and adds `pnpm security:audit`
   to CI; the production audit currently reports zero vulnerabilities. Turbo
@@ -93,6 +83,14 @@ memory.
   not race Next route-type generation against build cleanup. GitHub Actions
   run `30819616149` is green for commit `1cc781c`, including the audit, full
   verification, fresh PostgreSQL, and fresh Temporal checks.
+- Production runtime packaging now has `Dockerfile.web` (Next standalone)
+  and `Dockerfile.worker` (durable worker/preflight/migration/maintenance)
+  images plus `infra/production/compose.yaml`. Compose gates long-lived
+  services on the one-shot preflight, keeps migrations explicit, defaults web
+  binding to loopback, and uses non-root/read-only/capability-dropped
+  services. CI must build both images before this tranche is considered
+  validated; external provider provisioning, image signing/registry, and
+  source-policy activation remain blockers.
 
 ## Next production tranche
 

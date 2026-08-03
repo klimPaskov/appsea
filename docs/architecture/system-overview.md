@@ -243,3 +243,22 @@ database provisioning, encrypted cloud object storage and backup purge,
 deployed recomputation/cost alert endpoint operation and threshold ownership,
 and operational controls. The local
 fixture workflow is not a production deployment or market-research claim.
+
+## Production runtime packaging
+
+`Dockerfile.web` builds the Next.js application with standalone output and
+copies only the traced server/static runtime into a non-root image. It serves
+the existing liveness/readiness endpoints on port `3000` and does not run
+migrations. `Dockerfile.worker` packages the durable worker's reviewed
+TypeScript entry points and workspace dependencies under the same non-root
+runtime boundary; its default command is the Temporal worker, while the
+production Compose profile uses the same image for preflight, migration, and
+the singleton maintenance loop.
+
+`infra/production/compose.yaml` gates web, worker, and maintenance startup on
+the one-shot `pnpm production:preflight` service, keeps the migration service
+behind an explicit `migrate` profile, defaults web binding to loopback, and
+uses read-only filesystems, dropped capabilities, and `no-new-privileges`.
+The profile connects to externally operated PostgreSQL, Temporal, object
+storage, identity/delivery, and alert providers; it is a packaging and process
+topology contract, not provider provisioning or source activation proof.

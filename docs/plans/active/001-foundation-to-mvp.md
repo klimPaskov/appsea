@@ -599,3 +599,25 @@ recovery proof remain open.
 ### 7. Desktop release
 
 After web stability, complete Tauri packaging, signing, updates, platform tests, and release documentation for Windows and macOS.
+
+### 8. Production runtime packaging
+
+Status: repository container packaging is implemented and CI-built; provider
+provisioning and operated deployment remain open.
+
+Implemented:
+
+- `Dockerfile.web` builds the Next.js standalone server and serves the existing
+  health probes from a non-root runtime image.
+- `Dockerfile.worker` packages the durable worker and reviewed preflight,
+  migration, and maintenance entry points under a non-root runtime boundary.
+- `infra/production/compose.yaml` gates web, worker, and maintenance on the
+  one-shot production preflight, keeps migrations behind an explicit profile,
+  binds web to loopback by default, and drops capabilities on long-lived
+  services.
+- GitHub CI validates the Compose model and builds both images.
+
+Remaining: push signed images through an approved registry, provision the
+role-separated external services and secrets, run deployment/restore/crash
+drills, and record provider/incident/source-policy evidence. The package does
+not activate a source or perform a production migration automatically.

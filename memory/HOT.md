@@ -13,7 +13,7 @@
   Owner purge requests remain `awaiting_external_controls`; no destructive
   operation is wired. Deployment ownership/alerting and cloud/backup remain
   open.
-- Migrations `0083`-`0087` add the archived-owner metadata-only purge manifest, PostgreSQL 18 archival/read repairs, versioned MFA ciphertext, and rewrap events; the manifest is private/idempotent and never authorizes deletion.
-- Re-collection is explicit: matching tombstone, `limit: 1`, exact lookup,
-  immutable lineage, no automatic retry/refetch.
+- Purge manifests and re-collection are explicit, private, idempotent, and
+  never authorize deletion or automatic refetch.
 - Web/worker share fail-closed Temporal config; production requires TLS/API-key/namespace/CA. Maintenance uses `0046` leases/`0052` fencing; direct source commands use `0051`; deployment alerting, role rotation, recovery, and proof remain open.
+- Production runtime packaging now includes non-root web/worker images and a preflight-gated Compose topology; provider provisioning, signed registry images, and deployment drills remain open.

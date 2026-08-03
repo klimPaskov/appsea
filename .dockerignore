@@ -1,0 +1,14 @@
+.git
+.github
+.next
+.pnpm-store
+.turbo
+artifacts
+memory/index.sqlite3
+node_modules
+**/node_modules
+*.log
+.env
+.env.*
+!.env.example
+infra/production/production.env
