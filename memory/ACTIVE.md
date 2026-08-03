@@ -86,6 +86,9 @@ memory.
   rewrap commands expose only aggregate counts. GitHub Actions run
   `30816541495` is green for `8b9b19a`, including fresh PostgreSQL and Temporal
   proof.
+- Dependency security hardening updates Next.js to `16.2.12`, locks patched
+  PostCSS/`fast-uri`/sharp transitive versions, and adds `pnpm security:audit`
+  to CI; the production audit currently reports zero vulnerabilities.
 
 ## Next production tranche
 

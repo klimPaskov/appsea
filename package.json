@@ -51,6 +51,7 @@
     "worker:workflow:analysis:history:check": "pnpm --filter @appsea/worker workflow:analysis:history:check",
     "plan:sample": "pnpm --filter @appsea/worker plan:sample",
     "analysis:sample": "pnpm --filter @appsea/worker analysis:sample",
+    "security:audit": "pnpm audit --prod --audit-level=high",
     "ui:references": "node scripts/run_python.mjs scripts/render_references.py",
     "manifest": "node scripts/run_python.mjs scripts/generate_manifest.py",
     "setup": "pnpm agents:sync && pnpm memory:check && pnpm docs:check",

@@ -3,6 +3,7 @@
 For repository-wide work:
 
 ```bash
+pnpm security:audit
 pnpm agents:sync
 pnpm format:check
 pnpm lint
