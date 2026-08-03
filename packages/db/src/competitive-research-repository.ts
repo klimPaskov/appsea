@@ -66,9 +66,10 @@ export class CompetitiveResearchObservationConflictError extends Error {
 }
 
 export class CompetitiveResearchObservationPolicyError extends Error {
-  constructor() {
+  constructor(cause?: unknown) {
     super('Competitive research observation is not permitted by the source policy')
     this.name = 'CompetitiveResearchObservationPolicyError'
+    if (cause !== undefined) this.cause = cause
   }
 }
 
@@ -402,7 +403,7 @@ export class PostgresCompetitiveResearchRepository {
       )
     } catch (error) {
       if (isUniqueViolation(error)) throw new CompetitiveResearchObservationConflictError()
-      if (isPolicyViolation(error)) throw new CompetitiveResearchObservationPolicyError()
+      if (isPolicyViolation(error)) throw new CompetitiveResearchObservationPolicyError(error)
       throw error
     }
   }

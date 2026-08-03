@@ -85,6 +85,12 @@ const recomputeColumns = `
   attempt_count, workflow_id, failure_code, failure_summary, next_attempt_at,
   started_at, finished_at, updated_at`
 
+const qualifiedRecomputeColumns = `
+  job.workspace_id, job.recompute_id, job.opportunity_id, job.collection_run_id, job.seed_review_id,
+  job.source_tombstone_id, job.correction_id, job.analysis_run_id, job.idempotency_key,
+  job.requested_at, job.state, job.attempt_count, job.workflow_id, job.failure_code,
+  job.failure_summary, job.next_attempt_at, job.started_at, job.finished_at, job.updated_at`
+
 function iso(value: Date | string | null): string | null {
   if (value === null) return null
   return value instanceof Date ? value.toISOString() : new Date(value).toISOString()
@@ -307,7 +313,7 @@ export class PostgresProductionAnalysisRecomputeRepository {
            FROM candidate
           WHERE job.workspace_id = candidate.workspace_id
             AND job.recompute_id = candidate.recompute_id
-         RETURNING ${recomputeColumns}`,
+         RETURNING ${qualifiedRecomputeColumns}`,
         [
           parsedWorkspaceId,
           productionAnalysisRecomputeLimits.staleClaimSeconds,

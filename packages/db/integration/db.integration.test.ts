@@ -502,7 +502,8 @@ describe.sequential('PostgreSQL fixture persistence lifecycle', () => {
       '0074',
       '0075',
       '0076',
-      '0077'
+      '0077',
+      '0078'
     ])
     expect(secondMigrationResult.applied).toEqual([])
     expect(secondMigrationResult.alreadyApplied).toEqual([
@@ -582,7 +583,8 @@ describe.sequential('PostgreSQL fixture persistence lifecycle', () => {
       '0074',
       '0075',
       '0076',
-      '0077'
+      '0077',
+      '0078'
     ])
   })
 
@@ -3255,7 +3257,7 @@ describe.sequential('PostgreSQL fixture persistence lifecycle', () => {
       { readOnly: true }
     )
     expect(runCount.rows[0]?.count).toBe('0')
-    expect(await workflowRepository.read(input.workspaceId, execution.workflowId)).toBeNull()
+    expect(await workflowRepository.read('workspace-workflow-a', execution.workflowId)).toBeNull()
   })
 
   it('returns one accepted result for concurrent identical starts', async () => {

@@ -90,7 +90,8 @@ describe('database foundation', () => {
       '0074',
       '0075',
       '0076',
-      '0077'
+      '0077',
+      '0078'
     ])
     expect(migrations[0]?.checksum).toMatch(/^[a-f0-9]{64}$/)
     expect(migrations[0]?.sql).toContain('CREATE TABLE appsea.evidence_records')
@@ -142,6 +143,12 @@ describe('database foundation', () => {
     )
     expect(sourceQuotaQualificationMigration?.sql).toContain(
       'ON CONFLICT ON CONSTRAINT source_quota_reconciliation_cases_pkey'
+    )
+    const sourceQuotaResolutionQualificationMigration = migrations.find(
+      (migration) => migration.version === '0078'
+    )
+    expect(sourceQuotaResolutionQualificationMigration?.sql).toContain(
+      'stored_case.workspace_id = p_workspace_id'
     )
     const authMigration = migrations.find((migration) => migration.version === '0008')
     const privacyMigration = migrations.find((migration) => migration.version === '0009')
