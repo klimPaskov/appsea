@@ -571,6 +571,12 @@ describe('database foundation', () => {
     expect(maintenanceSchedulerLeaseMigration?.sql).toContain(
       'REVOKE ALL ON appsea.maintenance_scheduler_leases'
     )
+    expect(maintenanceSchedulerLeaseMigration?.sql).toContain(
+      'REVOKE appsea_maintenance FROM appsea_service'
+    )
+    expect(maintenanceSchedulerLeaseMigration?.sql).not.toContain(
+      'REVOKE appsea_maintenance FROM PUBLIC'
+    )
     expect(maintenanceSchedulerRunMigration?.sql).toContain(
       'CREATE TABLE appsea.maintenance_scheduler_runs'
     )

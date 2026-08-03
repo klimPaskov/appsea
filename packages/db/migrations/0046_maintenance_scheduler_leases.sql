@@ -48,7 +48,7 @@ END
 $$;
 
 REVOKE ALL ON appsea.maintenance_scheduler_leases FROM PUBLIC, appsea_service, appsea_maintenance;
-REVOKE appsea_maintenance FROM PUBLIC, appsea_service;
+REVOKE appsea_maintenance FROM appsea_service;
 GRANT USAGE ON SCHEMA appsea TO appsea_maintenance;
 
 CREATE OR REPLACE FUNCTION appsea.acquire_maintenance_scheduler_lease(
