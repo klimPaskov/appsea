@@ -44,6 +44,11 @@ export default async function WorkspacePage() {
           <Link className="quiet-button" href={`/workspace/${workspace.workspaceId}/campaigns`}>
             Campaigns
           </Link>
+          {!workspace.fixtureOnly && workspace.visibility === 'private' ? (
+            <Link className="quiet-button" href={`/workspace/${workspace.workspaceId}/imports`}>
+              Owner imports
+            </Link>
+          ) : null}
           <Link className="quiet-button" href={`/workspace/${workspace.workspaceId}/sources`}>
             Sources
           </Link>

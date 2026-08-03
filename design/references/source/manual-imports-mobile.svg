@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="390" height="844" viewBox="0 0 390 844">
+<rect width="390" height="844" fill="#f7f6f2" />
+<line x1="0" y1="66" x2="390" y2="66" stroke="#e8e6df" />
+<rect x="20" y="19" width="28" height="28" rx="8" fill="#171a1f" />
+<text x="34" y="37.5" font-family="Arial, Helvetica, sans-serif" font-size="12" font-weight="700" fill="#ffffff" text-anchor="middle">A</text>
+<text x="58" y="38" font-family="Arial, Helvetica, sans-serif" font-size="15" font-weight="700" fill="#171a1f">AppSea</text>
+<text x="370" y="37" font-family="Arial, Helvetica, sans-serif" font-size="12" font-weight="600" fill="#73767c" text-anchor="end">Imports</text>
+<text x="20" y="112" font-family="Arial, Helvetica, sans-serif" font-size="10" font-weight="700" fill="#73767c" letter-spacing="1">PRIVATE WORKSPACE</text>
+<text x="20" y="158" font-family="Arial, Helvetica, sans-serif" font-size="42" font-weight="650" fill="#171a1f" letter-spacing="-2">Owner imports</text>
+<text x="20" y="194" font-family="Arial, Helvetica, sans-serif" font-size="14" fill="#73767c">Authorized evidence, kept private.</text>
+<text x="20" y="236" font-family="Arial, Helvetica, sans-serif" font-size="10" font-weight="700" fill="#73767c" letter-spacing="1">COVERAGE BOUNDARY</text>
+<line x1="20" y1="254" x2="370" y2="254" stroke="#171a1f" />
+<text x="20" y="284" font-family="Arial, Helvetica, sans-serif" font-size="12" fill="#41444a">No public coverage claim.</text>
+<text x="20" y="306" font-family="Arial, Helvetica, sans-serif" font-size="12" fill="#73767c">2 MiB / 5,000 rows Â· URLs never fetched</text>
+<rect x="20" y="344" width="350" height="250" rx="6" fill="#fcfbf8" stroke="#d9d8d2" />
+<text x="38" y="378" font-family="Arial, Helvetica, sans-serif" font-size="10" font-weight="700" fill="#73767c" letter-spacing="1">STAGE EXPORT</text>
+<text x="38" y="414" font-family="Arial, Helvetica, sans-serif" font-size="12" font-weight="700" fill="#73767c">Campaign</text>
+<rect x="38" y="426" width="314" height="38" rx="5" fill="#f7f6f2" stroke="#d9d8d2" />
+<text x="50" y="450" font-family="Arial, Helvetica, sans-serif" font-size="12" fill="#41444a">Choose campaign</text>
+<text x="38" y="494" font-family="Arial, Helvetica, sans-serif" font-size="12" font-weight="700" fill="#73767c">Export file</text>
+<rect x="38" y="506" width="314" height="38" rx="5" fill="#f7f6f2" stroke="#d9d8d2" />
+<text x="50" y="530" font-family="Arial, Helvetica, sans-serif" font-size="12" fill="#73767c">Choose CSV or JSON</text>
+<text x="38" y="570" font-family="Arial, Helvetica, sans-serif" font-size="12" fill="#41444a">[ ] I am authorized to analyze this export.</text>
+<text x="20" y="646" font-family="Arial, Helvetica, sans-serif" font-size="10" font-weight="700" fill="#73767c" letter-spacing="1">IMPORT BATCHES</text>
+<line x1="20" y1="664" x2="370" y2="664" stroke="#171a1f" />
+<text x="20" y="700" font-family="Arial, Helvetica, sans-serif" font-size="18" font-weight="650" fill="#171a1f">authorized-export.csv</text>
+<text x="20" y="724" font-family="Arial, Helvetica, sans-serif" font-size="11" fill="#73767c">42 records Â· Collected</text>
+<text x="20" y="756" font-family="Arial, Helvetica, sans-serif" font-size="12" font-weight="650" fill="#171a1f">Inspect collection â†’</text>
+</svg>

@@ -49,6 +49,9 @@ import {
   PostgresSourceCollectionLeaseRepository,
   PostgresSourceQuotaRepository,
   PostgresSourceSnapshotReconciliationRepository,
+  PostgresManualImportRepository,
+  consumeManualImportBatchInTransaction,
+  ManualImportPermissionError,
   ProductionWorkflowConcurrencyLimitError,
   ProductionWorkflowRateLimitError,
   PostgresWorkflowJobRepository,
@@ -56,6 +59,7 @@ import {
   WorkflowJobConflictError,
   ProductionWorkflowAdmissionConflictError,
   withAuthenticatedWorkspaceTransaction,
+  withServiceWorkspaceTransaction,
   withWorkspaceTransaction
 } from '../src/index'
 
@@ -4753,6 +4757,284 @@ describe.sequential('PostgreSQL fixture persistence lifecycle', () => {
           'DELETE FROM appsea.maintenance_scheduler_leases WHERE scheduler_name = $1',
           ['appsea-source-quota-alerts-v1']
         )
+      })
+    }
+  })
+
+  it('persists, consumes, and deletes owner-authorized manual imports with RLS and tombstones', async () => {
+    const workspaceId = 'workspace-manual-import'
+    const userId = 'user-manual-import-owner'
+    const viewerId = 'user-manual-import-viewer'
+    const campaignId = 'campaign-manual-import'
+    const batchId = 'batch:manual-import'
+    const runId = 'run:manual-import'
+    const record = {
+      sourceRecordId: 'ticket-1',
+      canonicalLocator: 'https://example.test/tickets/1',
+      capturedAt: fixedAt,
+      publishedAt: null,
+      query: 'workflow problem',
+      product: 'Inbox Relay',
+      company: 'Example Systems',
+      feature: 'routing',
+      category: 'missing_alert',
+      text: 'The routing workflow loses the alert when ownership changes.',
+      language: 'en'
+    } as const
+    const configuration = {
+      schemaVersion: 'campaign-v1',
+      goal: 'Review owner-authorized workflow evidence.',
+      query: 'workflow problem',
+      seeds: ['workflow problem'],
+      sourceIds: ['manual-owner-import'],
+      languages: ['en'],
+      geographies: [],
+      dateRange: { from: null, to: null },
+      exclusions: [],
+      maxEvidenceCount: 10,
+      refreshPolicy: 'manual',
+      sensitiveTopicPolicy: 'review',
+      requestedDisplayMode: 'excerpt'
+    }
+    const budget = {
+      currency: 'USD',
+      maxSourceItems: 10,
+      maxCostMicros: 0,
+      maxActivityAttempts: 3
+    }
+
+    await withOwnerClient(async (client) => {
+      await client.query('BEGIN')
+      try {
+        await client.query(
+          `INSERT INTO appsea.workspaces
+             (workspace_id, slug, display_name, visibility, fixture_only, status, created_at, updated_at)
+           VALUES ($1, $1, 'Manual import workspace', 'private', false, 'active', $2, $2)`,
+          [workspaceId, fixedAt]
+        )
+        await client.query(
+          `INSERT INTO appsea.users
+             (user_id, email, display_name, password_hash, created_at, updated_at)
+           VALUES ($1, 'manual-import-owner@example.test', 'Manual Import Owner', repeat('x', 64), $2, $2)`,
+          [userId, fixedAt]
+        )
+        await client.query(
+          `INSERT INTO appsea.users
+             (user_id, email, display_name, password_hash, created_at, updated_at)
+           VALUES ($1, 'manual-import-viewer@example.test', 'Manual Import Viewer', repeat('x', 64), $2, $2)`,
+          [viewerId, fixedAt]
+        )
+        await client.query(
+          `INSERT INTO appsea.workspace_memberships
+             (workspace_id, user_id, role, created_at, updated_at)
+           VALUES ($1, $2, 'owner', $3, $3),
+                  ($1, $4, 'viewer', $3, $3)`,
+          [workspaceId, userId, fixedAt, viewerId]
+        )
+        await client.query(
+          `INSERT INTO appsea.research_campaigns
+             (workspace_id, campaign_id, name, purpose, state, configuration, budget, synthetic,
+              created_at, updated_at)
+           VALUES ($1, $2, 'Manual import campaign', 'opportunity-research', 'draft', $3::jsonb,
+                   $4::jsonb, false, $5, $5)`,
+          [workspaceId, campaignId, JSON.stringify(configuration), JSON.stringify(budget), fixedAt]
+        )
+        await client.query('COMMIT')
+      } catch (error) {
+        await client.query('ROLLBACK')
+        throw error
+      }
+    })
+
+    const manualImports = new PostgresManualImportRepository(servicePool)
+    try {
+      const created = await manualImports.createForUser(userId, {
+        workspaceId,
+        batchId,
+        campaignId,
+        sourceId: 'manual-owner-import',
+        policyVersion: 'manual-owner-import-v1',
+        purpose: 'opportunity-research',
+        requestedDisplayMode: 'excerpt',
+        idempotencyDigest: 'a'.repeat(64),
+        inputHash: 'b'.repeat(64),
+        format: 'json',
+        filename: 'authorized-export.json',
+        records: [record],
+        warnings: ['Owner-authorized tenant-private import.'],
+        authorizationAttested: true,
+        attestedBy: userId,
+        attestedAt: fixedAt,
+        createdAt: fixedAt
+      })
+      expect(created).toMatchObject({
+        batchId,
+        campaignId,
+        state: 'staged',
+        recordCount: 1,
+        warningCount: 1,
+        runId: null
+      })
+
+      await expect(
+        manualImports.createForUser(viewerId, {
+          workspaceId,
+          batchId: 'batch:manual-import-viewer',
+          campaignId,
+          sourceId: 'manual-owner-import',
+          policyVersion: 'manual-owner-import-v1',
+          purpose: 'opportunity-research',
+          requestedDisplayMode: 'excerpt',
+          idempotencyDigest: 'c'.repeat(64),
+          inputHash: 'd'.repeat(64),
+          format: 'json',
+          filename: 'viewer-export.json',
+          records: [record],
+          warnings: [],
+          authorizationAttested: true,
+          attestedBy: viewerId,
+          attestedAt: fixedAt,
+          createdAt: fixedAt
+        })
+      ).rejects.toBeInstanceOf(ManualImportPermissionError)
+
+      await expect(
+        manualImports.createForUser(userId, {
+          workspaceId,
+          batchId,
+          campaignId,
+          sourceId: 'manual-owner-import',
+          policyVersion: 'manual-owner-import-v1',
+          purpose: 'opportunity-research',
+          requestedDisplayMode: 'excerpt',
+          idempotencyDigest: 'a'.repeat(64),
+          inputHash: 'b'.repeat(64),
+          format: 'json',
+          filename: 'authorized-export.json',
+          records: [record],
+          warnings: ['Owner-authorized tenant-private import.'],
+          authorizationAttested: true,
+          attestedBy: userId,
+          attestedAt: fixedAt,
+          createdAt: fixedAt
+        })
+      ).resolves.toMatchObject({ batchId, state: 'staged' })
+
+      await expect(
+        manualImports.readForCollection({
+          workspaceId,
+          batchId,
+          policyVersion: 'manual-owner-import-v1',
+          runId,
+          limit: 10
+        })
+      ).resolves.toEqual({ records: [record], warnings: [] })
+
+      await withServiceWorkspaceTransaction(servicePool, workspaceId, (client) =>
+        consumeManualImportBatchInTransaction(client, {
+          workspaceId,
+          batchId,
+          campaignId,
+          policyVersion: 'manual-owner-import-v1',
+          runId,
+          observedAt: laterAt
+        })
+      )
+      await expect(manualImports.readForUser(userId, workspaceId, batchId)).resolves.toMatchObject({
+        state: 'consumed',
+        runId
+      })
+      await expect(
+        manualImports.readForCollection({
+          workspaceId,
+          batchId,
+          policyVersion: 'manual-owner-import-v1',
+          runId,
+          limit: 10
+        })
+      ).rejects.toMatchObject({ name: 'ManualImportUnavailableError' })
+
+      await expect(
+        manualImports.requestDeletionForUser(userId, workspaceId, batchId, latestAt)
+      ).resolves.toEqual({
+        batchId,
+        state: 'deleted',
+        tombstoneCount: 1,
+        replayed: false
+      })
+      await expect(
+        manualImports.requestDeletionForUser(userId, workspaceId, batchId, latestAt)
+      ).resolves.toEqual({
+        batchId,
+        state: 'deleted',
+        tombstoneCount: 1,
+        replayed: true
+      })
+
+      const deletionState = await withWorkspaceTransaction(
+        servicePool,
+        workspaceId,
+        async (client) => {
+          const result = await client.query<{
+            batch_state: string
+            payload_present: boolean
+            tombstones: string
+          }>(
+            `SELECT batch.state AS batch_state,
+                    record.record_payload IS NOT NULL AS payload_present,
+                    (SELECT count(*)::text FROM appsea.deletion_tombstones
+                      WHERE workspace_id = $1 AND source_id = 'manual-owner-import'
+                        AND source_record_id = $2) AS tombstones
+               FROM appsea.manual_import_batches batch
+               JOIN appsea.manual_import_records record
+                 ON record.workspace_id = batch.workspace_id AND record.batch_id = batch.batch_id
+              WHERE batch.workspace_id = $1 AND batch.batch_id = $3`,
+            [workspaceId, `manual:${batchId}:ticket-1`, batchId]
+          )
+          return result.rows[0]
+        },
+        { readOnly: true }
+      )
+      expect(deletionState).toEqual({
+        batch_state: 'deleted',
+        payload_present: false,
+        tombstones: '1'
+      })
+    } finally {
+      await withOwnerClient(async (client) => {
+        await client.query('BEGIN')
+        try {
+          await client.query('DELETE FROM appsea.deletion_tombstones WHERE workspace_id = $1', [
+            workspaceId
+          ])
+          await client.query('DELETE FROM appsea.manual_import_records WHERE workspace_id = $1', [
+            workspaceId
+          ])
+          await client.query('DELETE FROM appsea.manual_import_batches WHERE workspace_id = $1', [
+            workspaceId
+          ])
+          await client.query('DELETE FROM appsea.audit_events WHERE workspace_id = $1', [
+            workspaceId
+          ])
+          await client.query('DELETE FROM appsea.outbox_events WHERE workspace_id = $1', [
+            workspaceId
+          ])
+          await client.query('DELETE FROM appsea.research_campaigns WHERE workspace_id = $1', [
+            workspaceId
+          ])
+          await client.query('DELETE FROM appsea.workspace_memberships WHERE workspace_id = $1', [
+            workspaceId
+          ])
+          await client.query('DELETE FROM appsea.workspaces WHERE workspace_id = $1', [workspaceId])
+          await client.query('DELETE FROM appsea.users WHERE user_id IN ($1, $2)', [
+            userId,
+            viewerId
+          ])
+          await client.query('COMMIT')
+        } catch (error) {
+          await client.query('ROLLBACK')
+          throw error
+        }
       })
     }
   })

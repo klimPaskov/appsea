@@ -154,6 +154,12 @@ market coverage, does not fetch imported URLs, and does not activate CFPB,
 Stack Exchange, or any other third-party source. See
 [`manual-import-source-policy.md`](../../product/manual-import-source-policy.md)
 and [`manual-import.md`](../../runbooks/manual-import.md).
+The private `/workspace/:workspaceId/imports` screen provides the owner upload,
+metadata-only batch history, collection follow-up, and deletion action while
+leaving the public leaderboard unchanged.
+The PostgreSQL integration suite also exercises the staged/replayed/consumed/
+deleted lifecycle, forced-RLS owner boundary, payload clearing, and tombstone
+propagation; local execution remains Docker-blocked.
 
 Remaining deployment work and the non-fixture object-store integration are
 tracked in `docs/status/known-gaps.md` and are not part of the completed

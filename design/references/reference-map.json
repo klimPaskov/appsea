@@ -83,6 +83,13 @@
       "purpose": "Private member access and non-destructive purge handoff",
       "desktop": "source/workspace-members.svg",
       "mobile": "source/workspace-members-mobile.svg"
+    },
+    {
+      "id": "manual-imports",
+      "route": "/workspace/:workspaceId/imports",
+      "purpose": "Private owner-authorized import staging and batch deletion",
+      "desktop": "source/manual-imports.svg",
+      "mobile": "source/manual-imports-mobile.svg"
     }
   ]
 }

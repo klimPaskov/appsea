@@ -1,6 +1,6 @@
 # Manual import runbook
 
-Use the private workspace API when a workspace owner has an export they are authorized to analyze. The endpoint stages normalized rows and starts the durable production collection workflow in one idempotent request.
+Use the private workspace screen at `/workspace/{workspaceId}/imports`, or the API below, when a workspace owner has an export they are authorized to analyze. The screen stages normalized rows and starts the durable production collection workflow in one idempotent request; it shows batch metadata only and links to the private collection inspection page after a run is consumed.
 
 `POST /api/workspaces/{workspaceId}/imports`
 

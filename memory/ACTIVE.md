@@ -74,11 +74,14 @@ memory.
 The current tranche adds `packages/connectors/src/manual-import.ts`,
 `packages/db/src/manual-import-repository.ts`, migration `0089`, private
 `/api/workspaces/:workspaceId/imports` routes, and the manual source policy and
-runbook. Uploads are bounded at 2 MiB/5,000 rows, normalized and PII-scrubbed;
+runbook plus the private `/workspace/:workspaceId/imports` owner screen. Uploads
+are bounded at 2 MiB/5,000 rows, normalized and PII-scrubbed;
 Temporal receives only a batch identifier. Batch consumption is committed with
 collection persistence, and owner deletion clears staged payloads and emits
 tombstones for existing downstream deletion propagation. URL import is
 intentionally deferred to avoid SSRF and unreviewed third-party acquisition.
+Integration coverage now exercises owner staging/replay, service consumption,
+deletion payload clearing, RLS, and tombstones; local Docker is unavailable.
 
 ## Validated commands
 

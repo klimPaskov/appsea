@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1440" height="1000" viewBox="0 0 1440 1000">
+<rect width="1440" height="1000" fill="#f7f6f2" />
+<line x1="0" y1="76" x2="1440" y2="76" stroke="#e8e6df" stroke-width="1" />
+<rect x="76" y="24" width="28" height="28" rx="8" fill="#171a1f" />
+<text x="90" y="42.5" font-family="Arial, Helvetica, sans-serif" font-size="12" font-weight="700" fill="#ffffff" text-anchor="middle">A</text>
+<text x="114" y="43.5" font-family="Arial, Helvetica, sans-serif" font-size="15" font-weight="700" fill="#171a1f">AppSea</text>
+<text x="1364" y="43" font-family="Arial, Helvetica, sans-serif" font-size="13" font-weight="600" fill="#73767c" text-anchor="end">Owner imports</text>
+<text x="220" y="132" font-family="Arial, Helvetica, sans-serif" font-size="10" font-weight="700" fill="#73767c" letter-spacing="1.1">PRIVATE RESEARCH WORKSPACE</text>
+<text x="220" y="186" font-family="Arial, Helvetica, sans-serif" font-size="56" font-weight="650" fill="#171a1f" letter-spacing="-2.5">Owner imports</text>
+<text x="220" y="232" font-family="Arial, Helvetica, sans-serif" font-size="16" fill="#73767c">Bring an export you are authorized to analyze into a reviewed campaign.</text>
+<text x="220" y="257" font-family="Arial, Helvetica, sans-serif" font-size="16" fill="#73767c">Raw bytes are discarded; private coverage remains visibly bounded.</text>
+<text x="220" y="306" font-family="Arial, Helvetica, sans-serif" font-size="10" font-weight="700" fill="#73767c" letter-spacing="1.1">COVERAGE BOUNDARY</text>
+<line x1="220" y1="326" x2="1220" y2="326" stroke="#171a1f" stroke-width="1" />
+<text x="220" y="358" font-family="Arial, Helvetica, sans-serif" font-size="13" fill="#41444a">Tenant-private evidence only; no public market coverage or prevalence claim.</text>
+<text x="220" y="384" font-family="Arial, Helvetica, sans-serif" font-size="13" fill="#73767c">2 MiB / 5,000 records Â· normalized and PII-scrubbed Â· URLs never fetched</text>
+<rect x="220" y="432" width="1000" height="260" rx="6" fill="#fcfbf8" stroke="#d9d8d2" />
+<text x="244" y="466" font-family="Arial, Helvetica, sans-serif" font-size="10" font-weight="700" fill="#73767c" letter-spacing="1">STAGE AN AUTHORIZED EXPORT</text>
+<text x="244" y="504" font-family="Arial, Helvetica, sans-serif" font-size="12" font-weight="700" fill="#73767c">Campaign</text>
+<rect x="244" y="516" width="450" height="38" rx="5" fill="#f7f6f2" stroke="#d9d8d2" />
+<text x="258" y="540" font-family="Arial, Helvetica, sans-serif" font-size="12" fill="#41444a">Billing workflow research</text>
+<text x="720" y="504" font-family="Arial, Helvetica, sans-serif" font-size="12" font-weight="700" fill="#73767c">Export file</text>
+<rect x="720" y="516" width="450" height="38" rx="5" fill="#f7f6f2" stroke="#d9d8d2" />
+<text x="734" y="540" font-family="Arial, Helvetica, sans-serif" font-size="12" fill="#73767c">Choose CSV or JSON</text>
+<rect x="244" y="579" width="16" height="16" fill="#fcfbf8" stroke="#315ee8" />
+<text x="272" y="592" font-family="Arial, Helvetica, sans-serif" font-size="13" fill="#41444a">I am authorized to let this workspace analyze this export.</text>
+<rect x="244" y="620" width="178" height="36" rx="5" fill="#171a1f" />
+<text x="333" y="643" font-family="Arial, Helvetica, sans-serif" font-size="11" font-weight="650" fill="#ffffff" text-anchor="middle">Stage private import</text>
+<text x="220" y="748" font-family="Arial, Helvetica, sans-serif" font-size="10" font-weight="700" fill="#73767c" letter-spacing="1.1">IMPORT BATCHES</text>
+<line x1="220" y1="768" x2="1220" y2="768" stroke="#171a1f" />
+<text x="220" y="806" font-family="Arial, Helvetica, sans-serif" font-size="20" font-weight="650" fill="#171a1f">authorized-export.csv</text>
+<text x="220" y="832" font-family="Arial, Helvetica, sans-serif" font-size="12" fill="#73767c">batch:manual:one Â· CSV Â· 42 records Â· Collected</text>
+<text x="1220" y="806" font-family="Arial, Helvetica, sans-serif" font-size="11" font-weight="650" fill="#73767c" text-anchor="end">INSPECT COLLECTION</text>
+</svg>
