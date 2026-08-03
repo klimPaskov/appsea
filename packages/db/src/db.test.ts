@@ -265,6 +265,12 @@ describe('database foundation', () => {
     )
     expect(deletionClaimMigration?.sql).toContain('deletion_processing_requires_started_at')
     expect(deletionClaimMigration?.sql).toContain('TO appsea_owner, appsea_migrator')
+    expect(deletionClaimMigration?.sql).toContain(
+      'ALTER TABLE appsea.deletion_tombstones NO FORCE ROW LEVEL SECURITY'
+    )
+    expect(deletionClaimMigration?.sql).toContain(
+      'ALTER TABLE appsea.deletion_tombstones FORCE ROW LEVEL SECURITY'
+    )
     expect(deletionClaimMigration?.sql).toContain('deletion_tombstone_migration_repair')
     expect(deletionIntegrityMigration?.sql).toContain('CHECK (synthetic OR fixture_files IS NULL)')
     expect(workflowActorMigration?.sql).toContain('workflow_job_actor_guard')

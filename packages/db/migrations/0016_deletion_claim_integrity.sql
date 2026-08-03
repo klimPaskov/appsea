@@ -4,7 +4,9 @@
 
 -- The table is forced-RLS, including for the migration owner.  Use a
 -- migration-only owner policy that can see exactly the legacy rows being
--- repaired, then remove it before the migration commits.
+-- repaired, then remove it before the migration commits. The owner bypass is
+-- scoped to this transaction so the repair cannot depend on a pooled GUC.
+ALTER TABLE appsea.deletion_tombstones NO FORCE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS deletion_tombstone_migration_repair ON appsea.deletion_tombstones;
 CREATE POLICY deletion_tombstone_migration_repair ON appsea.deletion_tombstones
   FOR UPDATE
@@ -18,6 +20,7 @@ UPDATE appsea.deletion_tombstones
    AND processing_started_at IS NULL;
 
 DROP POLICY deletion_tombstone_migration_repair ON appsea.deletion_tombstones;
+ALTER TABLE appsea.deletion_tombstones FORCE ROW LEVEL SECURITY;
 
 ALTER TABLE appsea.deletion_tombstones
   ADD CONSTRAINT deletion_processing_requires_started_at

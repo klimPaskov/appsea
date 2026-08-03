@@ -11,6 +11,7 @@ ALTER TABLE appsea.deletion_tombstones
 -- from the server-observed claim time. The table is forced-RLS even for the
 -- migration owner, so use a migration-only repair policy and remove it before
 -- the migration commits.
+ALTER TABLE appsea.deletion_tombstones NO FORCE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS deletion_tombstone_retry_migration_repair
   ON appsea.deletion_tombstones;
 CREATE POLICY deletion_tombstone_retry_migration_repair
@@ -30,6 +31,7 @@ UPDATE appsea.deletion_tombstones
 
 DROP POLICY deletion_tombstone_retry_migration_repair
   ON appsea.deletion_tombstones;
+ALTER TABLE appsea.deletion_tombstones FORCE ROW LEVEL SECURITY;
 
 ALTER TABLE appsea.deletion_tombstones
   ADD CONSTRAINT deletion_tombstone_attempt_count_check
