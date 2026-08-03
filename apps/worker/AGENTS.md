@@ -24,6 +24,11 @@ through commit. Never log or persist the fence token. External provider sends,
 source HTTP requests, and object-store deletion remain outside this database
 fence and require idempotency/recovery controls. Renewal/release failures must
 use fixed event codes.
+Operational alert producers must enqueue their scalar, allowlisted event
+projection through the maintenance-role outbox before attempting the external
+provider. Use the bounded `alerts:deliver` drain for stale/retryable claims;
+provider effects stay outside the database transaction, and failure/exhaustion
+state uses fixed codes without raw response or exception text.
 Scheduler outcome telemetry must use the migration `0047` maintenance-role
 functions through the repository; persist only generated run IDs, fixed states
 or failure codes, durations, and bounded numeric counters. Never persist lease

@@ -8,10 +8,15 @@ import {
   databaseConfigFromEnv,
   PostgresMaintenanceSchedulerLeaseRepository,
   PostgresMaintenanceSchedulerRunRepository,
+  PostgresOperationalAlertOutboxRepository,
   PostgresProductionAnalysisRecomputeRepository
 } from '@appsea/db'
 import { emitWorkerEvent } from './observability'
-import { deliverOperationalAlert, isOperationalAlertEvent } from './alert-delivery'
+import {
+  deliverOperationalAlert,
+  enqueueAndDeliverOperationalAlert,
+  isOperationalAlertEvent
+} from './alert-delivery'
 import {
   maintenanceDatabaseConfigFromEnv,
   maintenanceSchedulerFailureCode,
@@ -48,6 +53,7 @@ function eventForResult(result: ProductionAnalysisRecomputeAlertResult): string 
 async function main(): Promise<void> {
   let servicePool: ReturnType<typeof createDatabasePool> | undefined
   let maintenancePool: ReturnType<typeof createDatabasePool> | undefined
+  let ownerId: string | undefined
   try {
     const input = productionAnalysisRecomputeAlertInputSchema.parse({
       observedAt: new Date().toISOString(),
@@ -75,9 +81,10 @@ async function main(): Promise<void> {
     })
     servicePool = createDatabasePool(databaseConfigFromEnv())
     maintenancePool = createDatabasePool(maintenanceDatabaseConfigFromEnv())
-    const ownerId = maintenanceSchedulerOwnerIdFromEnv()
+    ownerId = maintenanceSchedulerOwnerIdFromEnv()
     const leaseSeconds = maintenanceSchedulerLeaseSecondsFromEnv()
     const metrics = new PostgresMaintenanceSchedulerRunRepository(maintenancePool)
+    const outbox = new PostgresOperationalAlertOutboxRepository(maintenancePool)
     const serviceRecomputations = new PostgresProductionAnalysisRecomputeRepository(servicePool)
     const maintenanceRecomputations = new PostgresProductionAnalysisRecomputeRepository(
       maintenancePool
@@ -138,7 +145,9 @@ async function main(): Promise<void> {
       productionAnalysisRecomputeOldestAgeSeconds: result.oldestOpenJobAgeSeconds ?? 0,
       productionAnalysisRecomputeTruncated: result.truncated
     })
-    if (isOperationalAlertEvent(payload)) await deliverOperationalAlert(payload)
+    if (isOperationalAlertEvent(payload)) {
+      await enqueueAndDeliverOperationalAlert(payload, { outbox, ownerId })
+    }
   } catch (error) {
     const payload = emitWorkerEvent({
       event: 'production_analysis_recompute_alert_failed',
@@ -147,7 +156,14 @@ async function main(): Promise<void> {
       failureCode: maintenanceSchedulerFailureCode(error, 'APPSEA_RECOMPUTE_ALERT_FAILED')
     })
     try {
-      await deliverOperationalAlert(payload)
+      if (maintenancePool && ownerId) {
+        await enqueueAndDeliverOperationalAlert(payload, {
+          outbox: new PostgresOperationalAlertOutboxRepository(maintenancePool),
+          ownerId
+        })
+      } else {
+        await deliverOperationalAlert(payload)
+      }
     } catch {
       emitWorkerEvent({
         event: 'operational_alert_delivery_failed',

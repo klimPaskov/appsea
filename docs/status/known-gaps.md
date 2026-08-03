@@ -241,12 +241,14 @@ command is observability only and does not block admission or provide billing.
 Migration `0052` now fences selected
 SQL-only maintenance mutations with the server-clock lease identity; external
 source/provider/object-store effects and snapshot reconciliation remain outside
-that atomic boundary. Deployment still lacks scheduler process ownership,
-alert endpoint operation/incident response, provider pricing/billing controls,
-per-scheduler maintenance credentials, and a fresh Docker-backed recovery
-proof. The current
+that atomic boundary. Migration `0082` now makes operational alert enqueue,
+claim, retry, exhaustion, and retention purge durable through a scalar-only
+outbox and forward-compatible v2 scheduler functions. Deployment still lacks
+scheduler process ownership, alert endpoint operation/incident response,
+provider pricing/billing controls, per-scheduler maintenance credentials, and
+a fresh Docker-backed recovery proof. The current
 `appsea_maintenance` coordinator is trusted across
-the four allowlisted names; production data-work role separation and optional
+the allowlisted names; production data-work role separation and optional
 per-scheduler isolation remain release gates.
 
 The production workflow start route caps both declared and chunked JSON bodies

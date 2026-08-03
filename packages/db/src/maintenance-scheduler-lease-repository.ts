@@ -73,7 +73,7 @@ export class PostgresMaintenanceSchedulerLeaseRepository {
     return withDatabaseTransaction(this.pool, async (client) => {
       const result = await client.query<LeaseRow>(
         `SELECT acquired, lease_until, lease_token
-           FROM appsea.acquire_maintenance_scheduler_lease($1, $2, $3, $4)`,
+           FROM appsea.acquire_maintenance_scheduler_lease_v2($1, $2, $3, $4)`,
         [validatedSchedulerName, validatedOwnerId, validatedLeaseToken, validatedLeaseSeconds]
       )
       const row = result.rows[0]
@@ -99,7 +99,7 @@ export class PostgresMaintenanceSchedulerLeaseRepository {
     return withDatabaseTransaction(this.pool, async (client) => {
       const result = await client.query<LeaseRow>(
         `SELECT renewed, lease_until
-           FROM appsea.renew_maintenance_scheduler_lease($1, $2, $3, $4)`,
+           FROM appsea.renew_maintenance_scheduler_lease_v2($1, $2, $3, $4)`,
         [validatedSchedulerName, validatedOwnerId, validatedLeaseToken, validatedLeaseSeconds]
       )
       const row = result.rows[0]
@@ -122,7 +122,7 @@ export class PostgresMaintenanceSchedulerLeaseRepository {
     return withDatabaseTransaction(this.pool, async (client) => {
       const result = await client.query<LeaseRow>(
         `SELECT released
-           FROM appsea.release_maintenance_scheduler_lease($1, $2, $3)`,
+           FROM appsea.release_maintenance_scheduler_lease_v2($1, $2, $3)`,
         [validatedSchedulerName, validatedOwnerId, validatedLeaseToken]
       )
       const row = result.rows[0]

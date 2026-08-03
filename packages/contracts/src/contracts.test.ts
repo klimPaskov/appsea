@@ -97,6 +97,10 @@ import {
   maintenanceSchedulerReleaseResultSchema,
   maintenanceSchedulerRunMetricSchema,
   maintenanceSchedulerRunPurgeInputSchema,
+  operationalAlertPayloadSchema,
+  operationalAlertOutboxEnqueueInputSchema,
+  operationalAlertOutboxClaimInputSchema,
+  operationalAlertOutboxFailureInputSchema,
   workspaceOpportunityReadModelSchema,
   workspaceOpportunityDetailReadModelSchema,
   competitiveResearchReadModelSchema,
@@ -2866,5 +2870,52 @@ describe('contracts', () => {
         state: 'alert'
       }).success
     ).toBe(false)
+  })
+
+  it('keeps operational alert outbox payloads scalar, approved, and replay-safe', () => {
+    const payload = {
+      schemaVersion: 1 as const,
+      service: 'appsea-worker' as const,
+      observedAt: now,
+      event: 'source_quota_reconciliation_alert',
+      taskQueue: 'appsea-source-quota-alerts-v1',
+      schedulerName: 'appsea-source-quota-alerts-v1',
+      sourceQuotaReconciliationOpenCases: 2,
+      sourceQuotaReconciliationTruncated: false
+    }
+    expect(operationalAlertPayloadSchema.safeParse(payload).success).toBe(true)
+    expect(
+      operationalAlertPayloadSchema.safeParse({ ...payload, importedComplaint: 'secret text' })
+        .success
+    ).toBe(false)
+    expect(
+      operationalAlertPayloadSchema.safeParse({ ...payload, raw: { instructions: 'run this' } })
+        .success
+    ).toBe(false)
+
+    const enqueue = {
+      deliveryId: 'alert:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
+      payload,
+      payloadHash: 'b'.repeat(64),
+      availableAt: now
+    }
+    expect(operationalAlertOutboxEnqueueInputSchema.safeParse(enqueue).success).toBe(true)
+    expect(
+      operationalAlertOutboxClaimInputSchema.safeParse({
+        ownerId: 'worker:alerts:one',
+        claimId: '00000000-0000-4000-8000-000000000001',
+        limit: 10,
+        claimTtlSeconds: 300
+      }).success
+    ).toBe(true)
+    expect(
+      operationalAlertOutboxFailureInputSchema.safeParse({
+        deliveryId: enqueue.deliveryId,
+        ownerId: 'worker:alerts:one',
+        claimId: '00000000-0000-4000-8000-000000000001',
+        failureCode: 'APPSEA_ALERT_DELIVERY_FAILED',
+        retryAt: now
+      }).success
+    ).toBe(true)
   })
 })

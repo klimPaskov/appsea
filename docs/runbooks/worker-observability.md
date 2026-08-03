@@ -34,6 +34,10 @@ log sink and alert on:
   `production_analysis_recompute_clear` events; alert on failed/blocked/stale
   counters, and never treat a truncated inspection as clear. The command is
   read-only and never dispatches or retries a repair;
+- `operational_alert_delivery_finished` events and their bounded claimed,
+  sent, failed, exhausted, and purged counters. Provider response bodies and
+  exception text are never logged; delivery failures use the fixed
+  `APPSEA_ALERT_DELIVERY_FAILED` code;
 - missing `worker_started`/`worker_stopped` heartbeats for the task queue;
 - database connection or migration failures from the process supervisor.
 
@@ -78,11 +82,31 @@ the result `incomplete`; no currency conversion, billing assertion, admission
 block, or automatic refund occurs. The command emits only bounded counts and
 fixed alert/incomplete/clear events, never ledger identifiers or source data.
 
+The command `pnpm worker:alerts:deliver` drains the PostgreSQL operational-alert
+outbox through the standalone `appsea_maintenance` role. Migration `0082`
+validates a scalar, allowlisted payload before enqueue and exposes only
+maintenance-owned enqueue/claim/complete/fail/purge functions; neither the
+service role nor the maintenance role can select the outbox table directly.
+Claims have a server-clock lease and at most five attempts. A stale claim is
+recovered on a later pass, provider failure receives the fixed retry code and a
+bounded exponential delay, and terminal rows are purged only after the
+configured retention window. Set `APPSEA_ALERT_DELIVERY_MAX_ALERTS`,
+`APPSEA_ALERT_DELIVERY_CLAIM_TTL_SECONDS`,
+`APPSEA_ALERT_DELIVERY_RETENTION_DAYS`, and
+`APPSEA_ALERT_DELIVERY_PURGE_BATCH_SIZE` within their documented bounds. The
+three alert inspection commands enqueue before attempting the external HMAC
+provider, then this drain command provides the crash/provider-outage recovery
+path. Endpoint ownership, HMAC secret rotation, provider idempotency, scheduler
+availability, and incident routing remain deployment responsibilities.
+
 Migration `0046` adds a server-clock scheduler lease shared by source
 maintenance, auth retention, password-recovery delivery, and workspace-
 invitation delivery. Only the standalone `appsea_maintenance` role may call
 the four allowlisted lease functions; workers receive that role through
-`APPSEA_MAINTENANCE_DATABASE_URL`, separate from `DATABASE_URL`. Production
+`APPSEA_MAINTENANCE_DATABASE_URL`, separate from `DATABASE_URL`. Migration
+`0082` adds forward-compatible v2 lease/metrics functions for the three alert
+scans and the durable alert drain without editing released migration history.
+Production
 requires a stable, unique `APPSEA_SCHEDULER_OWNER_ID`; development/test runs
 generate an ephemeral owner. Each acquisition has a unique token, renews
 during a pass, rejects concurrent owners (including same-owner retries),

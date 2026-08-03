@@ -412,8 +412,10 @@ for that pre-context authorization lookup.
   security-definer record/list/purge functions. It stores a generated run ID,
   owner, fixed state/failure code, bounded duration, and validated numeric
   counters; it cannot store lease tokens, source text, credentials, or raw
-  exception messages. The current coordinator role is trusted across the four
-  allowlisted scheduler names; production may isolate scheduler credentials
+  exception messages. Migration `0082` adds v2 lease/metrics functions for the
+  three alert scans and the durable alert drain while retaining released
+  migration history; the current coordinator role is trusted across the
+  allowlisted scheduler names. Production may isolate scheduler credentials
   further if a compromise of one maintenance process must not starve another.
 - Migration `0064` adds a separate `SECURITY DEFINER` projection for
   recomputation-alert inspection. It validates active workspace context and
@@ -430,7 +432,13 @@ for that pre-context authorization lookup.
   source text, workspace identifiers, credentials, database URLs, or raw
   exception messages. Production preflight requires an HTTPS non-loopback
   endpoint; endpoint ownership, rotation, and incident response remain
-  deployment controls.
+  deployment controls. Migration `0082` persists the redacted payload in a
+  maintenance-owned outbox before the send, limits it to an allowlisted scalar
+  envelope, and exposes only security-definer enqueue/claim/complete/fail/purge
+  functions. Runtime and maintenance roles cannot select the outbox directly;
+  stale claims, bounded retries, terminal exhaustion, and retention purge are
+  server-clock operations. The provider effect remains outside the database
+  transaction and requires external idempotency/recovery.
 
 ## Temporal boundary
 

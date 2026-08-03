@@ -1,9 +1,12 @@
 import { createHmac } from 'node:crypto'
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
+import { operationalAlertPayloadSchema } from '@appsea/contracts'
 import {
   deliverOperationalAlert,
+  enqueueAndDeliverOperationalAlert,
   isOperationalAlertEvent,
-  operationalAlertConfigFromEnv
+  operationalAlertConfigFromEnv,
+  operationalAlertDeliveryId
 } from './alert-delivery'
 import type { WorkerEventPayload } from './observability'
 
@@ -101,5 +104,50 @@ describe('operational alert delivery', () => {
         maxAttempts: 2
       })
     ).rejects.toMatchObject({ code: 'unavailable' })
+  })
+
+  it('persists before delivery and completes the same claim idempotently', async () => {
+    const config = operationalAlertConfigFromEnv({
+      NODE_ENV: 'production',
+      APPSEA_ALERT_ROUTING_ENABLED: 'true',
+      APPSEA_ALERT_ROUTING_URL: 'https://alerts.internal/appsea',
+      APPSEA_ALERT_ROUTING_SECRET: secret
+    })
+    if (!config) throw new Error('expected alert config')
+    const expectedDeliveryId = operationalAlertDeliveryId(payload())
+    const storedPayload = operationalAlertPayloadSchema.parse(payload())
+    const outbox = {
+      enqueue: vi.fn(async () => ({ enqueued: true })),
+      claim: vi.fn(async ({ claimId }: { claimId: string }) => [
+        {
+          deliveryId: expectedDeliveryId,
+          payload: storedPayload,
+          attemptCount: 1,
+          claimId,
+          claimedBy: 'worker:alerts:one',
+          claimExpiresAt: '2026-08-03T12:05:00.000Z'
+        }
+      ]),
+      complete: vi.fn(async () => ({ completed: true })),
+      fail: vi.fn(async () => ({ applied: true, state: 'pending' as const }))
+    }
+    const requests: RequestInit[] = []
+    await expect(
+      enqueueAndDeliverOperationalAlert(payload(), {
+        outbox,
+        ownerId: 'worker:alerts:one',
+        config,
+        fetchImpl: async (_input, init = {}) => {
+          requests.push(init)
+          return new Response(null, { status: 204 })
+        },
+        now: () => new Date('2026-08-03T12:01:02.000Z')
+      })
+    ).resolves.toBe('sent')
+    expect(outbox.enqueue).toHaveBeenCalledTimes(1)
+    expect(outbox.claim).toHaveBeenCalledTimes(1)
+    expect(outbox.complete).toHaveBeenCalledTimes(1)
+    expect(outbox.fail).not.toHaveBeenCalled()
+    expect(new Headers(requests[0]?.headers).get('x-appsea-alert-id')).toBe(expectedDeliveryId)
   })
 })

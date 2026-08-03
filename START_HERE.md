@@ -45,6 +45,7 @@ Open `http://localhost:3000` after the web server starts.
 - lease-owned, read-only quota-reconciliation alert inspection with bounded alert/incomplete/clear events and visible truncated coverage
 - lease-owned, read-only production-analysis recomputation alert inspection with bounded alert/incomplete/clear events and visible truncated coverage; it never dispatches or retries a repair
 - lease-owned, read-only workspace cost-threshold inspection with exact micro-unit aggregates, explicit currency gaps, and bounded alert/incomplete/clear events; it never blocks work or performs billing
+- scalar-only, maintenance-owned operational-alert outbox with idempotent enqueue, stale-claim recovery, bounded retry/exhaustion, retention purge, and the `pnpm worker:alerts:deliver` drain command
 - explicit, one-record, tombstone-bound source re-collection with immutable lineage and private review; it never runs automatically and does not activate a connector
 - direct CFPB source commands use the same bounded production admission ledger through the `appsea-worker` service principal; they cannot bypass private-workspace, fixture, or source-policy gates
 - owner-scoped invitations for existing AppSea accounts with hash-only tokens, encrypted outbox delivery, acceptance/revocation, and a production kill switch
@@ -75,7 +76,7 @@ Open `http://localhost:3000` after the web server starts.
 - autonomous production deployment
 - desktop release packaging
 - automatic activation of generated skills or connectors
-- deployed scheduler ownership, incident routing, and live alert delivery for quota-reconciliation and production-analysis recomputation cases
+- deployed scheduler ownership, incident routing, endpoint operation, and provider recovery for live alert delivery (the repository outbox and drain are implemented)
 - automatic source re-collection, downstream analysis, and report/plan generation after a re-collection
 - deployed MCP secret storage, HTTPS/rate limiting, token-rotation automation, provider-backed MFA/OIDC controls, identity key rotation, and step-up contracts for mutations outside the password-gated set
 

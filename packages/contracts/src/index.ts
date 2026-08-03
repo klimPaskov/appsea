@@ -3616,6 +3616,236 @@ export const maintenanceSchedulerRunPurgeInputSchema = z
 
 export const maintenanceSchedulerRunReadModelSchema = maintenanceSchedulerRunMetricSchema
 
+/**
+ * Operational alerts are intentionally smaller than general worker events.
+ * Only the redacted scalar envelope may cross the durable outbox boundary;
+ * source text, credentials, arbitrary objects, and exception strings cannot
+ * be persisted as alert payloads.
+ */
+const operationalAlertScalarSchema = z.union([
+  z.string().max(240),
+  z.number().int().nonnegative().max(Number.MAX_SAFE_INTEGER),
+  z.boolean()
+])
+
+const operationalAlertAllowedKeys = new Set([
+  'schemaVersion',
+  'service',
+  'observedAt',
+  'event',
+  'taskQueue',
+  'schedulerName',
+  'jobId',
+  'workflowId',
+  'state',
+  'attempt',
+  'workspacesScanned',
+  'sourceItems',
+  'snapshotPagesScanned',
+  'snapshotSourceRecords',
+  'snapshotDeletionsQueued',
+  'snapshotCoverageGaps',
+  'costMicros',
+  'sessionsDeleted',
+  'rateLimitsDeleted',
+  'passwordResetTokensDeleted',
+  'workspaceInvitationsDeleted',
+  'mfaChallengesDeleted',
+  'mfaEventsDeleted',
+  'mfaPendingEnrollmentsDeleted',
+  'passwordResetDeliveriesClaimed',
+  'passwordResetDeliveriesSent',
+  'passwordResetDeliveriesFailed',
+  'workspaceInvitationDeliveriesClaimed',
+  'workspaceInvitationDeliveriesSent',
+  'workspaceInvitationDeliveriesFailed',
+  'quotaReservationsExpired',
+  'quotaReservationsPurged',
+  'sourceQuotaReconciliationOpenCases',
+  'sourceQuotaReconciliationOldestAgeSeconds',
+  'sourceQuotaReconciliationTruncated',
+  'productionAnalysisRecomputeJobs',
+  'productionAnalysisRecomputeFailed',
+  'productionAnalysisRecomputeBlocked',
+  'productionAnalysisRecomputeStale',
+  'productionAnalysisRecomputeOldestAgeSeconds',
+  'productionAnalysisRecomputeTruncated',
+  'workspaceCostAlertRows',
+  'workspaceCostAlertEntries',
+  'workspaceCostAlertTargetRows',
+  'workspaceCostAlertUnsupportedRows',
+  'workspaceCostAlertWorkspacesOverActual',
+  'workspaceCostAlertWorkspacesOverEstimated',
+  'workspaceCostAlertTruncated',
+  'productionWorkflowAdmissionsPurged',
+  'productionAnalysisAdmissionsPurged',
+  'sourceCollectionLeasesPurged',
+  'productionAnalysisObjectsPurged',
+  'sourceSnapshotReconciliationsProcessed',
+  'sourceSnapshotReconciliationsCompleted',
+  'sourceSnapshotReconciliationsIncomplete',
+  'sourceSnapshotReconciliationsFailed',
+  'sourceSnapshotReconciliationsRetried',
+  'sourceSnapshotCoverageGaps',
+  'campaignRefreshClaims',
+  'campaignRefreshDispatched',
+  'campaignRefreshFailed',
+  'campaignRefreshPolicyDenied',
+  'campaignOrchestrationClaims',
+  'campaignOrchestrationDispatched',
+  'campaignOrchestrationFailed',
+  'campaignOrchestrationPolicyDenied',
+  'campaignOrchestrationReconciled',
+  'productionWorkflowCancellationTargets',
+  'productionWorkflowCancellationAttempted',
+  'productionWorkflowCancellationDispatched',
+  'productionWorkflowCancellationFailed',
+  'retentionTombstonesQueued',
+  'deletionTombstonesProcessed',
+  'deletionObjectsAffected',
+  'deletionOpportunitiesInvalidated',
+  'recomputationJobsQueued',
+  'maintenancePasses',
+  'maintenanceFailures',
+  'operationalAlertDeliveryClaimed',
+  'operationalAlertDeliverySent',
+  'operationalAlertDeliveryFailed',
+  'operationalAlertDeliveryExhausted',
+  'operationalAlertDeliveryPurged',
+  'failureCode'
+])
+
+export const operationalAlertPayloadSchema = z
+  .object({
+    schemaVersion: z.literal(1),
+    service: z.literal('appsea-worker'),
+    observedAt: z.string().datetime(),
+    event: z
+      .string()
+      .min(3)
+      .max(120)
+      .regex(/^[a-z][a-z0-9_:-]+$/),
+    taskQueue: z
+      .string()
+      .min(3)
+      .max(160)
+      .regex(/^[a-z][a-z0-9_-]+$/),
+    schedulerName: maintenanceSchedulerNameSchema.optional(),
+    jobId: appseaIdentifierSchema.optional(),
+    workflowId: z
+      .string()
+      .min(3)
+      .max(240)
+      .regex(/^[a-zA-Z0-9][a-zA-Z0-9._:-]*$/)
+      .optional(),
+    state: z
+      .string()
+      .min(1)
+      .max(80)
+      .regex(/^[a-z][a-z0-9_:-]*$/)
+      .optional(),
+    attempt: z.number().int().nonnegative().max(1_000_000).optional(),
+    failureCode: maintenanceSchedulerFailureCodeSchema.optional()
+  })
+  .catchall(operationalAlertScalarSchema)
+  .superRefine((payload, context) => {
+    const keys = Object.keys(payload)
+    if (keys.length > 80) {
+      context.addIssue({
+        code: 'custom',
+        message: 'Operational alert payloads may contain at most 80 fields'
+      })
+    }
+    for (const key of keys) {
+      if (!operationalAlertAllowedKeys.has(key)) {
+        context.addIssue({
+          code: 'custom',
+          path: [key],
+          message: 'Operational alert payload contains an unapproved field'
+        })
+      }
+    }
+  })
+
+export const operationalAlertDeliveryIdSchema = z
+  .string()
+  .length(38)
+  .regex(/^alert:[a-f0-9]{32}$/)
+
+export const operationalAlertPayloadHashSchema = z
+  .string()
+  .length(64)
+  .regex(/^[a-f0-9]{64}$/)
+
+export const operationalAlertOutboxStateSchema = z.enum(['pending', 'sending', 'sent', 'exhausted'])
+
+export const operationalAlertOutboxLimits = {
+  maxAttempts: 5,
+  maxClaimBatch: 100,
+  minClaimTtlSeconds: 30,
+  maxClaimTtlSeconds: 3_600,
+  maxFailureCodeLength: 80
+} as const
+
+export const operationalAlertOutboxEnqueueInputSchema = z
+  .object({
+    deliveryId: operationalAlertDeliveryIdSchema,
+    payload: operationalAlertPayloadSchema,
+    payloadHash: operationalAlertPayloadHashSchema,
+    availableAt: z.string().datetime()
+  })
+  .strict()
+
+export const operationalAlertOutboxClaimInputSchema = z
+  .object({
+    ownerId: maintenanceSchedulerOwnerIdSchema,
+    claimId: z.string().uuid(),
+    limit: z.number().int().min(1).max(operationalAlertOutboxLimits.maxClaimBatch),
+    claimTtlSeconds: z
+      .number()
+      .int()
+      .min(operationalAlertOutboxLimits.minClaimTtlSeconds)
+      .max(operationalAlertOutboxLimits.maxClaimTtlSeconds)
+  })
+  .strict()
+
+export const operationalAlertOutboxClaimSchema = z
+  .object({
+    deliveryId: operationalAlertDeliveryIdSchema,
+    payload: operationalAlertPayloadSchema,
+    attemptCount: z.number().int().min(1).max(operationalAlertOutboxLimits.maxAttempts),
+    claimId: z.string().uuid(),
+    claimedBy: maintenanceSchedulerOwnerIdSchema,
+    claimExpiresAt: z.string().datetime()
+  })
+  .strict()
+
+export const operationalAlertOutboxCompleteInputSchema = z
+  .object({
+    deliveryId: operationalAlertDeliveryIdSchema,
+    ownerId: maintenanceSchedulerOwnerIdSchema,
+    claimId: z.string().uuid(),
+    sentAt: z.string().datetime()
+  })
+  .strict()
+
+export const operationalAlertOutboxFailureInputSchema = z
+  .object({
+    deliveryId: operationalAlertDeliveryIdSchema,
+    ownerId: maintenanceSchedulerOwnerIdSchema,
+    claimId: z.string().uuid(),
+    failureCode: maintenanceSchedulerFailureCodeSchema,
+    retryAt: z.string().datetime()
+  })
+  .strict()
+
+export const operationalAlertOutboxPurgeInputSchema = z
+  .object({
+    before: z.string().datetime(),
+    limit: z.number().int().min(1).max(10_000)
+  })
+  .strict()
+
 export const sourceMaintenanceInputSchema = z
   .object({
     jobId: maintenanceJobIdSchema,
@@ -5669,6 +5899,26 @@ export type MaintenanceSchedulerRunPurgeInput = z.infer<
 >
 export type MaintenanceSchedulerRunReadModel = z.infer<
   typeof maintenanceSchedulerRunReadModelSchema
+>
+export type OperationalAlertPayload = z.infer<typeof operationalAlertPayloadSchema>
+export type OperationalAlertDeliveryId = z.infer<typeof operationalAlertDeliveryIdSchema>
+export type OperationalAlertPayloadHash = z.infer<typeof operationalAlertPayloadHashSchema>
+export type OperationalAlertOutboxState = z.infer<typeof operationalAlertOutboxStateSchema>
+export type OperationalAlertOutboxEnqueueInput = z.infer<
+  typeof operationalAlertOutboxEnqueueInputSchema
+>
+export type OperationalAlertOutboxClaimInput = z.infer<
+  typeof operationalAlertOutboxClaimInputSchema
+>
+export type OperationalAlertOutboxClaim = z.infer<typeof operationalAlertOutboxClaimSchema>
+export type OperationalAlertOutboxCompleteInput = z.infer<
+  typeof operationalAlertOutboxCompleteInputSchema
+>
+export type OperationalAlertOutboxFailureInput = z.infer<
+  typeof operationalAlertOutboxFailureInputSchema
+>
+export type OperationalAlertOutboxPurgeInput = z.infer<
+  typeof operationalAlertOutboxPurgeInputSchema
 >
 export type SourceMaintenanceInput = z.input<typeof sourceMaintenanceInputSchema>
 export type SourceMaintenanceResult = z.infer<typeof sourceMaintenanceResultSchema>

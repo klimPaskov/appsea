@@ -130,6 +130,7 @@ export {
   maintenanceSchedulerLeaseLimits
 } from './maintenance-scheduler-lease-repository'
 export { PostgresMaintenanceSchedulerRunRepository } from './maintenance-scheduler-run-repository'
+export { PostgresOperationalAlertOutboxRepository } from './operational-alert-outbox-repository'
 export {
   PostgresWorkspaceCostRepository,
   WorkspaceCostSummaryQueryError

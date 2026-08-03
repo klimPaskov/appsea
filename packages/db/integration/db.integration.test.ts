@@ -40,6 +40,7 @@ import {
   PostgresProductionWorkflowAdmissionRepository,
   PostgresMaintenanceSchedulerLeaseRepository,
   PostgresMaintenanceSchedulerRunRepository,
+  PostgresOperationalAlertOutboxRepository,
   PostgresWorkspaceCostRepository,
   PostgresWorkspaceCostAlertRepository,
   PostgresCompetitiveResearchRepository,
@@ -4432,6 +4433,119 @@ describe.sequential('PostgreSQL fixture persistence lifecycle', () => {
           await client.query('ROLLBACK')
           throw error
         }
+      })
+    }
+  })
+
+  it('durably claims, retries, and completes operational alerts through the maintenance role', async () => {
+    const deliveryId = 'alert:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb'
+    const ownerId = 'integration:alert-owner'
+    const payload = {
+      schemaVersion: 1,
+      service: 'appsea-worker',
+      observedAt: new Date().toISOString(),
+      event: 'source_quota_reconciliation_alert',
+      taskQueue: 'appsea-source-quota-alerts-v1',
+      schedulerName: 'appsea-source-quota-alerts-v1',
+      sourceQuotaReconciliationOpenCases: 1,
+      sourceQuotaReconciliationTruncated: false
+    } as const
+    const outbox = new PostgresOperationalAlertOutboxRepository(maintenancePool)
+    const leases = new PostgresMaintenanceSchedulerLeaseRepository(maintenancePool)
+    const metrics = new PostgresMaintenanceSchedulerRunRepository(maintenancePool)
+    const availableAt = new Date().toISOString()
+    const claimId = '00000000-0000-4000-8000-000000000002'
+    const secondClaimId = '00000000-0000-4000-8000-000000000003'
+
+    try {
+      await expect(
+        outbox.enqueue({
+          deliveryId,
+          payload,
+          payloadHash: 'c'.repeat(64),
+          availableAt
+        })
+      ).resolves.toEqual({ enqueued: true })
+      await expect(
+        outbox.enqueue({
+          deliveryId,
+          payload,
+          payloadHash: 'c'.repeat(64),
+          availableAt
+        })
+      ).resolves.toEqual({ enqueued: false })
+      await expect(
+        servicePool.query('SELECT * FROM appsea.operational_alert_outbox')
+      ).rejects.toMatchObject({ code: '42501' })
+      await expect(
+        maintenancePool.query('SELECT * FROM appsea.operational_alert_outbox')
+      ).rejects.toMatchObject({ code: '42501' })
+
+      await expect(
+        outbox.claim({ ownerId, claimId, limit: 10, claimTtlSeconds: 300 })
+      ).resolves.toMatchObject([{ deliveryId, attemptCount: 1, claimId, claimedBy: ownerId }])
+      await expect(
+        outbox.fail({
+          deliveryId,
+          ownerId,
+          claimId,
+          failureCode: 'APPSEA_ALERT_DELIVERY_FAILED',
+          retryAt: new Date(Date.now() + 1_100).toISOString()
+        })
+      ).resolves.toEqual({ applied: true, state: 'pending' })
+      await maintenancePool.query('SELECT pg_sleep(1.2)')
+      await expect(
+        outbox.claim({ ownerId, claimId: secondClaimId, limit: 10, claimTtlSeconds: 300 })
+      ).resolves.toMatchObject([{ deliveryId, attemptCount: 2, claimId: secondClaimId }])
+      await expect(
+        outbox.complete({
+          deliveryId,
+          ownerId,
+          claimId: secondClaimId,
+          sentAt: new Date().toISOString()
+        })
+      ).resolves.toEqual({ completed: true })
+
+      const leaseToken = 'integration-alert-lease-token-0002'
+      await expect(
+        leases.acquire('appsea-source-quota-alerts-v1', ownerId, leaseToken, 60)
+      ).resolves.toMatchObject({ acquired: true, leaseToken })
+      await expect(
+        metrics.record({
+          runId: 'maintenance:integration-alerts',
+          schedulerName: 'appsea-source-quota-alerts-v1',
+          ownerId,
+          state: 'succeeded',
+          startedAt: availableAt,
+          finishedAt: new Date().toISOString(),
+          durationMs: 10,
+          failureCode: null,
+          counters: { claimed: 1, sent: 1 }
+        })
+      ).resolves.toEqual({ recorded: true })
+      await expect(metrics.listRecent('appsea-source-quota-alerts-v1', 10)).resolves.toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            runId: 'maintenance:integration-alerts',
+            schedulerName: 'appsea-source-quota-alerts-v1'
+          })
+        ])
+      )
+      await expect(
+        leases.release('appsea-source-quota-alerts-v1', ownerId, leaseToken)
+      ).resolves.toEqual({ released: true })
+    } finally {
+      await withOwnerClient(async (client) => {
+        await client.query('DELETE FROM appsea.operational_alert_outbox WHERE delivery_id = $1', [
+          deliveryId
+        ])
+        await client.query('DELETE FROM appsea.maintenance_scheduler_runs WHERE run_id = $1', [
+          'maintenance:integration-alerts'
+        ])
+        await client.query(
+          'DELETE FROM appsea.maintenance_scheduler_leases WHERE scheduler_name = $1',
+          ['appsea-source-quota-alerts-v1']
+        )
       })
     }
   })

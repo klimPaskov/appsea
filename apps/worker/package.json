@@ -22,6 +22,7 @@
     "source:quota:alert": "tsx src/source-quota-reconciliation-alert-cli.ts",
     "production:analysis:recompute:alert": "tsx src/production-analysis-recompute-alert-cli.ts",
     "workspace:cost:alert": "tsx src/workspace-cost-alert-cli.ts",
+    "alerts:deliver": "tsx src/operational-alert-delivery-cli.ts",
     "workflow:fixture": "tsx src/workflow-fixture.ts",
     "workflow:analysis:history:check": "tsx src/production-analysis-history-cli.ts",
     "source:cfpb": "tsx src/production-cfpb.ts",

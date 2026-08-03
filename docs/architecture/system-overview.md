@@ -96,6 +96,13 @@ run, exposes only bounded identifiers/counters through authenticated workspace
 inspection, and permits `appsea_maintenance` to record an exact linked-result
 or explicit no-result resolution. It never refunds quota or authorizes a
 re-fetch.
+Migration `0082` adds the durable operational-alert outbox. Producers enqueue a
+validated scalar-only projection before attempting the external HMAC endpoint;
+the standalone maintenance role claims rows with a server-clock lease, records
+fixed-code retry/exhaustion state, and purges terminal rows after retention.
+The outbox table is not directly readable by either runtime role, and the v2
+scheduler functions extend the allowlist for the three alert scans and the
+bounded drain without rewriting released migration history.
 Migration `0050` adds explicit, one-record tombstone-bound re-collection
 lineage across workflow projections, research runs, and source items. Completed
 deletion state is required by database triggers; deleted history is preserved

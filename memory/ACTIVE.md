@@ -7,7 +7,7 @@ Temporal, source-policy, private-workspace, report/plan, and maintenance
 boundaries. The public leaderboard is intentionally synthetic and sparse; no
 real source is enabled.
 
-Migrations `0027`-`0081` cover policy evidence, collection checkpoints,
+Migrations `0027`-`0082` cover policy evidence, collection checkpoints,
 deletion/recomputation repair, leases, admissions, campaign orchestration and
 cancellation, source reconciliation, analysis history, report/plan governance,
 cost and alert projections, object references, workspace archival/purge intent,
@@ -46,8 +46,11 @@ remain external gates.
 Workers have server-clock leases, fenced SQL mutations, bounded retries,
 reconciliation cases, deletion propagation, source/object retention queues,
 campaign refresh/orchestration, cancellation recovery, maintenance metrics, and
-signed alert delivery. Deployment scheduler ownership, incident routing,
-provider billing, cloud/backup purge, and production topology remain open.
+signed alert delivery. Migration `0082` adds a scalar-only operational-alert
+outbox with deterministic enqueue, stale-claim recovery, bounded retry and
+exhaustion, retention purge, and a durable `alerts:deliver` drain. Deployment
+scheduler ownership, incident routing, provider billing, cloud/backup purge,
+and production topology remain open.
 
 Imported complaints, pages, reports, and model output remain untrusted data;
 they cannot update code, skills, instructions, permissions, or repository
@@ -82,6 +85,12 @@ memory.
   commit `557ec62`, including aggregate verification, fresh PostgreSQL
   persistence, and fresh Temporal workflow gates. A deployed drain/crash drill
   remains pending.
+- The operational-alert outbox slice passes contracts (93), database (137),
+  and worker (116) tests plus affected typechecks and lints locally. Migration
+  `0082` integration coverage exercises maintenance-role function access,
+  idempotent enqueue, stale retry/reclaim, completion, direct-table denial, and
+  v2 alert scheduler names. Fresh PostgreSQL CI proof is pending for the new
+  migration; local Docker Desktop is unavailable.
 
 ## Next production tranche
 
@@ -103,7 +112,9 @@ memory.
 
 - No real source is active; fixture rankings are not market research.
 - Production DB/Temporal, role separation, HA, backups, scheduler ownership,
-  endpoint operation, alerting, billing, and deployment validation remain.
+  endpoint operation, provider recovery/incident routing, alerting, billing, and
+  deployment validation remain. The repository outbox and drain are implemented
+  but do not make the external provider transactional.
 - Recovery/invitations are provider-kill-switched; OIDC, verified identity,
   delivery/DPA, key rotation, provider-backed step-up, and high-impact action
   contracts without a password boundary remain open.

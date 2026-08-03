@@ -126,8 +126,10 @@ explicit no-result void. The boundary never refunds quota or authorizes a
 re-fetch. A lease-owned read-only alert inspection now emits fixed
 alert/incomplete/clear events and durable bounded counters while exposing
 truncated coverage. Alert/incomplete/failure outcomes now use the shared
-signed operational delivery boundary; deployed scheduler ownership, endpoint
-operations, and incident response remain open.
+scalar-only operational alert outbox and signed delivery boundary;
+`pnpm worker:alerts:deliver` recovers stale/retryable claims, while deployed
+scheduler ownership, endpoint operations, provider recovery, and incident
+response remain open.
 
 Migration `0050_explicit_source_recollection.sql` adds the reviewed explicit
 re-collection boundary. A completed matching deletion tombstone is required;
@@ -388,8 +390,11 @@ snapshot scheduler ownership, and worker crash fault-injection proof. Migrations
 `0037` and `0062` now queue deletion- or correction-triggered
 active-evidence repairs and the dispatcher reclaims stale dispatch claims with
 bounded terminal failure. Migration `0064` provides a separate bounded
-maintenance-role alert inspection; signed alert delivery exists for bounded outcomes; deployed scheduling, endpoint operation, and production
-Temporal remain open. The repository-level collection and manual-analysis
+maintenance-role alert inspection; migration `0082` adds a scalar-only durable
+operational-alert outbox, stale-claim recovery, bounded retries/exhaustion,
+retention purge, and a supervised `worker:alerts:deliver` drain. Deployed
+scheduling, endpoint operation, provider recovery, and production Temporal
+remain open. The repository-level collection and manual-analysis
 ingress gates are now implemented; deployed scheduler ownership,
 service-role/secret separation, and infrastructure authorization remain
 separate release work.
@@ -556,7 +561,9 @@ over the immutable ledger with exact micro-unit aggregates by currency and
 cost type;
 `0065` adds a lease-owned maintenance projection and cost-threshold alert
 inspection while production preflight requires explicit comparison and
-threshold settings;
+threshold settings; `0082` adds the maintenance-owned scalar operational-alert
+outbox, v2 scheduler allowlist, bounded retries/exhaustion, retention purge,
+and the durable drain;
 the worker also exposes a supervised `maintenance:loop` command that starts
 one lease-backed pass at a time, retries child failures with bounded backoff,
 and forwards shutdown without logging raw errors;

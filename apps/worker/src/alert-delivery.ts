@@ -1,4 +1,11 @@
 import { createHash, createHmac, randomUUID } from 'node:crypto'
+import {
+  operationalAlertPayloadSchema,
+  type OperationalAlertOutboxClaim,
+  type OperationalAlertOutboxCompleteInput,
+  type OperationalAlertOutboxEnqueueInput,
+  type OperationalAlertOutboxFailureInput
+} from '@appsea/contracts'
 import { requiredDeliveryUrl } from './signed-delivery'
 import type { WorkerEventPayload } from './observability'
 
@@ -13,6 +20,21 @@ export interface OperationalAlertDeliveryOptions {
   fetchImpl?: typeof globalThis.fetch
   now?: () => Date
   maxAttempts?: number
+}
+
+export interface OperationalAlertOutboxStore {
+  enqueue(input: OperationalAlertOutboxEnqueueInput): Promise<{ enqueued: boolean }>
+  claim(input: {
+    ownerId: string
+    claimId: string
+    limit: number
+    claimTtlSeconds: number
+  }): Promise<OperationalAlertOutboxClaim[]>
+  complete(input: OperationalAlertOutboxCompleteInput): Promise<{ completed: boolean }>
+  fail(input: OperationalAlertOutboxFailureInput): Promise<{
+    applied: boolean
+    state: 'pending' | 'sending' | 'sent' | 'exhausted' | null
+  }>
 }
 
 export class OperationalAlertDeliveryError extends Error {
@@ -62,16 +84,26 @@ export function operationalAlertConfigFromEnv(
   return { endpoint, secret }
 }
 
-function deliveryId(payload: WorkerEventPayload): string {
+function stablePayload(payload: WorkerEventPayload): Record<string, unknown> {
+  return Object.fromEntries(Object.entries(payload).filter(([key]) => key !== 'observedAt'))
+}
+
+function deliveryBucket(payload: WorkerEventPayload): number {
   const observedAt = Date.parse(payload.observedAt)
-  const bucket = Number.isFinite(observedAt) ? Math.floor(observedAt / 300_000) : 0
-  const stablePayload = Object.fromEntries(
-    Object.entries(payload).filter(([key]) => key !== 'observedAt')
-  )
+  return Number.isFinite(observedAt) ? Math.floor(observedAt / 300_000) : 0
+}
+
+export function operationalAlertDeliveryId(payload: WorkerEventPayload): string {
   const digest = createHash('sha256')
-    .update(JSON.stringify({ bucket, payload: stablePayload }))
+    .update(JSON.stringify({ bucket: deliveryBucket(payload), payload: stablePayload(payload) }))
     .digest('hex')
   return `alert:${digest.slice(0, 32)}`
+}
+
+export function operationalAlertPayloadHash(payload: WorkerEventPayload): string {
+  return createHash('sha256')
+    .update(JSON.stringify({ bucket: deliveryBucket(payload), payload: stablePayload(payload) }))
+    .digest('hex')
 }
 
 function validDate(value: Date): string {
@@ -103,7 +135,7 @@ export async function deliverOperationalAlert(
     throw new OperationalAlertDeliveryError('configuration')
   }
   const now = validDate((options.now ?? (() => new Date()))())
-  const id = deliveryId(payload)
+  const id = operationalAlertDeliveryId(payload)
   const body = JSON.stringify({
     schemaVersion: 1,
     kind: 'appsea.operational_alert',
@@ -142,6 +174,75 @@ export async function deliverOperationalAlert(
     }
   }
   throw new OperationalAlertDeliveryError('unavailable')
+}
+
+export interface DurableOperationalAlertDeliveryOptions extends OperationalAlertDeliveryOptions {
+  outbox: OperationalAlertOutboxStore
+  ownerId: string
+  claimTtlSeconds?: number
+}
+
+/**
+ * Persist an alert before attempting delivery. If the process or provider
+ * fails, the claim remains retryable and the same idempotency key is reused.
+ * The caller may surface the delivery error so its scheduler records failure;
+ * the outbox is the durable retry evidence.
+ */
+export async function enqueueAndDeliverOperationalAlert(
+  payload: WorkerEventPayload,
+  options: DurableOperationalAlertDeliveryOptions
+): Promise<'disabled' | 'sent' | 'queued'> {
+  const environment = options.environment ?? process.env
+  const config =
+    options.config === undefined
+      ? operationalAlertConfigFromEnv(environment, configurationError)
+      : options.config
+  if (!config) return 'disabled'
+
+  const parsedPayload = operationalAlertPayloadSchema.parse(payload)
+  const deliveryId = operationalAlertDeliveryId(payload)
+  await options.outbox.enqueue({
+    deliveryId,
+    payload: parsedPayload,
+    payloadHash: operationalAlertPayloadHash(payload),
+    availableAt: validDate((options.now ?? (() => new Date()))())
+  })
+
+  const claimId = randomUUID()
+  const claims = await options.outbox.claim({
+    ownerId: options.ownerId,
+    claimId,
+    limit: 1,
+    claimTtlSeconds: options.claimTtlSeconds ?? 300
+  })
+  const claim = claims.find((candidate) => candidate.deliveryId === deliveryId)
+  if (!claim) return 'queued'
+
+  try {
+    await deliverOperationalAlert(claim.payload, { ...options, config })
+    const completed = await options.outbox.complete({
+      deliveryId: claim.deliveryId,
+      ownerId: claim.claimedBy,
+      claimId: claim.claimId,
+      sentAt: new Date().toISOString()
+    })
+    if (!completed.completed) throw new OperationalAlertDeliveryError('unavailable')
+    return 'sent'
+  } catch (error) {
+    const attemptDelayMs = Math.min(3_600_000, 30_000 * 2 ** Math.max(0, claim.attemptCount - 1))
+    const failureCode =
+      error instanceof OperationalAlertDeliveryError && error.code === 'configuration'
+        ? 'APPSEA_ALERT_DELIVERY_CONFIGURATION'
+        : 'APPSEA_ALERT_DELIVERY_FAILED'
+    await options.outbox.fail({
+      deliveryId: claim.deliveryId,
+      ownerId: claim.claimedBy,
+      claimId: claim.claimId,
+      failureCode,
+      retryAt: new Date(Date.now() + attemptDelayMs).toISOString()
+    })
+    throw error
+  }
 }
 
 export function isOperationalAlertEvent(payload: WorkerEventPayload): boolean {

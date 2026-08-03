@@ -74,6 +74,11 @@ export interface WorkerEvent {
   recomputationJobsQueued?: number
   maintenancePasses?: number
   maintenanceFailures?: number
+  operationalAlertDeliveryClaimed?: number
+  operationalAlertDeliverySent?: number
+  operationalAlertDeliveryFailed?: number
+  operationalAlertDeliveryExhausted?: number
+  operationalAlertDeliveryPurged?: number
   failureCode?: string
 }
 
@@ -411,6 +416,23 @@ export function workerEventPayload(event: WorkerEvent): WorkerEventPayload {
       : {}),
     ...(finiteInteger(event.maintenanceFailures) !== undefined
       ? { maintenanceFailures: finiteInteger(event.maintenanceFailures) }
+      : {}),
+    ...(finiteInteger(event.operationalAlertDeliveryClaimed) !== undefined
+      ? { operationalAlertDeliveryClaimed: finiteInteger(event.operationalAlertDeliveryClaimed) }
+      : {}),
+    ...(finiteInteger(event.operationalAlertDeliverySent) !== undefined
+      ? { operationalAlertDeliverySent: finiteInteger(event.operationalAlertDeliverySent) }
+      : {}),
+    ...(finiteInteger(event.operationalAlertDeliveryFailed) !== undefined
+      ? { operationalAlertDeliveryFailed: finiteInteger(event.operationalAlertDeliveryFailed) }
+      : {}),
+    ...(finiteInteger(event.operationalAlertDeliveryExhausted) !== undefined
+      ? {
+          operationalAlertDeliveryExhausted: finiteInteger(event.operationalAlertDeliveryExhausted)
+        }
+      : {}),
+    ...(finiteInteger(event.operationalAlertDeliveryPurged) !== undefined
+      ? { operationalAlertDeliveryPurged: finiteInteger(event.operationalAlertDeliveryPurged) }
       : {}),
     ...(event.failureCode ? { failureCode: event.failureCode } : {})
   }

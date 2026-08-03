@@ -55,7 +55,7 @@ export class PostgresMaintenanceSchedulerRunRepository {
     return withDatabaseTransaction(this.pool, async (client) => {
       const result = await client.query<{ recorded: boolean }>(
         `SELECT recorded
-           FROM appsea.record_maintenance_scheduler_run(
+           FROM appsea.record_maintenance_scheduler_run_v2(
              $1, $2, $3, $4, $5, $6, $7, $8, $9::jsonb
            )`,
         [
@@ -105,7 +105,7 @@ export class PostgresMaintenanceSchedulerRunRepository {
       const result = await client.query<RunMetricRow>(
         `SELECT run_id, scheduler_name, owner_id, state, started_at, finished_at,
                 duration_ms, failure_code, counters
-           FROM appsea.list_maintenance_scheduler_runs($1, $2)`,
+           FROM appsea.list_maintenance_scheduler_runs_v2($1, $2)`,
         [schedulerName, limit]
       )
       return result.rows.map(mapRunMetric)
