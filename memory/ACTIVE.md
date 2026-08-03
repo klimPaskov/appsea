@@ -88,7 +88,9 @@ memory.
   proof.
 - Dependency security hardening updates Next.js to `16.2.12`, locks patched
   PostCSS/`fast-uri`/sharp transitive versions, and adds `pnpm security:audit`
-  to CI; the production audit currently reports zero vulnerabilities.
+  to CI; the production audit currently reports zero vulnerabilities. Turbo
+  now runs each package build after its typecheck so clean Linux checkouts do
+  not race Next route-type generation against build cleanup.
 
 ## Next production tranche
 

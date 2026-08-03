@@ -24,6 +24,9 @@ security controls.
   `16.2.12`.
 - Worker lint/typecheck and 118 worker tests pass with the patched transitive
   graph.
+- Turbo now serializes each package's `build` after its `typecheck`, preventing
+  concurrent Next route-type generation/build cleanup from producing a false
+  clean-checkout failure.
 
 ## Remaining security scope
 
