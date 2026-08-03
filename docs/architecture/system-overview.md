@@ -82,8 +82,8 @@ callable only through the standalone `appsea_maintenance` role supplied by
 select/mutate the lease table directly. The per-acquisition token prevents
 same-owner overwrites and stale release. The lease prevents duplicate passes
 across scheduler instances but is not by itself a fencing token for a
-long-running mutation and does not replace deployed scheduler ownership, alert routing, or
-metric alert ownership. Migration `0047` adds a maintenance-role-only
+long-running mutation and does not replace deployed scheduler ownership,
+alert endpoint operation, or metric alert ownership. Migration `0047` adds a maintenance-role-only
 record/list/purge boundary for bounded run outcomes: generated run IDs, owner,
 fixed state/failure code, duration, and numeric counters. Rows are purged by a
 configured retention window; lease tokens, source content, and raw errors are
@@ -223,6 +223,6 @@ Production evolution still requires authenticated/TLS-protected Temporal,
 production identity/recovery policy and scheduled/distributed validation of the
 new login/source maintenance jobs, approved live connectors, production
 database provisioning, encrypted cloud object storage and backup purge,
-deployed recomputation/cost alert routing and threshold ownership,
+deployed recomputation/cost alert endpoint operation and threshold ownership,
 and operational controls. The local
 fixture workflow is not a production deployment or market-research claim.

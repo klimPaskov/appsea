@@ -58,7 +58,8 @@ exhausted; the worker never logs object URIs or exception text.
 The worker command `pnpm worker:production:analysis:recompute:alert` uses the
 same lease-owned maintenance boundary for read-only inspection of deletion- or
 correction-triggered repairs. It emits only bounded counters, age, alert state,
-and truncation; deployment owns scheduling and incident routing.
+and truncation; alert/incomplete/failure outcomes use signed delivery while
+deployment owns scheduling and incident routing.
 
 The worker command `pnpm worker:workspace:cost:alert` uses the same boundary to
 inspect exact micro-unit aggregates from the immutable cost ledger. Configure
@@ -81,7 +82,7 @@ This is a repository-level duplicate-run guard. Migration `0052` adds a
 server-clock transaction fence for selected SQL-only maintenance mutations;
 external source requests, provider delivery, and object-store deletion remain
 outside that atomic boundary. Deployment still owns scheduler availability and
-alert routing. Migration `0047` adds durable,
+the configured alert endpoint. Migration `0047` adds durable,
 secret-free outcomes through the same maintenance connection. Each acquired,
 contended, or failed invocation records a generated run ID, owner, fixed state
 and failure code, bounded duration, and numeric counters; lease tokens and raw
@@ -102,13 +103,15 @@ conflict.
 
 The local fixture worker is intentionally not a production deployment.
 Production still requires a TLS-protected Temporal endpoint, durable log/metric
-retention, alert routing, secret redaction verification, and a documented
-worker replacement drill. The private workspace cost summary provides bounded
-cross-run ledger accounting; migration `0065` and the cost-alert command add
-repository-level threshold inspection, but a production scheduler, alert
-ownership, provider billing controls, external idempotency/recovery, and any
-stronger maintenance checkpoint/fencing boundary remain deployment
-responsibilities.
+retention, the configured alert endpoint, secret redaction verification, and a
+documented worker replacement drill. The private workspace cost summary
+provides bounded cross-run ledger accounting; migration `0065` and the
+cost-alert command add repository-level threshold inspection, while the three
+alert commands route only bounded alert/incomplete/failure payloads through
+`APPSEA_ALERT_ROUTING_URL` with HMAC and idempotency headers. A production
+scheduler, endpoint ownership/rotation, provider billing controls, external
+idempotency/recovery, and any stronger maintenance checkpoint/fencing boundary
+remain deployment responsibilities.
 Settled source-quota cases are
 inspectable at:
 
@@ -118,8 +121,9 @@ GET /api/workspaces/:workspaceId/research/quota-reconciliation?limit=50
 
 The worker command `pnpm worker:source:quota:reconcile` uses the standalone
 `appsea_maintenance` role for bounded inspection or an explicit linked/voided
-resolution. It records no source payload or caller key; deployment owns case
-alert routing and operator identity provisioning.
+resolution. It records no source payload or caller key; bounded case outcomes
+can use signed delivery while deployment owns endpoint operation and operator
+identity provisioning.
 
 Private workspace members can inspect bounded cross-run cost accounting at:
 
@@ -133,5 +137,5 @@ currency and cost type. Optional `from` and `to` ISO timestamps are limited to
 365 days; the default window is the previous 30 days. The response is
 `private, no-store` and contains no source content, run identifiers, or raw
 errors. This is operational accounting, not billing or payment processing;
-deployment still owns alert routing, provider pricing, and retention/backup
+deployment still owns endpoint operation, provider pricing, and retention/backup
 controls.

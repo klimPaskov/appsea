@@ -78,8 +78,9 @@ case is at or above the threshold. Treat
 `truncated: true`) as an unknown state that requires a larger bound or a
 private operator inspection; it must not be treated as clear. The
 `source_quota_reconciliation_clear` event is a complete bounded scan with no
-case at the threshold. Scheduler deployment, alert routing, and retention
-remain deployment responsibilities.
+case at the threshold and is not sent as incident traffic. Scheduler
+deployment, endpoint operation, and retention remain deployment
+responsibilities.
 
 ## Recovery and alerting
 
@@ -89,5 +90,6 @@ inspect the case, verify PostgreSQL run/checkpoint state, and resolve it through
 the maintenance role. Deployments should alert on
 `source_quota_reconciliation_failed` and on open cases older than the incident
 response threshold. The bounded alert inspection supplies the repository event
-and counters; scheduler ownership, alert routing, and retention for this case
-projection remain deployment responsibilities.
+and counters; the signed delivery boundary supplies idempotent
+alert/incomplete/failure attempts. Scheduler ownership, endpoint operation,
+and retention for this case projection remain deployment responsibilities.

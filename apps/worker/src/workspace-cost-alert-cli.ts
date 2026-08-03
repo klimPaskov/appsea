@@ -12,6 +12,7 @@ import {
   PostgresWorkspaceCostAlertRepository
 } from '@appsea/db'
 import { emitWorkerEvent } from './observability'
+import { deliverOperationalAlert, isOperationalAlertEvent } from './alert-delivery'
 import {
   maintenanceDatabaseConfigFromEnv,
   maintenanceSchedulerFailureCode,
@@ -145,7 +146,7 @@ async function main(): Promise<void> {
 
     const result = leaseRun.result
     console.log(JSON.stringify(result))
-    emitWorkerEvent({
+    const payload = emitWorkerEvent({
       event: eventForResult(result),
       taskQueue,
       schedulerName: taskQueue,
@@ -159,13 +160,24 @@ async function main(): Promise<void> {
       workspaceCostAlertWorkspacesOverEstimated: result.workspacesOverEstimatedThreshold,
       workspaceCostAlertTruncated: result.truncated
     })
+    if (isOperationalAlertEvent(payload)) await deliverOperationalAlert(payload)
   } catch (error) {
-    emitWorkerEvent({
+    const payload = emitWorkerEvent({
       event: 'workspace_cost_alert_failed',
       taskQueue,
       schedulerName: taskQueue,
       failureCode: maintenanceSchedulerFailureCode(error, 'APPSEA_COST_ALERT_FAILED')
     })
+    try {
+      await deliverOperationalAlert(payload)
+    } catch {
+      emitWorkerEvent({
+        event: 'operational_alert_delivery_failed',
+        taskQueue,
+        schedulerName: taskQueue,
+        failureCode: 'APPSEA_ALERT_DELIVERY_FAILED'
+      })
+    }
     process.exitCode = 1
   } finally {
     if (servicePool) await servicePool.end()

@@ -90,7 +90,20 @@ function schedulerName(value: string | undefined): string | undefined {
  * raw workflow input, error messages, source text, and database URLs never
  * enter worker logs.
  */
-export function emitWorkerEvent(event: WorkerEvent): void {
+export interface WorkerEventPayload {
+  schemaVersion: 1
+  service: 'appsea-worker'
+  observedAt: string
+  event: string
+  taskQueue: string
+  [key: string]: unknown
+}
+
+/**
+ * Build the bounded event payload once so log sinks and reviewed operational
+ * alert delivery use exactly the same redacted representation.
+ */
+export function workerEventPayload(event: WorkerEvent): WorkerEventPayload {
   const payload = {
     schemaVersion: 1,
     service: 'appsea-worker',
@@ -389,7 +402,13 @@ export function emitWorkerEvent(event: WorkerEvent): void {
       : {}),
     ...(event.failureCode ? { failureCode: event.failureCode } : {})
   }
+  return payload as WorkerEventPayload
+}
+
+export function emitWorkerEvent(event: WorkerEvent): WorkerEventPayload {
+  const payload = workerEventPayload(event)
   console.log(JSON.stringify(payload))
+  return payload
 }
 
 export interface WorkerHeartbeatOptions {

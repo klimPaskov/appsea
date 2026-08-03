@@ -26,6 +26,9 @@ function baseEnvironment(): NodeJS.ProcessEnv {
     APPSEA_PUBLIC_ORIGIN: 'https://appsea.example',
     APPSEA_AUTH_RECOVERY_ENABLED: 'false',
     APPSEA_AUTH_INVITATIONS_ENABLED: 'false',
+    APPSEA_ALERT_ROUTING_ENABLED: 'true',
+    APPSEA_ALERT_ROUTING_URL: 'https://alerts.internal/appsea',
+    APPSEA_ALERT_ROUTING_SECRET: Buffer.alloc(32, 9).toString('base64url'),
     APPSEA_SCHEDULER_OWNER_ID: 'scheduler:production:one',
     APPSEA_COST_ALERT_CURRENCY: 'USD',
     APPSEA_COST_ALERT_ACTUAL_THRESHOLD_MICROS: '1000000',
@@ -109,6 +112,23 @@ describe('production deployment configuration preflight', () => {
     expect(check(malformed, 'costAlert')).toMatchObject({
       status: 'failed',
       failureCode: 'APPSEA_PREFLIGHT_COST_ALERT'
+    })
+  })
+
+  it('requires an HTTPS operational alert route in production', () => {
+    const environment = baseEnvironment()
+    delete environment.APPSEA_ALERT_ROUTING_URL
+    const missing = validateProductionEnvironment(environment)
+    expect(check(missing, 'alertRouting')).toMatchObject({
+      status: 'failed',
+      failureCode: 'APPSEA_PREFLIGHT_ALERT_ROUTING'
+    })
+
+    environment.APPSEA_ALERT_ROUTING_URL = 'http://alerts.internal/appsea'
+    const insecure = validateProductionEnvironment(environment)
+    expect(check(insecure, 'alertRouting')).toMatchObject({
+      status: 'failed',
+      failureCode: 'APPSEA_PREFLIGHT_ALERT_ROUTING'
     })
   })
 

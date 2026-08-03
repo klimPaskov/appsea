@@ -54,8 +54,9 @@ analysis run and the worker keeps it outside the idempotency hash; migration
 `0056` adds at most ten server-clock attempt rows with stage heartbeats,
 duration, and fixed terminal failure codes. Queued and running fallback rows
 expose observed attempts without source content. The start action is still
-manual and approved-seed-only. Periodic deployment alerting, production
-Temporal availability, and production scheduler ownership remain open.
+manual and approved-seed-only. Signed alert delivery covers bounded outcomes;
+production Temporal availability, endpoint operation, and production scheduler
+ownership remain open.
 
 Source-policy approval integrity is now database-bound: new approvals require a
 canonical reviewer identity, an independent legal/privacy/security role, and an
@@ -96,14 +97,14 @@ policy review.
 
 ## Infrastructure
 
-The PostgreSQL schema, repository, migrations, RLS, local role bootstrap, and CI integration suite exist. `pnpm production:preflight` now rejects missing or role-confused production URLs, insecure endpoints, incomplete Temporal/object-store settings, and unsafe delivery switches before startup. Production role provisioning, secrets, verified TLS trust, backups, high availability, deployment, live dependency proof, and migration approval automation do not.
+The PostgreSQL schema, repository, migrations, RLS, local role bootstrap, and CI integration suite exist. `pnpm production:preflight` now rejects missing or role-confused production URLs, insecure endpoints, incomplete Temporal/object-store settings, unsafe delivery switches, and missing operational alert routing before startup. Production role provisioning, secrets, verified TLS trust, backups, high availability, deployment, live dependency proof, and migration approval automation do not.
 
 The fixture and production-collection workflow boundaries are durable locally
 and in CI. Web and worker clients now fail closed and support a non-loopback
 Temporal endpoint with namespace, API-key, and pinned-CA settings, but there is
 no production Temporal topology, namespace/task-queue authorization, HA,
-backup/restore policy, worker deployment, or alerting. Production billing and
-deployment configuration are also absent.
+backup/restore policy, worker deployment, or operated alert endpoint. Production
+billing and deployment configuration are also absent.
 
 Private workspace authentication is implemented for the web boundary with durable
 hashed sessions, PostgreSQL-backed login/signup throttling, bounded session
@@ -198,7 +199,7 @@ validation. The worker also exposes a deployment-owned `maintenance:loop`
 supervisor that starts one existing lease-backed pass at a time, retries child
 failures with bounded backoff, and forwards shutdown without logging raw
 errors. It improves repository-level ownership but still requires a production
-process supervisor, alert routing, and deployment liveness policy. Migration
+process supervisor, the configured alert endpoint, and deployment liveness policy. Migration
 `0047` now persists each acquired, contended, or failed
 maintenance invocation through maintenance-role-only record/list/purge
 functions, with generated run IDs, fixed states/codes, bounded durations, and
@@ -222,7 +223,7 @@ Migration `0052` now fences selected
 SQL-only maintenance mutations with the server-clock lease identity; external
 source/provider/object-store effects and snapshot reconciliation remain outside
 that atomic boundary. Deployment still lacks scheduler process ownership,
-alert routing/incident response, provider pricing/billing controls,
+alert endpoint operation/incident response, provider pricing/billing controls,
 per-scheduler maintenance credentials, and a fresh Docker-backed recovery
 proof. The current
 `appsea_maintenance` coordinator is trusted across
@@ -302,7 +303,7 @@ bounded all-workspace maintenance through a migration-owner security-definer
 workspace enumerator, stale-claim recovery, and deletion propagation now exist.
 No source is currently enabled for market research, and production Temporal
 provisioning/cloud-storage deployment, scheduler-triggered re-collection,
-cloud object-store/backups purge, recomputation alert routing, and
+cloud object-store/backups purge, recomputation alert endpoint operation, and
 legal/privacy/security approval remain required. Explicit one-record
 re-collection after a completed deletion tombstone is implemented behind a
 private reviewed route, but it is not automatic and does not activate the
@@ -322,8 +323,9 @@ remains open;
 automatic recomputation dispatch now exists through migrations `0037` and
 `0062`, and a separate maintenance-role read projection plus lease-owned,
 bounded alert inspection now makes failed, blocked, stale, oldest-age, and
-truncated coverage visible without dispatching or retrying a repair. The
-deployment scheduler, event routing, and incident response remain open. The
+truncated coverage visible without dispatching or retrying a repair. Alert and
+incomplete outcomes now have a signed delivery boundary; the deployment
+scheduler, endpoint operation, and incident response remain open. The
 migrations `0040`/`0041` provide a policy-gated identifier-only reconciliation
 job, page checkpoints, warning-preserving retries, and atomic tombstone
 finalization. A production-shaped
@@ -370,8 +372,9 @@ scheduler ownership, Temporal namespace authorization, and Docker-backed
 crash/retry evidence. A quota settled without
 a persisted result now creates a durable operator-reconciliation case; the
 worker does not release or re-fetch optimistically. The repository-level alert
-inspection is bounded and read-only; case alert routing, incident response,
-and maintenance-role provisioning remain deployment work.
+inspection is bounded and read-only; fixed case-alert outcomes can use the
+signed delivery boundary, while endpoint operation, incident response, and
+maintenance-role provisioning remain deployment work.
 
 ## Models
 

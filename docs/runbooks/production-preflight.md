@@ -37,6 +37,13 @@ shape passed; a non-zero exit means the deployment must not proceed.
   `pnpm worker:workspace:cost:alert`: set `APPSEA_COST_ALERT_CURRENCY`,
   `APPSEA_COST_ALERT_ACTUAL_THRESHOLD_MICROS`, and
   `APPSEA_COST_ALERT_ESTIMATED_THRESHOLD_MICROS` as exact micro-unit strings.
+- Operational alert routing must be enabled with
+  `APPSEA_ALERT_ROUTING_ENABLED=true`, an HTTPS non-loopback
+  `APPSEA_ALERT_ROUTING_URL`, and a separate 32-byte base64url
+  `APPSEA_ALERT_ROUTING_SECRET`. The quota, recomputation, and cost alert
+  commands send only their bounded structured alert payloads; clear results
+  are not delivered. The endpoint must honor the idempotency key and verify
+  the HMAC request signature.
 - Recovery and invitation switches accept only `true` or `false`. Enabling
   either requires the 32-byte encryption key and HTTPS signed-delivery gateway
   configuration; leaving both disabled keeps delivery kill-switched.
@@ -45,8 +52,10 @@ shape passed; a non-zero exit means the deployment must not proceed.
 The web readiness endpoint remains the live dependency check: it verifies
 PostgreSQL, Temporal, and object-store availability after processes start. The
 preflight cannot prove TLS trust against a provider, role grants, backups,
-high availability, alert routing, or source-policy approval. Those remain
-deployment-owner and independent legal/privacy/security review gates.
+high availability, endpoint delivery, provider billing, or source-policy
+approval. Those remain deployment-owner and independent legal/privacy/security
+review gates. Alert delivery retries a bounded number of times in the command;
+the scheduler must retry the command after an unavailable endpoint.
 
 ## Ownership and recovery
 

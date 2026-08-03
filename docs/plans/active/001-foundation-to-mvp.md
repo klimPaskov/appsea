@@ -25,7 +25,7 @@ Status: production-shaped foundation implemented and validated locally; producti
 
 Implemented:
 
-- PostgreSQL 18 schema and seventy-two forward, checksummed migrations
+- PostgreSQL 18 schema and seventy-nine forward, checksummed migrations
 - normalized source, evidence, complaint, cluster, competitor, opportunity, score, report, plan, audit, cost, deletion, outbox, and lineage tables
 - no-login owner, separate migrator, and least-privilege runtime role contract
 - forced workspace RLS and transaction-scoped workspace context
@@ -125,8 +125,9 @@ standalone maintenance role can record only an exact linked result or an
 explicit no-result void. The boundary never refunds quota or authorizes a
 re-fetch. A lease-owned read-only alert inspection now emits fixed
 alert/incomplete/clear events and durable bounded counters while exposing
-truncated coverage. Deployed scheduler routing and incident response remain
-open.
+truncated coverage. Alert/incomplete/failure outcomes now use the shared
+signed operational delivery boundary; deployed scheduler ownership, endpoint
+operations, and incident response remain open.
 
 Migration `0050_explicit_source_recollection.sql` adds the reviewed explicit
 re-collection boundary. A completed matching deletion tombstone is required;
@@ -198,8 +199,8 @@ bounded projection for inspecting open recomputation repairs. The worker
 command uses a scheduler lease, emits fixed alert/incomplete/clear events, and
 keeps failed, blocked, stale, age, and truncation state visible without
 claiming, retrying, resolving, dispatching, or starting Temporal work. Deployed
-scheduler ownership, event routing, and incident response remain deployment
-responsibilities.
+scheduler ownership, endpoint operations, and incident response remain
+deployment responsibilities.
 
 Migration `0065_cost_alert_read_boundary.sql` adds a maintenance-only,
 bounded currency aggregate for deployment cost-threshold inspection. The
@@ -263,9 +264,9 @@ status page/API reconciles safe Temporal state with a PostgreSQL projection,
 validates workflow workspace prefixes, and excludes hashes, object references,
 source payloads, and seed content. Migration `0055` records the highest
 bounded Temporal activity attempt on the run without changing input idempotency;
-`0056` now supplies bounded attempt timing and heartbeat history. Periodic
-deployment alerting, deployed scheduler ownership, and production Temporal
-remain open; repository-level campaign refresh and multi-source dispatch are
+`0056` now supplies bounded attempt timing and heartbeat history. Signed
+alert delivery covers bounded outcomes; deployed scheduler ownership and
+production Temporal remain open; repository-level campaign refresh and multi-source dispatch are
 implemented locally. Draft campaign forms now select from the private source
 registry while retaining visible pending-policy states. Deployed Temporal and
 scheduler crash/retry proof, live source-policy approval, and Docker-backed
@@ -381,7 +382,7 @@ snapshot scheduler ownership, and worker crash fault-injection proof. Migrations
 `0037` and `0062` now queue deletion- or correction-triggered
 active-evidence repairs and the dispatcher reclaims stale dispatch claims with
 bounded terminal failure. Migration `0064` provides a separate bounded
-maintenance-role alert inspection; deployed scheduling, event routing, and production
+maintenance-role alert inspection; signed alert delivery exists for bounded outcomes; deployed scheduling, endpoint operation, and production
 Temporal remain open. The repository-level collection and manual-analysis
 ingress gates are now implemented; deployed scheduler ownership,
 service-role/secret separation, and infrastructure authorization remain
@@ -442,7 +443,7 @@ Temporal activity, an opt-in approved-seed handoff queue, a deletion- or
 correction-triggered
 recomputation queue, and private active-output reads are implemented after a
 completed collection; live activation, cloud object-store deployment, deployed
-scheduling, and handoff/recomputation alert routing remain open. Source deletion now
+scheduling, and handoff/recomputation alert endpoint operation remain open. Source deletion now
 invalidates/de-ranks mutable opportunity projections through migration `0035`.
 Migration `0036` allows an explicit reviewed analysis over the remaining active
 evidence to re-cluster and reactivate only after its new output is linked; it
@@ -493,7 +494,7 @@ analysis/object references, active-output private reads, and a
 production-shaped report/package composition checkpoint, and a persisted
 versioned complaint classification/entity-resolution checkpoint and derived
 correction invalidation boundary are implemented;
-cloud object storage, recomputation alert routing, and export retention remain. Report and plan
+cloud object storage, recomputation alert endpoint operation, and export retention remain. Report and plan
 approval/export now hydrate validated object-backed production payloads before
 applying their separate governance boundaries. Production analysis read models
 carry the linked report/plan approval states from PostgreSQL so private
@@ -543,9 +544,9 @@ one lease-backed pass at a time, retries child failures with bounded backoff,
 and forwards shutdown without logging raw errors;
 the long-lived worker emits a bounded 30-second heartbeat and the web service
 exposes fail-closed liveness/readiness probes; deployed process-supervisor
-ownership, alert routing, traces, role separation, incident drills, and
-production security review remain. Provider idempotency, object-store
-conditional-delete, deployed scheduler alert delivery, and Docker-backed lock
+ownership, alert endpoint operations, traces, role separation, incident drills,
+and production security review remain. Provider idempotency, object-store
+conditional-delete, deployed scheduler ownership, and Docker-backed lock
 recovery proof remain open.
 
 ### 7. Desktop release

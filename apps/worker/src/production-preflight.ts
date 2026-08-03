@@ -12,6 +12,7 @@ import {
   maintenanceSchedulerOwnerIdFromEnv
 } from './maintenance-scheduler'
 import { requiredDeliveryUrl, signedDeliveryConfigFromEnv } from './signed-delivery'
+import { operationalAlertConfigFromEnv } from './alert-delivery'
 
 export type ProductionPreflightCheckStatus = 'ok' | 'failed'
 
@@ -176,6 +177,14 @@ function assertProductionCostAlert(environment: NodeJS.ProcessEnv): void {
   }
 }
 
+function assertProductionAlertRouting(environment: NodeJS.ProcessEnv): void {
+  const config = operationalAlertConfigFromEnv(
+    environment,
+    () => new ProductionPreflightConfigurationError()
+  )
+  if (!config) throw new ProductionPreflightConfigurationError()
+}
+
 function check(name: string, failureCode: string, run: () => void): ProductionPreflightCheck {
   try {
     run()
@@ -216,7 +225,10 @@ export function validateProductionEnvironment(
     check('trustedProxy', 'APPSEA_PREFLIGHT_TRUSTED_PROXY', () =>
       assertProductionProxy(environment)
     ),
-    check('costAlert', 'APPSEA_PREFLIGHT_COST_ALERT', () => assertProductionCostAlert(environment))
+    check('costAlert', 'APPSEA_PREFLIGHT_COST_ALERT', () => assertProductionCostAlert(environment)),
+    check('alertRouting', 'APPSEA_PREFLIGHT_ALERT_ROUTING', () =>
+      assertProductionAlertRouting(environment)
+    )
   ]
   return {
     status: checks.every((entry) => entry.status === 'ok') ? 'ready' : 'not_ready',

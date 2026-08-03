@@ -118,8 +118,9 @@ queued, running, and completed runs without exposing workflow payloads.
 Migration `0056` adds at most ten per-attempt rows with server-clock timing,
 stage heartbeats, duration, and fixed failure codes. The web boundary merges
 that history into a successful Temporal read when available; it remains a
-safe private projection. Periodic deployment alerting and production
-scheduler ownership remain separate operational controls.
+safe private projection. Signed alert delivery covers bounded outcomes; endpoint
+operation and production scheduler ownership remain separate operational
+controls.
 
 Private opportunity pages prefer the latest active production analysis for a
 slug and otherwise retain the fixture read path. The public leaderboard remains
@@ -154,7 +155,8 @@ opportunity. The existing worker dispatcher reconstructs active evidence and
 starts the same identifier-only analysis workflow. An approved immutable seed
 is still required; a missing or withdrawn seed leaves the request blocked for
 operator inspection rather than bypassing review. Cloud object deletion,
-deployment scheduling, and alert routing remain operational follow-ups.
+deployment scheduling, and alert endpoint operation remain operational
+follow-ups.
 
 ## Bounded recomputation alert inspection
 
@@ -184,7 +186,9 @@ failed, blocked, or has exceeded the age threshold. Treat
 unknown coverage, not clear. `production_analysis_recompute_clear` means a
 complete bounded scan observed no failed, blocked, or aged repair. It does not
 retry, resolve, start Temporal, recollect source data, or change retention;
-deployment owns scheduler supervision, routing, and operator response.
+alert/incomplete/failure outcomes use the signed delivery boundary, while
+deployment owns scheduler supervision, endpoint operation, and operator
+response.
 
 ## Object storage boundary
 

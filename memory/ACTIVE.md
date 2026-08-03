@@ -5,12 +5,12 @@
 Fixture product, PostgreSQL persistence, durable workflows, policy-gated CFPB
 collection, private workspaces, report/plan approval/export, recovery, and
 invitations are implemented. Migrations
-`0027`-`0073` add policy evidence, collection checkpoints, deletion repair,
+`0027`-`0079` add policy evidence, collection checkpoints, deletion repair,
 leases, snapshot reconciliation, workflow admissions, source-reconciliation
 admission, retryable tombstones, maintenance-run telemetry, a durable source-
-quota case ledger, recomputation alerts, cost-threshold projection, and
-owner-only non-destructive workspace archival, and a durable owner-confirmed
-workspace purge intent that never performs deletion.
+quota case ledger, recomputation alerts, cost-threshold projection, alert
+routing, and owner-only non-destructive workspace archival, plus a durable
+owner-confirmed workspace purge intent that never performs deletion.
 The 2026-08-02 purge-readiness tranche adds an owner-only read-only
 `WorkspacePurgeReadiness` inventory with deterministic blockers; it names
 cloud/object/export/backup requirements and never deletes. The 2026-08-03
@@ -46,11 +46,13 @@ reconstructs the policy-validated artifact from workspace-bound rows inside the
 persistence activity, preserving the no-raw-source-in-history boundary. Legacy
 v1 executions need a drain/retention plan.
 
-Monitoring includes health routes, a secret-free heartbeat, and lease-owned
-quota/recomputation/cost scans. `pnpm production:preflight` validates
-role-separated TLS databases, authenticated Temporal, signed object storage,
-scheduler ownership, HTTPS origin, delivery switches, and proxy secret shape.
-Deployment topology, HA, retention, alert routing, and failure drills remain.
+Monitoring includes health routes, a secret-free heartbeat, lease-owned
+quota/recomputation/cost scans, and bounded signed operational alert delivery.
+`pnpm production:preflight` validates role-separated TLS databases,
+authenticated Temporal, signed object storage, scheduler ownership, HTTPS
+origin, delivery switches, alert endpoint configuration, and proxy secret
+shape. Deployment topology, HA, retention, endpoint operations, and failure
+drills remain.
 
 ## Validated commands
 
@@ -61,7 +63,8 @@ Deployment topology, HA, retention, alert routing, and failure drills remain.
   Docker Desktop Linux engine pipe is unavailable.
 
 - Maintenance loop, quota-alert, and recomputation-alert tests pass; deployment
-  scheduler, Temporal, and source activation remain unclaimed.
+  scheduler, Temporal, endpoint operation, and source activation remain
+  unclaimed. Alert delivery is bounded and signed; clear events are not sent.
 
 Competitive research remains synthetic/reviewed-seed-only until an approved
 competitor source supplies retained evidence; the Stack Exchange candidate is
@@ -74,7 +77,7 @@ members choose an approved seed, the admission route starts
 state with PostgreSQL. Workflow prefixes are workspace-bound; hashes, object
 references, source payloads, and seed content stay hidden. Migration `0056`
 adds bounded server-clock attempt history with fixed failures. Deployed
-scheduler ownership, production Temporal, and periodic alerting remain open.
+scheduler ownership, production Temporal, and endpoint operations remain open.
 
 2026-08-02 correction tranche adds migrations `0061` and `0062`, a strict
 derived-only editor/owner correction contract, immutable prior/next snapshot
@@ -87,8 +90,9 @@ Missing or unapproved seeds block repair.
 
 The 2026-08-02 alert tranches add migrations `0064`/`0065`, maintenance-only
 recomputation/cost projections, bounded lease-aware scans, fixed states,
-secret-free counters, and explicit cost thresholds. They never mutate work;
-deployment owns scheduler routing, threshold selection, billing, and response.
+secret-free counters, explicit cost thresholds, and the 2026-08-03 signed
+delivery boundary. They never mutate work; deployment owns scheduler,
+endpoint, billing, and incident response operations.
 
 Migration `0066` adds `appsea.archive_workspace`: owner + recent step-up,
 active durable-work blocker, campaign refresh cleanup, pending-invitation
@@ -96,15 +100,9 @@ revocation, and identifier-only receipts. Archival retains lineage and is not
 workspace/object/export/backup purge. Web `DELETE /api/workspaces/:workspaceId`
 and the member settings control expose the strict `ARCHIVE WORKSPACE` action.
 
-Migration `0067` adds owner/editor field-level evidence redaction. The strict
-run/complaint/evidence route requires a recent step-up and records immutable
-redaction receipts plus identifier-only audit/outbox events. Source identity,
-capture/policy lineage, content hashes, and immutable analysis snapshots remain;
-private collection, opportunity/leaderboard, analysis, report, coding-plan, and
-export mappers apply stable masks.
-Text masking is denied while a raw source object reference exists, leaving
-source-policy deletion and cloud/backup purge as separate operations. The
-collection page exposes the small privacy-redaction control.
+Migration `0067` adds owner/editor field-level evidence redaction with
+immutable receipts, preserved source lineage, and stable read-time masks;
+source-policy deletion and cloud/backup purge remain separate operations.
 
 ## Next production tranche
 
@@ -130,8 +128,8 @@ collection page exposes the small privacy-redaction control.
 - Recovery/invitations await provider, DPA/retention, key rotation, monitoring,
   and failure-drill approval.
 - Deletion retries and explicit one-record recollection exist; workspace/export
-  purge, cloud storage, recomputation alert routing, deployed scheduler
-  ownership, and quota case routing remain open.
+  purge, cloud storage, endpoint operation, deployed scheduler ownership, and
+  quota case incident response remain open.
 - One-/multi-source cancellation has a durable private boundary; deployed
   Temporal cancellation and crash-drill evidence remain open.
 - Windows/macOS release remains open.

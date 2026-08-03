@@ -408,6 +408,13 @@ for that pre-context authorization lookup.
   aggregates. It returns currency totals only for a bounded period and row
   limit; the worker compares one explicitly configured currency without
   exchange-rate inference, ledger identifiers, or admission mutation.
+- The worker's operational alert sender reuses the already redacted event
+  payload, signs it with a separate HMAC secret, rejects redirects, and sends a
+  stable idempotency key across bounded transient retries. It never includes
+  source text, workspace identifiers, credentials, database URLs, or raw
+  exception messages. Production preflight requires an HTTPS non-loopback
+  endpoint; endpoint ownership, rotation, and incident response remain
+  deployment controls.
 
 ## Temporal boundary
 
