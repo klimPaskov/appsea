@@ -32,7 +32,7 @@ operator-gated.
   and `pnpm repo:check --docs-only` passed locally.
 - Fresh PostgreSQL/Temporal execution is delegated to the pushed CI proof;
   local Docker Desktop is unavailable. The latest green release-proof run is
-  GitHub Actions `30811054752` for commit `15d9629`.
+  GitHub Actions `30813209982` for commit `39e8bcd`.
 
 ## Remaining gates and simplifications
 

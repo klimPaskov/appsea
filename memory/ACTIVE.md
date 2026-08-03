@@ -80,6 +80,8 @@ memory.
 - The MFA key-rotation tranche passes contracts (94), database (142), and
   worker (116) focused tests plus affected typechecks. Migration `0086` adds
   ciphertext key versions; the status command exposes only aggregate counts.
+  GitHub Actions run `30813209982` is green for `39e8bcd`, including fresh
+  PostgreSQL and Temporal proof.
 
 ## Next production tranche
 

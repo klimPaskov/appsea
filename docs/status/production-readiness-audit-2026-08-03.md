@@ -34,7 +34,7 @@ Passing on 2026-08-03:
   `pnpm --filter @appsea/worker test` (116), plus affected package
   typechecks. Migration `0086` defaults existing ciphertext to version 1 and
   the status command exposes no key material. The latest release-proof run
-  is GitHub Actions `30811054752` for commit `15d9629`.
+  is GitHub Actions `30813209982` for commit `39e8bcd`.
 - MFA-focused contract, PostgreSQL repository/migration, web-route, worker
   preflight, and retention tests pass; the conditional-MFA route scenario
   passed in GitHub Actions run `30786965857` for commit `b9cb95e`.
