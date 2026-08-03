@@ -91,7 +91,8 @@ describe('database foundation', () => {
       '0075',
       '0076',
       '0077',
-      '0078'
+      '0078',
+      '0079'
     ])
     expect(migrations[0]?.checksum).toMatch(/^[a-f0-9]{64}$/)
     expect(migrations[0]?.sql).toContain('CREATE TABLE appsea.evidence_records')
@@ -149,6 +150,12 @@ describe('database foundation', () => {
     )
     expect(sourceQuotaResolutionQualificationMigration?.sql).toContain(
       'stored_case.workspace_id = p_workspace_id'
+    )
+    const competitorObservationDependencyGrantMigration = migrations.find(
+      (migration) => migration.version === '0079'
+    )
+    expect(competitorObservationDependencyGrantMigration?.sql).toContain(
+      'GRANT SELECT ON appsea.opportunity_competitors TO appsea_service'
     )
     const authMigration = migrations.find((migration) => migration.version === '0008')
     const privacyMigration = migrations.find((migration) => migration.version === '0009')
