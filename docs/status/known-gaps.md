@@ -454,7 +454,9 @@ not change the separate approval or approved-only export gates.
 
 ## Desktop
 
-The Tauri boundary is staged without signing, update infrastructure, or platform release tests.
+The Tauri boundary now compiles and is covered by a Windows CI check with a
+restrictive CSP and minimal capability set. Signing, update infrastructure,
+hosted-origin review, and platform release tests remain open.
 
 ## Autonomy
 
