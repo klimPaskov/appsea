@@ -106,6 +106,7 @@
 - [`status/worker-maintenance-hardening-completion-report.md`](status/worker-maintenance-hardening-completion-report.md)
 - [`status/auth-recovery-completion-report.md`](status/auth-recovery-completion-report.md)
 - [`status/auth-mfa-completion-report-2026-08-03.md`](status/auth-mfa-completion-report-2026-08-03.md)
+- [`status/mfa-key-rotation-completion-report-2026-08-03.md`](status/mfa-key-rotation-completion-report-2026-08-03.md)
 - [`status/mfa-agent-token-step-up-completion-report-2026-08-03.md`](status/mfa-agent-token-step-up-completion-report-2026-08-03.md)
 - [`status/conditional-mfa-password-gated-mutations-completion-report-2026-08-03.md`](status/conditional-mfa-password-gated-mutations-completion-report-2026-08-03.md)
 - [`status/temporal-legacy-history-drain-completion-report-2026-08-03.md`](status/temporal-legacy-history-drain-completion-report-2026-08-03.md)

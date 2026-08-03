@@ -13,6 +13,7 @@
     "plan:sample": "tsx src/plan-sample.ts",
     "analysis:sample": "tsx src/analysis-sample.ts",
     "auth:retention": "tsx src/auth-retention.ts",
+    "auth:mfa:rotation:status": "tsx src/auth-mfa-key-rotation-status.ts",
     "auth:recovery": "tsx src/auth-recovery.ts",
     "workspace:invitations": "tsx src/workspace-invitations.ts",
     "source:maintenance": "tsx src/source-maintenance.ts",

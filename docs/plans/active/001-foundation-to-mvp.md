@@ -25,7 +25,7 @@ Status: production-shaped foundation implemented and validated locally; producti
 
 Implemented:
 
-- PostgreSQL 18 schema and eighty-five forward, checksummed migrations
+- PostgreSQL 18 schema and eighty-six forward, checksummed migrations
 - normalized source, evidence, complaint, cluster, competitor, opportunity, score, report, plan, audit, cost, deletion, outbox, and lineage tables
 - no-login owner, separate migrator, and least-privilege runtime role contract
 - forced workspace RLS and transaction-scoped workspace context
@@ -123,7 +123,9 @@ Migrations `0084_workspace_archival_function_qualification.sql` and
 `0085_workspace_purge_manifest_read_only.sql` are append-only PostgreSQL 18
 repairs: the first qualifies the archival function's workspace predicates, and
 the second keeps the private manifest read compatible with a read-only
-transaction. The CI release workflow now runs the complete `pnpm verify`
+transaction. Migration `0086_auth_mfa_key_versions.sql` adds a version to every
+encrypted TOTP secret, with current/previous-key configuration, transactional
+opportunistic rewrap, and a count-only operator status command. The CI release workflow now runs the complete `pnpm verify`
 fixture/build/route-smoke proof with read-only repository permissions and
 bounded stale-run cancellation.
 
@@ -513,9 +515,10 @@ Implemented:
 
 Remaining: verified account recovery/delivery policy, production
 secret/session-retention operations, OIDC/verified identity, provider-backed
-step-up, MFA key rotation, and explicit contracts for high-impact mutations
-that do not already require password step-up. The AppSea-owned TOTP boundary is implemented in
-migrations `0080`/`0081` with encrypted enrollment secrets, hash-only recovery
+step-up, approved deployment/status review for MFA key rotation, and explicit
+contracts for high-impact mutations that do not already require password
+step-up. The AppSea-owned TOTP boundary is implemented in migrations
+`0080`/`0081`/`0086` with encrypted enrollment secrets, hash-only recovery
 codes, expiring login challenges, a session-bound MFA step-up marker for
 password-gated high-risk mutations, and account-security routes; external
 identity-provider operations remain separate.

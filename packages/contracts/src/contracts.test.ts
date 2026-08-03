@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import {
   authRetentionInputSchema,
   authRetentionResultSchema,
+  authMfaKeyRotationStatusSchema,
   authRecoveryBatchInputSchema,
   workspaceInvitationDeliveryBatchInputSchema,
   authSignInInputSchema,
@@ -989,6 +990,23 @@ describe('contracts', () => {
     ).toBe(true)
     expect(authRecoveryBatchInputSchema.safeParse({ batchSize: 100 }).success).toBe(true)
     expect(authRecoveryBatchInputSchema.safeParse({ batchSize: 101 }).success).toBe(false)
+    const mfaRotationStatus = {
+      currentKeyVersion: 2,
+      previousKeyVersion: 1,
+      totalAccounts: 5,
+      currentKeyAccounts: 3,
+      previousKeyAccounts: 2,
+      unknownKeyAccounts: 0,
+      enabledAccounts: 5,
+      pendingAccounts: 0
+    }
+    expect(authMfaKeyRotationStatusSchema.safeParse(mfaRotationStatus).success).toBe(true)
+    expect(
+      authMfaKeyRotationStatusSchema.safeParse({
+        ...mfaRotationStatus,
+        unknownKeyAccounts: 1
+      }).success
+    ).toBe(false)
     expect(workspaceInvitationDeliveryBatchInputSchema.safeParse({ batchSize: 100 }).success).toBe(
       true
     )

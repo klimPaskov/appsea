@@ -515,7 +515,8 @@ describe.sequential('PostgreSQL fixture persistence lifecycle', () => {
       '0082',
       '0083',
       '0084',
-      '0085'
+      '0085',
+      '0086'
     ])
     expect(secondMigrationResult.applied).toEqual([])
     expect(secondMigrationResult.alreadyApplied).toEqual([
@@ -603,7 +604,8 @@ describe.sequential('PostgreSQL fixture persistence lifecycle', () => {
       '0082',
       '0083',
       '0084',
-      '0085'
+      '0085',
+      '0086'
     ])
   })
 
@@ -1672,6 +1674,26 @@ describe.sequential('PostgreSQL fixture persistence lifecycle', () => {
       })
       expect(confirmed.enabled).toBe(true)
       expect(confirmed.recoveryCodesRemaining).toBe(10)
+      const storedMfa = await withOwnerClient((client) =>
+        client.query<{ secret_key_version: number; secret_ciphertext: string }>(
+          `SELECT secret_key_version, secret_ciphertext
+             FROM appsea.auth_mfa_totp
+            WHERE user_id = $1`,
+          [created.session.user.userId]
+        )
+      )
+      expect(storedMfa.rows[0]?.secret_key_version).toBe(1)
+      expect(storedMfa.rows[0]?.secret_ciphertext).not.toContain(enrollment.secret)
+      await expect(authRepository.readMfaKeyRotationStatus()).resolves.toMatchObject({
+        currentKeyVersion: 1,
+        previousKeyVersion: null,
+        totalAccounts: 1,
+        currentKeyAccounts: 1,
+        previousKeyAccounts: 0,
+        unknownKeyAccounts: 0,
+        enabledAccounts: 1,
+        pendingAccounts: 0
+      })
 
       const challenged = await authRepository.signIn({ email, password })
       expect(challenged.mfaRequired).toBe(true)

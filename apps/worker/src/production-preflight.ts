@@ -1,7 +1,7 @@
 import { fileURLToPath } from 'node:url'
 import path from 'node:path'
 import { workspaceCostAlertLimits } from '@appsea/contracts'
-import { databaseConfigFromEnv } from '@appsea/db'
+import { databaseConfigFromEnv, mfaEncryptionConfigFromEnv } from '@appsea/db'
 import { objectStoreFromEnv } from '@appsea/object-store'
 import { temporalClientConfigFromEnv } from '@appsea/workflows'
 import {
@@ -104,8 +104,15 @@ function assertProductionDelivery(environment: NodeJS.ProcessEnv): void {
 }
 
 function assertProductionMfa(environment: NodeJS.ProcessEnv): void {
-  const key = requiredEnvironmentValue(environment, 'APPSEA_AUTH_MFA_ENCRYPTION_KEY')
-  if (!/^[A-Za-z0-9_-]{43}$/.test(key) || Buffer.from(key, 'base64url').length !== 32) {
+  try {
+    const config = mfaEncryptionConfigFromEnv(environment)
+    if (!environment.APPSEA_AUTH_MFA_ENCRYPTION_KEY?.trim()) {
+      throw new ProductionPreflightConfigurationError()
+    }
+    if (config.previous && config.previous.version >= config.current.version) {
+      throw new ProductionPreflightConfigurationError()
+    }
+  } catch {
     throw new ProductionPreflightConfigurationError()
   }
 }

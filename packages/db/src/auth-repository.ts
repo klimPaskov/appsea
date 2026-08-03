@@ -42,6 +42,7 @@ import {
   authMfaStepUpInputSchema,
   authMfaEnrollmentConfirmInputSchema,
   authMfaEnrollmentReadModelSchema,
+  authMfaKeyRotationStatusSchema,
   authMfaSignInInputSchema,
   authMfaStatusReadModelSchema,
   authSessionTokenSchema,
@@ -94,6 +95,7 @@ import {
   type AuthMfaStepUpInput,
   type AuthMfaEnrollmentConfirmInput,
   type AuthMfaEnrollmentReadModel,
+  type AuthMfaKeyRotationStatus,
   type AuthMfaSignInInput,
   type AuthMfaStatusReadModel,
   type WorkspaceEvidenceReadModel,
@@ -125,6 +127,12 @@ import {
   verifyMfaTotpCode,
   normalizeMfaCode
 } from './auth-mfa'
+import {
+  decryptMfaSecret as decryptMfaSecretWithConfig,
+  encryptMfaSecret as encryptMfaSecretWithConfig,
+  mfaEncryptionConfigFromEnv,
+  type MfaEncryptionConfig
+} from './auth-mfa-key'
 import {
   WorkspaceAuthorizationError,
   withAuthenticatedWorkspaceTransaction,
@@ -389,6 +397,7 @@ interface MfaTotpRow extends QueryResultRow {
   secret_ciphertext: string
   secret_nonce: string
   secret_tag: string
+  secret_key_version: number | string | null
   status: 'pending' | 'enabled'
   verified_at: Date | string | null
   last_used_step: number | string | null
@@ -398,6 +407,12 @@ interface MfaStatusRow extends QueryResultRow {
   status: 'pending' | 'enabled' | null
   verified_at: Date | string | null
   recovery_codes_remaining: number | string
+}
+
+interface MfaKeyRotationRow extends QueryResultRow {
+  secret_key_version: number | string
+  status: 'pending' | 'enabled'
+  account_count: number | string
 }
 
 interface MfaChallengeRow extends QueryResultRow {
@@ -709,30 +724,19 @@ function passwordResetEncryptionKey(): Buffer {
   return key
 }
 
-function mfaEncryptionKey(): Buffer {
-  const configured = process.env.APPSEA_AUTH_MFA_ENCRYPTION_KEY
-  if (!configured) {
-    if (process.env.NODE_ENV === 'test') return Buffer.alloc(32, 8)
+function mfaEncryptionConfig(): MfaEncryptionConfig {
+  try {
+    return mfaEncryptionConfigFromEnv()
+  } catch {
     throw new AuthMfaConfigurationError()
   }
-  if (!/^[A-Za-z0-9_-]{43}$/.test(configured)) throw new AuthMfaConfigurationError()
-  const key = Buffer.from(configured, 'base64url')
-  if (key.length !== 32) throw new AuthMfaConfigurationError()
-  return key
 }
 
-function encryptMfaSecret(secret: string): {
-  ciphertext: string
-  nonce: string
-  tag: string
-} {
-  const nonce = randomBytes(12)
-  const cipher = createCipheriv('aes-256-gcm', mfaEncryptionKey(), nonce)
-  const ciphertext = Buffer.concat([cipher.update(secret, 'utf8'), cipher.final()])
-  return {
-    ciphertext: ciphertext.toString('base64url'),
-    nonce: nonce.toString('base64url'),
-    tag: cipher.getAuthTag().toString('base64url')
+function encryptMfaSecret(secret: string) {
+  try {
+    return encryptMfaSecretWithConfig(secret, mfaEncryptionConfig())
+  } catch {
+    throw new AuthMfaConfigurationError()
   }
 }
 
@@ -740,18 +744,10 @@ function decryptMfaSecret(row: {
   secret_ciphertext: string
   secret_nonce: string
   secret_tag: string
-}): string {
+  secret_key_version?: number | string | null
+}) {
   try {
-    const decipher = createDecipheriv(
-      'aes-256-gcm',
-      mfaEncryptionKey(),
-      Buffer.from(row.secret_nonce, 'base64url')
-    )
-    decipher.setAuthTag(Buffer.from(row.secret_tag, 'base64url'))
-    return Buffer.concat([
-      decipher.update(Buffer.from(row.secret_ciphertext, 'base64url')),
-      decipher.final()
-    ]).toString('utf8')
+    return decryptMfaSecretWithConfig(row, mfaEncryptionConfig())
   } catch {
     throw new AuthMfaConfigurationError()
   }
@@ -1240,7 +1236,7 @@ export class PostgresAuthRepository {
 
         const totp = await client.query<MfaTotpRow>(
           `SELECT mfa.user_id, app_user.email, mfa.secret_ciphertext,
-                  mfa.secret_nonce, mfa.secret_tag, mfa.status,
+                  mfa.secret_nonce, mfa.secret_tag, mfa.secret_key_version, mfa.status,
                   mfa.verified_at, mfa.last_used_step
              FROM appsea.auth_mfa_totp mfa
              JOIN appsea.users app_user ON app_user.user_id = mfa.user_id
@@ -1336,6 +1332,53 @@ export class PostgresAuthRepository {
     })
   }
 
+  /**
+   * Return operator-only MFA key-version counts. This intentionally exposes
+   * no key material or encrypted fields and is safe to run during a reviewed
+   * deployment rotation.
+   */
+  async readMfaKeyRotationStatus(): Promise<AuthMfaKeyRotationStatus> {
+    const config = mfaEncryptionConfig()
+    const result = await withDatabaseTransaction(
+      this.pool,
+      (client) =>
+        client.query<MfaKeyRotationRow>(
+          `SELECT secret_key_version, status, COUNT(*)::bigint AS account_count
+             FROM appsea.auth_mfa_totp
+            GROUP BY secret_key_version, status
+            ORDER BY secret_key_version, status`,
+          []
+        ),
+      { readOnly: true, maxSerializationRetries: 0 }
+    )
+    let totalAccounts = 0
+    let currentKeyAccounts = 0
+    let previousKeyAccounts = 0
+    let unknownKeyAccounts = 0
+    let enabledAccounts = 0
+    let pendingAccounts = 0
+    for (const row of result.rows) {
+      const count = Number(row.account_count)
+      const version = Number(row.secret_key_version)
+      totalAccounts += count
+      if (version === config.current.version) currentKeyAccounts += count
+      else if (config.previous?.version === version) previousKeyAccounts += count
+      else unknownKeyAccounts += count
+      if (row.status === 'enabled') enabledAccounts += count
+      else pendingAccounts += count
+    }
+    return authMfaKeyRotationStatusSchema.parse({
+      currentKeyVersion: config.current.version,
+      previousKeyVersion: config.previous?.version ?? null,
+      totalAccounts,
+      currentKeyAccounts,
+      previousKeyAccounts,
+      unknownKeyAccounts,
+      enabledAccounts,
+      pendingAccounts
+    })
+  }
+
   async beginMfaEnrollment(token: string): Promise<AuthMfaEnrollmentReadModel> {
     const parsedToken = authSessionTokenSchema.safeParse(token)
     if (!parsedToken.success) throw new AuthenticationError()
@@ -1364,18 +1407,26 @@ export class PostgresAuthRepository {
         ])
         await client.query(
           `INSERT INTO appsea.auth_mfa_totp
-             (user_id, secret_ciphertext, secret_nonce, secret_tag, status,
+             (user_id, secret_ciphertext, secret_nonce, secret_tag, secret_key_version, status,
               created_at, verified_at, last_used_step)
-           VALUES ($1, $2, $3, $4, 'pending', $5, NULL, NULL)
+           VALUES ($1, $2, $3, $4, $5, 'pending', $6, NULL, NULL)
            ON CONFLICT (user_id) DO UPDATE
              SET secret_ciphertext = EXCLUDED.secret_ciphertext,
                  secret_nonce = EXCLUDED.secret_nonce,
                  secret_tag = EXCLUDED.secret_tag,
+                 secret_key_version = EXCLUDED.secret_key_version,
                  status = 'pending',
                  created_at = EXCLUDED.created_at,
                  verified_at = NULL,
                  last_used_step = NULL`,
-          [current.user_id, encrypted.ciphertext, encrypted.nonce, encrypted.tag, now]
+          [
+            current.user_id,
+            encrypted.ciphertext,
+            encrypted.nonce,
+            encrypted.tag,
+            encrypted.keyVersion,
+            now
+          ]
         )
         for (const code of recoveryCodes) {
           await client.query(
@@ -1412,7 +1463,7 @@ export class PostgresAuthRepository {
         if (!current) throw new AuthenticationError()
         const result = await client.query<MfaTotpRow>(
           `SELECT mfa.user_id, app_user.email, mfa.secret_ciphertext,
-                  mfa.secret_nonce, mfa.secret_tag, mfa.status,
+                  mfa.secret_nonce, mfa.secret_tag, mfa.secret_key_version, mfa.status,
                   mfa.verified_at, mfa.last_used_step
             FROM appsea.auth_mfa_totp mfa
              JOIN appsea.users app_user ON app_user.user_id = mfa.user_id
@@ -1424,15 +1475,30 @@ export class PostgresAuthRepository {
         )
         const row = result.rows[0]
         if (!row) throw new AuthMfaVerificationError()
-        const secret = decryptMfaSecret(row)
-        const step = verifyMfaTotpCode(secret, parsedInput.data.code, Date.now(), null)
+        const decrypted = decryptMfaSecret(row)
+        const step = verifyMfaTotpCode(decrypted.secret, parsedInput.data.code, Date.now(), null)
         if (step === null) throw new AuthMfaVerificationError()
+        const encrypted = encryptMfaSecret(decrypted.secret)
         const now = new Date()
         await client.query(
           `UPDATE appsea.auth_mfa_totp
-              SET status = 'enabled', verified_at = $2, last_used_step = $3
+              SET secret_ciphertext = $2,
+                  secret_nonce = $3,
+                  secret_tag = $4,
+                  secret_key_version = $5,
+                  status = 'enabled',
+                  verified_at = $6,
+                  last_used_step = $7
             WHERE user_id = $1`,
-          [current.user_id, now, step]
+          [
+            current.user_id,
+            encrypted.ciphertext,
+            encrypted.nonce,
+            encrypted.tag,
+            encrypted.keyVersion,
+            now,
+            step
+          ]
         )
         await this.recordMfaEvent(client, 'enrollment_completed', current.user_id, null, now)
       },
@@ -1452,7 +1518,7 @@ export class PostgresAuthRepository {
         if (!current) throw new AuthenticationError()
         const result = await client.query<MfaTotpRow>(
           `SELECT mfa.user_id, app_user.email, mfa.secret_ciphertext,
-                  mfa.secret_nonce, mfa.secret_tag, mfa.status,
+                  mfa.secret_nonce, mfa.secret_tag, mfa.secret_key_version, mfa.status,
                   mfa.verified_at, mfa.last_used_step
              FROM appsea.auth_mfa_totp mfa
              JOIN appsea.users app_user ON app_user.user_id = mfa.user_id
@@ -1691,15 +1757,39 @@ export class PostgresAuthRepository {
       return true
     }
     const lastUsedStep = row.last_used_step === null ? null : Number(row.last_used_step)
-    const step = verifyMfaTotpCode(decryptMfaSecret(row), normalized, timestampMs, lastUsedStep)
+    const decrypted = decryptMfaSecret(row)
+    const step = verifyMfaTotpCode(decrypted.secret, normalized, timestampMs, lastUsedStep)
     if (step === null) return false
-    await client.query(
-      `UPDATE appsea.auth_mfa_totp
-          SET last_used_step = $2
-        WHERE user_id = $1
-          AND status = 'enabled'`,
-      [row.user_id, step]
-    )
+    const currentKeyVersion = mfaEncryptionConfig().current.version
+    if (decrypted.keyVersion !== currentKeyVersion) {
+      const encrypted = encryptMfaSecret(decrypted.secret)
+      await client.query(
+        `UPDATE appsea.auth_mfa_totp
+            SET secret_ciphertext = $2,
+                secret_nonce = $3,
+                secret_tag = $4,
+                secret_key_version = $5,
+                last_used_step = $6
+          WHERE user_id = $1
+            AND status = 'enabled'`,
+        [
+          row.user_id,
+          encrypted.ciphertext,
+          encrypted.nonce,
+          encrypted.tag,
+          encrypted.keyVersion,
+          step
+        ]
+      )
+    } else {
+      await client.query(
+        `UPDATE appsea.auth_mfa_totp
+            SET last_used_step = $2
+          WHERE user_id = $1
+            AND status = 'enabled'`,
+        [row.user_id, step]
+      )
+    }
     return true
   }
 
@@ -1855,7 +1945,7 @@ export class PostgresAuthRepository {
 
         const result = await client.query<MfaTotpRow>(
           `SELECT mfa.user_id, app_user.email, mfa.secret_ciphertext,
-                  mfa.secret_nonce, mfa.secret_tag, mfa.status,
+                  mfa.secret_nonce, mfa.secret_tag, mfa.secret_key_version, mfa.status,
                   mfa.verified_at, mfa.last_used_step
              FROM appsea.auth_mfa_totp mfa
              JOIN appsea.users app_user ON app_user.user_id = mfa.user_id

@@ -42,6 +42,7 @@ export {
 } from './source-quota-repository'
 export type { ProductionAnalysisRecomputeAlertObservation } from '@appsea/contracts'
 export type { WorkspaceCostAlertObservation } from '@appsea/contracts'
+export type { AuthMfaKeyRotationStatus } from '@appsea/contracts'
 export {
   PostgresSourcePolicyRepository,
   type SourcePolicyApprovalInput,
@@ -150,6 +151,12 @@ export {
   EvidenceRedactionPermissionError
 } from './evidence-redaction-repository'
 export { PostgresAgentAccessTokenRepository } from './agent-access-token-repository'
+export {
+  MfaEncryptionKeyConfigurationError,
+  mfaEncryptionConfigFromEnv,
+  type MfaEncryptionConfig,
+  type MfaEncryptionKey
+} from './auth-mfa-key'
 export {
   PostgresSourceSnapshotReconciliationRepository,
   SourceSnapshotReconciliationAdmissionDeniedError,

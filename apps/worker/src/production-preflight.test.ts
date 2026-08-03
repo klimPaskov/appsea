@@ -85,6 +85,18 @@ describe('production deployment configuration preflight', () => {
       status: 'failed',
       failureCode: 'APPSEA_PREFLIGHT_AUTH_MFA'
     })
+
+    environment.APPSEA_AUTH_MFA_ENCRYPTION_KEY = Buffer.alloc(32, 6).toString('base64url')
+    environment.APPSEA_AUTH_MFA_ENCRYPTION_KEY_VERSION = '2'
+    environment.APPSEA_AUTH_MFA_ENCRYPTION_KEY_PREVIOUS = Buffer.alloc(32, 5).toString('base64url')
+    environment.APPSEA_AUTH_MFA_ENCRYPTION_KEY_PREVIOUS_VERSION = '1'
+    expect(validateProductionEnvironment(environment).status).toBe('ready')
+
+    delete environment.APPSEA_AUTH_MFA_ENCRYPTION_KEY_PREVIOUS_VERSION
+    expect(check(validateProductionEnvironment(environment), 'authMfa')).toMatchObject({
+      status: 'failed',
+      failureCode: 'APPSEA_PREFLIGHT_AUTH_MFA'
+    })
   })
 
   it('rejects local database roles, loopback endpoints, and insecure production mode', () => {

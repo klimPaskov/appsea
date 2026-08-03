@@ -1,4 +1,11 @@
 export { createDatabasePool, databaseConfigFromEnv } from './config'
+export type { AuthMfaKeyRotationStatus } from '@appsea/contracts'
+export {
+  mfaEncryptionConfigFromEnv,
+  MfaEncryptionKeyConfigurationError,
+  type MfaEncryptionConfig,
+  type MfaEncryptionKey
+} from './auth-mfa-key'
 export {
   AuthenticationConflictError,
   AuthenticationError,

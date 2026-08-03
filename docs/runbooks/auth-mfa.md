@@ -32,11 +32,35 @@ valid code is consumed and is never returned in a session or workspace read.
 ## Configuration
 
 Set `APPSEA_AUTH_MFA_ENCRYPTION_KEY` only through the deployment secret
-manager. It must be a separate 32-byte base64url key. Production preflight
-rejects a missing, malformed, or reused-shape key before a process starts.
-Rotation is not automatic: schedule a reviewed key migration or require
-affected accounts to re-enroll, then verify that old encrypted secrets are no
-longer needed before revoking the old key.
+manager. It must be a separate 32-byte base64url key. Every ciphertext carries
+`secret_key_version`; legacy rows are version `1`. Production preflight rejects
+a missing or malformed current key, an incomplete current/previous pair, a
+non-monotonic version, or a reused key before a process starts.
+
+### Reviewed key rotation
+
+Rotation is an operator-approved deployment, not an autonomous action:
+
+1. Generate a new 32-byte base64url key. Set it as
+   `APPSEA_AUTH_MFA_ENCRYPTION_KEY`, increment
+   `APPSEA_AUTH_MFA_ENCRYPTION_KEY_VERSION`, and set the old key/version as
+   `APPSEA_AUTH_MFA_ENCRYPTION_KEY_PREVIOUS` and
+   `APPSEA_AUTH_MFA_ENCRYPTION_KEY_PREVIOUS_VERSION`.
+2. Deploy the reviewed configuration and run
+   `pnpm worker:auth:mfa:rotation:status` with the service database role. The
+   command prints counts only: current, previous, unknown, enabled, and
+   pending rows. It never prints key material or encrypted fields.
+3. Successful TOTP verification and pending-enrollment confirmation decrypt
+   with the previous key when needed and re-encrypt in the current version in
+   the same database transaction. Keep the previous key configured while
+   `previousKeyAccounts` or `unknownKeyAccounts` is non-zero; unknown rows are
+   a fail-closed incident, not evidence that the accounts have no MFA.
+4. After an independent review confirms the counts are zero and dormant
+   accounts have an approved recovery/re-enrollment plan, remove the previous
+   key/version in a separate deployment. Do not delete or rewrite ciphertext
+   directly. Recovery-code-only access does not rewrap a dormant secret, so the
+   previous key may need to remain until that account completes TOTP or
+   re-enrollment.
 
 ## User flow
 
@@ -96,7 +120,15 @@ TOTP timestep and rejects a previously used timestep.
   challenged login, recovery-code consumption, MFA step-up replay rejection,
   and disable behavior when the PostgreSQL integration gate is available.
 - `apps/worker/src/production-preflight.test.ts` covers the production key
-  requirement, and authentication retention now reports MFA cleanup counters.
+  requirement and current/previous version rules; authentication retention now
+  reports MFA cleanup counters.
+- `packages/db/src/auth-mfa-key.test.ts` covers current/previous decryption,
+  rewrap metadata, malformed configuration, and unsupported versions.
+- `packages/db/integration/db.integration.test.ts` covers the version-one
+  migration default and count-only rotation status after enrollment.
 
-TOTP MFA does not close the remaining OIDC, verified-identity, delivery/DPA,
-key-rotation, provider-backed step-up, or production identity-operations gates.
+TOTP MFA key rotation is now represented in the repository, but this does not
+close the remaining OIDC, verified-identity, delivery/DPA, provider-backed
+step-up, or production identity-operations gates. Production still requires
+an approved deployment procedure and an actual status review before removing
+the previous key.

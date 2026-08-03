@@ -362,6 +362,7 @@ function mfaStepUpPool(
               secret_ciphertext: 'ciphertext',
               secret_nonce: 'nonce-nonce-nonce',
               secret_tag: 'tag-tag-tag-tag',
+              secret_key_version: 1,
               status: 'enabled',
               verified_at: '2026-08-03T00:00:00.000Z',
               last_used_step: null
@@ -374,6 +375,34 @@ function mfaStepUpPool(
         return options.validCode === false
           ? { rows: [], rowCount: 0 }
           : { rows: [{ recovery_code_id: 'mfa-recovery:one' }], rowCount: 1 }
+      }
+      return { rows: [], rowCount: 1 }
+    },
+    release: () => undefined
+  } as unknown as PoolClient
+  return {
+    pool: { connect: async () => client } as unknown as Pool,
+    statements
+  }
+}
+
+function mfaKeyRotationStatusPool(): {
+  pool: Pool
+  statements: Array<{ text: string; values: unknown[] }>
+} {
+  const statements: Array<{ text: string; values: unknown[] }> = []
+  const client = {
+    query: async (text: string, values: unknown[] = []) => {
+      statements.push({ text, values })
+      if (text.includes('GROUP BY secret_key_version')) {
+        return {
+          rows: [
+            { secret_key_version: 1, status: 'enabled', account_count: '2' },
+            { secret_key_version: 3, status: 'pending', account_count: '1' },
+            { secret_key_version: 9, status: 'enabled', account_count: '1' }
+          ],
+          rowCount: 3
+        }
       }
       return { rows: [], rowCount: 1 }
     },
@@ -824,6 +853,21 @@ function workspacePurgeManifestPool(options: { owner?: boolean; archived?: boole
 }
 
 describe('PostgresAuthRepository', () => {
+  it('reports MFA key-version counts without exposing encrypted fields', async () => {
+    const { pool, statements } = mfaKeyRotationStatusPool()
+    await expect(new PostgresAuthRepository(pool).readMfaKeyRotationStatus()).resolves.toEqual({
+      currentKeyVersion: 1,
+      previousKeyVersion: null,
+      totalAccounts: 4,
+      currentKeyAccounts: 2,
+      previousKeyAccounts: 0,
+      unknownKeyAccounts: 2,
+      enabledAccounts: 3,
+      pendingAccounts: 1
+    })
+    expect(JSON.stringify(statements)).not.toContain('secret_ciphertext')
+  })
+
   it('reads an active session and only stores token hashes in SQL parameters', async () => {
     const token = 'a'.repeat(48)
     const { pool, statements } = fakePool()

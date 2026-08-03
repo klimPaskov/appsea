@@ -70,7 +70,7 @@ For a clean bootstrap check:
 pnpm verify:persistence:fresh
 ```
 
-`verify:persistence:fresh` is intentionally destructive: it removes the Compose project's local PostgreSQL named volume before recreating it. Do not run it when local development data must be retained. The fresh suite also exercises migration `0082` outbox idempotency, claim recovery, retry, completion, v2 alert scheduler names, migration `0083` archived-owner purge-manifest replay/read authorization, migration `0084` archival-function qualification, migration `0085` read-only manifest reads, and direct table-access denial.
+`verify:persistence:fresh` is intentionally destructive: it removes the Compose project's local PostgreSQL named volume before recreating it. Do not run it when local development data must be retained. The fresh suite also exercises migration `0082` outbox idempotency, claim recovery, retry, completion, v2 alert scheduler names, migration `0083` archived-owner purge-manifest replay/read authorization, migration `0084` archival-function qualification, migration `0085` read-only manifest reads, migration `0086` MFA ciphertext-version defaults/status, and direct table-access denial.
 
 The integration test itself will drop only the `appsea` schema and migration-history table inside the exact local `appsea_test` database. It requires loopback port `5433`, exact service, maintenance, and migrator usernames, the database marker comment, and `APPSEA_ALLOW_DESTRUCTIVE_DB_TESTS=yes`. Connection-string query parameters are rejected so they cannot redirect the destructive target.
 

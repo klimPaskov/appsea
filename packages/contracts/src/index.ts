@@ -4133,6 +4133,40 @@ export const authMfaStatusReadModelSchema = z
   })
   .strict()
 
+// Deployment diagnostics expose counts only. Key material and encrypted
+// secret fields never cross the operator-status contract.
+export const authMfaKeyRotationStatusSchema = z
+  .object({
+    currentKeyVersion: z.number().int().min(1).max(32_767),
+    previousKeyVersion: z.number().int().min(1).max(32_767).nullable(),
+    totalAccounts: z.number().int().nonnegative(),
+    currentKeyAccounts: z.number().int().nonnegative(),
+    previousKeyAccounts: z.number().int().nonnegative(),
+    unknownKeyAccounts: z.number().int().nonnegative(),
+    enabledAccounts: z.number().int().nonnegative(),
+    pendingAccounts: z.number().int().nonnegative()
+  })
+  .strict()
+  .superRefine((value, context) => {
+    if (
+      value.currentKeyAccounts + value.previousKeyAccounts + value.unknownKeyAccounts !==
+      value.totalAccounts
+    ) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['totalAccounts'],
+        message: 'Key-version counts must add up to total accounts'
+      })
+    }
+    if (value.enabledAccounts + value.pendingAccounts !== value.totalAccounts) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['totalAccounts'],
+        message: 'MFA status counts must add up to total accounts'
+      })
+    }
+  })
+
 export const authMfaEnrollmentReadModelSchema = z
   .object({
     secret: z.string().regex(/^[A-Z2-7]{32}$/),
@@ -6030,6 +6064,7 @@ export type AuthMfaStepUpInput = z.infer<typeof authMfaStepUpInputSchema>
 export type AuthMfaStepUpResult = z.infer<typeof authMfaStepUpResultSchema>
 export type AuthMfaSignInInput = z.infer<typeof authMfaSignInInputSchema>
 export type AuthMfaStatusReadModel = z.infer<typeof authMfaStatusReadModelSchema>
+export type AuthMfaKeyRotationStatus = z.infer<typeof authMfaKeyRotationStatusSchema>
 export type AuthMfaEnrollmentReadModel = z.infer<typeof authMfaEnrollmentReadModelSchema>
 export type AuthReauthenticationInput = z.infer<typeof authReauthenticationInputSchema>
 export type AuthAccountDeletionInput = z.infer<typeof authAccountDeletionInputSchema>

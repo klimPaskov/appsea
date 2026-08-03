@@ -48,9 +48,14 @@ shape passed; a non-zero exit means the deployment must not proceed.
   either requires the 32-byte encryption key and HTTPS signed-delivery gateway
   configuration; leaving both disabled keeps delivery kill-switched.
 - `APPSEA_AUTH_MFA_ENCRYPTION_KEY` is always required in production and must be
-  a separate 32-byte base64url key. It encrypts TOTP enrollment secrets; rotate
-  it through the deployment secret manager with an explicit re-enrollment or
-  key-migration plan, because the application never stores plaintext secrets.
+  a separate 32-byte base64url key. `APPSEA_AUTH_MFA_ENCRYPTION_KEY_VERSION`
+  defaults to `1`; during a reviewed rotation, configure the strictly older
+  `APPSEA_AUTH_MFA_ENCRYPTION_KEY_PREVIOUS` and
+  `APPSEA_AUTH_MFA_ENCRYPTION_KEY_PREVIOUS_VERSION` pair. The application
+  rewraps secrets after successful TOTP verification, and
+  `pnpm worker:auth:mfa:rotation:status` reports counts without key material;
+  do not remove the previous key until an operator has reviewed zero previous
+  and unknown rows.
 - An optional trusted-proxy secret must be exactly 32 bytes in base64url form.
 
 The web readiness endpoint remains the live dependency check: it verifies
