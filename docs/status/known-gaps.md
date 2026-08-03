@@ -11,10 +11,10 @@ and coverage gaps, but it is not a general REST/MCP write API. Token issue and
 revoke now require the existing password step-up plus a fresh MFA proof when
 MFA is enabled; accounts without MFA retain the password-only path. Token
 management is API-only, and HTTPS termination, external secret storage, rate
-limiting, OIDC/provider identity, rotation automation, and deployment monitoring
-remain open. Versioned MFA keys, a previous-key window, opportunistic rewrap,
-and count-only rotation status are implemented, but production deployment
-review and dormant-account handling remain open. Password-gated high-risk mutations now
+limiting, OIDC/provider identity, and deployment monitoring remain open. Versioned
+MFA keys, a previous-key window, opportunistic rewrap, a lease-owned bounded
+dormant-account rewrap command, and count-only rotation status are implemented,
+but production deployment review and live status approval remain open. Password-gated high-risk mutations now
 share the conditional MFA marker; mutations without a password-step-up
 boundary still need their own reviewed step-up contract.
 
@@ -129,9 +129,9 @@ issues a short-lived hash-only challenge, and recovery codes are one-time
 hashes. Migration `0081` adds a fifteen-minute session marker for an additional
 MFA proof on password-gated high-risk mutations; the proof consumes a TOTP or one
 recovery code transactionally. Production requires a separate
-`APPSEA_AUTH_MFA_ENCRYPTION_KEY`; migration `0086` versions ciphertext and the
-operator status command makes stale/unknown rows visible without exposing key
-material.
+`APPSEA_AUTH_MFA_ENCRYPTION_KEY`; migrations `0086`/`0087` version ciphertext,
+record identifier-only rewrap events, and the operator status/rewrap commands
+make stale/unknown rows visible and recoverable without exposing key material.
 Account recovery mechanics
 (hash-only single-use tokens, encrypted delivery outbox, retryable worker,
 fragment links, and generic responses) are implemented behind a production

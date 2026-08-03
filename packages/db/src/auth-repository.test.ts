@@ -1,6 +1,6 @@
 import { promisify } from 'node:util'
 import { scrypt as scryptCallback } from 'node:crypto'
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import type { Pool, PoolClient } from 'pg'
 import { InMemoryObjectStore } from '@appsea/object-store'
 import {
@@ -28,6 +28,7 @@ import {
 } from './auth-repository'
 import type { AuthAccountDeletionBlockedError } from './auth-repository'
 import { sha256 } from './hash'
+import { encryptMfaSecret, mfaEncryptionConfigFromEnv } from './auth-mfa-key'
 
 const scrypt = promisify(scryptCallback) as unknown as (
   password: string,
@@ -403,6 +404,47 @@ function mfaKeyRotationStatusPool(): {
           ],
           rowCount: 3
         }
+      }
+      return { rows: [], rowCount: 1 }
+    },
+    release: () => undefined
+  } as unknown as PoolClient
+  return {
+    pool: { connect: async () => client } as unknown as Pool,
+    statements
+  }
+}
+
+function mfaKeyRotationRewrapPool(encrypted: { ciphertext: string; nonce: string; tag: string }): {
+  pool: Pool
+  statements: Array<{ text: string; values: unknown[] }>
+} {
+  const statements: Array<{ text: string; values: unknown[] }> = []
+  const client = {
+    query: async (text: string, values: unknown[] = []) => {
+      statements.push({ text, values })
+      if (text.includes('secret_key_version NOT IN')) {
+        return { rows: [{ account_count: '0' }], rowCount: 1 }
+      }
+      if (text.includes('ORDER BY user_id')) {
+        return {
+          rows: [
+            {
+              user_id: 'user:one',
+              secret_ciphertext: encrypted.ciphertext,
+              secret_nonce: encrypted.nonce,
+              secret_tag: encrypted.tag,
+              secret_key_version: 1
+            }
+          ],
+          rowCount: 1
+        }
+      }
+      if (text.includes('WHERE secret_key_version = $1')) {
+        return { rows: [{ account_count: '0' }], rowCount: 1 }
+      }
+      if (text.includes('UPDATE appsea.auth_mfa_totp')) {
+        return { rows: [], rowCount: 1 }
       }
       return { rows: [], rowCount: 1 }
     },
@@ -866,6 +908,40 @@ describe('PostgresAuthRepository', () => {
       pendingAccounts: 1
     })
     expect(JSON.stringify(statements)).not.toContain('secret_ciphertext')
+  })
+
+  it('rewraps a bounded previous-key account without exposing its secret', async () => {
+    const previousKey = Buffer.alloc(32, 2).toString('base64url')
+    const currentKey = Buffer.alloc(32, 1).toString('base64url')
+    vi.stubEnv('NODE_ENV', 'test')
+    vi.stubEnv('APPSEA_AUTH_MFA_ENCRYPTION_KEY', currentKey)
+    vi.stubEnv('APPSEA_AUTH_MFA_ENCRYPTION_KEY_VERSION', '2')
+    vi.stubEnv('APPSEA_AUTH_MFA_ENCRYPTION_KEY_PREVIOUS', previousKey)
+    vi.stubEnv('APPSEA_AUTH_MFA_ENCRYPTION_KEY_PREVIOUS_VERSION', '1')
+    try {
+      const previousConfig = mfaEncryptionConfigFromEnv({
+        NODE_ENV: 'test',
+        APPSEA_AUTH_MFA_ENCRYPTION_KEY: previousKey,
+        APPSEA_AUTH_MFA_ENCRYPTION_KEY_VERSION: '1'
+      })
+      const encrypted = encryptMfaSecret('JBSWY3DPEHPK3PXP', previousConfig)
+      const { pool, statements } = mfaKeyRotationRewrapPool(encrypted)
+      await expect(
+        new PostgresAuthRepository(pool).rewrapMfaKeyBatch({ batchSize: 10 })
+      ).resolves.toEqual({
+        currentKeyVersion: 2,
+        previousKeyVersion: 1,
+        batchSize: 10,
+        rewrappedAccounts: 1,
+        remainingPreviousKeyAccounts: 0,
+        completed: true
+      })
+      const update = statements.find((entry) => entry.text.includes('UPDATE appsea.auth_mfa_totp'))
+      expect(update?.values[4]).toBe(2)
+      expect(JSON.stringify(statements)).not.toContain('JBSWY3DPEHPK3PXP')
+    } finally {
+      vi.unstubAllEnvs()
+    }
   })
 
   it('reads an active session and only stores token hashes in SQL parameters', async () => {

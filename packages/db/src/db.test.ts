@@ -99,7 +99,8 @@ describe('database foundation', () => {
       '0083',
       '0084',
       '0085',
-      '0086'
+      '0086',
+      '0087'
     ])
     expect(migrations[0]?.checksum).toMatch(/^[a-f0-9]{64}$/)
     expect(migrations[0]?.sql).toContain('CREATE TABLE appsea.evidence_records')
@@ -205,6 +206,10 @@ describe('database foundation', () => {
     const authMfaKeyVersionMigration = migrations.find((migration) => migration.version === '0086')
     expect(authMfaKeyVersionMigration?.sql).toContain('secret_key_version')
     expect(authMfaKeyVersionMigration?.sql).toContain('auth_mfa_totp_key_version_idx')
+    const authMfaRotationEventMigration = migrations.find(
+      (migration) => migration.version === '0087'
+    )
+    expect(authMfaRotationEventMigration?.sql).toContain('key_rotation_rewrapped')
     const authMigration = migrations.find((migration) => migration.version === '0008')
     const privacyMigration = migrations.find((migration) => migration.version === '0009')
     const retentionMigration = migrations.find((migration) => migration.version === '0010')

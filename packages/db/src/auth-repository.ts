@@ -42,6 +42,8 @@ import {
   authMfaStepUpInputSchema,
   authMfaEnrollmentConfirmInputSchema,
   authMfaEnrollmentReadModelSchema,
+  authMfaKeyRotationRewrapInputSchema,
+  authMfaKeyRotationRewrapResultSchema,
   authMfaKeyRotationStatusSchema,
   authMfaSignInInputSchema,
   authMfaStatusReadModelSchema,
@@ -95,6 +97,8 @@ import {
   type AuthMfaStepUpInput,
   type AuthMfaEnrollmentConfirmInput,
   type AuthMfaEnrollmentReadModel,
+  type AuthMfaKeyRotationRewrapInput,
+  type AuthMfaKeyRotationRewrapResult,
   type AuthMfaKeyRotationStatus,
   type AuthMfaSignInInput,
   type AuthMfaStatusReadModel,
@@ -134,6 +138,7 @@ import {
   type MfaEncryptionConfig
 } from './auth-mfa-key'
 import {
+  MaintenanceSchedulerFenceError,
   WorkspaceAuthorizationError,
   withAuthenticatedWorkspaceTransaction,
   withDatabaseTransaction
@@ -202,6 +207,20 @@ export class AuthMfaConfigurationError extends Error {
   constructor() {
     super('MFA encryption is not configured')
     this.name = 'AuthMfaConfigurationError'
+  }
+}
+
+export class AuthMfaKeyRotationError extends Error {
+  constructor() {
+    super('MFA key rotation could not be completed')
+    this.name = 'AuthMfaKeyRotationError'
+  }
+}
+
+export class AuthMfaKeyRotationUnknownVersionError extends AuthMfaKeyRotationError {
+  constructor() {
+    super()
+    this.name = 'AuthMfaKeyRotationUnknownVersionError'
   }
 }
 
@@ -413,6 +432,14 @@ interface MfaKeyRotationRow extends QueryResultRow {
   secret_key_version: number | string
   status: 'pending' | 'enabled'
   account_count: number | string
+}
+
+interface MfaKeyRotationSecretRow extends QueryResultRow {
+  user_id: string
+  secret_ciphertext: string
+  secret_nonce: string
+  secret_tag: string
+  secret_key_version: number | string | null
 }
 
 interface MfaChallengeRow extends QueryResultRow {
@@ -1379,6 +1406,119 @@ export class PostgresAuthRepository {
     })
   }
 
+  /**
+   * Rewrap a bounded batch of dormant MFA ciphertexts with the configured
+   * current key. The previous key is required, unknown key versions fail
+   * closed before any row is changed, and the maintenance fence is asserted
+   * inside the same transaction as each batch. Replaying the batch is safe:
+   * rows are selected by the previous version and therefore cannot be
+   * rewrapped twice after a committed update.
+   */
+  async rewrapMfaKeyBatch(
+    input: AuthMfaKeyRotationRewrapInput,
+    maintenanceFence?: MaintenanceSchedulerFence
+  ): Promise<AuthMfaKeyRotationRewrapResult> {
+    const parsedInput = authMfaKeyRotationRewrapInputSchema.parse(input)
+    const config = mfaEncryptionConfig()
+    const previous = config.previous
+    if (!previous) throw new AuthMfaKeyRotationError()
+
+    try {
+      const result = await withDatabaseTransaction(
+        this.pool,
+        async (client) => {
+          const unknown = await client.query<{ account_count: number | string }>(
+            `SELECT COUNT(*)::bigint AS account_count
+               FROM appsea.auth_mfa_totp
+              WHERE secret_key_version NOT IN ($1, $2)`,
+            [config.current.version, previous.version]
+          )
+          if (Number(unknown.rows[0]?.account_count ?? 0) > 0) {
+            throw new AuthMfaKeyRotationUnknownVersionError()
+          }
+
+          const rows = await client.query<MfaKeyRotationSecretRow>(
+            `SELECT user_id, secret_ciphertext, secret_nonce, secret_tag,
+                    secret_key_version
+               FROM appsea.auth_mfa_totp
+              WHERE secret_key_version = $1
+              ORDER BY user_id
+              LIMIT $2
+              FOR UPDATE SKIP LOCKED`,
+            [previous.version, parsedInput.batchSize]
+          )
+          let rewrappedAccounts = 0
+          for (const row of rows.rows) {
+            let encrypted: ReturnType<typeof encryptMfaSecretWithConfig>
+            try {
+              const decrypted = decryptMfaSecretWithConfig(row, config)
+              if (decrypted.keyVersion !== previous.version) {
+                throw new AuthMfaKeyRotationError()
+              }
+              encrypted = encryptMfaSecretWithConfig(decrypted.secret, config)
+            } catch (error) {
+              if (error instanceof AuthMfaKeyRotationError) throw error
+              throw new AuthMfaKeyRotationError()
+            }
+
+            const updated = await client.query(
+              `UPDATE appsea.auth_mfa_totp
+                  SET secret_ciphertext = $2,
+                      secret_nonce = $3,
+                      secret_tag = $4,
+                      secret_key_version = $5
+                WHERE user_id = $1
+                  AND secret_key_version = $6`,
+              [
+                row.user_id,
+                encrypted.ciphertext,
+                encrypted.nonce,
+                encrypted.tag,
+                encrypted.keyVersion,
+                previous.version
+              ]
+            )
+            if (updated.rowCount !== 1) throw new AuthMfaKeyRotationError()
+            await this.recordMfaEvent(
+              client,
+              'key_rotation_rewrapped',
+              row.user_id,
+              null,
+              new Date()
+            )
+            rewrappedAccounts += 1
+          }
+
+          const remaining = await client.query<{ account_count: number | string }>(
+            `SELECT COUNT(*)::bigint AS account_count
+               FROM appsea.auth_mfa_totp
+              WHERE secret_key_version = $1`,
+            [previous.version]
+          )
+          const remainingPreviousKeyAccounts = Number(remaining.rows[0]?.account_count ?? 0)
+          return {
+            currentKeyVersion: config.current.version,
+            previousKeyVersion: previous.version,
+            batchSize: parsedInput.batchSize,
+            rewrappedAccounts,
+            remainingPreviousKeyAccounts,
+            completed: remainingPreviousKeyAccounts === 0
+          }
+        },
+        { maxSerializationRetries: 0, maintenanceFence }
+      )
+      return authMfaKeyRotationRewrapResultSchema.parse(result)
+    } catch (error) {
+      if (
+        error instanceof AuthMfaKeyRotationError ||
+        error instanceof MaintenanceSchedulerFenceError
+      ) {
+        throw error
+      }
+      throw new AuthMfaKeyRotationError()
+    }
+  }
+
   async beginMfaEnrollment(token: string): Promise<AuthMfaEnrollmentReadModel> {
     const parsedToken = authSessionTokenSchema.safeParse(token)
     if (!parsedToken.success) throw new AuthenticationError()
@@ -1713,7 +1853,8 @@ export class PostgresAuthRepository {
       | 'challenge_created'
       | 'challenge_succeeded'
       | 'challenge_failed'
-      | 'recovery_code_used',
+      | 'recovery_code_used'
+      | 'key_rotation_rewrapped',
     userId: string,
     challengeId: string | null,
     occurredAt: Date

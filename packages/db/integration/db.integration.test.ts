@@ -516,7 +516,8 @@ describe.sequential('PostgreSQL fixture persistence lifecycle', () => {
       '0083',
       '0084',
       '0085',
-      '0086'
+      '0086',
+      '0087'
     ])
     expect(secondMigrationResult.applied).toEqual([])
     expect(secondMigrationResult.alreadyApplied).toEqual([
@@ -605,7 +606,8 @@ describe.sequential('PostgreSQL fixture persistence lifecycle', () => {
       '0083',
       '0084',
       '0085',
-      '0086'
+      '0086',
+      '0087'
     ])
   })
 
@@ -1694,6 +1696,65 @@ describe.sequential('PostgreSQL fixture persistence lifecycle', () => {
         enabledAccounts: 1,
         pendingAccounts: 0
       })
+
+      const previousMfaKey = process.env.APPSEA_AUTH_MFA_ENCRYPTION_KEY
+      const previousMfaKeyVersion = process.env.APPSEA_AUTH_MFA_ENCRYPTION_KEY_VERSION
+      const previousMfaPreviousKey = process.env.APPSEA_AUTH_MFA_ENCRYPTION_KEY_PREVIOUS
+      const previousMfaPreviousKeyVersion =
+        process.env.APPSEA_AUTH_MFA_ENCRYPTION_KEY_PREVIOUS_VERSION
+      process.env.APPSEA_AUTH_MFA_ENCRYPTION_KEY = Buffer.alloc(32, 9).toString('base64url')
+      process.env.APPSEA_AUTH_MFA_ENCRYPTION_KEY_VERSION = '2'
+      process.env.APPSEA_AUTH_MFA_ENCRYPTION_KEY_PREVIOUS = Buffer.alloc(32, 8).toString(
+        'base64url'
+      )
+      process.env.APPSEA_AUTH_MFA_ENCRYPTION_KEY_PREVIOUS_VERSION = '1'
+      try {
+        await expect(authRepository.readMfaKeyRotationStatus()).resolves.toMatchObject({
+          currentKeyVersion: 2,
+          previousKeyVersion: 1,
+          currentKeyAccounts: 0,
+          previousKeyAccounts: 1,
+          unknownKeyAccounts: 0
+        })
+        await expect(authRepository.rewrapMfaKeyBatch({ batchSize: 10 })).resolves.toMatchObject({
+          currentKeyVersion: 2,
+          previousKeyVersion: 1,
+          rewrappedAccounts: 1,
+          remainingPreviousKeyAccounts: 0,
+          completed: true
+        })
+        await expect(authRepository.readMfaKeyRotationStatus()).resolves.toMatchObject({
+          currentKeyVersion: 2,
+          previousKeyVersion: 1,
+          currentKeyAccounts: 1,
+          previousKeyAccounts: 0,
+          unknownKeyAccounts: 0
+        })
+        const rotationEvents = await withOwnerClient((client) =>
+          client.query<{ event_type: string }>(
+            `SELECT event_type
+               FROM appsea.auth_mfa_events
+              WHERE user_id = $1
+                AND event_type = 'key_rotation_rewrapped'`,
+            [created.session.user.userId]
+          )
+        )
+        expect(rotationEvents.rows).toHaveLength(1)
+      } finally {
+        if (previousMfaKey === undefined) delete process.env.APPSEA_AUTH_MFA_ENCRYPTION_KEY
+        else process.env.APPSEA_AUTH_MFA_ENCRYPTION_KEY = previousMfaKey
+        if (previousMfaKeyVersion === undefined)
+          delete process.env.APPSEA_AUTH_MFA_ENCRYPTION_KEY_VERSION
+        else process.env.APPSEA_AUTH_MFA_ENCRYPTION_KEY_VERSION = previousMfaKeyVersion
+        if (previousMfaPreviousKey === undefined)
+          delete process.env.APPSEA_AUTH_MFA_ENCRYPTION_KEY_PREVIOUS
+        else process.env.APPSEA_AUTH_MFA_ENCRYPTION_KEY_PREVIOUS = previousMfaPreviousKey
+        if (previousMfaPreviousKeyVersion === undefined)
+          delete process.env.APPSEA_AUTH_MFA_ENCRYPTION_KEY_PREVIOUS_VERSION
+        else
+          process.env.APPSEA_AUTH_MFA_ENCRYPTION_KEY_PREVIOUS_VERSION =
+            previousMfaPreviousKeyVersion
+      }
 
       const challenged = await authRepository.signIn({ email, password })
       expect(challenged.mfaRequired).toBe(true)

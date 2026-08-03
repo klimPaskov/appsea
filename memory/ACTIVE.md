@@ -7,7 +7,7 @@ Temporal, source-policy, private-workspace, report/plan, and maintenance
 boundaries. The public leaderboard is intentionally synthetic and sparse; no
 real source is enabled.
 
-Migrations `0027`-`0086` cover policy evidence, collection checkpoints,
+Migrations `0027`-`0087` cover policy evidence, collection checkpoints,
 deletion/recomputation repair, leases, admissions, campaign orchestration and
 cancellation, source reconciliation, analysis history, report/plan governance,
 cost and alert projections, object references, workspace archival/purge intent/
@@ -21,8 +21,10 @@ remains read-only. Migration `0086` versions encrypted TOTP ciphertext with a
 current/previous-key deployment window; successful TOTP verification and
 pending-enrollment confirmation rewrap to the current key, while
 `pnpm worker:auth:mfa:rotation:status` reports count-only current/previous/
-unknown rows. Previous-key removal still requires operator review and dormant
-account handling.
+unknown rows. `pnpm worker:auth:mfa:rotation:rewrap` now performs one
+lease-owned, bounded dormant-account batch with fail-closed unknown-version
+handling and identifier-only audit events. Previous-key removal still requires
+operator review and live deployment evidence.
 
 The fixture workflow is the complete persisted path. Production collection and
 identifier-only analysis v2 are policy-gated, durable, and replay-safe, but
@@ -57,8 +59,9 @@ alert delivery. Migration `0082` adds the scalar operational-alert outbox and
 durable drain. Deployment scheduler ownership, incident routing, provider
 billing, cloud/backup purge, and production topology remain open.
 
-Migrations `0083`-`0086` add the archived-owner forced-RLS purge manifest,
-PostgreSQL 18 archival/read repairs, and versioned MFA ciphertext. The
+Migrations `0083`-`0087` add the archived-owner forced-RLS purge manifest,
+PostgreSQL 18 archival/read repairs, versioned MFA ciphertext, and the
+identifier-only dormant-account rewrap event. The
 manifest inventories sorted object references, hashes the list, and persists a
 deterministic 24-hour identifier-only receipt; it never authorizes deletion.
 Owner membership, password/MFA step-up, and the exact confirmation phrase are
@@ -77,11 +80,12 @@ memory.
   `contents: read`, stale-run cancellation, and 30-minute job bounds. GitHub
   run `30810550754` is green for `54a045e`, including fresh PostgreSQL/Temporal;
   only a non-failing Node.js 20 action-runtime deprecation was annotated.
-- The MFA key-rotation tranche passes contracts (94), database (142), and
-  worker (116) focused tests plus affected typechecks. Migration `0086` adds
-  ciphertext key versions; the status command exposes only aggregate counts.
-  GitHub Actions run `30813209982` is green for `39e8bcd`, including fresh
-  PostgreSQL and Temporal proof.
+- The MFA key-rotation tranche passes contracts (94), database (143), and
+  worker (118) focused tests plus affected typechecks. Migration `0086` adds
+  ciphertext key versions and `0087` records rewrap events; the status and
+  rewrap commands expose only aggregate counts. GitHub Actions run
+  `30813209982` is green for `39e8bcd`, including fresh PostgreSQL and Temporal
+  proof; the new tranche still needs its own fresh CI proof.
 
 ## Next production tranche
 

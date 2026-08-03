@@ -42,7 +42,11 @@ export {
 } from './source-quota-repository'
 export type { ProductionAnalysisRecomputeAlertObservation } from '@appsea/contracts'
 export type { WorkspaceCostAlertObservation } from '@appsea/contracts'
-export type { AuthMfaKeyRotationStatus } from '@appsea/contracts'
+export type {
+  AuthMfaKeyRotationRewrapInput,
+  AuthMfaKeyRotationRewrapResult,
+  AuthMfaKeyRotationStatus
+} from '@appsea/contracts'
 export {
   PostgresSourcePolicyRepository,
   type SourcePolicyApprovalInput,
@@ -235,6 +239,8 @@ export {
   AuthPasswordResetError,
   AuthMfaAlreadyEnabledError,
   AuthMfaConfigurationError,
+  AuthMfaKeyRotationError,
+  AuthMfaKeyRotationUnknownVersionError,
   AuthMfaNotEnabledError,
   AuthMfaVerificationError,
   WorkspaceInvitationConflictError,

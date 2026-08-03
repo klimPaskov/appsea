@@ -25,7 +25,7 @@ Status: production-shaped foundation implemented and validated locally; producti
 
 Implemented:
 
-- PostgreSQL 18 schema and eighty-six forward, checksummed migrations
+- PostgreSQL 18 schema and eighty-seven forward, checksummed migrations
 - normalized source, evidence, complaint, cluster, competitor, opportunity, score, report, plan, audit, cost, deletion, outbox, and lineage tables
 - no-login owner, separate migrator, and least-privilege runtime role contract
 - forced workspace RLS and transaction-scoped workspace context
@@ -124,8 +124,10 @@ Migrations `0084_workspace_archival_function_qualification.sql` and
 repairs: the first qualifies the archival function's workspace predicates, and
 the second keeps the private manifest read compatible with a read-only
 transaction. Migration `0086_auth_mfa_key_versions.sql` adds a version to every
-encrypted TOTP secret, with current/previous-key configuration, transactional
-opportunistic rewrap, and a count-only operator status command. The CI release workflow now runs the complete `pnpm verify`
+encrypted TOTP secret, and migration `0087_auth_mfa_rotation_events.sql` adds
+an identifier-only rewrap event. Current/previous-key configuration,
+transactional opportunistic rewrap, a bounded dormant-account rewrap command,
+and a count-only operator status command are now covered. The CI release workflow now runs the complete `pnpm verify`
 fixture/build/route-smoke proof with read-only repository permissions and
 bounded stale-run cancellation.
 
@@ -518,7 +520,7 @@ secret/session-retention operations, OIDC/verified identity, provider-backed
 step-up, approved deployment/status review for MFA key rotation, and explicit
 contracts for high-impact mutations that do not already require password
 step-up. The AppSea-owned TOTP boundary is implemented in migrations
-`0080`/`0081`/`0086` with encrypted enrollment secrets, hash-only recovery
+`0080`/`0081`/`0086`/`0087` with encrypted enrollment secrets, hash-only recovery
 codes, expiring login challenges, a session-bound MFA step-up marker for
 password-gated high-risk mutations, and account-security routes; external
 identity-provider operations remain separate.

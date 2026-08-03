@@ -4167,6 +4167,44 @@ export const authMfaKeyRotationStatusSchema = z
     }
   })
 
+/**
+ * A bounded operator batch for rewrapping MFA ciphertext that still uses the
+ * configured previous key. The batch is intentionally small enough to retry
+ * safely and never carries key material or account identifiers.
+ */
+export const authMfaKeyRotationRewrapInputSchema = z
+  .object({
+    batchSize: z.number().int().min(1).max(1_000)
+  })
+  .strict()
+
+export const authMfaKeyRotationRewrapResultSchema = z
+  .object({
+    currentKeyVersion: z.number().int().min(1).max(32_767),
+    previousKeyVersion: z.number().int().min(1).max(32_767),
+    batchSize: z.number().int().min(1).max(1_000),
+    rewrappedAccounts: z.number().int().nonnegative().max(1_000),
+    remainingPreviousKeyAccounts: z.number().int().nonnegative(),
+    completed: z.boolean()
+  })
+  .strict()
+  .superRefine((value, context) => {
+    if (value.rewrappedAccounts > value.batchSize) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['rewrappedAccounts'],
+        message: 'Rewrapped account count cannot exceed the requested batch size'
+      })
+    }
+    if (value.completed && value.remainingPreviousKeyAccounts !== 0) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['completed'],
+        message: 'A completed rotation batch cannot leave previous-key accounts'
+      })
+    }
+  })
+
 export const authMfaEnrollmentReadModelSchema = z
   .object({
     secret: z.string().regex(/^[A-Z2-7]{32}$/),
@@ -6065,6 +6103,8 @@ export type AuthMfaStepUpResult = z.infer<typeof authMfaStepUpResultSchema>
 export type AuthMfaSignInInput = z.infer<typeof authMfaSignInInputSchema>
 export type AuthMfaStatusReadModel = z.infer<typeof authMfaStatusReadModelSchema>
 export type AuthMfaKeyRotationStatus = z.infer<typeof authMfaKeyRotationStatusSchema>
+export type AuthMfaKeyRotationRewrapInput = z.infer<typeof authMfaKeyRotationRewrapInputSchema>
+export type AuthMfaKeyRotationRewrapResult = z.infer<typeof authMfaKeyRotationRewrapResultSchema>
 export type AuthMfaEnrollmentReadModel = z.infer<typeof authMfaEnrollmentReadModelSchema>
 export type AuthReauthenticationInput = z.infer<typeof authReauthenticationInputSchema>
 export type AuthAccountDeletionInput = z.infer<typeof authAccountDeletionInputSchema>

@@ -38,6 +38,7 @@
     "worker:source:cfpb:reconcile": "pnpm --filter @appsea/worker source:cfpb:reconcile",
     "worker:source:cfpb:reconcile:next": "pnpm --filter @appsea/worker source:cfpb:reconcile:next",
     "worker:auth:mfa:rotation:status": "pnpm --filter @appsea/worker auth:mfa:rotation:status",
+    "worker:auth:mfa:rotation:rewrap": "pnpm --filter @appsea/worker auth:mfa:rotation:rewrap",
     "worker:source:quota:reconcile": "pnpm --filter @appsea/worker source:quota:reconcile",
     "worker:source:quota:alert": "pnpm --filter @appsea/worker source:quota:alert",
     "worker:production:analysis:recompute:alert": "pnpm --filter @appsea/worker production:analysis:recompute:alert",

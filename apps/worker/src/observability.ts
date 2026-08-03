@@ -20,6 +20,12 @@ export interface WorkerEvent {
   mfaChallengesDeleted?: number
   mfaEventsDeleted?: number
   mfaPendingEnrollmentsDeleted?: number
+  currentKeyVersion?: number
+  previousKeyVersion?: number
+  batchSize?: number
+  rewrappedAccounts?: number
+  remainingPreviousKeyAccounts?: number
+  completed?: boolean
   passwordResetDeliveriesClaimed?: number
   passwordResetDeliveriesSent?: number
   passwordResetDeliveriesFailed?: number
@@ -169,6 +175,22 @@ export function workerEventPayload(event: WorkerEvent): WorkerEventPayload {
     ...(finiteInteger(event.mfaPendingEnrollmentsDeleted) !== undefined
       ? { mfaPendingEnrollmentsDeleted: finiteInteger(event.mfaPendingEnrollmentsDeleted) }
       : {}),
+    ...(finiteInteger(event.currentKeyVersion) !== undefined
+      ? { currentKeyVersion: finiteInteger(event.currentKeyVersion) }
+      : {}),
+    ...(finiteInteger(event.previousKeyVersion) !== undefined
+      ? { previousKeyVersion: finiteInteger(event.previousKeyVersion) }
+      : {}),
+    ...(finiteInteger(event.batchSize) !== undefined
+      ? { batchSize: finiteInteger(event.batchSize) }
+      : {}),
+    ...(finiteInteger(event.rewrappedAccounts) !== undefined
+      ? { rewrappedAccounts: finiteInteger(event.rewrappedAccounts) }
+      : {}),
+    ...(finiteInteger(event.remainingPreviousKeyAccounts) !== undefined
+      ? { remainingPreviousKeyAccounts: finiteInteger(event.remainingPreviousKeyAccounts) }
+      : {}),
+    ...(event.completed !== undefined ? { completed: event.completed } : {}),
     ...(finiteInteger(event.passwordResetDeliveriesClaimed) !== undefined
       ? { passwordResetDeliveriesClaimed: finiteInteger(event.passwordResetDeliveriesClaimed) }
       : {}),

@@ -41,6 +41,7 @@ Open `http://localhost:3000` after the web server starts.
   scans and heartbeat work before closing Temporal and PostgreSQL connections
 - private workspace authentication with hashed/revocable sessions, authenticated active-session inventory and reauthenticated per-session revocation, password step-up for owner mutations, AppSea-owned TOTP MFA, conditional MFA step-up for password-gated high-risk mutations, and membership-checked research reads
 - private workspace cost summaries over the immutable ledger, grouped by currency and cost type with exact micro-unit totals and bounded periods
+- lease-owned, bounded dormant-account MFA ciphertext rewrap batches with fail-closed unknown-version handling and count-only progress
 - private visibility for settled source-quota requests that lack a completed production result, with maintenance-role-only resolution and no automatic re-fetch
 - lease-owned, read-only quota-reconciliation alert inspection with bounded alert/incomplete/clear events and visible truncated coverage
 - lease-owned, read-only production-analysis recomputation alert inspection with bounded alert/incomplete/clear events and visible truncated coverage; it never dispatches or retries a repair

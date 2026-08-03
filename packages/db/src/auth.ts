@@ -1,5 +1,9 @@
 export { createDatabasePool, databaseConfigFromEnv } from './config'
-export type { AuthMfaKeyRotationStatus } from '@appsea/contracts'
+export type {
+  AuthMfaKeyRotationRewrapInput,
+  AuthMfaKeyRotationRewrapResult,
+  AuthMfaKeyRotationStatus
+} from '@appsea/contracts'
 export {
   mfaEncryptionConfigFromEnv,
   MfaEncryptionKeyConfigurationError,
@@ -19,6 +23,8 @@ export {
   AuthPasswordResetError,
   AuthMfaAlreadyEnabledError,
   AuthMfaConfigurationError,
+  AuthMfaKeyRotationError,
+  AuthMfaKeyRotationUnknownVersionError,
   AuthMfaNotEnabledError,
   AuthMfaVerificationError,
   WorkspaceInvitationConflictError,

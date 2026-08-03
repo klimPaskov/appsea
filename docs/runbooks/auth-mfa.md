@@ -50,17 +50,26 @@ Rotation is an operator-approved deployment, not an autonomous action:
    `pnpm worker:auth:mfa:rotation:status` with the service database role. The
    command prints counts only: current, previous, unknown, enabled, and
    pending rows. It never prints key material or encrypted fields.
-3. Successful TOTP verification and pending-enrollment confirmation decrypt
-   with the previous key when needed and re-encrypt in the current version in
-   the same database transaction. Keep the previous key configured while
-   `previousKeyAccounts` or `unknownKeyAccounts` is non-zero; unknown rows are
-   a fail-closed incident, not evidence that the accounts have no MFA.
-4. After an independent review confirms the counts are zero and dormant
-   accounts have an approved recovery/re-enrollment plan, remove the previous
-   key/version in a separate deployment. Do not delete or rewrite ciphertext
-   directly. Recovery-code-only access does not rewrap a dormant secret, so the
-   previous key may need to remain until that account completes TOTP or
-   re-enrollment.
+3. Run the lease-owned, bounded dormant-account batch command:
+   `pnpm worker:auth:mfa:rotation:rewrap`. Set
+   `APPSEA_AUTH_MFA_ROTATION_BATCH_SIZE` only within the validated 1-1000
+   range. The command re-encrypts at most that many previous-key rows in one
+   transaction, records an identifier-only `key_rotation_rewrapped` event for
+   each committed account, and prints only bounded versions/counts. Repeat it
+   until the result reports `completed: true`; a later invocation resumes by
+   key version and does not duplicate a committed rewrap.
+4. The batch fails closed before changing rows when any ciphertext carries an
+   unknown key version, when the previous key is absent, when decryption fails,
+   or when the maintenance lease/fence is lost. Keep the previous key
+   configured while `previousKeyAccounts` or `unknownKeyAccounts` is non-zero;
+   unknown rows are a fail-closed incident, not evidence that the accounts have
+   no MFA. Successful TOTP verification and pending-enrollment confirmation
+   still opportunistically rewrap active accounts in their own transactions.
+5. After an independent review confirms the status counts are zero and the
+   batch command has completed, remove the previous key/version in a separate
+   deployment. Do not delete or rewrite ciphertext directly. Recovery-code-only
+   access no longer leaves dormant accounts behind because the operator batch
+   handles them without requiring a login.
 
 ## User flow
 
@@ -125,10 +134,13 @@ TOTP timestep and rejects a previously used timestep.
 - `packages/db/src/auth-mfa-key.test.ts` covers current/previous decryption,
   rewrap metadata, malformed configuration, and unsupported versions.
 - `packages/db/integration/db.integration.test.ts` covers the version-one
-  migration default and count-only rotation status after enrollment.
+  migration default, count-only rotation status after enrollment, and a
+  previous-key dormant-account rewrap with an identifier-only event.
+- `apps/worker/src/auth-mfa-key-rotation-runner.test.ts` covers lease/fence
+  propagation and bounded input validation.
 
-TOTP MFA key rotation is now represented in the repository, but this does not
-close the remaining OIDC, verified-identity, delivery/DPA, provider-backed
-step-up, or production identity-operations gates. Production still requires
-an approved deployment procedure and an actual status review before removing
-the previous key.
+TOTP MFA key rotation now includes a bounded dormant-account rewrap command,
+but this does not close the remaining OIDC, verified-identity, delivery/DPA,
+provider-backed step-up, or production identity-operations gates. Production
+still requires an approved deployment procedure, a live status review, and
+independent confirmation before removing the previous key.

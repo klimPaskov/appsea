@@ -3,6 +3,8 @@ import {
   authRetentionInputSchema,
   authRetentionResultSchema,
   authMfaKeyRotationStatusSchema,
+  authMfaKeyRotationRewrapInputSchema,
+  authMfaKeyRotationRewrapResultSchema,
   authRecoveryBatchInputSchema,
   workspaceInvitationDeliveryBatchInputSchema,
   authSignInInputSchema,
@@ -1005,6 +1007,28 @@ describe('contracts', () => {
       authMfaKeyRotationStatusSchema.safeParse({
         ...mfaRotationStatus,
         unknownKeyAccounts: 1
+      }).success
+    ).toBe(false)
+    expect(authMfaKeyRotationRewrapInputSchema.safeParse({ batchSize: 100 }).success).toBe(true)
+    expect(authMfaKeyRotationRewrapInputSchema.safeParse({ batchSize: 1_001 }).success).toBe(false)
+    expect(
+      authMfaKeyRotationRewrapResultSchema.safeParse({
+        currentKeyVersion: 2,
+        previousKeyVersion: 1,
+        batchSize: 100,
+        rewrappedAccounts: 2,
+        remainingPreviousKeyAccounts: 0,
+        completed: true
+      }).success
+    ).toBe(true)
+    expect(
+      authMfaKeyRotationRewrapResultSchema.safeParse({
+        currentKeyVersion: 2,
+        previousKeyVersion: 1,
+        batchSize: 1,
+        rewrappedAccounts: 2,
+        remainingPreviousKeyAccounts: 0,
+        completed: true
       }).success
     ).toBe(false)
     expect(workspaceInvitationDeliveryBatchInputSchema.safeParse({ batchSize: 100 }).success).toBe(

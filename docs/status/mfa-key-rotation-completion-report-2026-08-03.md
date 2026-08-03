@@ -3,6 +3,10 @@
 Status: repository tranche complete; production deployment rollout remains
 operator-gated.
 
+This report records the initial versioning slice. The follow-up dormant-account
+rewrap boundary is recorded in
+[`mfa-dormant-account-rewrap-completion-report-2026-08-03.md`](mfa-dormant-account-rewrap-completion-report-2026-08-03.md).
+
 ## Implemented
 
 - Migration `0086_auth_mfa_key_versions.sql` adds a checked `secret_key_version`
@@ -36,9 +40,10 @@ operator-gated.
 
 ## Remaining gates and simplifications
 
-- No automatic key rotation, bulk rewrap job, or destructive key deletion was
-  added. Operators must keep the previous key until the count-only status is
-  reviewed at zero and dormant-account handling is approved.
+- No automatic key rotation or destructive key deletion was added. The
+  follow-up adds one bounded, lease-owned dormant-account rewrap batch per
+  invocation; operators must still keep the previous key until the count-only
+  status is reviewed at zero and the deployment is approved.
 - OIDC/verified identity, delivery/DPA, provider-backed step-up, production
   role provisioning, source activation, cloud purge, and signed desktop release
   remain outside this tranche and outside any completion claim for AppSea.
