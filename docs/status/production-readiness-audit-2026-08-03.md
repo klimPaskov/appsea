@@ -68,7 +68,9 @@ Passing on 2026-08-03:
   workflow typecheck, script syntax, and documentation validation. Its
   Docker-backed execution was attempted locally but stopped before services
   started because this host's Docker Desktop Linux engine pipe is unavailable;
-  the CI workflow must provide the first hosted execution proof for this script.
+  hosted GitHub Actions run `30841762532` then passed the drill with
+  `completed:completed:2`, `1:1:7:1:2` durable rows, and two distinct outbox
+  event types (`research.run.completed`, `workflow.job.completed`).
 
 Attempted but unavailable on this host:
 

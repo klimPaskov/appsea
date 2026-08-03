@@ -76,9 +76,9 @@ memory.
 
 ## Validated commands
 
-- OIDC commit `90f0cf2` passed GitHub Actions run `30838396204`, including the
-  fresh PostgreSQL migration `0088` install/upgrade proof, fresh Temporal,
-  aggregate verify/security audit, container smoke, and Windows desktop jobs.
+- GitHub Actions run `30841762532` passed for `c703747`; the hosted worker
+  replacement drill verified one job/run, seven checkpoints, one cost row,
+  and two distinct outbox rows after process loss.
 - Dependency security hardening locks patched Next.js/PostCSS/`fast-uri`/sharp
   versions and adds `pnpm security:audit`; the production audit reports zero
   vulnerabilities. GitHub Actions run `30819616149` passed audit, verification,
