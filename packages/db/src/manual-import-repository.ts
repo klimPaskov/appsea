@@ -165,32 +165,11 @@ async function assertCampaign(
   if (campaign.purpose !== input.purpose) {
     throw new ManualImportConflictError('The campaign purpose does not match the import purpose')
   }
-  const policy = await client.query<{ source_id: string }>(
-    `SELECT source.source_id
-       FROM appsea.sources source
-       JOIN appsea.source_policy_versions policy
-         ON policy.source_id = source.source_id
-        AND policy.policy_version = $2
-      WHERE source.source_id = $1
-        AND source.source_type = 'manual'
-        AND source.lifecycle_state = 'active'
-        AND source.current_policy_version = policy.policy_version
-        AND policy.policy_state = 'approved'
-        AND policy.reviewed_at IS NOT NULL
-        AND (policy.expires_at IS NULL OR policy.expires_at > clock_timestamp())
-        AND EXISTS (
-          SELECT 1
-            FROM appsea.source_policy_reviews review
-           WHERE review.source_id = policy.source_id
-             AND review.policy_version = policy.policy_version
-             AND review.decision = 'approved'
-             AND review.content_hash = policy.content_hash
-             AND review.independence_attested
-        )
-      FOR SHARE OF source`,
-    [input.sourceId, input.policyVersion]
+  const policy = await client.query<{ collectible: boolean }>(
+    `SELECT appsea.manual_import_source_policy_collectible($1, $2, $3, $4) AS collectible`,
+    [input.sourceId, input.policyVersion, input.purpose, input.requestedDisplayMode]
   )
-  if (policy.rowCount !== 1) {
+  if (policy.rows[0]?.collectible !== true) {
     throw new ManualImportConflictError('The owner-import source policy is not collectible')
   }
 }

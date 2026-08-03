@@ -9,7 +9,7 @@ sparse; no third-party public source is enabled. A reviewed internal
 `manual-owner-import` policy now supports tenant-private owner-authorized CSV/
 JSON intake without claiming public market coverage.
 
-Migrations `0027`-`0089` cover policy evidence, collection checkpoints,
+Migrations `0027`-`0090` cover policy evidence, checkpoints,
 deletion/recomputation repair, leases, admissions, campaign orchestration and
 cancellation, source reconciliation, analysis history, report/plan governance,
 cost and alert projections, object references, workspace archival/purge intent/
@@ -72,7 +72,7 @@ Imported complaints, pages, reports, and model output remain untrusted data;
 they cannot update code, skills, instructions, permissions, or repository
 memory.
 
-The current tranche adds `packages/connectors/src/manual-import.ts`,
+This tranche adds `packages/connectors/src/manual-import.ts`,
 `packages/db/src/manual-import-repository.ts`, migration `0089`, private
 `/api/workspaces/:workspaceId/imports` routes, and the manual source policy and
 runbook plus the private `/workspace/:workspaceId/imports` owner screen. Uploads
@@ -80,9 +80,10 @@ are bounded at 2 MiB/5,000 rows, normalized and PII-scrubbed;
 Temporal receives only a batch identifier. Batch consumption is committed with
 collection persistence; owner deletion clears staged payloads and emits
 tombstones. URL import is
-intentionally deferred to avoid SSRF and unreviewed third-party acquisition.
-Integration coverage now exercises owner staging/replay, service consumption,
-deletion payload clearing, RLS, and tombstones; local Docker is unavailable.
+deferred to avoid SSRF and unreviewed third-party acquisition.
+Integration coverage exercises staging/replay/consumption/deletion, RLS,
+tombstones; migration `0090` keeps policy validation in a narrow definer
+function. Docker is unavailable locally.
 
 ## Validated commands
 

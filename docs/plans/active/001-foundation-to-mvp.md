@@ -25,7 +25,7 @@ Status: production-shaped foundation implemented and validated locally; producti
 
 Implemented:
 
-- PostgreSQL 18 schema and eighty-nine forward, checksummed migrations
+- PostgreSQL 18 schema and ninety forward, checksummed migrations
 - normalized source, evidence, complaint, cluster, competitor, opportunity, score, report, plan, audit, cost, deletion, outbox, and lineage tables
 - no-login owner, separate migrator, and least-privilege runtime role contract
 - forced workspace RLS and transaction-scoped workspace context
@@ -160,6 +160,9 @@ leaving the public leaderboard unchanged.
 The PostgreSQL integration suite also exercises the staged/replayed/consumed/
 deleted lifecycle, forced-RLS owner boundary, payload clearing, and tombstone
 propagation; local execution remains Docker-blocked.
+Migration `0090_manual_import_policy_read_gate.sql` keeps the runtime policy
+check behind a narrow security-definer decision function instead of requiring
+row-lock privileges on global source tables.
 
 Remaining deployment work and the non-fixture object-store integration are
 tracked in `docs/status/known-gaps.md` and are not part of the completed

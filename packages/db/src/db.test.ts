@@ -102,7 +102,8 @@ describe('database foundation', () => {
       '0086',
       '0087',
       '0088',
-      '0089'
+      '0089',
+      '0090'
     ])
     expect(migrations[0]?.checksum).toMatch(/^[a-f0-9]{64}$/)
     expect(migrations[0]?.sql).toContain('CREATE TABLE appsea.evidence_records')
@@ -233,6 +234,15 @@ describe('database foundation', () => {
     expect(manualImportMigration?.sql).toContain('manual-owner-import-v1')
     expect(manualImportMigration?.sql).toContain(
       'GRANT UPDATE (state, run_id, consumed_at, deleted_at)'
+    )
+    const manualImportPolicyGateMigration = migrations.find(
+      (migration) => migration.version === '0090'
+    )
+    expect(manualImportPolicyGateMigration?.sql).toContain(
+      'CREATE OR REPLACE FUNCTION appsea.manual_import_source_policy_collectible'
+    )
+    expect(manualImportPolicyGateMigration?.sql).toContain(
+      'GRANT EXECUTE ON FUNCTION appsea.manual_import_source_policy_collectible'
     )
     const authMigration = migrations.find((migration) => migration.version === '0008')
     const privacyMigration = migrations.find((migration) => migration.version === '0009')
