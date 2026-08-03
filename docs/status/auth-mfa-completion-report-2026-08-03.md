@@ -36,8 +36,8 @@ identity-operation gates remain open.
   step-up, enrollment, confirmation, status, disable, and cookie tests passed.
 - `packages/db/src/auth-repository.test.ts`, `packages/db/src/db.test.ts`,
   and `packages/db/integration/db.integration.test.ts` cover repository,
-  migration, and PostgreSQL behavior; the integration case runs when the
-  disposable PostgreSQL gate is available.
+  migration, and PostgreSQL behavior; the fresh integration case passed in
+  GitHub Actions run `30783777897`.
 - `apps/worker/src/production-preflight.test.ts` and maintenance-runner tests
   cover the key and retention contract.
 - Focused package typechecks, lints, tests, and `pnpm format:check` passed.
@@ -49,7 +49,7 @@ identity-operation gates remain open.
   rotation, MFA enforcement for every existing high-risk token action, and
   production identity monitoring still require reviewed deployment controls.
 - The local Docker Desktop Linux engine is unavailable, so fresh PostgreSQL
-  RLS/role execution and the new integration case remain remote-CI evidence.
+  RLS/role execution remains remote-CI evidence.
 - The implementation does not display QR images; the reviewed provisioning URI
   and manual secret are shown once to keep the dependency and data boundary
   small.
