@@ -375,6 +375,9 @@ Implemented:
   The private production collection read model exposes bounded handoff state,
   retry, and failure metadata without exposing raw idempotency keys or source
   payloads.
+- the long-lived worker has an idempotent SIGINT/SIGTERM lifecycle that shuts
+  down Temporal, stops heartbeat and dispatch loops, awaits their drain, and
+  closes database/Temporal connections before process exit.
 
 Remaining production work: run the legacy v1 history checker against the
 authenticated deployment and complete its separately approved archive/

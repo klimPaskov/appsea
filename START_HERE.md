@@ -37,6 +37,8 @@ Open `http://localhost:3000` after the web server starts.
   reviewed artifacts inside the activity so complaint text is absent from new
   Temporal histories, and a bounded visibility-only checker distinguishes new
   v2 histories from legacy executions without decoding payloads
+- idempotent SIGINT/SIGTERM worker shutdown that drains handoff/recomputation
+  scans and heartbeat work before closing Temporal and PostgreSQL connections
 - private workspace authentication with hashed/revocable sessions, authenticated active-session inventory and reauthenticated per-session revocation, password step-up for owner mutations, AppSea-owned TOTP MFA, conditional MFA step-up for password-gated high-risk mutations, and membership-checked research reads
 - private workspace cost summaries over the immutable ledger, grouped by currency and cost type with exact micro-unit totals and bounded periods
 - private visibility for settled source-quota requests that lack a completed production result, with maintenance-role-only resolution and no automatic re-fetch
@@ -68,7 +70,8 @@ Open `http://localhost:3000` after the web server starts.
 - production encrypted object-storage deployment, lifecycle/versioning rules, destructive workspace/object/backup/export purge wiring (workspace archival is implemented separately)
 - production deployment must still run the legacy production-analysis v1
   history checker, complete approved archive/retention actions, and prove the
-  remaining Temporal security controls
+  remaining Temporal security controls; it must also configure a worker drain
+  window and prove graceful replacement/crash recovery
 - autonomous production deployment
 - desktop release packaging
 - automatic activation of generated skills or connectors

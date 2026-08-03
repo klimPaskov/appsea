@@ -43,6 +43,15 @@ the bounded event envelope. Alert when the expected heartbeat window is
 missed; a heartbeat is a liveness signal, not proof that a particular workflow
 or source job is making progress.
 
+The long-lived worker installs idempotent SIGINT/SIGTERM handlers. A signal
+stops new handoff/recomputation scans, shuts down the Temporal worker so active
+activities can reach their configured safe point, stops the heartbeat, waits
+for the scan loop to drain, emits the bounded `worker_stopped` event, and only
+then closes PostgreSQL and Temporal connections. A repeated signal does not
+run cleanup twice. Deployments should allow this drain window before sending a
+forced kill; a forced kill remains a crash-recovery event and must be followed
+by the normal workflow/checkpoint inspection.
+
 The source and authentication maintenance commands parse bounded contracts
 before opening repository work. Their default job IDs use a UTC-minute bucket;
 set `APPSEA_SOURCE_MAINTENANCE_JOB_ID` or `APPSEA_AUTH_MAINTENANCE_JOB_ID` to

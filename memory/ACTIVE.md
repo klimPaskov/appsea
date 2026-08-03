@@ -29,6 +29,13 @@ history memo. `pnpm worker:workflow:analysis:history:check` inspects Temporal
 visibility metadata without fetching history and requires a reviewed manifest
 for visible legacy/unknown executions; it never performs archive or deletion.
 
+The long-lived worker now installs an idempotent SIGINT/SIGTERM lifecycle before
+opening dependencies. The first signal stops new handoff/recomputation scans,
+requests Temporal worker shutdown, stops the heartbeat, awaits the scan drain,
+emits the bounded stop event, and closes PostgreSQL/Temporal connections.
+Repeated signals do not repeat cleanup. This is a repository boundary; a
+deployed supervisor drain window and crash/replacement drill remain unproven.
+
 Authentication uses scrypt password hashes, revocable opaque sessions,
 membership-before-RLS, password reauthentication, TOTP enrollment/login,
 hash-only recovery codes, MFA step-up, recovery/invitation outboxes, owner-safe
@@ -68,12 +75,18 @@ memory.
   GitHub Actions run `30788668850` is green for commit `bf1756e` across
   aggregate verification, fresh PostgreSQL persistence, and fresh Temporal
   workflow gates.
+- The durable-worker shutdown slice passes the focused lifecycle tests plus
+  worker typecheck and lint locally. Full `pnpm verify` also passes all 56
+  package tasks, fixture worker, sample plan/analysis generation, web smoke,
+  and repository validation. Remote CI and a deployed drain/crash drill remain
+  pending for this slice.
 
 ## Next production tranche
 
 1. Obtain independent CFPB and competitor/contrary-evidence source approvals.
 2. Provision role-separated PostgreSQL and authenticated Temporal; run restore,
-   crash/retry/cancellation, legacy-history, and backup drills.
+   graceful replacement/crash, retry/cancellation, legacy-history, and backup
+   drills with a configured worker drain window.
 3. Approve OIDC/verified identity, delivery/DPA, MFA key rotation, provider
    step-up, and explicit contracts for high-impact mutations without a
    password-step-up boundary.
@@ -96,6 +109,7 @@ memory.
   separate reviewed operations; workspace archival and purge intent do not
   delete research.
 - One-/multi-source cancellation and recomputation are durable repository
-  boundaries, but deployed Temporal cancellation and crash-drill evidence are
-  not claimed.
+  boundaries, and the worker now has an idempotent signal-driven drain path,
+  but deployed Temporal cancellation, graceful replacement, and crash-drill
+  evidence are not claimed.
 - Windows/macOS release remains open.

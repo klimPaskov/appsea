@@ -84,6 +84,7 @@
 - [`adrs/0014-mfa-step-up-for-agent-tokens.md`](adrs/0014-mfa-step-up-for-agent-tokens.md)
 - [`adrs/0015-conditional-mfa-for-password-gated-mutations.md`](adrs/0015-conditional-mfa-for-password-gated-mutations.md)
 - [`adrs/0016-temporal-legacy-history-drain.md`](adrs/0016-temporal-legacy-history-drain.md)
+- [`adrs/0017-durable-worker-shutdown.md`](adrs/0017-durable-worker-shutdown.md)
 
 ## Generated references
 
@@ -106,6 +107,7 @@
 - [`status/mfa-agent-token-step-up-completion-report-2026-08-03.md`](status/mfa-agent-token-step-up-completion-report-2026-08-03.md)
 - [`status/conditional-mfa-password-gated-mutations-completion-report-2026-08-03.md`](status/conditional-mfa-password-gated-mutations-completion-report-2026-08-03.md)
 - [`status/temporal-legacy-history-drain-completion-report-2026-08-03.md`](status/temporal-legacy-history-drain-completion-report-2026-08-03.md)
+- [`status/durable-worker-shutdown-completion-report-2026-08-03.md`](status/durable-worker-shutdown-completion-report-2026-08-03.md)
 - [`status/workspace-invitation-completion-report.md`](status/workspace-invitation-completion-report.md)
 - [`status/production-readiness-audit-2026-07-25.md`](status/production-readiness-audit-2026-07-25.md)
 - [`status/production-readiness-audit-2026-08-02.md`](status/production-readiness-audit-2026-08-02.md)

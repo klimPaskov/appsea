@@ -64,6 +64,7 @@ production requires a non-loopback address, namespace, API key, and pinned CA.
   the explicit `appsea-worker` actor in the job and terminal audit event
 - Temporal restart recovery and one-time output/cost/audit/outbox effects
 - decoded history inspection proving the raw fixture idempotency key is absent
+- idempotent SIGINT/SIGTERM worker shutdown with heartbeat/dispatch drain
 
 ## Troubleshooting
 
@@ -88,4 +89,5 @@ unauthenticated UI to a network. The worker/client configuration is now
 production-shaped, but a production runbook is still required after choosing
 the hosted/self-managed topology. It must specify TLS/mTLS, namespace and
 task-queue authorization, retention, encryption, HA, backups, restore tests,
-worker deployment, metrics, alerts, and incident response.
+worker deployment, graceful shutdown/drain windows, metrics, alerts, and
+incident response.

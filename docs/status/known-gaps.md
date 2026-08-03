@@ -108,8 +108,12 @@ The fixture and production-collection workflow boundaries are durable locally
 and in CI. Web and worker clients now fail closed and support a non-loopback
 Temporal endpoint with namespace, API-key, and pinned-CA settings, but there is
 no production Temporal topology, namespace/task-queue authorization, HA,
-backup/restore policy, worker deployment, or operated alert endpoint. Production
-billing and deployment configuration are also absent.
+backup/restore policy, worker deployment, or operated alert endpoint. The
+long-lived repository worker now has an idempotent SIGINT/SIGTERM path that
+stops new dispatch scans, requests Temporal shutdown, drains heartbeat/scan
+work, and closes its connections; the deployed supervisor drain window and
+replacement/crash drill are still unproven. Production billing and deployment
+configuration are also absent.
 
 Private workspace authentication is implemented for the web boundary with durable
 hashed sessions, PostgreSQL-backed login/signup throttling, bounded session

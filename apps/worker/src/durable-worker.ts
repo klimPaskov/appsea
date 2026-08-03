@@ -14,6 +14,21 @@ import { createProductionAnalysisActivities } from './production-analysis-activi
 import { createProductionAnalysisHandoffDispatcher } from './production-analysis-handoff'
 import { createProductionAnalysisRecomputeDispatcher } from './production-analysis-recompute'
 import { emitWorkerEvent, startWorkerHeartbeat } from './observability'
+import { createDurableWorkerShutdownLifecycle } from './durable-worker-lifecycle'
+
+let stopping = false
+let worker: Worker | undefined
+let stopHeartbeat = (): void => undefined
+const shutdownController = new AbortController()
+const shutdown = createDurableWorkerShutdownLifecycle(() => {
+  stopping = true
+  shutdownController.abort()
+  stopHeartbeat()
+  worker?.shutdown()
+})
+const requestShutdown = (): void => shutdown.request()
+process.once('SIGINT', requestShutdown)
+process.once('SIGTERM', requestShutdown)
 
 const pool = createDatabasePool(databaseConfigFromEnv())
 const objectStore = objectStoreFromEnv(process.env)
@@ -28,12 +43,25 @@ const workflowClient = new WorkflowClient({
 const handoffDispatcher = createProductionAnalysisHandoffDispatcher(pool, workflowClient)
 const recomputeDispatcher = createProductionAnalysisRecomputeDispatcher(pool, workflowClient)
 
-let stopping = false
-let stopHeartbeat = (): void => undefined
 const wait = (milliseconds: number): Promise<void> =>
-  new Promise((resolve) => setTimeout(resolve, milliseconds))
+  new Promise((resolve) => {
+    if (shutdownController.signal.aborted) {
+      resolve()
+      return
+    }
+    const timer = setTimeout(() => {
+      shutdownController.signal.removeEventListener('abort', onAbort)
+      resolve()
+    }, milliseconds)
+    const onAbort = (): void => {
+      clearTimeout(timer)
+      shutdownController.signal.removeEventListener('abort', onAbort)
+      resolve()
+    }
+    shutdownController.signal.addEventListener('abort', onAbort, { once: true })
+  })
 const handoffLoop = (async (): Promise<void> => {
-  while (!stopping) {
+  while (!stopping && !shutdownController.signal.aborted) {
     try {
       await handoffDispatcher.dispatchBatch()
     } catch {
@@ -43,6 +71,7 @@ const handoffLoop = (async (): Promise<void> => {
         failureCode: 'APPSEA_HANDOFF_SCAN_FAILED'
       })
     }
+    if (stopping || shutdownController.signal.aborted) break
     try {
       await recomputeDispatcher.dispatchBatch()
     } catch {
@@ -52,12 +81,12 @@ const handoffLoop = (async (): Promise<void> => {
         failureCode: 'APPSEA_RECOMPUTE_SCAN_FAILED'
       })
     }
-    if (!stopping) await wait(5_000)
+    if (!stopping && !shutdownController.signal.aborted) await wait(5_000)
   }
 })()
 
 try {
-  const worker = await Worker.create({
+  worker = await Worker.create({
     connection: workerConnection,
     taskQueue: fixtureResearchTaskQueue,
     workflowsPath: fileURLToPath(import.meta.resolve('@appsea/workflows/workflows')),
@@ -69,13 +98,18 @@ try {
     maxConcurrentActivityTaskExecutions: 4,
     maxConcurrentWorkflowTaskExecutions: 8
   })
-  emitWorkerEvent({ event: 'worker_started', taskQueue: fixtureResearchTaskQueue })
-  stopHeartbeat = startWorkerHeartbeat(fixtureResearchTaskQueue)
+  if (shutdown.isRequested()) {
+    worker.shutdown()
+  } else {
+    emitWorkerEvent({ event: 'worker_started', taskQueue: fixtureResearchTaskQueue })
+    stopHeartbeat = startWorkerHeartbeat(fixtureResearchTaskQueue)
+  }
   await worker.run()
 } finally {
-  stopping = true
-  stopHeartbeat()
+  shutdown.request()
   await handoffLoop
   emitWorkerEvent({ event: 'worker_stopped', taskQueue: fixtureResearchTaskQueue })
+  process.removeListener('SIGINT', requestShutdown)
+  process.removeListener('SIGTERM', requestShutdown)
   await Promise.all([pool.end(), clientConnection.close(), workerConnection.close()])
 }
