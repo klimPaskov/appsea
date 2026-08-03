@@ -88,9 +88,9 @@ memory.
   images plus `infra/production/compose.yaml`. Compose gates long-lived
   services on the one-shot preflight, keeps migrations explicit, defaults web
   binding to loopback, and uses non-root/read-only/capability-dropped
-  services. CI must build both images before this tranche is considered
-  validated; external provider provisioning, image signing/registry, and
-  source-policy activation remain blockers.
+  services. GitHub Actions run `30822047661` passed both image builds and
+  Compose validation for commit `bd713ee`; external provider provisioning,
+  image signing/registry, and source-policy activation remain blockers.
 
 ## Next production tranche
 

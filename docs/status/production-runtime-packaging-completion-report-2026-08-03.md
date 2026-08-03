@@ -26,8 +26,9 @@ not claimed.
   server at `apps/web/.next/standalone/apps/web/server.js`.
 - Local `docker compose --file infra/production/compose.yaml config --quiet`
   passed without a Docker daemon.
-- Web build, worker checks, repository documentation checks, and container
-  builds are covered by the release CI workflow.
+- GitHub Actions run `30822047661` passed for commit `bd713ee`, including the
+  full verification, fresh PostgreSQL and Temporal checks, Compose validation,
+  and both container image builds.
 
 ## Explicit limits
 
