@@ -325,7 +325,7 @@ BEGIN
       USING ERRCODE = '22023';
   END IF;
 
-  UPDATE appsea.operational_alert_outbox
+  UPDATE appsea.operational_alert_outbox AS outbox
      SET state = 'sent',
          claim_id = NULL,
          claimed_by = NULL,
@@ -333,10 +333,10 @@ BEGIN
          sent_at = p_sent_at,
          last_failure_code = NULL,
          updated_at = clock_timestamp()
-   WHERE delivery_id = p_delivery_id
-     AND state = 'sending'
-     AND claimed_by = p_owner_id
-     AND claim_id = p_claim_id;
+   WHERE outbox.delivery_id = p_delivery_id
+     AND outbox.state = 'sending'
+     AND outbox.claimed_by = p_owner_id
+     AND outbox.claim_id = p_claim_id;
   RETURN QUERY SELECT FOUND;
 END
 $$;
@@ -373,7 +373,7 @@ BEGIN
       USING ERRCODE = '22023';
   END IF;
 
-  UPDATE appsea.operational_alert_outbox
+  UPDATE appsea.operational_alert_outbox AS outbox
      SET state = CASE WHEN attempt_count >= 5 THEN 'exhausted' ELSE 'pending' END,
          available_at = CASE WHEN attempt_count >= 5 THEN available_at ELSE p_retry_at END,
          claim_id = NULL,
@@ -381,10 +381,10 @@ BEGIN
          claim_expires_at = NULL,
          last_failure_code = p_failure_code,
          updated_at = clock_timestamp()
-   WHERE delivery_id = p_delivery_id
-     AND state = 'sending'
-     AND claimed_by = p_owner_id
-     AND claim_id = p_claim_id;
+   WHERE outbox.delivery_id = p_delivery_id
+     AND outbox.state = 'sending'
+     AND outbox.claimed_by = p_owner_id
+     AND outbox.claim_id = p_claim_id;
   IF NOT FOUND THEN
     RETURN QUERY SELECT false, NULL::text;
     RETURN;
