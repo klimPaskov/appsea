@@ -18,7 +18,8 @@ agent bearer mutations.
 
 Focused checks passed: contracts 89, database 135, web 144; affected
 typechecks passed. The disposable PostgreSQL integration case covers step-up
-success and recovery-code replay but needs Docker or GitHub Actions. The broad
+success and recovery-code replay and passed in GitHub Actions run
+`30785696385` for commit `1b45c8a`. The broad
 AppSea goal remains open: no live source is active, production DB/Temporal,
 provider identity/delivery/key rotation, cloud/backup/export purge, scheduler
 operations, and signed desktop release remain deployment or approval gates.

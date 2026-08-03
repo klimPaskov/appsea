@@ -29,9 +29,8 @@ issue/revoke; external identity and deployment controls remain open.
   enforcement.
 - Contracts, database, and web typechecks passed.
 - PostgreSQL integration coverage now exercises step-up success, recent-marker
-  inspection, and recovery-code replay rejection; execution still requires the
-  repository's disposable PostgreSQL environment or the GitHub integration
-  job.
+  inspection, and recovery-code replay rejection; the disposable PostgreSQL
+  job passed in GitHub Actions run `30785696385` for commit `1b45c8a`.
 
 ## Deliberate boundaries and remaining blockers
 
@@ -41,7 +40,8 @@ issue/revoke; external identity and deployment controls remain open.
   delivery, or provider-backed step-up. Key rotation, identity/DPA approval,
   production secret operations, and identity monitoring remain open.
 - The local Docker Desktop Linux engine is unavailable in this environment, so
-  fresh PostgreSQL role/RLS execution remains a remote-CI gate.
+  fresh PostgreSQL role/RLS execution remains a remote-CI-only proof here; the
+  current remote gate is green.
 
 This report does not claim AppSea is production-ready or that fixture research
 is real market evidence.

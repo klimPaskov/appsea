@@ -41,16 +41,17 @@ memory.
 
 ## Validated commands
 
-- `pnpm verify` passed 2026-08-03 before the latest MFA step-up tranche; it
-  covered package lint/typecheck/test/build, fixture worker, sample plan,
-  smoke web, and repository checks.
+- `pnpm verify` passed 2026-08-03 for the MFA step-up tranche; it covered
+  package lint/typecheck/test/build, fixture worker, sample plan, smoke web,
+  and repository checks.
 - The current tranche passes contracts (89), db (135), and web (144) focused
   suites plus affected typechecks and lints. Its PostgreSQL integration test
-  covers marker creation and recovery-code replay; fresh execution needs Docker
-  or GitHub Actions.
+  covers marker creation and recovery-code replay; GitHub Actions run
+  `30785696385` passed the fresh PostgreSQL and Temporal gates.
 - PostgreSQL and Temporal fresh integration is staged but local Docker is
   blocked by the unavailable Docker Desktop Linux engine pipe. Remote CI is the
-  authoritative fresh-install/upgrade and workflow proof.
+  authoritative fresh-install/upgrade and workflow proof; that remote gate is
+  green for commit `1b45c8a`.
 
 ## Next production tranche
 
