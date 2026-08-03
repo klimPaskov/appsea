@@ -40,6 +40,9 @@ Open `http://localhost:3000` after the web server starts.
 - idempotent SIGINT/SIGTERM worker shutdown that drains handoff/recomputation
   scans and heartbeat work before closing Temporal and PostgreSQL connections
 - private workspace authentication with hashed/revocable sessions, authenticated active-session inventory and reauthenticated per-session revocation, password step-up for owner mutations, AppSea-owned TOTP MFA, conditional MFA step-up for password-gated high-risk mutations, and membership-checked research reads
+- optional, disabled-by-default OIDC identity linking/sign-in with strict
+  issuer/subject binding, state/nonce/PKCE and ID-token verification, explicit
+  step-up-protected linking/unlinking, and MFA-aware challenge handoff
 - private workspace cost summaries over the immutable ledger, grouped by currency and cost type with exact micro-unit totals and bounded periods
 - lease-owned, bounded dormant-account MFA ciphertext rewrap batches with fail-closed unknown-version handling and count-only progress
 - private visibility for settled source-quota requests that lack a completed production result, with maintenance-role-only resolution and no automatic re-fetch
@@ -67,7 +70,8 @@ Open `http://localhost:3000` after the web server starts.
 - real social source access
 - production identity operations (recovery and invitation mechanics are
   implemented behind provider/identity kill switches; verified email policy,
-  delivery approval, MFA/OIDC, and provider policy remain; owner-safe account
+  delivery approval, OIDC provider approval, and provider policy remain;
+  owner-safe account
   closure is implemented but intentionally retains shared workspace research)
 - production database provisioning and production Temporal infrastructure (TLS/authentication, HA, backups, retention, deployment, and alerts)
 - production encrypted object-storage deployment, lifecycle/versioning rules, provider consumption of purge manifests, and destructive workspace/object/backup/export purge wiring (workspace archival is implemented separately)

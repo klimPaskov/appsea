@@ -8,6 +8,8 @@ import {
   authRecoveryBatchInputSchema,
   workspaceInvitationDeliveryBatchInputSchema,
   authSignInInputSchema,
+  authExternalIdentityClaimsSchema,
+  authExternalIdentityReadModelSchema,
   authReauthenticationInputSchema,
   authAccountDeletionInputSchema,
   authAccountDeletionResultSchema,
@@ -309,6 +311,52 @@ const validFixturePersistenceInput: FixturePersistenceInput = {
 }
 
 describe('contracts', () => {
+  it('keeps external identity claims strict and hides provider subjects in read models', () => {
+    expect(
+      authExternalIdentityClaimsSchema.safeParse({
+        issuer: 'https://issuer.example.test',
+        subject: 'provider-subject',
+        email: 'user@example.com',
+        emailVerified: true
+      }).success
+    ).toBe(true)
+    expect(
+      authExternalIdentityClaimsSchema.safeParse({
+        issuer: 'https://issuer.example.test',
+        subject: 'provider-subject',
+        email: 'user@example.com',
+        emailVerified: false
+      }).success
+    ).toBe(false)
+    expect(
+      authExternalIdentityClaimsSchema.safeParse({
+        issuer: 'https://user:secret@issuer.example.test/tenant?x=1',
+        subject: 'provider-subject',
+        email: 'user@example.com',
+        emailVerified: true
+      }).success
+    ).toBe(false)
+    expect(
+      authExternalIdentityClaimsSchema.safeParse({
+        issuer: 'http://issuer.example.test',
+        subject: 'provider-subject',
+        email: 'user@example.com',
+        emailVerified: true
+      }).success
+    ).toBe(false)
+    expect(
+      authExternalIdentityReadModelSchema.safeParse({
+        identityId: 'oidc-identity:one',
+        provider: 'oidc',
+        issuerHost: 'issuer.example.test',
+        email: 'user@example.com',
+        linkedAt: now,
+        lastAuthenticatedAt: null,
+        subject: 'must-not-leak'
+      }).success
+    ).toBe(false)
+  })
+
   it('requires an explicit workspace archive confirmation and keeps purge separate', () => {
     expect(
       workspaceArchiveInputSchema.safeParse({ confirmation: 'ARCHIVE WORKSPACE' }).success

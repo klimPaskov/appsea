@@ -11,7 +11,9 @@ and coverage gaps, but it is not a general REST/MCP write API. Token issue and
 revoke now require the existing password step-up plus a fresh MFA proof when
 MFA is enabled; accounts without MFA retain the password-only path. Token
 management is API-only, and HTTPS termination, external secret storage, rate
-limiting, OIDC/provider identity, and deployment monitoring remain open. Versioned
+limiting, and deployment monitoring remain open. Optional OIDC/provider identity
+linking and sign-in now have a disabled-by-default, explicit issuer/subject
+boundary, but live provider approval and operations remain open. Versioned
 MFA keys, a previous-key window, opportunistic rewrap, a lease-owned bounded
 dormant-account rewrap command, and count-only rotation status are implemented,
 but production deployment review and live status approval remain open. Password-gated high-risk mutations now
@@ -152,9 +154,11 @@ until every owned workspace has another owner. Owner-only member listing, role c
 implemented through the private workspace settings route and protected by a
 15-minute password step-up window. Owner-only workspace archival is now also
 implemented through the same route: it blocks active workflow/run/lease work,
-retains lineage, and records identifier-only receipts. OIDC and a production
-identity-provider control plane remain open; the TOTP implementation does not
-prove verified email ownership, external OIDC operations, provider-backed
+retains lineage, and records identifier-only receipts. The OIDC boundary is
+disabled by default and never auto-links by email, but a production
+identity-provider control plane remains open; the TOTP implementation does not
+prove verified email ownership, provider delivery/DPA, provider identity
+retention/revocation handling, provider-backed
 step-up, or a step-up contract for unrelated mutations that lack a password
 boundary.
 

@@ -19,6 +19,8 @@ import {
   authPasswordResetInputSchema,
   authPasswordResetRequestInputSchema,
   authPasswordResetTokenSchema,
+  authExternalIdentityClaimsSchema,
+  authExternalIdentityReadModelSchema,
   authReauthenticationInputSchema,
   authAccountDeletionInputSchema,
   authAccountDeletionResultSchema,
@@ -78,6 +80,9 @@ import {
   type AuthSessionSummaryReadModel,
   type AuthPasswordResetInput,
   type AuthPasswordResetRequestInput,
+  type AuthExternalIdentityClaims,
+  type AuthExternalIdentityReadModel,
+  type AuthSignInResult,
   type AuthReauthenticationInput,
   type AuthAccountDeletionInput,
   type AuthAccountDeletionResult,
@@ -90,7 +95,6 @@ import {
   type WorkspacePurgeRequestInput,
   type WorkspacePurgeReadiness,
   type AuthSignInInput,
-  type AuthSignInResult,
   type AuthSignInSuccessResult,
   type AuthSignUpInput,
   type AuthMfaDisableInput,
@@ -172,6 +176,27 @@ export class AuthenticationConflictError extends Error {
   constructor() {
     super('Unable to create the account')
     this.name = 'AuthenticationConflictError'
+  }
+}
+
+export class AuthExternalIdentityNotFoundError extends Error {
+  constructor() {
+    super('The external identity is not linked to an AppSea account')
+    this.name = 'AuthExternalIdentityNotFoundError'
+  }
+}
+
+export class AuthExternalIdentityConflictError extends Error {
+  constructor() {
+    super('The external identity is already linked')
+    this.name = 'AuthExternalIdentityConflictError'
+  }
+}
+
+export class AuthExternalIdentityPermissionError extends Error {
+  constructor() {
+    super('A recent password and MFA step-up is required to manage external identities')
+    this.name = 'AuthExternalIdentityPermissionError'
   }
 }
 
@@ -400,6 +425,17 @@ interface SessionRow extends QueryResultRow {
   expires_at: Date | string
 }
 
+interface AuthExternalIdentityRow extends QueryResultRow {
+  identity_id: string
+  user_id: string
+  provider: 'oidc'
+  issuer: string
+  subject: string
+  email: string
+  linked_at: Date | string
+  last_authenticated_at: Date | string | null
+}
+
 interface ReauthenticationSessionRow extends QueryResultRow {
   session_id: string
   password_hash: string
@@ -446,6 +482,8 @@ interface MfaChallengeRow extends QueryResultRow {
   challenge_id: string
   user_id: string
   email: string
+  oidc_identity_id: string | null
+  oidc_issuer: string | null
   expires_at: Date | string
   attempt_count: number | string
   locked_until: Date | string | null
@@ -893,6 +931,23 @@ function mapWorkspaceInvitation(row: WorkspaceInvitationRow): WorkspaceInvitatio
   })
 }
 
+function mapExternalIdentity(row: AuthExternalIdentityRow): AuthExternalIdentityReadModel {
+  let issuerHost: string
+  try {
+    issuerHost = new URL(row.issuer).hostname
+  } catch {
+    throw new Error('Stored external identity issuer is invalid')
+  }
+  return authExternalIdentityReadModelSchema.parse({
+    identityId: row.identity_id,
+    provider: row.provider,
+    issuerHost,
+    email: row.email,
+    linkedAt: iso(row.linked_at),
+    lastAuthenticatedAt: row.last_authenticated_at === null ? null : iso(row.last_authenticated_at)
+  })
+}
+
 function mapOpportunity(row: OpportunityRow): WorkspaceOpportunityReadModel {
   return workspaceOpportunityReadModelSchema.parse({
     id: row.opportunity_id,
@@ -1239,7 +1294,8 @@ export class PostgresAuthRepository {
       async (client) => {
         const challenge = await client.query<MfaChallengeRow>(
           `SELECT challenge.challenge_id, challenge.user_id,
-                  app_user.email, challenge.expires_at,
+                  app_user.email, challenge.oidc_identity_id,
+                  challenge.oidc_issuer, challenge.expires_at,
                   challenge.attempt_count, challenge.locked_until,
                   challenge.consumed_at
              FROM appsea.auth_mfa_challenges challenge
@@ -1306,6 +1362,14 @@ export class PostgresAuthRepository {
           [challengeRow.challenge_id, now]
         )
         await this.insertSession(client, challengeRow.user_id, token, now, now)
+        if (challengeRow.oidc_identity_id && challengeRow.oidc_issuer) {
+          await client.query(`SELECT appsea.touch_oidc_identity_sign_in($1, $2, $3, $4)`, [
+            identifier('oidc-event'),
+            challengeRow.user_id,
+            challengeRow.oidc_identity_id,
+            challengeRow.oidc_issuer
+          ])
+        }
         await this.recordMfaEvent(
           client,
           'challenge_succeeded',
@@ -1822,6 +1886,262 @@ export class PostgresAuthRepository {
         ])
       },
       { maintenanceFence }
+    )
+  }
+
+  /**
+   * Sign in only through an identity that an existing AppSea account linked
+   * explicitly. Provider email claims never perform account discovery or
+   * account linking; the issuer/subject pair is the durable identity key.
+   */
+  async signInWithExternalIdentity(input: AuthExternalIdentityClaims): Promise<AuthSignInResult> {
+    const parsed = authExternalIdentityClaimsSchema.parse(input)
+    const issuer = parsed.issuer.endsWith('/') ? parsed.issuer.slice(0, -1) : parsed.issuer
+    const token = sessionToken()
+    const now = new Date()
+    const mfaChallenge = await withDatabaseTransaction(this.pool, async (client) => {
+      const result = await client.query<
+        AuthExternalIdentityRow & { account_state: 'active' | 'closed' }
+      >(
+        `SELECT identity.identity_id, identity.provider, identity.issuer,
+                identity.subject, identity.email, identity.linked_at,
+                identity.last_authenticated_at, identity.user_id,
+                app_user.account_state
+           FROM appsea.auth_identities identity
+           JOIN appsea.users app_user ON app_user.user_id = identity.user_id
+          WHERE identity.provider = 'oidc'
+            AND identity.issuer = $1
+            AND identity.subject = $2
+            AND app_user.account_state = 'active'
+            AND identity.email = $3
+          FOR UPDATE OF identity`,
+        [issuer, parsed.subject, parsed.email]
+      )
+      const identity = result.rows[0]
+      if (!identity) throw new AuthExternalIdentityNotFoundError()
+      const mfa = await client.query<{ enabled: boolean }>(
+        `SELECT EXISTS (
+           SELECT 1
+             FROM appsea.auth_mfa_totp
+            WHERE user_id = $1
+              AND status = 'enabled'
+         ) AS enabled`,
+        [identity.user_id]
+      )
+      if (mfa.rows[0]?.enabled === true) {
+        const challengeToken = sessionToken()
+        const expiresAt = new Date(now.getTime() + mfaChallengeLifetimeMs)
+        await client.query(
+          `INSERT INTO appsea.auth_mfa_challenges
+             (challenge_id, user_id, challenge_hash, created_at, expires_at,
+              oidc_identity_id, oidc_issuer)
+           VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+          [
+            identifier('mfa-challenge'),
+            identity.user_id,
+            sha256(challengeToken),
+            now,
+            expiresAt,
+            identity.identity_id,
+            issuer
+          ]
+        )
+        return { challengeToken, expiresAt }
+      }
+      await this.insertSession(client, identity.user_id, token, now)
+      await client.query(`SELECT appsea.touch_oidc_identity_sign_in($1, $2, $3, $4)`, [
+        identifier('oidc-event'),
+        identity.user_id,
+        identity.identity_id,
+        issuer
+      ])
+      return null
+    })
+    if (mfaChallenge) {
+      return authSignInResultSchema.parse({
+        mfaRequired: true,
+        challengeToken: mfaChallenge.challengeToken,
+        expiresAt: mfaChallenge.expiresAt.toISOString()
+      })
+    }
+    const session = await this.readSession(token)
+    if (!session) throw new Error('External identity session could not be read')
+    return authSignInResultSchema.parse({ mfaRequired: false, token, session })
+  }
+
+  async listExternalIdentities(token: string): Promise<AuthExternalIdentityReadModel[]> {
+    const parsedToken = authSessionTokenSchema.safeParse(token)
+    if (!parsedToken.success) throw new AuthenticationError()
+    return withDatabaseTransaction(
+      this.pool,
+      async (client) => {
+        const current = await this.currentMfaSessionUser(client, parsedToken.data)
+        if (!current) throw new AuthenticationError()
+        const result = await client.query<AuthExternalIdentityRow>(
+          `SELECT identity_id, user_id, provider, issuer, subject, email, linked_at,
+                  last_authenticated_at
+             FROM appsea.auth_identities
+            WHERE user_id = $1
+            ORDER BY linked_at, identity_id`,
+          [current.user_id]
+        )
+        return result.rows.map(mapExternalIdentity)
+      },
+      { readOnly: true, maxSerializationRetries: 0 }
+    )
+  }
+
+  /** Link or replay an OIDC identity after both current step-up markers pass. */
+  async linkExternalIdentity(
+    token: string,
+    input: AuthExternalIdentityClaims
+  ): Promise<AuthExternalIdentityReadModel> {
+    const parsedToken = authSessionTokenSchema.safeParse(token)
+    const parsed = authExternalIdentityClaimsSchema.parse(input)
+    if (!parsedToken.success) throw new AuthExternalIdentityPermissionError()
+    const issuer = parsed.issuer.endsWith('/') ? parsed.issuer.slice(0, -1) : parsed.issuer
+    try {
+      return await withDatabaseTransaction(
+        this.pool,
+        async (client) => {
+          const current = await client.query<{
+            session_id: string
+            user_id: string
+            email: string
+            mfa_allowed: boolean
+          }>(
+            `SELECT session.session_id, session.user_id, app_user.email,
+                    (
+                      NOT EXISTS (
+                        SELECT 1 FROM appsea.auth_mfa_totp mfa
+                         WHERE mfa.user_id = session.user_id
+                           AND mfa.status = 'enabled'
+                      )
+                      OR (
+                        session.last_mfa_reauthenticated_at IS NOT NULL
+                        AND session.last_mfa_reauthenticated_at >
+                            clock_timestamp() - ($2::bigint * interval '1 millisecond')
+                      )
+                    ) AS mfa_allowed
+               FROM appsea.auth_sessions session
+               JOIN appsea.users app_user
+                 ON app_user.user_id = session.user_id
+                AND app_user.account_state = 'active'
+              WHERE session.token_hash = $1
+                AND session.revoked_at IS NULL
+                AND session.expires_at > clock_timestamp()
+                AND session.last_reauthenticated_at >
+                    clock_timestamp() - ($2::bigint * interval '1 millisecond')
+              FOR UPDATE OF session`,
+            [sha256(parsedToken.data), recentReauthenticationWindowMs]
+          )
+          const currentRow = current.rows[0]
+          if (!currentRow || !currentRow.mfa_allowed || currentRow.email !== parsed.email) {
+            throw new AuthExternalIdentityPermissionError()
+          }
+
+          const existing = await client.query<AuthExternalIdentityRow>(
+            `SELECT identity_id, user_id, provider, issuer, subject, email, linked_at,
+                    last_authenticated_at
+               FROM appsea.auth_identities
+              WHERE provider = 'oidc'
+                AND issuer = $1
+                AND subject = $2
+              FOR UPDATE`,
+            [issuer, parsed.subject]
+          )
+          const existingRow = existing.rows[0]
+          if (existingRow) {
+            if (existingRow.user_id !== currentRow.user_id || existingRow.email !== parsed.email) {
+              throw new AuthExternalIdentityConflictError()
+            }
+            return mapExternalIdentity(existingRow)
+          }
+
+          const identityId = identifier('oidc-identity')
+          const inserted = await client.query<AuthExternalIdentityRow>(
+            `SELECT * FROM appsea.link_oidc_identity($1, $2, $3, $4, $5, $6)`,
+            [
+              identifier('oidc-event'),
+              sha256(parsedToken.data),
+              identityId,
+              issuer,
+              parsed.subject,
+              parsed.email
+            ]
+          )
+          const row = inserted.rows[0]
+          if (!row) throw new Error('External identity was not recorded')
+          return mapExternalIdentity(row)
+        },
+        { maxSerializationRetries: 0 }
+      )
+    } catch (error) {
+      if (isUniqueViolation(error)) throw new AuthExternalIdentityConflictError()
+      throw error
+    }
+  }
+
+  async unlinkExternalIdentity(token: string, identityId: string): Promise<boolean> {
+    const parsedToken = authSessionTokenSchema.safeParse(token)
+    const parsedIdentityId = appseaIdentifierSchema.safeParse(identityId)
+    if (!parsedToken.success || !parsedIdentityId.success) {
+      throw new AuthExternalIdentityPermissionError()
+    }
+    return withDatabaseTransaction(
+      this.pool,
+      async (client) => {
+        const current = await client.query<{
+          session_id: string
+          user_id: string
+          mfa_allowed: boolean
+        }>(
+          `SELECT session.session_id, session.user_id,
+                  (
+                    NOT EXISTS (
+                      SELECT 1 FROM appsea.auth_mfa_totp mfa
+                       WHERE mfa.user_id = session.user_id
+                         AND mfa.status = 'enabled'
+                    )
+                    OR (
+                      session.last_mfa_reauthenticated_at IS NOT NULL
+                      AND session.last_mfa_reauthenticated_at >
+                          clock_timestamp() - ($2::bigint * interval '1 millisecond')
+                    )
+                  ) AS mfa_allowed
+             FROM appsea.auth_sessions session
+             JOIN appsea.users app_user
+               ON app_user.user_id = session.user_id
+              AND app_user.account_state = 'active'
+            WHERE session.token_hash = $1
+              AND session.revoked_at IS NULL
+              AND session.expires_at > clock_timestamp()
+              AND session.last_reauthenticated_at >
+                  clock_timestamp() - ($2::bigint * interval '1 millisecond')
+            FOR UPDATE OF session`,
+          [sha256(parsedToken.data), recentReauthenticationWindowMs]
+        )
+        const currentRow = current.rows[0]
+        if (!currentRow || !currentRow.mfa_allowed) {
+          throw new AuthExternalIdentityPermissionError()
+        }
+        const identity = await client.query<{ identity_id: string; issuer: string }>(
+          `SELECT identity_id, issuer
+             FROM appsea.auth_identities
+            WHERE identity_id = $1
+              AND user_id = $2
+            FOR UPDATE`,
+          [parsedIdentityId.data, currentRow.user_id]
+        )
+        const identityRow = identity.rows[0]
+        if (!identityRow) return false
+        const result = await client.query<{ unlink_oidc_identity: boolean }>(
+          `SELECT appsea.unlink_oidc_identity($1, $2, $3)`,
+          [identifier('oidc-event'), sha256(parsedToken.data), parsedIdentityId.data]
+        )
+        return result.rows[0]?.unlink_oidc_identity === true
+      },
+      { maxSerializationRetries: 0 }
     )
   }
 

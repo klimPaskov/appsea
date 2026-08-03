@@ -4,15 +4,25 @@ import { useState } from 'react'
 
 type AuthMode = 'login' | 'signup'
 
-export function AuthForm({ mode }: { mode: AuthMode }) {
+export function AuthForm({
+  mode,
+  oidcMfaPending = false,
+  initialMessage
+}: {
+  mode: AuthMode
+  oidcMfaPending?: boolean
+  initialMessage?: string
+}) {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [displayName, setDisplayName] = useState('')
   const [workspaceName, setWorkspaceName] = useState('')
   const [mfaChallengeToken, setMfaChallengeToken] = useState<string | null>(null)
   const [mfaCode, setMfaCode] = useState('')
-  const [message, setMessage] = useState<string | null>(null)
+  const [oidcMfaChallenge, setOidcMfaChallenge] = useState(oidcMfaPending)
+  const [message, setMessage] = useState<string | null>(initialMessage ?? null)
   const [pending, setPending] = useState(false)
+  const mfaActive = mfaChallengeToken !== null || oidcMfaChallenge
 
   async function submit(event: React.FormEvent<HTMLFormElement>): Promise<void> {
     event.preventDefault()
@@ -20,18 +30,18 @@ export function AuthForm({ mode }: { mode: AuthMode }) {
     setMessage(null)
     try {
       const response = await fetch(
-        mfaChallengeToken
-          ? '/api/auth/mfa/login'
-          : `/api/auth/${mode === 'signup' ? 'signup' : 'login'}`,
+        mfaActive ? '/api/auth/mfa/login' : `/api/auth/${mode === 'signup' ? 'signup' : 'login'}`,
         {
           method: 'POST',
           headers: { 'content-type': 'application/json' },
           body: JSON.stringify(
             mfaChallengeToken
               ? { challengeToken: mfaChallengeToken, code: mfaCode }
-              : mode === 'signup'
-                ? { email, password, displayName, workspaceName }
-                : { email, password }
+              : oidcMfaChallenge
+                ? { code: mfaCode }
+                : mode === 'signup'
+                  ? { email, password, displayName, workspaceName }
+                  : { email, password }
           )
         }
       )
@@ -45,6 +55,7 @@ export function AuthForm({ mode }: { mode: AuthMode }) {
       }
       if (body.data?.mfaRequired === true && body.data.challengeToken) {
         setMfaChallengeToken(body.data.challengeToken)
+        setOidcMfaChallenge(false)
         setMfaCode('')
         setMessage('Enter the six-digit code from your authenticator app.')
         return
@@ -59,7 +70,7 @@ export function AuthForm({ mode }: { mode: AuthMode }) {
 
   return (
     <form className="auth-form" onSubmit={submit}>
-      {mode === 'signup' && !mfaChallengeToken ? (
+      {mode === 'signup' && !mfaActive ? (
         <>
           <label>
             Name
@@ -83,7 +94,7 @@ export function AuthForm({ mode }: { mode: AuthMode }) {
           </label>
         </>
       ) : null}
-      {!mfaChallengeToken ? (
+      {!mfaActive ? (
         <label>
           Email
           <input
@@ -96,7 +107,7 @@ export function AuthForm({ mode }: { mode: AuthMode }) {
           />
         </label>
       ) : null}
-      {!mfaChallengeToken ? (
+      {!mfaActive ? (
         <label>
           Password
           <input
@@ -110,7 +121,7 @@ export function AuthForm({ mode }: { mode: AuthMode }) {
           />
         </label>
       ) : null}
-      {mfaChallengeToken ? (
+      {mfaActive ? (
         <label>
           Authenticator code
           <input
@@ -128,19 +139,20 @@ export function AuthForm({ mode }: { mode: AuthMode }) {
       <button disabled={pending} type="submit">
         {pending
           ? 'Working…'
-          : mfaChallengeToken
+          : mfaActive
             ? 'Verify code'
             : mode === 'signup'
               ? 'Create workspace'
               : 'Sign in'}
       </button>
-      {mfaChallengeToken ? (
+      {mfaActive ? (
         <button
           className="quiet-button"
           disabled={pending}
           type="button"
           onClick={() => {
             setMfaChallengeToken(null)
+            setOidcMfaChallenge(false)
             setMfaCode('')
             setMessage(null)
           }}

@@ -56,6 +56,18 @@ shape passed; a non-zero exit means the deployment must not proceed.
   `pnpm worker:auth:mfa:rotation:status` reports counts without key material;
   do not remove the previous key until an operator has reviewed zero previous
   and unknown rows.
+- OIDC is disabled unless `APPSEA_AUTH_OIDC_ENABLED=true`. When enabled,
+  preflight requires HTTPS non-private issuer and callback URLs whose origin
+  matches `APPSEA_PUBLIC_ORIGIN`, client
+  credentials, `APPSEA_AUTH_OIDC_REVIEWED=true`, and
+  `APPSEA_AUTH_OIDC_ACCOUNT_LINKING=explicit`. Optional
+  `APPSEA_AUTH_OIDC_ENDPOINT_ORIGINS` entries must be reviewed HTTPS origins
+  without paths, queries, or fragments or unsafe literal host forms; the issuer
+  origin is always allowed.
+  This check validates only the deployment shape; it does not approve a
+  provider, verify its discovery/JWKS endpoint, or prove verified-email, DPA,
+  delivery, retention, key-rotation, or incident operations. See
+  [`auth-oidc.md`](auth-oidc.md).
 - An optional trusted-proxy secret must be exactly 32 bytes in base64url form.
 
 The web readiness endpoint remains the live dependency check: it verifies

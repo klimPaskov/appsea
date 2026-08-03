@@ -7,7 +7,7 @@ Temporal, source-policy, private-workspace, report/plan, and maintenance
 boundaries. The public leaderboard is intentionally synthetic and sparse; no
 real source is enabled.
 
-Migrations `0027`-`0087` cover policy evidence, collection checkpoints,
+Migrations `0027`-`0088` cover policy evidence, collection checkpoints,
 deletion/recomputation repair, leases, admissions, campaign orchestration and
 cancellation, source reconciliation, analysis history, report/plan governance,
 cost and alert projections, object references, workspace archival/purge intent/
@@ -37,20 +37,23 @@ history memo. `pnpm worker:workflow:analysis:history:check` inspects Temporal
 visibility metadata without fetching history and requires a reviewed manifest
 for visible legacy/unknown executions; it never performs archive or deletion.
 
-The long-lived worker now installs an idempotent SIGINT/SIGTERM lifecycle before
-opening dependencies. The first signal stops new handoff/recomputation scans,
-requests Temporal worker shutdown, stops the heartbeat, awaits the scan drain,
-emits the bounded stop event, and closes PostgreSQL/Temporal connections.
-Repeated signals do not repeat cleanup. This is a repository boundary; a
-deployed supervisor drain window and crash/replacement drill remain unproven.
+The long-lived worker has an idempotent SIGINT/SIGTERM lifecycle: it stops new
+scans, requests Temporal shutdown, drains heartbeat/scan work, emits a bounded
+stop event, and closes PostgreSQL/Temporal connections. Deployment drain and
+crash/replacement proof remain unproven.
 
 Authentication uses scrypt password hashes, revocable opaque sessions,
 membership-before-RLS, password reauthentication, TOTP enrollment/login,
 hash-only recovery codes, MFA step-up, recovery/invitation outboxes, owner-safe
-account closure, archival, and scoped read-only agent tokens. Provider identity,
-verified email, delivery/DPA, provider-backed step-up, and deployed identity
-operations remain external gates. MFA key rotation is now a repository-
-supported reviewed deployment procedure rather than an automatic operation.
+account closure, archival, and scoped read-only agent tokens. Migration `0088`
+adds disabled-by-default OIDC identities: explicit step-up-protected
+issuer/subject link/unlink, strict state/nonce/PKCE plus RS256/verified-email
+checks, linked-only sign-in, and local-MFA challenge handoff. The identity
+binding survives the MFA handoff in the database, and sign-in telemetry runs
+only after a session is issued. Provider approval, verified email, delivery/
+DPA, account-lifetime retention/revocation, DNS/egress, provider-backed
+step-up, and deployed identity operations remain external gates. MFA key
+rotation is a reviewed deployment procedure rather than an automatic operation.
 
 Workers have server-clock leases, fenced SQL mutations, bounded retries,
 reconciliation, deletion/source/object retention queues, campaign
@@ -59,14 +62,10 @@ alert delivery. Migration `0082` adds the scalar operational-alert outbox and
 durable drain. Deployment scheduler ownership, incident routing, provider
 billing, cloud/backup purge, and production topology remain open.
 
-Migrations `0083`-`0087` add the archived-owner forced-RLS purge manifest,
-PostgreSQL 18 archival/read repairs, versioned MFA ciphertext, and the
-identifier-only dormant-account rewrap event. The
-manifest inventories sorted object references, hashes the list, and persists a
-deterministic 24-hour identifier-only receipt; it never authorizes deletion.
-Owner membership, password/MFA step-up, and the exact confirmation phrase are
-required. Provider object/export/backup retention and destructive purge remain
-open.
+Migrations `0083`-`0087` add the forced-RLS purge manifest, PostgreSQL 18
+archival/read repairs, versioned MFA ciphertext, and identifier-only rewrap
+event. The manifest is a deterministic 24-hour metadata handoff, never a delete
+authorization; provider object/export/backup purge remains open.
 
 Imported complaints, pages, reports, and model output remain untrusted data;
 they cannot update code, skills, instructions, permissions, or repository

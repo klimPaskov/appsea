@@ -315,9 +315,20 @@ for that pre-context authorization lookup.
   normalized email matches, and the database membership trigger preserves an
   owner actor while recording the accepting user. Invitation creation and
   revocation require the same web step-up as membership changes, and both API
-  and worker paths have an explicit production kill switch. Invitations,
-  OIDC, verified-email policy, and provider-backed step-up remain separate
-  review gates. TOTP MFA is now a global-auth boundary: migration `0080` stores
+  and worker paths have an explicit production kill switch. Migration `0088`
+  adds the global `auth_identities` table, binds OIDC identity metadata to MFA
+  challenges, and exposes only service-role security-definer touch/link/unlink
+  functions. Direct identity writes and the generic event function are not
+  executable by `PUBLIC`, `appsea_maintenance`, or `appsea_migrator`; the
+  mutation functions also reject callers other than `appsea_service`. OIDC
+  linking requires an existing account's password/MFA step-up, stores only the
+  normalized issuer/subject and verified email claim, and removes identities on
+  account closure. OIDC sign-in resolves only a linked subject; it never
+  discovers or links an account by email. The web boundary enforces
+  state/nonce/PKCE, discovery/JWKS issuer matching, RS256 signature, audience,
+  freshness, and verified-email checks. The provider switch is disabled by
+  default; provider approval, verified-email policy, delivery/DPA, retention,
+  DNS/egress, and provider-backed step-up remain separate review gates. TOTP MFA is now a global-auth boundary: migration `0080` stores
   only encrypted enrollment material, hash-only recovery codes, expiring login
   challenges, and bounded audit events; migration `0081` adds a session-bound
   recent-MFA marker for password-gated high-risk mutations; password sign-in cannot mint

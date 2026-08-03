@@ -182,6 +182,16 @@ identifier-only receipts; read mappers mask current evidence, analysis, and
 report projections. Raw source deletion, object-store purge, and backup
 deletion remain source-policy operations.
 
+Migration `0088_auth_oidc_identities.sql` extends the global authentication
+boundary with optional OIDC identities. The provider is disabled by default;
+when configured, the web layer performs discovery, state/nonce/PKCE, RS256
+JWKS, audience, freshness, and verified-email checks before passing only the
+normalized issuer/subject/email claim to PostgreSQL. Linking and unlinking
+require the current session's password/MFA step-up, sign-in resolves only an
+existing linked subject, and account closure removes provider identity rows.
+Provider approval, delivery/DPA, verified-email policy, and provider-backed
+step-up remain deployment gates.
+
 Migration `0068_research_campaign_orchestration.sql` adds the multi-source
 campaign boundary. A private owner/editor request creates one idempotent
 parent orchestration and one forced-RLS child row per configured non-fixture

@@ -20,6 +20,7 @@ const mocks = vi.hoisted(() => ({
   allowAuthAttempt: vi.fn(),
   readSession: vi.fn(),
   readSessionToken: vi.fn(),
+  readOidcMfaChallengeToken: vi.fn(),
   sameOriginRequest: vi.fn()
 }))
 
@@ -34,6 +35,7 @@ vi.mock('../server/auth-session', () => ({
   privateResponseHeaders: { 'cache-control': 'private, no-store' },
   readSession: mocks.readSession,
   readSessionToken: mocks.readSessionToken,
+  readOidcMfaChallengeToken: mocks.readOidcMfaChallengeToken,
   reauthenticationRequiredResponse: () =>
     Response.json(
       { error: 'Recent reauthentication required' },
@@ -96,6 +98,7 @@ describe('MFA authentication routes', () => {
     mocks.allowAuthAttempt.mockResolvedValue(true)
     mocks.readSessionToken.mockResolvedValue(token)
     mocks.readSession.mockResolvedValue(session)
+    mocks.readOidcMfaChallengeToken.mockResolvedValue(null)
     mocks.repository.hasRecentReauthentication.mockResolvedValue(true)
     mocks.repository.readMfaStatus.mockResolvedValue(status)
     mocks.repository.beginMfaEnrollment.mockResolvedValue(enrollment)
@@ -127,6 +130,17 @@ describe('MFA authentication routes', () => {
     )
     expect(limited.status).toBe(429)
     expect(mocks.repository.completeMfaSignIn).toHaveBeenCalledTimes(1)
+  })
+
+  it('accepts a pending OIDC MFA challenge from its HttpOnly cookie without exposing the token', async () => {
+    mocks.readOidcMfaChallengeToken.mockResolvedValue(token)
+    const response = await completeMfaLogin(request('/api/auth/mfa/login', { code: '123456' }))
+    expect(response.status).toBe(200)
+    expect(mocks.repository.completeMfaSignIn).toHaveBeenCalledWith({
+      challengeToken: token,
+      code: '123456'
+    })
+    expect(response.headers.get('set-cookie')).toContain('appsea_oidc_mfa=;')
   })
 
   it('requires same-origin, session step-up, and an exact enrollment confirmation', async () => {

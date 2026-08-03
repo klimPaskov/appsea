@@ -4082,6 +4082,55 @@ export const authSignInInputSchema = z
   })
   .strict()
 
+// External identities are linked only after an authenticated password/MFA
+// step-up. The provider subject is never exposed in private read models and
+// email matching is not an account-linking rule.
+export const authExternalIdentityProviderSchema = z.literal('oidc')
+
+const authExternalIdentityIssuerSchema = z
+  .string()
+  .trim()
+  .url()
+  .max(512)
+  .superRefine((value, context) => {
+    try {
+      const parsed = new URL(value)
+      const hostname = parsed.hostname.toLowerCase().replace(/^\[|\]$/g, '')
+      const loopback = hostname === 'localhost' || hostname === '127.0.0.1' || hostname === '::1'
+      if (
+        parsed.username ||
+        parsed.password ||
+        parsed.search ||
+        parsed.hash ||
+        (parsed.protocol !== 'https:' && !(parsed.protocol === 'http:' && loopback))
+      ) {
+        context.addIssue({ code: z.ZodIssueCode.custom, message: 'Issuer URL is not permitted' })
+      }
+    } catch {
+      context.addIssue({ code: z.ZodIssueCode.custom, message: 'Issuer URL is not permitted' })
+    }
+  })
+
+export const authExternalIdentityClaimsSchema = z
+  .object({
+    issuer: authExternalIdentityIssuerSchema,
+    subject: z.string().min(1).max(512),
+    email: authEmailSchema,
+    emailVerified: z.literal(true)
+  })
+  .strict()
+
+export const authExternalIdentityReadModelSchema = z
+  .object({
+    identityId: appseaIdentifierSchema,
+    provider: authExternalIdentityProviderSchema,
+    issuerHost: z.string().min(1).max(255),
+    email: authEmailSchema,
+    linkedAt: z.string().datetime(),
+    lastAuthenticatedAt: z.string().datetime().nullable()
+  })
+  .strict()
+
 // MFA codes are accepted only at the authentication boundary. Recovery codes
 // are displayed once during enrollment and are never persisted in plaintext.
 export const authMfaTotpCodeSchema = z
@@ -6096,6 +6145,9 @@ export type WorkspaceInvitationDeliveryBatchInput = z.infer<
 >
 export type AuthSignUpInput = z.infer<typeof authSignUpInputSchema>
 export type AuthSignInInput = z.infer<typeof authSignInInputSchema>
+export type AuthExternalIdentityProvider = z.infer<typeof authExternalIdentityProviderSchema>
+export type AuthExternalIdentityClaims = z.infer<typeof authExternalIdentityClaimsSchema>
+export type AuthExternalIdentityReadModel = z.infer<typeof authExternalIdentityReadModelSchema>
 export type AuthMfaEnrollmentConfirmInput = z.infer<typeof authMfaEnrollmentConfirmInputSchema>
 export type AuthMfaDisableInput = z.infer<typeof authMfaDisableInputSchema>
 export type AuthMfaStepUpInput = z.infer<typeof authMfaStepUpInputSchema>

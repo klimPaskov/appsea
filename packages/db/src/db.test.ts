@@ -100,7 +100,8 @@ describe('database foundation', () => {
       '0084',
       '0085',
       '0086',
-      '0087'
+      '0087',
+      '0088'
     ])
     expect(migrations[0]?.checksum).toMatch(/^[a-f0-9]{64}$/)
     expect(migrations[0]?.sql).toContain('CREATE TABLE appsea.evidence_records')
@@ -210,6 +211,20 @@ describe('database foundation', () => {
       (migration) => migration.version === '0087'
     )
     expect(authMfaRotationEventMigration?.sql).toContain('key_rotation_rewrapped')
+    const authOidcMigration = migrations.find((migration) => migration.version === '0088')
+    expect(authOidcMigration?.sql).toContain('CREATE TABLE appsea.auth_identities')
+    expect(authOidcMigration?.sql).toContain('record_oidc_security_event')
+    expect(authOidcMigration?.sql).toContain('OIDC security event identity binding is invalid')
+    expect(authOidcMigration?.sql).toContain('CREATE OR REPLACE FUNCTION appsea.link_oidc_identity')
+    expect(authOidcMigration?.sql).toContain(
+      'CREATE OR REPLACE FUNCTION appsea.unlink_oidc_identity'
+    )
+    expect(authOidcMigration?.sql).toContain(
+      'REVOKE ALL ON FUNCTION appsea.link_oidc_identity(text, text, text, text, text, text)'
+    )
+    expect(authOidcMigration?.sql).toContain("position('@' IN issuer) = 0")
+    expect(authOidcMigration?.sql).toContain('oidc_identity_id text')
+    expect(authOidcMigration?.sql).toContain('auth_mfa_challenges_oidc_identity_binding_check')
     const authMigration = migrations.find((migration) => migration.version === '0008')
     const privacyMigration = migrations.find((migration) => migration.version === '0009')
     const retentionMigration = migrations.find((migration) => migration.version === '0010')

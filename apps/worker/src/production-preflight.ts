@@ -1,5 +1,6 @@
 import { fileURLToPath } from 'node:url'
 import path from 'node:path'
+import { isIP } from 'node:net'
 import { workspaceCostAlertLimits } from '@appsea/contracts'
 import { databaseConfigFromEnv, mfaEncryptionConfigFromEnv } from '@appsea/db'
 import { objectStoreFromEnv } from '@appsea/object-store'
@@ -35,8 +36,79 @@ export class ProductionPreflightConfigurationError extends Error {
 }
 
 function isLoopbackHost(hostname: string): boolean {
-  const normalized = hostname.toLowerCase().replace(/^\[|\]$/g, '')
+  const normalized = hostname
+    .toLowerCase()
+    .replace(/^\[|\]$/g, '')
+    .replace(/\.+$/, '')
   return normalized === 'localhost' || normalized === '127.0.0.1' || normalized === '::1'
+}
+
+function mappedIpv4FromIpv6(hostname: string): string | null {
+  const normalized = hostname
+    .toLowerCase()
+    .replace(/^\[|\]$/g, '')
+    .replace(/\.+$/, '')
+  if (isIP(normalized) !== 6) return null
+  const sections = normalized.split('::')
+  if (sections.length > 2) return null
+  const left = sections[0] === '' ? [] : sections[0]!.split(':')
+  const right = sections.length === 2 && sections[1] !== '' ? sections[1]!.split(':') : []
+  if (
+    [...left, ...right].some((section) => !/^[0-9a-f]{1,4}$/i.test(section) || section.length === 0)
+  ) {
+    return null
+  }
+  const missing = 8 - left.length - right.length
+  if (missing < 0 || (sections.length === 2 && missing < 1)) return null
+  const words = [...left, ...Array.from({ length: missing }, () => '0'), ...right].map((word) =>
+    Number.parseInt(word, 16)
+  )
+  const mapped = words.slice(0, 5).every((word) => word === 0) && words[5] === 0xffff
+  const compatible = words.slice(0, 6).every((word) => word === 0)
+  if (words.length !== 8 || (!mapped && !compatible)) {
+    return null
+  }
+  return [words[6]! >> 8, words[6]! & 255, words[7]! >> 8, words[7]! & 255].join('.')
+}
+
+function isPrivateHost(hostname: string): boolean {
+  const normalized = hostname
+    .toLowerCase()
+    .replace(/^\[|\]$/g, '')
+    .replace(/\.+$/, '')
+  if (isLoopbackHost(normalized)) return true
+  const mappedIpv4 = mappedIpv4FromIpv6(normalized)
+  if (mappedIpv4) return isPrivateHost(mappedIpv4)
+  const octets = normalized.split('.').map((part) => Number(part))
+  if (
+    octets.length === 4 &&
+    octets.every((part) => Number.isInteger(part) && part >= 0 && part <= 255)
+  ) {
+    return (
+      octets[0] === 0 ||
+      octets[0] === 10 ||
+      octets[0] === 127 ||
+      (octets[0] === 100 && octets[1]! >= 64 && octets[1]! <= 127) ||
+      (octets[0] === 169 && octets[1] === 254) ||
+      (octets[0] === 172 && octets[1]! >= 16 && octets[1]! <= 31) ||
+      (octets[0] === 192 && octets[1] === 168) ||
+      (octets[0] === 198 && (octets[1] === 18 || octets[1] === 19)) ||
+      octets[0]! >= 224
+    )
+  }
+  return (
+    isIP(normalized) === 6 &&
+    (normalized === '::' ||
+      normalized === '::1' ||
+      normalized.startsWith('fc') ||
+      normalized.startsWith('fd') ||
+      normalized.startsWith('fe8') ||
+      normalized.startsWith('fe9') ||
+      normalized.startsWith('fea') ||
+      normalized.startsWith('feb') ||
+      normalized.startsWith('fec') ||
+      normalized.startsWith('ff'))
+  )
 }
 
 function requiredEnvironmentValue(environment: NodeJS.ProcessEnv, name: string): string {
@@ -82,7 +154,7 @@ function assertProductionOrigin(environment: NodeJS.ProcessEnv): void {
     true,
     () => new ProductionPreflightConfigurationError()
   )
-  if (isLoopbackHost(origin.hostname)) throw new ProductionPreflightConfigurationError()
+  if (isPrivateHost(origin.hostname)) throw new ProductionPreflightConfigurationError()
 }
 
 function assertProductionDelivery(environment: NodeJS.ProcessEnv): void {
@@ -98,7 +170,7 @@ function assertProductionDelivery(environment: NodeJS.ProcessEnv): void {
     environment,
     () => new ProductionPreflightConfigurationError()
   )
-  if (isLoopbackHost(delivery.endpoint.hostname)) {
+  if (isPrivateHost(delivery.endpoint.hostname)) {
     throw new ProductionPreflightConfigurationError()
   }
 }
@@ -115,6 +187,87 @@ function assertProductionMfa(environment: NodeJS.ProcessEnv): void {
   } catch {
     throw new ProductionPreflightConfigurationError()
   }
+}
+
+function assertProductionOidc(environment: NodeJS.ProcessEnv): void {
+  if (!strictBoolean(environment, 'APPSEA_AUTH_OIDC_ENABLED')) return
+  if (environment.APPSEA_AUTH_OIDC_REVIEWED?.trim() !== 'true') {
+    throw new ProductionPreflightConfigurationError()
+  }
+  if (environment.APPSEA_AUTH_OIDC_ACCOUNT_LINKING?.trim() !== 'explicit') {
+    throw new ProductionPreflightConfigurationError()
+  }
+  for (const name of [
+    'APPSEA_AUTH_OIDC_ISSUER',
+    'APPSEA_AUTH_OIDC_REDIRECT_URI',
+    'APPSEA_AUTH_OIDC_CLIENT_ID',
+    'APPSEA_AUTH_OIDC_CLIENT_SECRET'
+  ]) {
+    requiredEnvironmentValue(environment, name)
+  }
+  const issuer = requiredEnvironmentValue(environment, 'APPSEA_AUTH_OIDC_ISSUER')
+  const redirectUri = requiredEnvironmentValue(environment, 'APPSEA_AUTH_OIDC_REDIRECT_URI')
+  let issuerUrl: URL
+  let redirectUrl: URL
+  let publicOrigin: URL
+  try {
+    issuerUrl = new URL(issuer)
+    redirectUrl = new URL(redirectUri)
+    publicOrigin = requiredDeliveryUrl(
+      requiredEnvironmentValue(environment, 'APPSEA_PUBLIC_ORIGIN'),
+      'origin',
+      true,
+      () => new ProductionPreflightConfigurationError()
+    )
+  } catch {
+    throw new ProductionPreflightConfigurationError()
+  }
+  if (
+    issuerUrl.protocol !== 'https:' ||
+    redirectUrl.protocol !== 'https:' ||
+    issuerUrl.username ||
+    issuerUrl.password ||
+    issuerUrl.search ||
+    issuerUrl.hash ||
+    redirectUrl.username ||
+    redirectUrl.password ||
+    isPrivateHost(issuerUrl.hostname) ||
+    isPrivateHost(redirectUrl.hostname) ||
+    redirectUrl.pathname !== '/api/auth/oidc/callback' ||
+    redirectUrl.search ||
+    redirectUrl.hash ||
+    redirectUrl.origin !== publicOrigin.origin
+  ) {
+    throw new ProductionPreflightConfigurationError()
+  }
+  if (requiredEnvironmentValue(environment, 'APPSEA_AUTH_OIDC_CLIENT_ID').length > 512) {
+    throw new ProductionPreflightConfigurationError()
+  }
+  const configuredOrigins = environment.APPSEA_AUTH_OIDC_ENDPOINT_ORIGINS?.trim() ?? ''
+  const endpointOrigins = configuredOrigins === '' ? [] : configuredOrigins.split(',')
+  if (endpointOrigins.length > 8) throw new ProductionPreflightConfigurationError()
+  for (const origin of endpointOrigins) {
+    if (!origin || origin.length > 512) throw new ProductionPreflightConfigurationError()
+    let parsed: URL
+    try {
+      parsed = new URL(origin.trim())
+    } catch {
+      throw new ProductionPreflightConfigurationError()
+    }
+    if (
+      parsed.protocol !== 'https:' ||
+      parsed.pathname !== '/' ||
+      parsed.username ||
+      parsed.password ||
+      parsed.search ||
+      parsed.hash ||
+      isPrivateHost(parsed.hostname)
+    ) {
+      throw new ProductionPreflightConfigurationError()
+    }
+  }
+  const clientSecret = requiredEnvironmentValue(environment, 'APPSEA_AUTH_OIDC_CLIENT_SECRET')
+  if (clientSecret.length > 2_048) throw new ProductionPreflightConfigurationError()
 }
 
 function assertProductionObjectStore(environment: NodeJS.ProcessEnv): void {
@@ -237,6 +390,9 @@ export function validateProductionEnvironment(
       assertProductionDelivery(environment)
     ),
     check('authMfa', 'APPSEA_PREFLIGHT_AUTH_MFA', () => assertProductionMfa(environment)),
+    check('authIdentity', 'APPSEA_PREFLIGHT_AUTH_IDENTITY', () =>
+      assertProductionOidc(environment)
+    ),
     check('trustedProxy', 'APPSEA_PREFLIGHT_TRUSTED_PROXY', () =>
       assertProductionProxy(environment)
     ),

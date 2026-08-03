@@ -6,6 +6,13 @@ The public AppSea leaderboard is a sparse, synthetic fixture surface. Private re
 
 - Signup creates a private workspace and makes the new user its owner.
 - Sign-in accepts a bounded email/password input and issues an opaque session token in an `HttpOnly`, `SameSite=Lax` cookie.
+- An optional OIDC provider can be enabled only through reviewed deployment
+  configuration. Existing accounts may explicitly link one verified
+  `(issuer, subject)` identity after password/MFA step-up; provider email
+  equality never links accounts. Provider sign-in looks up only a previously
+  linked identity and never creates an account or auto-links by email. The
+  state/nonce/PKCE and ID-token verification boundary is documented in
+  [`auth-oidc.md`](../runbooks/auth-oidc.md).
 - Accounts can enroll TOTP MFA from `/account/security` after a recent password step-up. The encrypted secret is never returned after enrollment; ten recovery codes are shown once and stored only as hashes. When MFA is enabled, password sign-in creates a short-lived challenge and no session cookie is issued until a current TOTP or one-time recovery code succeeds.
 - Sessions expire after 30 days and can be revoked at sign-out. Read models never include passwords, password hashes, or session tokens.
 - Authenticated users can inspect active sessions at `/account/security`; each session exposes only a stable identifier and timestamps. Revoking another session requires same-origin password reauthentication, while the current session cannot be revoked from that page.
@@ -166,9 +173,9 @@ fixture-enabled workspace is provisioned.
 Owner-safe account closure is implemented as a profile/authentication operation; workspace-data,
 object-store, backup, and export deletion remain separate retention work. Production
 identity-provider policy remains open. Recovery and invitation mechanics are implemented behind reviewed provider/identity kill switches; external
-OIDC policy, verified-email policy, provider-backed step-up integration, key
-rotation, and explicit contracts for high-impact mutations without a
-password-step-up boundary remain open. The
+OIDC provider approval, verified-email policy, provider-backed step-up
+integration, key rotation, and explicit contracts for high-impact mutations
+without a password-step-up boundary remain open. The
 current password step-up is an application boundary, not a substitute for a production identity
 provider. The current invitation simplification intentionally excludes new-account creation and
 email verification until that identity policy is approved.

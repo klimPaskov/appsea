@@ -46,6 +46,7 @@
 - [`runbooks/auth-retention.md`](runbooks/auth-retention.md)
 - [`runbooks/auth-recovery.md`](runbooks/auth-recovery.md)
 - [`runbooks/auth-mfa.md`](runbooks/auth-mfa.md)
+- [`runbooks/auth-oidc.md`](runbooks/auth-oidc.md)
 - [`runbooks/workspace-invitations.md`](runbooks/workspace-invitations.md)
 - [`runbooks/account-closure.md`](runbooks/account-closure.md)
 - [`runbooks/workspace-archival.md`](runbooks/workspace-archival.md)

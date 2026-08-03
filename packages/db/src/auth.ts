@@ -13,6 +13,9 @@ export {
 export {
   AuthenticationConflictError,
   AuthenticationError,
+  AuthExternalIdentityConflictError,
+  AuthExternalIdentityNotFoundError,
+  AuthExternalIdentityPermissionError,
   AuthAccountDeletionBlockedError,
   WorkspaceArchivePermissionError,
   WorkspacePurgeManifestNotReadyError,

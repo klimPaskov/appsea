@@ -99,6 +99,81 @@ describe('production deployment configuration preflight', () => {
     })
   })
 
+  it('keeps OIDC disabled by default and requires an explicit reviewed deployment when enabled', () => {
+    const disabled = validateProductionEnvironment(baseEnvironment())
+    expect(check(disabled, 'authIdentity')).toMatchObject({ status: 'ok' })
+
+    const environment = baseEnvironment()
+    environment.APPSEA_AUTH_OIDC_ENABLED = 'true'
+    environment.APPSEA_AUTH_OIDC_ISSUER = 'https://issuer.example'
+    environment.APPSEA_AUTH_OIDC_REDIRECT_URI = 'https://appsea.example/api/auth/oidc/callback'
+    environment.APPSEA_AUTH_OIDC_CLIENT_ID = 'appsea'
+    environment.APPSEA_AUTH_OIDC_CLIENT_SECRET = 'oidc-secret'
+    const unreviewed = validateProductionEnvironment(environment)
+    expect(check(unreviewed, 'authIdentity')).toMatchObject({
+      status: 'failed',
+      failureCode: 'APPSEA_PREFLIGHT_AUTH_IDENTITY'
+    })
+
+    environment.APPSEA_AUTH_OIDC_REVIEWED = 'true'
+    environment.APPSEA_AUTH_OIDC_ACCOUNT_LINKING = 'explicit'
+    expect(check(validateProductionEnvironment(environment), 'authIdentity')).toMatchObject({
+      status: 'ok'
+    })
+
+    environment.APPSEA_AUTH_OIDC_ENDPOINT_ORIGINS = 'https://oauth.example'
+    expect(check(validateProductionEnvironment(environment), 'authIdentity')).toMatchObject({
+      status: 'ok'
+    })
+
+    environment.APPSEA_AUTH_OIDC_ENDPOINT_ORIGINS = 'https://127.0.0.1'
+    expect(check(validateProductionEnvironment(environment), 'authIdentity')).toMatchObject({
+      status: 'failed',
+      failureCode: 'APPSEA_PREFLIGHT_AUTH_IDENTITY'
+    })
+
+    environment.APPSEA_AUTH_OIDC_ENDPOINT_ORIGINS = 'https://localhost...'
+    expect(check(validateProductionEnvironment(environment), 'authIdentity')).toMatchObject({
+      status: 'failed',
+      failureCode: 'APPSEA_PREFLIGHT_AUTH_IDENTITY'
+    })
+
+    delete environment.APPSEA_AUTH_OIDC_ENDPOINT_ORIGINS
+    environment.APPSEA_AUTH_OIDC_ISSUER = 'https://169.254.169.254'
+    expect(check(validateProductionEnvironment(environment), 'authIdentity')).toMatchObject({
+      status: 'failed',
+      failureCode: 'APPSEA_PREFLIGHT_AUTH_IDENTITY'
+    })
+
+    for (const issuer of [
+      'https://[::ffff:192.168.1.1]',
+      'https://[::ffff:10.0.0.1]',
+      'https://[::]',
+      'https://[ff02::1]',
+      'https://[::192.168.1.1]',
+      'https://[fec0::1]'
+    ]) {
+      environment.APPSEA_AUTH_OIDC_ISSUER = issuer
+      expect(check(validateProductionEnvironment(environment), 'authIdentity')).toMatchObject({
+        status: 'failed',
+        failureCode: 'APPSEA_PREFLIGHT_AUTH_IDENTITY'
+      })
+    }
+
+    environment.APPSEA_AUTH_OIDC_ISSUER = 'https://issuer.example'
+    environment.APPSEA_AUTH_OIDC_REDIRECT_URI = 'http://localhost:3000/api/auth/oidc/callback'
+    expect(check(validateProductionEnvironment(environment), 'authIdentity')).toMatchObject({
+      status: 'failed',
+      failureCode: 'APPSEA_PREFLIGHT_AUTH_IDENTITY'
+    })
+
+    environment.APPSEA_AUTH_OIDC_REDIRECT_URI = 'https://another.example/api/auth/oidc/callback'
+    expect(check(validateProductionEnvironment(environment), 'authIdentity')).toMatchObject({
+      status: 'failed',
+      failureCode: 'APPSEA_PREFLIGHT_AUTH_IDENTITY'
+    })
+  })
+
   it('rejects local database roles, loopback endpoints, and insecure production mode', () => {
     const environment = baseEnvironment()
     environment.DATABASE_URL = 'postgres://appsea_service:db-secret@127.0.0.1:5433/appsea'

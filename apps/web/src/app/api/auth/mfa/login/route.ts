@@ -2,10 +2,15 @@ import { authMfaSignInInputSchema } from '@appsea/contracts'
 import { AuthMfaVerificationError } from '@appsea/db/auth'
 import { NextResponse } from 'next/server'
 import {
+  oidcMfaChallengeCookieName,
+  oidcMfaChallengeCookieOptions
+} from '../../../../../server/oidc'
+import {
   allowAuthAttempt,
   authRepository,
   invalidRequest,
   privateResponseHeaders,
+  readOidcMfaChallengeToken,
   sameOriginRequest,
   sessionCookieName,
   sessionCookieOptions
@@ -23,7 +28,16 @@ export async function POST(request: Request): Promise<Response> {
   } catch {
     return invalidRequest('Request body must be valid JSON')
   }
-  const parsed = authMfaSignInInputSchema.safeParse(payload)
+  let parsed = authMfaSignInInputSchema.safeParse(payload)
+  let oidcChallenge = false
+  if (!parsed.success && typeof payload === 'object' && payload !== null && 'code' in payload) {
+    const challengeToken = await readOidcMfaChallengeToken()
+    parsed = authMfaSignInInputSchema.safeParse({
+      challengeToken,
+      code: (payload as { code?: unknown }).code
+    })
+    oidcChallenge = parsed.success
+  }
   if (!parsed.success) return invalidRequest('A valid MFA challenge and code are required')
 
   try {
@@ -41,6 +55,12 @@ export async function POST(request: Request): Promise<Response> {
       { headers: privateResponseHeaders }
     )
     response.cookies.set(sessionCookieName, result.token, sessionCookieOptions())
+    if (oidcChallenge) {
+      response.cookies.set(oidcMfaChallengeCookieName, '', {
+        ...oidcMfaChallengeCookieOptions(),
+        maxAge: 0
+      })
+    }
     return response
   } catch (error) {
     if (error instanceof AuthMfaVerificationError) {

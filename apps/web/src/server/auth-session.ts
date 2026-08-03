@@ -4,6 +4,7 @@ import { PostgresAuthRepository } from '@appsea/db/auth'
 import type { AuthSessionReadModel } from '@appsea/contracts'
 import type { ObjectStore } from '@appsea/object-store'
 import { getDatabasePool } from './database'
+import { oidcMfaChallengeCookieName } from './oidc'
 
 export const sessionCookieName =
   process.env.NODE_ENV === 'production' ? '__Host-appsea_session' : 'appsea_session'
@@ -36,6 +37,12 @@ export function sessionCookieOptions(): {
 export async function readSessionToken(): Promise<string | null> {
   const cookieStore = await cookies()
   const token = cookieStore.get(sessionCookieName)?.value
+  return token && sessionTokenPattern.test(token) ? token : null
+}
+
+export async function readOidcMfaChallengeToken(): Promise<string | null> {
+  const cookieStore = await cookies()
+  const token = cookieStore.get(oidcMfaChallengeCookieName)?.value
   return token && sessionTokenPattern.test(token) ? token : null
 }
 
@@ -106,6 +113,7 @@ export async function allowAuthAttempt(
   email: string,
   scope:
     | 'login'
+    | 'oidc'
     | 'mfa'
     | 'signup'
     | 'reauthenticate'
@@ -123,17 +131,19 @@ export async function allowAuthAttempt(
       ? 4
       : scope === 'mfa'
         ? 8
-        : scope === 'reauthenticate'
-          ? 6
-          : scope === 'recovery'
-            ? 5
-            : scope === 'invitation'
-              ? 8
-              : scope === 'invitation-accept'
-                ? 20
-                : scope === 'account-deletion'
-                  ? 3
-                  : 10
+        : scope === 'oidc'
+          ? 8
+          : scope === 'reauthenticate'
+            ? 6
+            : scope === 'recovery'
+              ? 5
+              : scope === 'invitation'
+                ? 8
+                : scope === 'invitation-accept'
+                  ? 20
+                  : scope === 'account-deletion'
+                    ? 3
+                    : 10
   if (clientMarker) {
     keys.push(`${scope}:client:${clientMarker}`)
   } else {

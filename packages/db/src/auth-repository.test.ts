@@ -13,6 +13,9 @@ import {
   AuthSessionConflictError,
   AuthSessionNotFoundError,
   AuthenticationError,
+  AuthExternalIdentityConflictError,
+  AuthExternalIdentityNotFoundError,
+  AuthExternalIdentityPermissionError,
   AuthPasswordResetError,
   AuthMfaNotEnabledError,
   AuthMfaVerificationError,
@@ -119,6 +122,152 @@ function fakePool(options: { session?: boolean; expired?: boolean } = {}): {
     connect: async () => client
   } as unknown as Pool
   return { pool, statements }
+}
+
+type ExternalIdentityFixture = {
+  identity_id: string
+  user_id?: string
+  provider: 'oidc'
+  issuer: string
+  subject: string
+  email: string
+  linked_at: string
+  last_authenticated_at: string | null
+}
+
+function externalIdentityPool(
+  options: {
+    current?: { session_id: string; user_id: string; email?: string; mfa_allowed?: boolean } | null
+    identity?: (ExternalIdentityFixture & { user_id: string }) | null
+    identities?: ExternalIdentityFixture[]
+    mfaEnabled?: boolean
+  } = {}
+): {
+  pool: Pool
+  statements: Array<{ text: string; values: unknown[] }>
+} {
+  const statements: Array<{ text: string; values: unknown[] }> = []
+  const current = options.current ?? {
+    session_id: 'session:one',
+    user_id: 'user:one',
+    email: 'user@example.com',
+    mfa_allowed: true
+  }
+  const client = {
+    query: async (text: string, values: unknown[] = []) => {
+      statements.push({ text, values })
+      if (text.includes('FROM appsea.auth_identities identity')) {
+        return options.identity
+          ? { rows: [options.identity], rowCount: 1 }
+          : { rows: [], rowCount: 0 }
+      }
+      if (text.includes('SELECT EXISTS (') && text.includes('auth_mfa_totp')) {
+        return { rows: [{ enabled: options.mfaEnabled === true }], rowCount: 1 }
+      }
+      if (text.includes('touch_oidc_identity_sign_in')) {
+        return { rows: [], rowCount: 1 }
+      }
+      if (text.includes('SELECT session.session_id, session.user_id, app_user.email')) {
+        return current ? { rows: [current], rowCount: 1 } : { rows: [], rowCount: 0 }
+      }
+      if (text.includes('AS mfa_allowed') && text.includes('FROM appsea.auth_sessions')) {
+        return current ? { rows: [current], rowCount: 1 } : { rows: [], rowCount: 0 }
+      }
+      if (text.includes('FROM appsea.auth_identities') && text.includes('ORDER BY linked_at')) {
+        return { rows: options.identities ?? [], rowCount: options.identities?.length ?? 0 }
+      }
+      if (
+        text.includes('SELECT identity_id, user_id, provider, issuer, subject, email, linked_at')
+      ) {
+        return options.identity
+          ? { rows: [options.identity], rowCount: 1 }
+          : { rows: [], rowCount: 0 }
+      }
+      if (text.includes('SELECT * FROM appsea.link_oidc_identity')) {
+        return {
+          rows: [
+            {
+              identity_id: 'oidc-identity:new',
+              user_id: 'user:one',
+              provider: 'oidc',
+              issuer: String(values[3]),
+              subject: String(values[4]),
+              email: String(values[5]),
+              linked_at: '2026-08-03T00:00:00.000Z',
+              last_authenticated_at: null
+            }
+          ],
+          rowCount: 1
+        }
+      }
+      if (
+        text.includes('RETURNING identity_id, user_id, provider, issuer, subject, email, linked_at')
+      ) {
+        return {
+          rows: [
+            {
+              identity_id: 'oidc-identity:new',
+              user_id: 'user:one',
+              provider: 'oidc',
+              issuer: String(values[2]),
+              subject: String(values[3]),
+              email: String(values[4]),
+              linked_at: '2026-08-03T00:00:00.000Z',
+              last_authenticated_at: null
+            }
+          ],
+          rowCount: 1
+        }
+      }
+      if (text.includes('SELECT identity_id, issuer')) {
+        return options.identity
+          ? {
+              rows: [
+                { identity_id: options.identity.identity_id, issuer: options.identity.issuer }
+              ],
+              rowCount: 1
+            }
+          : { rows: [], rowCount: 0 }
+      }
+      if (text.includes('SELECT appsea.unlink_oidc_identity')) {
+        return { rows: [{ unlink_oidc_identity: true }], rowCount: 1 }
+      }
+      if (text.includes('FROM appsea.auth_sessions')) {
+        return current
+          ? {
+              rows: [
+                {
+                  session_id: current.session_id,
+                  user_id: current.user_id,
+                  email: current.email ?? 'user@example.com',
+                  display_name: 'Example User',
+                  user_created_at: '2026-07-24T00:00:00.000Z',
+                  expires_at: '2026-08-24T00:00:00.000Z'
+                }
+              ],
+              rowCount: 1
+            }
+          : { rows: [], rowCount: 0 }
+      }
+      if (text.includes('FROM appsea.users')) {
+        return {
+          rows: [
+            {
+              user_id: current?.user_id ?? 'user:one',
+              email: current?.email ?? 'user@example.com',
+              display_name: 'Example User',
+              password_hash: await storedPassword('correct horse battery staple'),
+              created_at: '2026-07-24T00:00:00.000Z'
+            }
+          ],
+          rowCount: 1
+        }
+      }
+      return { rows: [], rowCount: 1 }
+    },
+    release: () => undefined
+  } as unknown as PoolClient
+  return { pool: { connect: async () => client } as unknown as Pool, statements }
 }
 
 function objectBackedReportPool(reference: { uri: string; contentHash: string }): Pool {
@@ -999,6 +1148,161 @@ describe('PostgresAuthRepository', () => {
     expect(insert?.text).toContain('last_reauthenticated_at')
     expect(insert?.values?.[2]).toMatch(/^[a-f0-9]{64}$/)
     expect(JSON.stringify(statements)).not.toContain('correct horse battery staple')
+  })
+
+  it('signs in only through an exact linked OIDC subject and preserves the MFA handoff', async () => {
+    const identity = {
+      identity_id: 'oidc-identity:one',
+      user_id: 'user:one',
+      provider: 'oidc' as const,
+      issuer: 'https://issuer.example.test',
+      subject: 'provider-user-1',
+      email: 'user@example.com',
+      linked_at: '2026-08-03T00:00:00.000Z',
+      last_authenticated_at: null
+    }
+    const { pool, statements } = externalIdentityPool({ identity, mfaEnabled: true })
+    const result = await new PostgresAuthRepository(pool).signInWithExternalIdentity({
+      issuer: identity.issuer,
+      subject: identity.subject,
+      email: identity.email,
+      emailVerified: true
+    })
+
+    expect(result.mfaRequired).toBe(true)
+    if (!result.mfaRequired) throw new Error('expected an MFA challenge')
+    expect(result.challengeToken).toMatch(/^[A-Za-z0-9_-]{32,}$/)
+    const challengeInsert = statements.find((entry) =>
+      entry.text.includes('INSERT INTO appsea.auth_mfa_challenges')
+    )
+    expect(challengeInsert?.values[2]).toMatch(/^[a-f0-9]{64}$/)
+    expect(JSON.stringify(statements)).not.toContain(result.challengeToken)
+    expect(statements.some((entry) => entry.text.includes('touch_oidc_identity_sign_in'))).toBe(
+      false
+    )
+
+    const noMfaFixture = externalIdentityPool({ identity, mfaEnabled: false })
+    const noMfaResult = await new PostgresAuthRepository(
+      noMfaFixture.pool
+    ).signInWithExternalIdentity({
+      issuer: identity.issuer,
+      subject: identity.subject,
+      email: identity.email,
+      emailVerified: true
+    })
+    expect(noMfaResult.mfaRequired).toBe(false)
+    expect(
+      noMfaFixture.statements.some((entry) => entry.text.includes('touch_oidc_identity_sign_in'))
+    ).toBe(true)
+
+    await expect(
+      new PostgresAuthRepository(externalIdentityPool().pool).signInWithExternalIdentity({
+        issuer: identity.issuer,
+        subject: identity.subject,
+        email: identity.email,
+        emailVerified: true
+      })
+    ).rejects.toThrow(AuthExternalIdentityNotFoundError)
+  })
+
+  it('requires password/MFA step-up and rejects linking an identity owned by another account', async () => {
+    const claims = {
+      issuer: 'https://issuer.example.test',
+      subject: 'provider-user-2',
+      email: 'user@example.com',
+      emailVerified: true as const
+    }
+    await expect(
+      new PostgresAuthRepository(
+        externalIdentityPool({
+          current: {
+            session_id: 'session:one',
+            user_id: 'user:one',
+            email: 'user@example.com',
+            mfa_allowed: false
+          }
+        }).pool
+      ).linkExternalIdentity('a'.repeat(48), claims)
+    ).rejects.toThrow(AuthExternalIdentityPermissionError)
+
+    const { pool } = externalIdentityPool({
+      identity: {
+        identity_id: 'oidc-identity:two',
+        user_id: 'user:two',
+        provider: 'oidc',
+        issuer: claims.issuer,
+        subject: claims.subject,
+        email: claims.email,
+        linked_at: '2026-08-03T00:00:00.000Z',
+        last_authenticated_at: null
+      }
+    })
+    await expect(
+      new PostgresAuthRepository(pool).linkExternalIdentity('a'.repeat(48), claims)
+    ).rejects.toThrow(AuthExternalIdentityConflictError)
+
+    const linked = await new PostgresAuthRepository(
+      externalIdentityPool().pool
+    ).linkExternalIdentity('a'.repeat(48), claims)
+    expect(linked).toMatchObject({
+      identityId: 'oidc-identity:new',
+      provider: 'oidc',
+      issuerHost: 'issuer.example.test',
+      email: claims.email
+    })
+  })
+
+  it('lists bounded OIDC identity views and unlinks only the current account identity', async () => {
+    const first = {
+      identity_id: 'oidc-identity:one',
+      provider: 'oidc' as const,
+      issuer: 'https://issuer.example.test',
+      subject: 'provider-user-1',
+      email: 'user@example.com',
+      linked_at: '2026-08-03T00:00:00.000Z',
+      last_authenticated_at: null
+    }
+    const second = {
+      identity_id: 'oidc-identity:two',
+      provider: 'oidc' as const,
+      issuer: 'https://login.example.test',
+      subject: 'provider-user-2',
+      email: 'user@example.com',
+      linked_at: '2026-08-03T00:01:00.000Z',
+      last_authenticated_at: '2026-08-03T00:02:00.000Z'
+    }
+    const listed = await new PostgresAuthRepository(
+      externalIdentityPool({ identities: [first, second] }).pool
+    ).listExternalIdentities('a'.repeat(48))
+    expect(listed).toEqual([
+      {
+        identityId: first.identity_id,
+        provider: 'oidc',
+        issuerHost: 'issuer.example.test',
+        email: first.email,
+        linkedAt: first.linked_at,
+        lastAuthenticatedAt: null
+      },
+      {
+        identityId: second.identity_id,
+        provider: 'oidc',
+        issuerHost: 'login.example.test',
+        email: second.email,
+        linkedAt: second.linked_at,
+        lastAuthenticatedAt: second.last_authenticated_at
+      }
+    ])
+
+    const { pool, statements } = externalIdentityPool({
+      identity: { ...first, user_id: 'user:one' }
+    })
+    await expect(
+      new PostgresAuthRepository(pool).unlinkExternalIdentity('a'.repeat(48), first.identity_id)
+    ).resolves.toBe(true)
+    expect(statements.some((entry) => entry.text.includes('unlink_oidc_identity'))).toBe(true)
+    expect(statements.some((entry) => entry.text.includes('record_oidc_security_event'))).toBe(
+      false
+    )
   })
 
   it('uses hashed durable keys for authentication throttling', async () => {
