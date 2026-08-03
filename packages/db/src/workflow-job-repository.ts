@@ -207,6 +207,19 @@ async function insertCheckpoint(
   checkpoint: WorkflowJobCheckpointWrite
 ): Promise<void> {
   const checkpointHash = contentHash(checkpoint)
+  const existing = await client.query<StoredCheckpointHashRow>(
+    `SELECT content_hash
+       FROM appsea.workflow_job_checkpoints
+      WHERE workspace_id = $1 AND workflow_id = $2 AND checkpoint_key = $3
+      FOR SHARE`,
+    [checkpoint.workspaceId, checkpoint.execution.workflowId, checkpoint.checkpointKey]
+  )
+  if (existing.rows[0]) {
+    if (existing.rows[0].content_hash !== checkpointHash) {
+      throw new WorkflowCheckpointConflictError()
+    }
+    return
+  }
   await client.query(
     `INSERT INTO appsea.workflow_job_checkpoints
        (workspace_id, workflow_id, checkpoint_key, sequence_no, checkpoint, state,

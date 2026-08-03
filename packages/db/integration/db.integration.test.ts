@@ -499,7 +499,8 @@ describe.sequential('PostgreSQL fixture persistence lifecycle', () => {
       '0071',
       '0072',
       '0073',
-      '0074'
+      '0074',
+      '0075'
     ])
     expect(secondMigrationResult.applied).toEqual([])
     expect(secondMigrationResult.alreadyApplied).toEqual([
@@ -576,7 +577,8 @@ describe.sequential('PostgreSQL fixture persistence lifecycle', () => {
       '0071',
       '0072',
       '0073',
-      '0074'
+      '0074',
+      '0075'
     ])
   })
 
@@ -1017,8 +1019,8 @@ describe.sequential('PostgreSQL fixture persistence lifecycle', () => {
         `INSERT INTO appsea.sources
            (source_id, display_name, source_type, lifecycle_state, current_policy_version,
             created_at, updated_at)
-         VALUES ($1, 'Quota Reconcile Source', 'api', 'active', $2, $3, $3)`,
-        [sourceId, policyVersion, fixedAt]
+         VALUES ($1, 'Quota Reconcile Source', 'api', 'active', NULL, $2, $2)`,
+        [sourceId, fixedAt]
       )
       await client.query(
         `INSERT INTO appsea.source_policy_versions
@@ -1030,6 +1032,12 @@ describe.sequential('PostgreSQL fixture persistence lifecycle', () => {
                  '{"quota":{"requestsPerMinute":10,"maxRecordsPerRun":10}}'::jsonb,
                  $4, $3)`,
         [sourceId, policyVersion, fixedAt, 'a'.repeat(64)]
+      )
+      await client.query(
+        `UPDATE appsea.sources
+            SET current_policy_version = $2, updated_at = $3
+          WHERE source_id = $1`,
+        [sourceId, policyVersion, fixedAt]
       )
       await client.query(
         `INSERT INTO appsea.source_quota_windows
@@ -1113,6 +1121,12 @@ describe.sequential('PostgreSQL fixture persistence lifecycle', () => {
         await client.query('DELETE FROM appsea.workspace_memberships WHERE workspace_id = $1', [
           workspaceId
         ])
+        await client.query(
+          `UPDATE appsea.sources
+              SET lifecycle_state = 'retired', current_policy_version = NULL
+            WHERE source_id = $1`,
+          [sourceId]
+        )
         await client.query('DELETE FROM appsea.source_policy_versions WHERE source_id = $1', [
           sourceId
         ])
@@ -1169,8 +1183,8 @@ describe.sequential('PostgreSQL fixture persistence lifecycle', () => {
       await admissionRepository.consume(workspaceId, 'c'.repeat(64), 'd'.repeat(64))
       for (const [digest, hash] of [
         ['e', 'f'],
-        ['g', 'h'],
-        ['i', 'j']
+        ['0', '1'],
+        ['2', '3']
       ] as const) {
         const admitted = await admissionRepository.admitForUser(
           input(digest.repeat(64), hash.repeat(64))
@@ -1179,7 +1193,7 @@ describe.sequential('PostgreSQL fixture persistence lifecycle', () => {
         await admissionRepository.consume(workspaceId, digest.repeat(64), hash.repeat(64))
       }
       await expect(
-        admissionRepository.admitForUser(input('k'.repeat(64), 'l'.repeat(64)))
+        admissionRepository.admitForUser(input('4'.repeat(64), '5'.repeat(64)))
       ).rejects.toBeInstanceOf(ProductionWorkflowRateLimitError)
     } finally {
       await withOwnerClient(async (client) => {
@@ -1512,6 +1526,12 @@ describe.sequential('PostgreSQL fixture persistence lifecycle', () => {
         await client.query('DELETE FROM appsea.source_policy_reviews WHERE source_id = $1', [
           sourceId
         ])
+        await client.query(
+          `UPDATE appsea.sources
+              SET lifecycle_state = 'retired', current_policy_version = NULL
+            WHERE source_id = $1`,
+          [sourceId]
+        )
         await client.query('DELETE FROM appsea.source_policy_versions WHERE source_id = $1', [
           sourceId
         ])
@@ -2600,11 +2620,13 @@ describe.sequential('PostgreSQL fixture persistence lifecycle', () => {
     )
 
     await expect(
-      servicePool.query(
-        `UPDATE appsea.evidence_records
-            SET normalized_text = 'runtime tamper'
-          WHERE workspace_id = $1 AND evidence_id = $2`,
-        [input.workspaceId, before.evidence_id]
+      withWorkspaceTransaction(servicePool, input.workspaceId, (client) =>
+        client.query(
+          `UPDATE appsea.evidence_records
+              SET normalized_text = 'runtime tamper'
+            WHERE workspace_id = $1 AND evidence_id = $2`,
+          [input.workspaceId, before.evidence_id]
+        )
       )
     ).rejects.toMatchObject({ code: '42501' })
 
@@ -2614,7 +2636,12 @@ describe.sequential('PostgreSQL fixture persistence lifecycle', () => {
   })
 
   it('keeps competitive observation provenance policy-gated and reviewable', async () => {
-    const input = await fixtureInput()
+    const input = await fixtureInput(
+      'workspace-competitor-observation',
+      'campaign-competitor-observation',
+      'run-competitor-observation',
+      'fixture-competitor-observation'
+    )
     const persisted = await repository.persist(input)
     const userId = 'user:competitor-observation'
     const observationId = 'observation:fixture'
@@ -3082,6 +3109,8 @@ describe.sequential('PostgreSQL fixture persistence lifecycle', () => {
     persistenceInput.artifact.opportunity.id = 'opportunity-workflow-crosswire'
     persistenceInput.artifact.opportunity.name = 'Workflow Crosswire Fixture'
     persistenceInput.planPackage = generatePlanPackage(persistenceInput.artifact, latestAt)
+    persistenceInput.artifact.opportunity.slug = 'inbox-relay-crosswire'
+    persistenceInput.planPackage.opportunitySlug = persistenceInput.artifact.opportunity.slug
     const ownOutput = await repository.persist(persistenceInput)
     const unrelatedOutput = await workflowRepository.read(
       input.workspaceId,
@@ -3372,6 +3401,9 @@ describe.sequential('PostgreSQL fixture persistence lifecycle', () => {
     input.artifact.clusters = input.artifact.clusters.slice(0, -1)
     input.artifact.complaints = input.artifact.complaints.filter(
       (complaint) => !removedComplaintIds.has(complaint.id)
+    )
+    input.artifact.analyses = input.artifact.analyses.filter(
+      (analysis) => !removedComplaintIds.has(analysis.complaintId)
     )
     input.artifact.opportunity.complaintIds = input.artifact.clusters.flatMap(
       (cluster) => cluster.complaintIds
@@ -4171,6 +4203,12 @@ describe.sequential('PostgreSQL fixture persistence lifecycle', () => {
                      'Repair test thesis', 'Test operators', 'Repair dispatch', 1, false, 'researched',
                      $3, $4, 'Source deletion test', 'invalidated', $4, $4)`,
             [workspaceId, opportunityId, runId, laterAt]
+          )
+          await client.query(
+            `INSERT INTO appsea.research_run_opportunities
+               (workspace_id, run_id, opportunity_id, linked_at)
+             VALUES ($1, $2, $3, $4)`,
+            [workspaceId, runId, opportunityId, laterAt]
           )
           await client.query(
             `INSERT INTO appsea.opportunity_seed_reviews

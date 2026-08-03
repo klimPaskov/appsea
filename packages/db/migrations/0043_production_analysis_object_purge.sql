@@ -65,10 +65,10 @@ SECURITY DEFINER
 SET search_path = pg_catalog, appsea
 AS $$
 DECLARE
-  object_ref jsonb;
-  object_uri text;
-  object_kind text;
-  retention_until timestamptz;
+  source_object_ref jsonb;
+  source_object_uri text;
+  source_object_kind text;
+  source_retention_until timestamptz;
   observed_at timestamptz := clock_timestamp();
 BEGIN
   IF NEW.availability_state <> 'invalidated'
@@ -76,34 +76,34 @@ BEGIN
     RETURN NEW;
   END IF;
 
-  FOR object_ref IN
+  FOR source_object_ref IN
     SELECT value
       FROM jsonb_array_elements(
         jsonb_build_array(NEW.artifact_object_ref, NEW.report_object_ref, NEW.plan_object_ref)
       )
      WHERE value IS NOT NULL
   LOOP
-    object_uri := object_ref->>'uri';
-    object_kind := object_ref->>'kind';
-    IF object_uri IS NULL OR object_kind IS NULL THEN
+    source_object_uri := source_object_ref->>'uri';
+    source_object_kind := source_object_ref->>'kind';
+    IF source_object_uri IS NULL OR source_object_kind IS NULL THEN
       CONTINUE;
     END IF;
-    retention_until := NULLIF(object_ref->>'retentionUntil', '')::timestamptz;
+    source_retention_until := NULLIF(source_object_ref->>'retentionUntil', '')::timestamptz;
     INSERT INTO appsea.production_analysis_object_purge_jobs
       (workspace_id, purge_id, analysis_run_id, object_uri, object_kind, object_ref,
        "authorization", requested_at, eligible_at, state, next_attempt_at)
     VALUES
       (NEW.workspace_id,
-       'object-purge:' || md5(NEW.workspace_id || ':' || object_uri),
+       'object-purge:' || md5(NEW.workspace_id || ':' || source_object_uri),
        NEW.analysis_run_id,
-       object_uri,
-       object_kind,
-       object_ref,
+       source_object_uri,
+       source_object_kind,
+       source_object_ref,
        'retention-expired',
        observed_at,
-       GREATEST(observed_at, COALESCE(retention_until, observed_at)),
+       GREATEST(observed_at, COALESCE(source_retention_until, observed_at)),
        'pending',
-       GREATEST(observed_at, COALESCE(retention_until, observed_at)))
+       GREATEST(observed_at, COALESCE(source_retention_until, observed_at)))
     ON CONFLICT (workspace_id, object_uri) DO NOTHING;
   END LOOP;
   RETURN NEW;

@@ -352,7 +352,7 @@ BEGIN
   IF admission.state = 'released' OR admission.state = 'expired' THEN RETURN true; END IF;
   IF admission.state <> 'consumed' THEN RETURN false; END IF;
   UPDATE appsea.production_analysis_workflow_admissions
-     SET state = 'released', released_at = now_at, updated_at = now_at
+     SET state = 'released', consumed_at = NULL, released_at = now_at, updated_at = now_at
    WHERE workspace_id = p_workspace_id
      AND idempotency_digest = p_idempotency_digest;
   RETURN true;
