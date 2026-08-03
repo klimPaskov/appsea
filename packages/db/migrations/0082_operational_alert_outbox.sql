@@ -95,7 +95,7 @@ DECLARE
 BEGIN
   IF p_payload IS NULL
      OR jsonb_typeof(p_payload) <> 'object'
-     OR jsonb_object_length(p_payload) > 80
+     OR (SELECT count(*) FROM jsonb_object_keys(p_payload)) > 80
      OR p_payload->>'schemaVersion' <> '1'
      OR p_payload->>'service' <> 'appsea-worker'
      OR p_payload->>'observedAt' IS NULL
