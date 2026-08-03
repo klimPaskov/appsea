@@ -5,19 +5,24 @@
 Fixture product, PostgreSQL persistence, durable workflows, policy-gated CFPB
 collection, private workspaces, report/plan approval/export, recovery, and
 invitations are implemented. Migrations
-`0027`-`0072` add policy evidence, collection checkpoints, deletion repair,
+`0027`-`0073` add policy evidence, collection checkpoints, deletion repair,
 leases, snapshot reconciliation, workflow admissions, source-reconciliation
 admission, retryable tombstones, maintenance-run telemetry, a durable source-
 quota case ledger, recomputation alerts, cost-threshold projection, and
-owner-only non-destructive workspace archival.
+owner-only non-destructive workspace archival, and a durable owner-confirmed
+workspace purge intent that never performs deletion.
 The 2026-08-02 purge-readiness tranche adds an owner-only read-only
 `WorkspacePurgeReadiness` inventory with deterministic blockers; it names
-cloud/object/export/backup requirements and never deletes.
+cloud/object/export/backup requirements and never deletes. The 2026-08-03
+purge-intent tranche adds forced-RLS migration `0073`, owner step-up request and
+cancellation APIs, readiness snapshots, and identifier-only audit/outbox
+receipts; requests remain `awaiting_external_controls` until a separately
+reviewed provider deletion boundary exists.
 
-The 2026-08-03 tranche adds migration `0068`: a forced-RLS parent/child queue
-for two to sixteen non-fixture sources. The authenticated route is idempotent;
-source maintenance rechecks policy, admits/starts the existing workflow, and
-reconciles safe child state. No connector was activated.
+Migration `0068` adds a forced-RLS parent/child queue for two to sixteen
+non-fixture sources. The authenticated route is idempotent; maintenance
+rechecks policy, admits/starts the existing workflow, and reconciles state. No
+connector was activated.
 
 The 2026-08-03 agent-access tranche adds migration `0069` and a private
 read-only MCP-over-HTTP boundary. Workspace owners issue expiring scoped
@@ -30,9 +35,8 @@ intent is persisted before Temporal for multi-source and one-source runs,
 queued children stop transactionally, and a leased worker retries external
 cancellation. Workflows retain terminal authority; the private pages show the
 pending safe boundary and dispatching claims cannot orphan starts.
-The 2026-08-03 history-pagination tranche adds migration `0072` and closes the campaign-history cap:
-strict cursor/page contracts, authenticated one-/multi-source repository pages,
-private paginated APIs, and a dedicated history route. Cursors carry only a
+Migration `0072` closes the campaign-history cap with strict cursors, private
+one-/multi-source pages, and a dedicated history route. Cursors carry only a
 version, request timestamp, and stable identifier; hashes and source payloads
 remain outside the read boundary.
 On 2026-08-01, production analysis Temporal starts were versioned to
@@ -50,9 +54,9 @@ Deployment topology, HA, retention, alert routing, and failure drills remain.
 
 ## Validated commands
 
-- `pnpm verify` passed 2026-08-03 after the pagination tranche. Focused latest
-  contracts (87), db (128), workflows (29), worker (100), and web (135) suites
-  plus affected package typechecks/lints pass.
+- `pnpm verify` passed 2026-08-03 after pagination. Focused contracts (87), db
+  (128), workflows (29), worker (100), and web (135) suites plus affected
+  typechecks/lints pass.
 - PostgreSQL and Temporal integration are staged but Docker-blocked because the
   Docker Desktop Linux engine pipe is unavailable.
 
@@ -102,8 +106,6 @@ Text masking is denied while a raw source object reference exists, leaving
 source-policy deletion and cloud/backup purge as separate operations. The
 collection page exposes the small privacy-redaction control.
 
-Current audit: `docs/status/production-readiness-audit-2026-08-03.md`.
-
 ## Next production tranche
 
 1. Legal/privacy/security approval and CFPB policy activation.
@@ -130,6 +132,6 @@ Current audit: `docs/status/production-readiness-audit-2026-08-03.md`.
 - Deletion retries and explicit one-record recollection exist; workspace/export
   purge, cloud storage, recomputation alert routing, deployed scheduler
   ownership, and quota case routing remain open.
-- One-/multi-source cancellation now has a durable private boundary; deployed
+- One-/multi-source cancellation has a durable private boundary; deployed
   Temporal cancellation and crash-drill evidence remain open.
 - Windows/macOS release remains open.

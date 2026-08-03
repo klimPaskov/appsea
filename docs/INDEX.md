@@ -160,3 +160,4 @@
 - [`status/competitor-feature-matrix-completion-report-2026-08-02.md`](status/competitor-feature-matrix-completion-report-2026-08-02.md)
 - [`status/workspace-archival-completion-report-2026-08-02.md`](status/workspace-archival-completion-report-2026-08-02.md)
 - [`status/workspace-purge-readiness-completion-report-2026-08-02.md`](status/workspace-purge-readiness-completion-report-2026-08-02.md)
+- [`status/workspace-purge-intent-completion-report-2026-08-03.md`](status/workspace-purge-intent-completion-report-2026-08-03.md)

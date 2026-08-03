@@ -3,13 +3,13 @@
 - Start broad work with instructions, memory, and `docs/INDEX.md`.
 - Fixture mode is the complete persisted path; approved collection stores non-synthetic evidence separately. Leaderboard is leaderboard-only.
 - PostgreSQL/RLS: `packages/db`; Temporal: `packages/workflows` and `apps/worker`.
-- Fixture/collection workflows are package-tested; Temporal deployment/Docker proof and cloud/backup purge remain pending. `0043` queues output purge; `0044` retries tombstones.
+- Fixture/collection workflows are package-tested; Temporal/Docker proof and cloud/backup purge remain pending. `0043` queues output purge; `0044` retries tombstones.
 - `CfpbConnector` is typed and quota/deletion-aware but disabled pending legal/privacy/security approval; `0027` records operator-only policy evidence. `StackExchangeConnector` is a disabled, attribution-bound candidate for competitor/contrary research; the production worker selects it only from an approved registry snapshot, and no real source is active.
 - Web research uses scrypt credentials, revocable sessions, membership-before-RLS, owner mutations, and 15-minute step-up; invitation/recovery delivery is kill-switched; MFA/OIDC remain open.
 - Production collection persists policy-bound evidence, complaints, tombstones, gaps, cost, and lineage; private reads: `/workspace/:workspaceId/research/:runId`; outputs use filesystem/S3.
-- Migration `0067` adds step-up-protected owner/editor field redaction receipts and read-time masks; provenance, hashes, immutable snapshots, raw-source deletion policy, and cloud/backup purge remain separate boundaries.
+- `0067` adds step-up owner/editor redaction receipts and masks; provenance, hashes, snapshots, raw deletion, and cloud/backup purge remain separate.
 - Analysis v2 carries IDs/digests; the worker rebuilds artifacts in-activity. Private reads carry approval state; legacy v1 drain, cloud/backup purge, role rotation, and scheduler ownership remain open. Collection writes lock leases; `0037` recovers stale dispatches.
-- Auth, quotas, retention, admissions, purge, tombstones, scheduler metrics, and campaign refresh are durable; initialization fails closed without a reservation; `maintenance:loop` is bounded and signal-safe. Deployment ownership/alerting and cloud/backup remain open.
-- Health probes fail closed; worker heartbeat is 30s and secret-free.
+- Auth, quotas, retention, admissions, purge, tombstones, scheduler metrics, and campaign refresh are durable; initialization fails closed without a reservation; `maintenance:loop` is bounded and signal-safe. Owner purge requests persist an `awaiting_external_controls` handoff after the database gate; no destructive operation is wired. Deployment ownership/alerting and cloud/backup remain open.
+- Health probes fail closed; worker heartbeat is 30s, secret-free.
 - Re-collection is explicit only: a completed matching tombstone, `limit: 1`, exact source-native lookup, immutable lineage, and no automatic retry/refetch.
 - Web/worker share fail-closed Temporal config; production requires TLS/API-key/namespace/CA. Maintenance uses `0046` leases/`0052` fencing; direct source commands use `0051`; deployment alerting, role rotation, recovery, and proof remain open.

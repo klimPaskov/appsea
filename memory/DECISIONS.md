@@ -34,22 +34,22 @@ move a draft to `reviewed`; only owners may approve or withdraw; transitions are
 monotonic and the database trigger repeats the role/order check while emitting
 identifier-only audit/outbox receipts. Export returns only a schema-validated,
 approved report read model with its manifest hash, never raw source payloads.
-This proves an operator-safe fixture export without implying that non-fixture
-object storage, retention, or deletion duties are complete.
+This proves an operator-safe fixture export; non-fixture storage, retention,
+and deletion duties remain incomplete.
 
 ## 2026-07-24: Explicit session inventory and revocation
 
 Expose active sessions privately using stable IDs/timestamps. Revoke another
 session only after same-origin password reauthentication and reject the current
 session; the database resolves the current token before updating the target.
-Recovery, MFA/OIDC, and account deletion remain separate identity work.
+Recovery, MFA/OIDC, and account deletion remain separate work.
 
 ## 2026-07-24: Bounded maintenance runners and scheduler correlation
 
 Keep quota/deletion and auth retention as pure, contract-validated runners with
 capped inputs, independent budgets, and stable scheduler IDs. PostgreSQL is the
-idempotency boundary; deployment, alerting, and recovery ownership require
-review before production scheduling.
+idempotency boundary; deployment, alerting, and recovery
+ownership require review before production scheduling.
 
 ## 2026-07-24: Provider-neutral password recovery boundary
 
@@ -65,20 +65,17 @@ approved.
 Keep invitations owner-scoped and provider-neutral: store a hash-only token,
 encrypted delivery material, bounded expiry/retries, and identifier-only
 receipts. Require owner step-up and an existing account email match. Do not
-create accounts or verify ownership until identity/provider review; API and
-worker delivery remain kill-switched.
+create accounts or verify ownership until identity/provider review; delivery
+remains kill-switched.
 
 ## 2026-07-25: Shared-workspace-safe account closure
 
-Account closure uses the existing password step-up marker plus a typed
-`DELETE MY ACCOUNT` confirmation. Migration `0026_account_closure.sql` checks
-the authenticated user at a security-definer boundary and blocks closure while
-that user owns any workspace; ownership transfer remains an explicit owner
-mutation. Once unblocked, sessions and reset material are revoked, pending
-encrypted reset deliveries are discarded, and the profile is anonymized with a
-non-deliverable placeholder. Memberships and shared research remain so other
-members retain access and provenance. This is an account/profile closure, not
-workspace-data, export, object-store, or backup deletion.
+Account closure uses a password step-up plus `DELETE MY ACCOUNT`. Migration
+`0026_account_closure.sql` checks the user at a security-definer boundary and
+blocks closure while they own a workspace; transfer remains explicit. Once
+unblocked, sessions/reset material are revoked, deliveries discarded, and the
+profile anonymized. Shared memberships/research remain; this is not workspace,
+export, object-store, or backup deletion.
 
 ## 2026-07-25: Policy-gated production collection checkpoint
 
@@ -88,9 +85,8 @@ evidence and keeps activation in the migration-operator boundary; runtime
 workers can only read an active approved snapshot. The first CFPB checkpoint
 persists policy-allowed non-synthetic items, redacted evidence, unreviewed
 complaints, tombstones, coverage gaps, and idempotent identifier-only receipts.
-It is not a full research run: clustering, competitors, scoring, reports,
-plans, Temporal orchestration, legal approval, and market completeness remain
-separate boundaries.
+It is not a full research run: clustering, competitors, scoring, reports, plans,
+Temporal orchestration, legal approval, and market completeness remain separate.
 
 ## 2026-07-25: Production collection workflow boundary
 
@@ -101,36 +97,32 @@ immutable user/service attribution. PostgreSQL is the non-cancellable
 persistence authority; a settled quota without a result stops for operator
 reconciliation. This proves the contract locally without claiming production
 Temporal, live-source approval, purge, aggregate recomputation, or downstream
-opportunity analysis.
+analysis.
 
 ## 2026-07-25: Policy-derived source retention
 
-Enforce a source policy's `retentionDays` and `deletionRequired` through a
-bounded migration-owner function that queues deterministic retention tombstones;
-reuse the existing skip-locked deletion propagation path for redaction and
-dependent report/plan invalidation. The function clamps caller time to the
-database clock, and skips fixture/purge-only policies until a matching purge
-implementation exists, and keeps enqueue and propagation budgets independent.
-This satisfies the CFPB redaction/tombstone obligation without adding a second
-payload-deletion implementation. `redact` and `tombstone` therefore currently
-share the same source-deletion propagation semantics; field-level redaction,
-object-store/backups purge, and aggregate recomputation remain separate work.
+Enforce `retentionDays` and `deletionRequired` through a bounded
+migration-owner function that queues deterministic tombstones and reuses the
+skip-locked propagation path for redaction and report/plan invalidation. It
+uses database time, skips fixture/purge-only policies without a matching purge,
+and keeps budgets independent. `redact` and `tombstone` share source-deletion
+semantics; field-level, object-store/backup purge, and recomputation remain
+separate.
 
 ## 2026-07-26: Offline production analysis composition boundary
 
-Keep an offline, production-shaped composition boundary that accepts only
-reviewed non-fixture input and a reviewed seed. Code owns normalization,
-clustering, and scoring; the sample is visibly test-only and never activates a
-source or claims market evidence. Durable persistence, orchestration, object
-storage, and approval remain separate boundaries.
+Keep an offline, production-shaped composition boundary accepting only reviewed
+non-fixture input and seed. Code owns normalization, clustering, and scoring;
+the sample is visibly test-only and never activates a source or claims market
+evidence. Persistence, orchestration, storage, and approval remain separate.
 
 ## 2026-07-26: Keep non-fixture blobs behind an object-store seam
 
-Keep non-fixture plan/report payloads behind a content-addressed object seam,
-with workspace-bound, hash-validated, immutable references and tombstone-before-
-read behavior. The in-memory/filesystem adapter is not cloud deployment;
+Keep non-fixture plan/report payloads behind a content-addressed object seam
+with workspace-bound, hash-validated references and tombstone-before-read
+behavior. The filesystem adapter is not cloud deployment;
 encrypted storage, lifecycle, backup deletion, lineage, and private reads need
-separate review.
+review.
 
 ## 2026-08-01: Queue invalidated analysis output purge separately
 
@@ -138,7 +130,7 @@ Keep source invalidation and external deletion separate. Migration `0043`
 queues artifact/report/plan refs before commit; maintenance claims with stale
 recovery, marks deleted, waits for `retentionUntil`, then purges with bounded
 retries. Local orphan bodies are cleaned after sidecar loss. This is narrower
-than source-wide, cloud backup/version, closure, or export purge.
+than source-wide, cloud/backup, closure, or export purge
 
 ## 2026-07-26: Preserve production analysis provenance before persistence
 
@@ -369,3 +361,15 @@ rewritten. A text mask is rejected while a raw source object reference exists,
 so source-policy deletion and cloud/backup purge remain separate reviewed
 operations. The stable generic marker avoids revealing the redaction reason or
 original content, and receipt replay is idempotent with conflict on reuse.
+
+## 2026-08-03: Persist purge intent without authorizing deletion
+
+Workspace archival and destructive retention are separate boundaries. Migration
+`0073` lets an owner with a recent password step-up record a strict,
+database-ready purge intent with a readiness snapshot and identifier-only
+audit/outbox receipts. The intent remains `awaiting_external_controls` until
+cloud object-store, export-retention, backup-deletion, and provider approval
+are independently verified; it cannot be consumed as a deletion command.
+Repeating an active request is idempotent, and the owner can cancel
+the handoff. This keeps external deletion review visible without creating a
+second unreviewed destructive path.

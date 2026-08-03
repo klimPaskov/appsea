@@ -104,8 +104,11 @@ The owner-only purge-readiness projection and private members-page inventory
 now expose bounded active-work and raw/analysis/report/plan object-reference
 counts. Its `database_ready` state is a PostgreSQL checkpoint only; the
 response always names cloud object-store purge, export-retention purge, and
-backup deletion verification as external requirements. The route is
-read-only and never queues or performs destructive deletion.
+backup deletion verification as external requirements. Migration `0073` adds a
+forced-RLS owner-confirmed purge-intent ledger with idempotent request and
+cancellation functions, identifier-only audit/outbox receipts, and private
+members-page/API controls. The intent snapshots `database_ready` but remains
+`awaiting_external_controls`; it never queues or performs destructive deletion.
 
 The invalidated production-analysis output queue is a deliberate narrow slice:
 it does not claim source-wide retention purge, cloud backup deletion, or

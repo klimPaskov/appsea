@@ -219,6 +219,8 @@ export {
   AuthenticationConflictError,
   AuthenticationError,
   AuthAccountDeletionBlockedError,
+  WorkspacePurgeRequestNotReadyError,
+  WorkspacePurgeRequestPermissionError,
   AuthPasswordResetConfigurationError,
   AuthPasswordResetError,
   WorkspaceInvitationConflictError,

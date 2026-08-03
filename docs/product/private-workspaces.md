@@ -44,8 +44,15 @@ The public AppSea leaderboard is a sparse, synthetic fixture surface. Private re
   blocks the transition while workflow, run, handoff, lease, reconciliation, or recomputation work
   is active and returns a bounded count for retry. Archival retains evidence, reports, plans,
   provenance, exports, object references, and backups; destructive workspace/object/backup/export
-  purge is a separate reviewed retention operation and is not exposed by this endpoint. Repeating
-  an owner request is an idempotent read of the archived state.
+  purge is a separate reviewed retention operation. Once the owner-only purge-readiness inventory
+  reaches `database_ready`, the same step-up can record a durable
+  `awaiting_external_controls` intent through `POST /api/workspaces/:workspaceId/purge-request`
+  with the exact `REQUEST WORKSPACE PURGE` confirmation. The intent snapshots the readiness
+  evidence and writes identifier-only audit/outbox receipts; it does not delete data or authorize
+  provider-side deletion. Owners can inspect it with `GET` and cancel it with `DELETE` plus
+  `CANCEL WORKSPACE PURGE`. Repeating an active request is idempotent. Cloud object-store,
+  export-retention, backup verification, and a separately reviewed destructive workflow remain
+  external requirements.
 - Owners and editors can expand `Privacy redaction` on a collection evidence row after the same
   password step-up. They select one or more narrative/entity/locator fields and a reason; the
   strict API binds the evidence to the run and complaint and records an immutable receipt. Private

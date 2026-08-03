@@ -76,6 +76,13 @@
       "purpose": "Private cursor-paginated campaign run history",
       "desktop": "source/campaign-history.svg",
       "mobile": "source/campaign-history-mobile.svg"
+    },
+    {
+      "id": "workspace-members",
+      "route": "/workspace/:workspaceId/members",
+      "purpose": "Private member access and non-destructive purge handoff",
+      "desktop": "source/workspace-members.svg",
+      "mobile": "source/workspace-members-mobile.svg"
     }
   ]
 }

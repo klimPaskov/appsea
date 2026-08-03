@@ -137,7 +137,10 @@ members-page inventory now expose bounded active-work and raw/analysis/report/
 plan object-reference counts. `database_ready` means only that the
 PostgreSQL-observable blockers are clear; the response always keeps cloud
 object-store purge, export-retention purge, and backup-deletion verification
-visible. It is read-only and does not queue or perform destructive deletion.
+visible. After step-up and exact confirmation, the owner-only purge-request API
+can snapshot a `database_ready` inventory into a durable
+`awaiting_external_controls` intent, or cancel that intent. The handoff is not
+an authorization to delete and does not perform destructive deletion.
 
 The repository refuses to auto-create fixture workspaces when `NODE_ENV` is
 `production`; deployment must provision fixture-enabled workspaces explicitly.
@@ -170,7 +173,7 @@ through the existing analysis workflow. Automatic re-collection, object
 storage/backups, destructive workspace purge, export purge, and deployed
 scheduler alerting are not implemented. Workspace archival is a separate,
 non-destructive lifecycle boundary and does not satisfy those purge duties. The
-readiness inventory documents the sequence but does not change this gap.
+durable purge intent documents the owner handoff but does not change this gap.
 Complaint review transitions and the
 explicit reviewed analysis-start route are implemented. Migration `0034` also
 provides an opt-in, seed-bound post-collection handoff with stale-claim
@@ -272,8 +275,9 @@ in-memory/filesystem adapters plus a signed S3-compatible adapter wired through
 the shared environment factory. Migration `0043` adds the durable
 invalidated-output purge queue. Provider encryption, lifecycle/versioning,
 least-privilege credential deployment, destructive workspace/object/backup
-purge, and fresh Docker-backed proof remain open. Owner workspace archival is
-implemented separately and retains the referenced data.
+purge, and fresh Docker-backed proof remain open. Owner workspace archival and
+the non-destructive purge intent are implemented separately and retain the
+referenced data.
 
 ## Sources
 

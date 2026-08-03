@@ -23,6 +23,9 @@ import {
   authAccountDeletionResultSchema,
   workspaceArchiveInputSchema,
   workspaceArchiveResultSchema,
+  workspacePurgeRequestCancelInputSchema,
+  workspacePurgeRequestInputSchema,
+  workspacePurgeRequestSchema,
   workspacePurgeReadinessSchema,
   authSessionSummaryReadModelSchema,
   authSessionReadModelSchema,
@@ -65,6 +68,9 @@ import {
   type AuthAccountDeletionResult,
   type WorkspaceArchiveInput,
   type WorkspaceArchiveResult,
+  type WorkspacePurgeRequest,
+  type WorkspacePurgeRequestCancelInput,
+  type WorkspacePurgeRequestInput,
   type WorkspacePurgeReadiness,
   type AuthSignInInput,
   type AuthSignInResult,
@@ -165,6 +171,23 @@ export class WorkspaceArchivePermissionError extends Error {
   constructor() {
     super('Only the workspace owner can archive this active workspace')
     this.name = 'WorkspaceArchivePermissionError'
+  }
+}
+
+export class WorkspacePurgeRequestPermissionError extends Error {
+  constructor() {
+    super('Only the workspace owner can request or cancel workspace purge')
+    this.name = 'WorkspacePurgeRequestPermissionError'
+  }
+}
+
+export class WorkspacePurgeRequestNotReadyError extends Error {
+  readonly readiness: WorkspacePurgeReadiness
+
+  constructor(readiness: WorkspacePurgeReadiness) {
+    super('Workspace purge request is blocked by the current database readiness inventory')
+    this.name = 'WorkspacePurgeRequestNotReadyError'
+    this.readiness = readiness
   }
 }
 
@@ -343,6 +366,16 @@ interface WorkspacePurgeReadinessRow extends QueryResultRow {
   checked_at: Date | string
 }
 
+interface WorkspacePurgeRequestRow extends QueryResultRow {
+  workspace_id: string
+  request_id: string | null
+  state: 'awaiting_external_controls' | 'canceled' | 'blocked'
+  requested_at: Date | string | null
+  canceled_at: Date | string | null
+  readiness_snapshot: unknown
+  replayed: boolean
+}
+
 interface WorkspaceMemberRow extends QueryResultRow {
   user_id: string
   email: string
@@ -454,6 +487,20 @@ interface WorkspacePlanRow extends QueryResultRow {
 
 function iso(value: Date | string): string {
   return value instanceof Date ? value.toISOString() : new Date(value).toISOString()
+}
+
+function mapWorkspacePurgeRequest(row: WorkspacePurgeRequestRow): WorkspacePurgeRequest {
+  if (row.request_id === null || row.requested_at === null || row.state === 'blocked') {
+    throw new Error('Workspace purge request row is incomplete')
+  }
+  return workspacePurgeRequestSchema.parse({
+    workspaceId: row.workspace_id,
+    requestId: row.request_id,
+    state: row.state,
+    requestedAt: iso(row.requested_at),
+    canceledAt: row.canceled_at === null ? null : iso(row.canceled_at),
+    readiness: workspacePurgeReadinessSchema.parse(row.readiness_snapshot)
+  })
 }
 
 function identifier(prefix: string): string {
@@ -1369,6 +1416,129 @@ export class PostgresAuthRepository {
       ],
       checkedAt: iso(row.checked_at)
     })
+  }
+
+  /**
+   * Record an owner-confirmed purge intent only after PostgreSQL reports a
+   * database-ready snapshot. The returned request remains awaiting external
+   * object-store, export-retention, and backup controls; this method never
+   * performs destructive deletion.
+   */
+  async requestWorkspacePurge(
+    userId: string,
+    workspaceId: string,
+    input: WorkspacePurgeRequestInput
+  ): Promise<WorkspacePurgeRequest> {
+    const parsedUserId = appseaIdentifierSchema.parse(userId)
+    const parsedWorkspaceId = appseaIdentifierSchema.parse(workspaceId)
+    workspacePurgeRequestInputSchema.parse(input)
+    try {
+      const result = await withDatabaseTransaction(
+        this.pool,
+        async (client) => {
+          await client.query("SELECT set_config('appsea.auth_user_id', $1, true)", [parsedUserId])
+          await client.query("SELECT set_config('appsea.workspace_id', $1, true)", [
+            parsedWorkspaceId
+          ])
+          return client.query<WorkspacePurgeRequestRow>(
+            `SELECT workspace_id, request_id, state, requested_at, canceled_at,
+                    readiness_snapshot, replayed
+               FROM appsea.request_workspace_purge($1, $2)`,
+            [parsedWorkspaceId, parsedUserId]
+          )
+        },
+        { maxSerializationRetries: 0 }
+      )
+      const row = result.rows[0]
+      if (!row) throw new Error('Workspace purge request result was not recorded')
+      if (row.state === 'blocked') {
+        throw new WorkspacePurgeRequestNotReadyError(
+          workspacePurgeReadinessSchema.parse(row.readiness_snapshot)
+        )
+      }
+      return mapWorkspacePurgeRequest(row)
+    } catch (error) {
+      if (isWorkspaceArchivePermissionError(error)) {
+        throw new WorkspacePurgeRequestPermissionError()
+      }
+      throw error
+    }
+  }
+
+  /** Read the latest owner-visible purge intent without exposing bodies. */
+  async readWorkspacePurgeRequest(
+    userId: string,
+    workspaceId: string
+  ): Promise<WorkspacePurgeRequest | null> {
+    const parsedUserId = appseaIdentifierSchema.parse(userId)
+    const parsedWorkspaceId = appseaIdentifierSchema.parse(workspaceId)
+    const result = await withDatabaseTransaction(
+      this.pool,
+      async (client) => {
+        await client.query("SELECT set_config('appsea.auth_user_id', $1, true)", [parsedUserId])
+        const membership = await client.query<{ role: string }>(
+          `SELECT role
+             FROM appsea.workspace_memberships
+            WHERE workspace_id = $1 AND user_id = $2
+            FOR SHARE`,
+          [parsedWorkspaceId, parsedUserId]
+        )
+        if (membership.rows[0]?.role !== 'owner') throw new WorkspaceAuthorizationError()
+        await client.query("SELECT set_config('appsea.workspace_id', $1, true)", [
+          parsedWorkspaceId
+        ])
+        return client.query<WorkspacePurgeRequestRow>(
+          `SELECT workspace_id, request_id, state, requested_at, canceled_at,
+                  readiness_snapshot, false AS replayed
+             FROM appsea.workspace_purge_requests
+            WHERE workspace_id = $1
+            ORDER BY requested_at DESC, request_id DESC
+            LIMIT 1
+            FOR SHARE`,
+          [parsedWorkspaceId]
+        )
+      },
+      { readOnly: true, maxSerializationRetries: 0 }
+    )
+    const row = result.rows[0]
+    return row ? mapWorkspacePurgeRequest(row) : null
+  }
+
+  /** Cancel a pending purge intent; cancellation does not restore deleted data. */
+  async cancelWorkspacePurge(
+    userId: string,
+    workspaceId: string,
+    input: WorkspacePurgeRequestCancelInput
+  ): Promise<WorkspacePurgeRequest> {
+    const parsedUserId = appseaIdentifierSchema.parse(userId)
+    const parsedWorkspaceId = appseaIdentifierSchema.parse(workspaceId)
+    const parsedInput = workspacePurgeRequestCancelInputSchema.parse(input)
+    try {
+      const result = await withDatabaseTransaction(
+        this.pool,
+        async (client) => {
+          await client.query("SELECT set_config('appsea.auth_user_id', $1, true)", [parsedUserId])
+          await client.query("SELECT set_config('appsea.workspace_id', $1, true)", [
+            parsedWorkspaceId
+          ])
+          return client.query<WorkspacePurgeRequestRow>(
+            `SELECT workspace_id, request_id, state, requested_at, canceled_at,
+                    readiness_snapshot, replayed
+               FROM appsea.cancel_workspace_purge($1, $2, $3)`,
+            [parsedWorkspaceId, parsedUserId, parsedInput.requestId]
+          )
+        },
+        { maxSerializationRetries: 0 }
+      )
+      const row = result.rows[0]
+      if (!row) throw new Error('Workspace purge cancellation result was not recorded')
+      return mapWorkspacePurgeRequest(row)
+    } catch (error) {
+      if (isWorkspaceArchivePermissionError(error)) {
+        throw new WorkspacePurgeRequestPermissionError()
+      }
+      throw error
+    }
   }
 
   async readAuthenticatedSession(token: string): Promise<AuthSessionReadModel | null> {

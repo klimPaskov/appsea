@@ -18,7 +18,9 @@ import {
   WorkspaceMembershipConflictError,
   WorkspaceMembershipManagementError,
   WorkspaceAuthorizationError,
-  WorkspacePlanNotApprovedError
+  WorkspacePlanNotApprovedError,
+  WorkspacePurgeRequestNotReadyError,
+  WorkspacePurgeRequestPermissionError
 } from './auth-repository'
 import type { AuthAccountDeletionBlockedError } from './auth-repository'
 import { sha256 } from './hash'
@@ -581,6 +583,114 @@ function workspacePurgeReadinessPool(options: { owner?: boolean } = {}): {
   }
 }
 
+function workspacePurgeRequestPool(
+  options: { owner?: boolean; blocked?: boolean; canceled?: boolean } = {}
+): {
+  pool: Pool
+  statements: Array<{ text: string; values: unknown[] }>
+} {
+  const statements: Array<{ text: string; values: unknown[] }> = []
+  const readiness = {
+    workspaceId: 'workspace:one',
+    state: options.blocked ? 'blocked' : 'database_ready',
+    archivedAt: options.blocked ? null : '2026-08-02T20:00:00.000Z',
+    activeWorkCount: options.blocked ? 1 : 0,
+    rawSourceObjectReferenceCount: 0,
+    analysisObjectReferenceCount: 0,
+    reportObjectReferenceCount: 0,
+    planObjectReferenceCount: 0,
+    blockers: options.blocked ? ['workspace_not_archived', 'active_work'] : [],
+    externalRequirements: [
+      'cloud_object_store_purge',
+      'export_retention_purge',
+      'backup_deletion_verification'
+    ],
+    checkedAt: '2026-08-02T20:01:00.000Z'
+  }
+  const client = {
+    query: async (text: string, values: unknown[] = []) => {
+      statements.push({ text, values })
+      if (text.includes('FROM appsea.request_workspace_purge')) {
+        if (options.owner === false)
+          throw Object.assign(new Error('workspace purge request requires an owner'), {
+            code: '42501'
+          })
+        return {
+          rows: [
+            options.blocked
+              ? {
+                  workspace_id: 'workspace:one',
+                  request_id: null,
+                  state: 'blocked',
+                  requested_at: null,
+                  canceled_at: null,
+                  readiness_snapshot: readiness,
+                  replayed: false
+                }
+              : {
+                  workspace_id: 'workspace:one',
+                  request_id: `workspace-purge:${'a'.repeat(32)}`,
+                  state: options.canceled ? 'canceled' : 'awaiting_external_controls',
+                  requested_at: '2026-08-02T20:02:00.000Z',
+                  canceled_at: options.canceled ? '2026-08-02T20:03:00.000Z' : null,
+                  readiness_snapshot: readiness,
+                  replayed: false
+                }
+          ],
+          rowCount: 1
+        }
+      }
+      if (text.includes('FROM appsea.cancel_workspace_purge')) {
+        if (options.owner === false)
+          throw Object.assign(new Error('workspace purge cancellation requires an owner'), {
+            code: '42501'
+          })
+        return {
+          rows: [
+            {
+              workspace_id: 'workspace:one',
+              request_id: `workspace-purge:${'a'.repeat(32)}`,
+              state: 'canceled',
+              requested_at: '2026-08-02T20:02:00.000Z',
+              canceled_at: '2026-08-02T20:03:00.000Z',
+              readiness_snapshot: readiness,
+              replayed: false
+            }
+          ],
+          rowCount: 1
+        }
+      }
+      if (text.includes('FROM appsea.workspace_purge_requests')) {
+        return {
+          rows: [
+            {
+              workspace_id: 'workspace:one',
+              request_id: `workspace-purge:${'a'.repeat(32)}`,
+              state: options.canceled ? 'canceled' : 'awaiting_external_controls',
+              requested_at: '2026-08-02T20:02:00.000Z',
+              canceled_at: options.canceled ? '2026-08-02T20:03:00.000Z' : null,
+              readiness_snapshot: readiness,
+              replayed: false
+            }
+          ],
+          rowCount: 1
+        }
+      }
+      if (text.includes('FROM appsea.workspace_memberships')) {
+        return options.owner === false
+          ? { rows: [{ role: 'editor' }], rowCount: 1 }
+          : { rows: [{ role: 'owner' }], rowCount: 1 }
+      }
+      return { rows: [], rowCount: 0 }
+    },
+    release: () => undefined
+  } as unknown as PoolClient
+  return {
+    pool: { connect: async () => client } as unknown as Pool,
+    statements
+  }
+}
+
 describe('PostgresAuthRepository', () => {
   it('reads an active session and only stores token hashes in SQL parameters', async () => {
     const token = 'a'.repeat(48)
@@ -888,6 +998,54 @@ describe('PostgresAuthRepository', () => {
         workspacePurgeReadinessPool({ owner: false }).pool
       ).readWorkspacePurgeReadiness('user:editor', 'workspace:one')
     ).rejects.toBeInstanceOf(WorkspaceAuthorizationError)
+  })
+
+  it('records an owner-confirmed purge intent only after the database gate', async () => {
+    const requested = workspacePurgeRequestPool()
+    const repository = new PostgresAuthRepository(requested.pool)
+    await expect(
+      repository.requestWorkspacePurge('user:owner', 'workspace:one', {
+        confirmation: 'REQUEST WORKSPACE PURGE'
+      })
+    ).resolves.toMatchObject({
+      requestId: `workspace-purge:${'a'.repeat(32)}`,
+      state: 'awaiting_external_controls',
+      readiness: { state: 'database_ready' }
+    })
+    expect(
+      requested.statements.some((entry) => entry.text.includes('request_workspace_purge'))
+    ).toBe(true)
+
+    const blocked = new PostgresAuthRepository(workspacePurgeRequestPool({ blocked: true }).pool)
+    await expect(
+      blocked.requestWorkspacePurge('user:owner', 'workspace:one', {
+        confirmation: 'REQUEST WORKSPACE PURGE'
+      })
+    ).rejects.toBeInstanceOf(WorkspacePurgeRequestNotReadyError)
+
+    const forbidden = new PostgresAuthRepository(workspacePurgeRequestPool({ owner: false }).pool)
+    await expect(
+      forbidden.requestWorkspacePurge('user:editor', 'workspace:one', {
+        confirmation: 'REQUEST WORKSPACE PURGE'
+      })
+    ).rejects.toBeInstanceOf(WorkspacePurgeRequestPermissionError)
+  })
+
+  it('reads and cancels purge intents through the owner boundary', async () => {
+    const inspected = workspacePurgeRequestPool()
+    const repository = new PostgresAuthRepository(inspected.pool)
+    await expect(
+      repository.readWorkspacePurgeRequest('user:owner', 'workspace:one')
+    ).resolves.toMatchObject({ state: 'awaiting_external_controls' })
+    await expect(
+      repository.cancelWorkspacePurge('user:owner', 'workspace:one', {
+        requestId: `workspace-purge:${'a'.repeat(32)}`,
+        confirmation: 'CANCEL WORKSPACE PURGE'
+      })
+    ).resolves.toMatchObject({ state: 'canceled' })
+    expect(
+      inspected.statements.some((entry) => entry.text.includes('cancel_workspace_purge'))
+    ).toBe(true)
   })
 
   it('lists members for owners and records role/removal changes durably', async () => {

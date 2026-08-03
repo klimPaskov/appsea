@@ -335,6 +335,14 @@ for that pre-context authorization lookup.
   archived workspace. Evidence lineage, reports, plans, exports, object
   references, backups, and deletion obligations remain retained; purge is a
   separate reviewed retention boundary.
+- Migration `0073_workspace_purge_intents.sql` adds the next explicit handoff:
+  an owner with recent step-up and exact confirmation can call a security-
+  definer function only after a server-side `database_ready` inventory. The
+  forced-RLS request ledger snapshots bounded counts and external requirements,
+  emits identifier-only audit/outbox receipts, and remains
+  `awaiting_external_controls`; it cannot authorize object, export, backup, or
+  database deletion. A separate owner cancellation function is equally
+  non-destructive.
 - Migration `0067_field_level_evidence_redaction.sql` adds the privacy
   projection boundary. An authenticated owner/editor calls a narrow
   security-definer function after a recent web step-up; PostgreSQL repeats the

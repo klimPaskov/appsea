@@ -598,6 +598,57 @@ def analysis_status_screen(width: int, height: int, mobile: bool) -> str:
     return shell(width, height, content, mobile)
 
 
+def workspace_members_screen(width: int, height: int, mobile: bool) -> str:
+    margin = 24 if mobile else 220
+    top = 112 if mobile else 132
+    title_size = 38 if mobile else 56
+    content = text(margin, top, 'Private workspace', 10, 700, MUTED, letter=1.1)
+    content += text(margin, top + 54, 'Members', title_size, 650, INK, letter=-2.5)
+    content += text(
+        margin,
+        top + (88 if mobile else 100),
+        'Workspace access and reviewed retention controls.',
+        14 if mobile else 16,
+        400,
+        MUTED,
+    )
+    list_y = top + (170 if mobile else 164)
+    content += text(margin, list_y, 'WORKSPACE ACCESS', 10, 700, MUTED, letter=1.1)
+    content += line(margin, list_y + 20, width - margin, list_y + 20, INK)
+    members = [('Owner account', 'owner@example.test', 'owner'), ('Research editor', 'editor@example.test', 'editor')]
+    row_height = 74 if mobile else 66
+    for index, (name, email, role) in enumerate(members):
+        row_y = list_y + 20 + index * row_height
+        content += text(margin, row_y + 26, name, 16 if mobile else 18, 650)
+        content += text(margin, row_y + 48, email, 11, 400, MUTED)
+        content += text(width - margin, row_y + 30, role, 11, 650, INK, 'end')
+        content += line(margin, row_y + row_height, width - margin, row_y + row_height)
+    box_y = list_y + 20 + row_height * len(members) + (34 if mobile else 42)
+    box_height = 286 if mobile else 238
+    content += rect(margin, box_y, width - margin * 2, box_height, SURFACE, 6, LINE)
+    content += text(margin + 18, box_y + 28, 'DELETION READINESS', 10, 700, MUTED, letter=1.0)
+    content += multiline(
+        margin + 18,
+        box_y + 55,
+        'Database gate ready. Cloud object-store, export-retention, and backup verification remain external controls.',
+        13 if mobile else 14,
+        42 if mobile else 78,
+        21 if mobile else 23,
+        fill='#41444a',
+    )
+    summary_y = box_y + (132 if mobile else 112)
+    content += text(margin + 18, summary_y, 'ACTIVE WORK', 10, 700, MUTED, letter=1.0)
+    content += text(width - margin - 18, summary_y, '0', 14, 650, INK, 'end')
+    content += line(margin + 18, summary_y + 16, width - margin - 18, summary_y + 16)
+    content += text(margin + 18, summary_y + 42, 'OBJECT REFERENCES', 10, 700, MUTED, letter=1.0)
+    content += text(width - margin - 18, summary_y + 42, '0', 14, 650, INK, 'end')
+    button_y = box_y + box_height - 48
+    button_width = 178 if mobile else 196
+    content += rect(margin + 18, button_y, button_width, 32, INK, 5)
+    content += text(margin + 18 + button_width / 2, button_y + 21, 'Request deletion review', 11, 650, '#ffffff', 'middle')
+    return shell(width, height, content, mobile)
+
+
 SCREENS = {
     'leaderboard': leaderboard,
     'opportunity': opportunity_screen,
@@ -610,7 +661,8 @@ SCREENS = {
     'campaign-history': campaign_history_screen,
     'source-coverage': source_coverage_screen,
     'campaign-status': campaign_status_screen,
-    'analysis-status': analysis_status_screen
+    'analysis-status': analysis_status_screen,
+    'workspace-members': workspace_members_screen
 }
 
 

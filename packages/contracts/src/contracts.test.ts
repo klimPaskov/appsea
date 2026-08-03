@@ -10,6 +10,9 @@ import {
   authAccountDeletionResultSchema,
   workspaceArchiveInputSchema,
   workspaceArchiveResultSchema,
+  workspacePurgeRequestCancelInputSchema,
+  workspacePurgeRequestInputSchema,
+  workspacePurgeRequestSchema,
   workspacePurgeReadinessSchema,
   authPasswordResetAcceptedReadModelSchema,
   authPasswordResetInputSchema,
@@ -366,6 +369,57 @@ describe('contracts', () => {
         state: 'database_ready'
       }).success
     ).toBe(true)
+  })
+
+  it('requires explicit purge intent and preserves the database-ready snapshot', () => {
+    const readiness = {
+      workspaceId: 'workspace:one',
+      state: 'database_ready' as const,
+      archivedAt: now,
+      activeWorkCount: 0,
+      rawSourceObjectReferenceCount: 0,
+      analysisObjectReferenceCount: 0,
+      reportObjectReferenceCount: 0,
+      planObjectReferenceCount: 0,
+      blockers: [] as const,
+      externalRequirements: [
+        'cloud_object_store_purge',
+        'export_retention_purge',
+        'backup_deletion_verification'
+      ] as const,
+      checkedAt: now
+    }
+    expect(
+      workspacePurgeRequestInputSchema.safeParse({
+        confirmation: 'REQUEST WORKSPACE PURGE'
+      }).success
+    ).toBe(true)
+    expect(
+      workspacePurgeRequestCancelInputSchema.safeParse({
+        requestId: `workspace-purge:${'a'.repeat(32)}`,
+        confirmation: 'CANCEL WORKSPACE PURGE'
+      }).success
+    ).toBe(true)
+    expect(
+      workspacePurgeRequestSchema.safeParse({
+        workspaceId: 'workspace:one',
+        requestId: `workspace-purge:${'a'.repeat(32)}`,
+        state: 'awaiting_external_controls',
+        requestedAt: now,
+        canceledAt: null,
+        readiness
+      }).success
+    ).toBe(true)
+    expect(
+      workspacePurgeRequestSchema.safeParse({
+        workspaceId: 'workspace:one',
+        requestId: `workspace-purge:${'a'.repeat(32)}`,
+        state: 'awaiting_external_controls',
+        requestedAt: now,
+        canceledAt: null,
+        readiness: { ...readiness, state: 'blocked', blockers: ['workspace_not_archived'] }
+      }).success
+    ).toBe(false)
   })
 
   it('bounds full-snapshot reconciliation inputs and preserves visible incomplete state', () => {

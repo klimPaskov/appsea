@@ -5,11 +5,13 @@ import {
   workspaceInvitationReadModelSchema,
   workspaceInvitationRoleSchema,
   workspaceArchiveResultSchema,
+  workspacePurgeRequestSchema,
   workspacePurgeReadinessSchema,
   workspaceMemberReadModelSchema,
   workspaceRoleSchema,
   type WorkspaceInvitationReadModel,
   type WorkspaceMemberReadModel,
+  type WorkspacePurgeRequest,
   type WorkspacePurgeReadiness
 } from '@appsea/contracts'
 
@@ -19,6 +21,7 @@ type WorkspaceMembersPanelProps = {
   initialMembers: WorkspaceMemberReadModel[]
   initialInvitations: WorkspaceInvitationReadModel[]
   initialPurgeReadiness: WorkspacePurgeReadiness | null
+  initialPurgeRequest: WorkspacePurgeRequest | null
   canManage: boolean
 }
 
@@ -28,6 +31,7 @@ export function WorkspaceMembersPanel({
   initialMembers,
   initialInvitations,
   initialPurgeReadiness,
+  initialPurgeRequest,
   canManage
 }: WorkspaceMembersPanelProps) {
   const [members, setMembers] = useState(initialMembers)
@@ -41,10 +45,15 @@ export function WorkspaceMembersPanel({
   const [password, setPassword] = useState('')
   const [reauthenticating, setReauthenticating] = useState(false)
   const [archiving, setArchiving] = useState(false)
-  const [purgeReadiness] = useState<WorkspacePurgeReadiness | null>(() =>
+  const [requestingPurge, setRequestingPurge] = useState(false)
+  const [cancelingPurge, setCancelingPurge] = useState(false)
+  const [purgeReadiness, setPurgeReadiness] = useState<WorkspacePurgeReadiness | null>(() =>
     initialPurgeReadiness === null
       ? null
       : workspacePurgeReadinessSchema.parse(initialPurgeReadiness)
+  )
+  const [purgeRequest, setPurgeRequest] = useState<WorkspacePurgeRequest | null>(() =>
+    initialPurgeRequest === null ? null : workspacePurgeRequestSchema.parse(initialPurgeRequest)
   )
 
   async function reauthenticate(event: FormEvent<HTMLFormElement>) {
@@ -211,6 +220,87 @@ export function WorkspaceMembersPanel({
       setError(cause instanceof Error ? cause.message : 'Unable to archive workspace')
     } finally {
       setArchiving(false)
+    }
+  }
+
+  async function requestWorkspacePurge() {
+    if (
+      !reauthenticated ||
+      purgeReadiness?.state !== 'database_ready' ||
+      !window.confirm(
+        'Record a workspace purge request for external review? No data will be deleted by this action.'
+      )
+    ) {
+      return
+    }
+    setRequestingPurge(true)
+    setError(null)
+    try {
+      const response = await fetch(`/api/workspaces/${workspaceId}/purge-request`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ confirmation: 'REQUEST WORKSPACE PURGE' })
+      })
+      const body = (await response.json()) as { data?: unknown; error?: unknown }
+      if (response.status === 428) {
+        setReauthenticated(false)
+        throw new Error('Verify your password before requesting workspace purge')
+      }
+      if (response.status === 409) {
+        const blocked = workspacePurgeReadinessSchema.safeParse(body.data)
+        if (blocked.success) setPurgeReadiness(blocked.data)
+        throw new Error(
+          typeof body.error === 'string'
+            ? body.error
+            : 'Finish the database readiness gates before requesting workspace purge'
+        )
+      }
+      if (!response.ok)
+        throw new Error(
+          typeof body.error === 'string' ? body.error : 'Unable to request workspace purge'
+        )
+      setPurgeRequest(workspacePurgeRequestSchema.parse(body.data))
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : 'Unable to request workspace purge')
+    } finally {
+      setRequestingPurge(false)
+    }
+  }
+
+  async function cancelWorkspacePurge() {
+    if (
+      !reauthenticated ||
+      purgeRequest === null ||
+      purgeRequest.state !== 'awaiting_external_controls' ||
+      !window.confirm('Cancel this workspace purge request? No data will be deleted.')
+    ) {
+      return
+    }
+    setCancelingPurge(true)
+    setError(null)
+    try {
+      const response = await fetch(`/api/workspaces/${workspaceId}/purge-request`, {
+        method: 'DELETE',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          requestId: purgeRequest.requestId,
+          confirmation: 'CANCEL WORKSPACE PURGE'
+        })
+      })
+      const body = (await response.json()) as { data?: unknown; error?: unknown }
+      if (response.status === 428) {
+        setReauthenticated(false)
+        throw new Error('Verify your password before canceling workspace purge')
+      }
+      if (!response.ok)
+        throw new Error(
+          typeof body.error === 'string' ? body.error : 'Unable to cancel workspace purge request'
+        )
+      setPurgeRequest(workspacePurgeRequestSchema.parse(body.data))
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : 'Unable to cancel workspace purge request')
+    } finally {
+      setCancelingPurge(false)
     }
   }
 
@@ -448,6 +538,41 @@ export function WorkspaceMembersPanel({
               .join(', ')}
             .
           </p>
+          {purgeRequest ? (
+            <div className="workspace-purge-request-status">
+              <strong>
+                {purgeRequest.state === 'awaiting_external_controls'
+                  ? 'Purge request recorded for external review'
+                  : 'Purge request canceled'}
+              </strong>
+              <p>
+                {purgeRequest.state === 'awaiting_external_controls'
+                  ? `Request ${purgeRequest.requestId} is waiting for provider-side object, export, and backup controls. AppSea has not deleted data.`
+                  : 'This cancellation only removes the pending intent. It does not restore or delete any data.'}
+              </p>
+              {purgeRequest.state === 'awaiting_external_controls' ? (
+                <button
+                  className="quiet-button"
+                  type="button"
+                  disabled={cancelingPurge || !reauthenticated}
+                  onClick={() => void cancelWorkspacePurge()}
+                >
+                  {cancelingPurge ? 'Canceling…' : 'Cancel purge request'}
+                </button>
+              ) : null}
+            </div>
+          ) : null}
+          {purgeReadiness.state === 'database_ready' &&
+          purgeRequest?.state !== 'awaiting_external_controls' ? (
+            <button
+              className="quiet-button"
+              type="button"
+              disabled={requestingPurge || !reauthenticated}
+              onClick={() => void requestWorkspacePurge()}
+            >
+              {requestingPurge ? 'Recording request…' : 'Request deletion review'}
+            </button>
+          ) : null}
         </section>
       ) : null}
     </>

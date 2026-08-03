@@ -820,6 +820,22 @@ a:focus-visible {
   font-size: 14px;
 }
 
+.workspace-purge-request-status {
+  display: grid;
+  gap: 8px;
+  margin-top: 24px;
+  padding: 16px 18px;
+  border: 1px solid var(--line);
+  background: var(--line-soft);
+}
+
+.workspace-purge-request-status p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.55;
+}
+
 @media (max-width: 720px) {
   .workspace-purge-summary {
     grid-template-columns: repeat(2, minmax(0, 1fr));

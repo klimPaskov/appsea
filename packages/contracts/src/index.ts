@@ -3793,6 +3793,23 @@ export const workspaceArchiveInputSchema = z
   })
   .strict()
 
+export const workspacePurgeRequestInputSchema = z
+  .object({
+    confirmation: z.literal('REQUEST WORKSPACE PURGE')
+  })
+  .strict()
+
+export const workspacePurgeRequestIdSchema = z
+  .string()
+  .regex(/^workspace-purge:[a-f0-9]{32}$/, 'Invalid workspace purge request id')
+
+export const workspacePurgeRequestCancelInputSchema = z
+  .object({
+    requestId: workspacePurgeRequestIdSchema,
+    confirmation: z.literal('CANCEL WORKSPACE PURGE')
+  })
+  .strict()
+
 const workspaceArchivedResultSchema = z
   .object({
     workspaceId: appseaIdentifierSchema,
@@ -3874,6 +3891,42 @@ export const workspacePurgeReadinessSchema = z
         code: 'custom',
         path: ['state'],
         message: 'Purge readiness state must match the observed blockers'
+      })
+    }
+  })
+
+export const workspacePurgeRequestStateSchema = z.enum(['awaiting_external_controls', 'canceled'])
+
+export const workspacePurgeRequestSchema = z
+  .object({
+    workspaceId: appseaIdentifierSchema,
+    requestId: workspacePurgeRequestIdSchema,
+    state: workspacePurgeRequestStateSchema,
+    requestedAt: z.string().datetime(),
+    canceledAt: z.string().datetime().nullable(),
+    readiness: workspacePurgeReadinessSchema
+  })
+  .strict()
+  .superRefine((value, context) => {
+    if (value.state === 'canceled' && value.canceledAt === null) {
+      context.addIssue({
+        code: 'custom',
+        path: ['canceledAt'],
+        message: 'Canceled purge requests must record a cancellation time'
+      })
+    }
+    if (value.state === 'awaiting_external_controls' && value.canceledAt !== null) {
+      context.addIssue({
+        code: 'custom',
+        path: ['canceledAt'],
+        message: 'Active purge requests cannot record a cancellation time'
+      })
+    }
+    if (value.readiness.state !== 'database_ready') {
+      context.addIssue({
+        code: 'custom',
+        path: ['readiness'],
+        message: 'A purge request must snapshot a database-ready workspace'
       })
     }
   })
@@ -5464,11 +5517,18 @@ export type AuthSignInInput = z.infer<typeof authSignInInputSchema>
 export type AuthReauthenticationInput = z.infer<typeof authReauthenticationInputSchema>
 export type AuthAccountDeletionInput = z.infer<typeof authAccountDeletionInputSchema>
 export type WorkspaceArchiveInput = z.infer<typeof workspaceArchiveInputSchema>
+export type WorkspacePurgeRequestInput = z.infer<typeof workspacePurgeRequestInputSchema>
+export type WorkspacePurgeRequestId = z.infer<typeof workspacePurgeRequestIdSchema>
+export type WorkspacePurgeRequestCancelInput = z.infer<
+  typeof workspacePurgeRequestCancelInputSchema
+>
 export type WorkspacePurgeReadinessBlocker = z.infer<typeof workspacePurgeReadinessBlockerSchema>
 export type WorkspacePurgeExternalRequirement = z.infer<
   typeof workspacePurgeExternalRequirementSchema
 >
 export type WorkspacePurgeReadiness = z.infer<typeof workspacePurgeReadinessSchema>
+export type WorkspacePurgeRequestState = z.infer<typeof workspacePurgeRequestStateSchema>
+export type WorkspacePurgeRequest = z.infer<typeof workspacePurgeRequestSchema>
 export type AuthPasswordResetToken = z.infer<typeof authPasswordResetTokenSchema>
 export type AgentAccessToken = z.infer<typeof agentAccessTokenSchema>
 export type AgentAccessTokenScope = z.infer<typeof agentAccessTokenScopeSchema>
