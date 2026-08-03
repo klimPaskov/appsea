@@ -125,6 +125,12 @@ describe('database foundation', () => {
     const quotaMigration = migrations.find((migration) => migration.version === '0011')
     const deletionMigration = migrations.find((migration) => migration.version === '0012')
     const hardeningMigration = migrations.find((migration) => migration.version === '0013')
+    expect(hardeningMigration?.sql).not.toContain(
+      'REVOKE ALL ON FUNCTION appsea.expire_source_quota_reservations(timestamptz, integer)'
+    )
+    expect(hardeningMigration?.sql).toContain(
+      'REVOKE ALL ON FUNCTION appsea.expire_source_quota_reservations(text, timestamptz, integer)'
+    )
     const maintenanceMigration = migrations.find((migration) => migration.version === '0014')
     const deletionIntegrityMigration = migrations.find((migration) => migration.version === '0015')
     const deletionClaimMigration = migrations.find((migration) => migration.version === '0016')

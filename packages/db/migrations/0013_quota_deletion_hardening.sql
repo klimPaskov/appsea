@@ -306,7 +306,6 @@ BEFORE UPDATE OF fixture_files, package_object_ref, deletion_state,
   deletion_tombstone_id ON appsea.plan_package_versions FOR EACH ROW
 EXECUTE FUNCTION appsea.guard_plan_deletion_state();
 
-REVOKE ALL ON FUNCTION appsea.expire_source_quota_reservations(timestamptz, integer) FROM PUBLIC;
 REVOKE ALL ON FUNCTION appsea.expire_source_quota_reservations(text, timestamptz, integer) FROM PUBLIC;
 REVOKE ALL ON FUNCTION appsea.purge_source_quota_reservations(text, timestamptz, integer) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION appsea.expire_source_quota_reservations(text, timestamptz, integer)
