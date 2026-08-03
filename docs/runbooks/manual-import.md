@@ -19,4 +19,4 @@ The campaign must be private, non-fixture, and explicitly include `manual-owner-
 
 Supported columns/keys are `source_record_id` (or `id`), `canonical_locator` (or `url`/`link`), `captured_at`, `published_at`, `query`, `product`, `company`, `feature`, `category`, `text` (or `complaint`/`body`/`message`), and `language`. JSON may be an array or `{ "records": [] }`.
 
-Inspect batches with `GET /api/workspaces/{workspaceId}/imports` or `GET /api/workspaces/{workspaceId}/imports/{batchId}`. Delete with the owner-only `DELETE` endpoint. Deletion is idempotent and returns the number of source tombstones recorded. Do not treat an owner export as broad public coverage, and do not paste secrets or unredacted personal data into an import.
+Inspect batches with `GET /api/workspaces/{workspaceId}/imports` or `GET /api/workspaces/{workspaceId}/imports/{batchId}`. Delete with the owner-only `DELETE` endpoint. Deletion is idempotent, records immediately due retryable source tombstones, and returns the number of tombstones recorded. Do not treat an owner export as broad public coverage, and do not paste secrets or unredacted personal data into an import.
