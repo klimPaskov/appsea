@@ -88,7 +88,7 @@ function fakePool(options: { session?: boolean; expired?: boolean } = {}): {
         return { rows: [{ workspace_id: 'workspace:one', role: 'owner' }], rowCount: 1 }
       }
       if (text.includes('SELECT role')) return { rows: [{ role: 'owner' }], rowCount: 1 }
-      if (text.includes('FROM appsea.workspace_memberships') && text.includes('FOR SHARE')) {
+      if (text.includes('FROM appsea.workspace_memberships')) {
         return { rows: [{ '?column?': 1 }], rowCount: 1 }
       }
       if (text.includes('FROM appsea.workspaces')) {
@@ -271,8 +271,14 @@ function membershipAdminPool(
         else targetRole = nextRole
         return { rows: [], rowCount: 1 }
       }
-      if (text.includes('FROM appsea.workspace_memberships') && text.includes('user_id = $2')) {
+      if (
+        text.includes('FROM appsea.workspace_memberships membership') ||
+        (text.includes('FROM appsea.workspace_memberships') && text.includes('user_id = $2'))
+      ) {
         return { rows: [{ user_id: 'user:owner', role: actorRole }], rowCount: 1 }
+      }
+      if (text.includes('FROM appsea.workspaces')) {
+        return { rows: [{ '?column?': 1 }], rowCount: 1 }
       }
       return { rows: [], rowCount: 0 }
     },
@@ -292,7 +298,7 @@ function stepUpPool(options: { validPassword?: boolean; recent?: boolean } = {})
   const client = {
     query: async (text: string, values: unknown[] = []) => {
       statements.push({ text, values })
-      if (text.includes('SELECT session.session_id, user.password_hash')) {
+      if (text.includes('SELECT session.session_id, app_user.password_hash')) {
         return {
           rows: [
             {
@@ -365,7 +371,7 @@ function workspaceInvitationPool(): {
     query: async (text: string, values: unknown[] = []) => {
       statements.push({ text, values })
       if (text.includes('SELECT role')) return { rows: [{ role: 'owner' }], rowCount: 1 }
-      if (text.includes('FROM appsea.workspace_memberships') && text.includes('FOR SHARE')) {
+      if (text.includes('FROM appsea.workspace_memberships')) {
         return { rows: [{ '?column?': 1 }], rowCount: 1 }
       }
       if (text.includes('FROM appsea.workspaces')) {

@@ -105,6 +105,22 @@ const tombstoneColumns = `
   received_at, processing_started_at, completed_at, affected_object_count,
   attempt_count, next_attempt_at, failure_code, failure_summary`
 
+const qualifiedTombstoneColumns = `
+  tombstone.workspace_id AS workspace_id,
+  tombstone.tombstone_id AS tombstone_id,
+  tombstone.source_id AS source_id,
+  tombstone.source_record_id AS source_record_id,
+  tombstone.reason AS reason,
+  tombstone.state AS state,
+  tombstone.received_at AS received_at,
+  tombstone.processing_started_at AS processing_started_at,
+  tombstone.completed_at AS completed_at,
+  tombstone.affected_object_count AS affected_object_count,
+  tombstone.attempt_count AS attempt_count,
+  tombstone.next_attempt_at AS next_attempt_at,
+  tombstone.failure_code AS failure_code,
+  tombstone.failure_summary AS failure_summary`
+
 export class PostgresDeletionPropagationRepository {
   constructor(private readonly pool: Pool) {}
 
@@ -378,7 +394,7 @@ export class PostgresDeletionPropagationRepository {
          FROM candidate
         WHERE tombstone.workspace_id = candidate.workspace_id
           AND tombstone.tombstone_id = candidate.tombstone_id
-       RETURNING ${tombstoneColumns}`,
+       RETURNING ${qualifiedTombstoneColumns}`,
       [
         workspaceId,
         deletionPropagationLimits.maxAttempts,

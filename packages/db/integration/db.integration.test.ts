@@ -498,7 +498,8 @@ describe.sequential('PostgreSQL fixture persistence lifecycle', () => {
       '0070',
       '0071',
       '0072',
-      '0073'
+      '0073',
+      '0074'
     ])
     expect(secondMigrationResult.applied).toEqual([])
     expect(secondMigrationResult.alreadyApplied).toEqual([
@@ -574,7 +575,8 @@ describe.sequential('PostgreSQL fixture persistence lifecycle', () => {
       '0070',
       '0071',
       '0072',
-      '0073'
+      '0073',
+      '0074'
     ])
   })
 
@@ -669,7 +671,7 @@ describe.sequential('PostgreSQL fixture persistence lifecycle', () => {
     ).rejects.toMatchObject({ code: '42501' })
     await expect(
       servicePool.query(
-        "UPDATE appsea.evidence_records SET normalized_text = 'changed' WHERE false"
+        'UPDATE appsea.evidence_records SET source_item_id = source_item_id WHERE false'
       )
     ).rejects.toMatchObject({ code: '42501' })
     await expect(
@@ -743,7 +745,8 @@ describe.sequential('PostgreSQL fixture persistence lifecycle', () => {
     await withOwnerClient(async (client) => {
       await client.query(
         `UPDATE appsea.maintenance_scheduler_leases
-            SET lease_until = clock_timestamp() - interval '1 second'
+            SET acquired_at = clock_timestamp() - interval '2 seconds',
+                lease_until = clock_timestamp() - interval '1 second'
           WHERE scheduler_name = $1`,
         [schedulerName]
       )
@@ -803,7 +806,8 @@ describe.sequential('PostgreSQL fixture persistence lifecycle', () => {
       const expireLease = withOwnerClient(async (client) => {
         await client.query(
           `UPDATE appsea.maintenance_scheduler_leases
-              SET lease_until = clock_timestamp() - interval '1 second'
+              SET acquired_at = clock_timestamp() - interval '2 seconds',
+                  lease_until = clock_timestamp() - interval '1 second'
             WHERE scheduler_name = $1`,
           [schedulerName]
         )
@@ -3076,7 +3080,6 @@ describe.sequential('PostgreSQL fixture persistence lifecycle', () => {
     )
     persistenceInput.artifact.id = 'research-fixture-workflow-crosswire'
     persistenceInput.artifact.opportunity.id = 'opportunity-workflow-crosswire'
-    persistenceInput.artifact.opportunity.slug = 'workflow-crosswire'
     persistenceInput.artifact.opportunity.name = 'Workflow Crosswire Fixture'
     persistenceInput.planPackage = generatePlanPackage(persistenceInput.artifact, latestAt)
     const ownOutput = await repository.persist(persistenceInput)

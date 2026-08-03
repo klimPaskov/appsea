@@ -194,6 +194,7 @@ export async function withAuthenticatedWorkspaceTransaction<T>(
 ): Promise<T> {
   const validatedUserId = appseaIdentifierSchema.parse(userId)
   const validatedWorkspaceId = appseaIdentifierSchema.parse(workspaceId)
+  const authorizationLock = options.readOnly === true ? '' : ' FOR SHARE'
   return withDatabaseTransaction(
     pool,
     async (client) => {
@@ -202,8 +203,7 @@ export async function withAuthenticatedWorkspaceTransaction<T>(
         `SELECT 1
            FROM appsea.workspace_memberships membership
           WHERE membership.user_id = $1
-            AND membership.workspace_id = $2
-          FOR SHARE`,
+            AND membership.workspace_id = $2${authorizationLock}`,
         [validatedUserId, validatedWorkspaceId]
       )
       if (membership.rowCount !== 1) throw new WorkspaceAuthorizationError()
@@ -213,8 +213,7 @@ export async function withAuthenticatedWorkspaceTransaction<T>(
       const workspace = await client.query(
         `SELECT 1
            FROM appsea.workspaces
-          WHERE workspace_id = $1 AND status = 'active'
-          FOR SHARE`,
+          WHERE workspace_id = $1 AND status = 'active'${authorizationLock}`,
         [validatedWorkspaceId]
       )
       if (workspace.rowCount !== 1) throw new WorkspaceAuthorizationError()

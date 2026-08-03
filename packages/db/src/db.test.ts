@@ -86,7 +86,8 @@ describe('database foundation', () => {
       '0070',
       '0071',
       '0072',
-      '0073'
+      '0073',
+      '0074'
     ])
     expect(migrations[0]?.checksum).toMatch(/^[a-f0-9]{64}$/)
     expect(migrations[0]?.sql).toContain('CREATE TABLE appsea.evidence_records')
@@ -119,6 +120,11 @@ describe('database foundation', () => {
     expect(workspacePurgeMigration?.sql).toContain('CREATE TABLE appsea.workspace_purge_requests')
     expect(workspacePurgeMigration?.sql).toContain('request_workspace_purge')
     expect(workspacePurgeMigration?.sql).toContain('cancel_workspace_purge')
+    const migrationOwnerCompatibilityMigration = migrations.find(
+      (migration) => migration.version === '0074'
+    )
+    expect(migrationOwnerCompatibilityMigration?.sql).toContain('migration_owner_scope')
+    expect(migrationOwnerCompatibilityMigration?.sql).toContain('default_research_run_finished_at')
     const authMigration = migrations.find((migration) => migration.version === '0008')
     const privacyMigration = migrations.find((migration) => migration.version === '0009')
     const retentionMigration = migrations.find((migration) => migration.version === '0010')

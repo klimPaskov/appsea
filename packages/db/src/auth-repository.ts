@@ -1165,11 +1165,11 @@ export class PostgresAuthRepository {
       this.pool,
       async (client) => {
         const result = await client.query<ReauthenticationSessionRow>(
-          `SELECT session.session_id, user.password_hash
+          `SELECT session.session_id, app_user.password_hash
              FROM appsea.auth_sessions session
-             JOIN appsea.users user ON user.user_id = session.user_id
+             JOIN appsea.users app_user ON app_user.user_id = session.user_id
             WHERE session.token_hash = $1
-              AND user.account_state = 'active'
+              AND app_user.account_state = 'active'
               AND session.revoked_at IS NULL
               AND session.expires_at > clock_timestamp()`,
           [sha256(parsedToken.data)]
@@ -1201,9 +1201,9 @@ export class PostgresAuthRepository {
              FROM appsea.auth_sessions
            WHERE token_hash = $1
               AND EXISTS (
-                SELECT 1 FROM appsea.users user
-                 WHERE user.user_id = appsea.auth_sessions.user_id
-                   AND user.account_state = 'active'
+                SELECT 1 FROM appsea.users app_user
+                 WHERE app_user.user_id = appsea.auth_sessions.user_id
+                   AND app_user.account_state = 'active'
               )
               AND revoked_at IS NULL
               AND expires_at > clock_timestamp()
@@ -1319,8 +1319,7 @@ export class PostgresAuthRepository {
         const membership = await client.query<{ role: string }>(
           `SELECT role
              FROM appsea.workspace_memberships
-            WHERE workspace_id = $1 AND user_id = $2
-            FOR SHARE`,
+            WHERE workspace_id = $1 AND user_id = $2`,
           [parsedWorkspaceId, parsedUserId]
         )
         if (membership.rows[0]?.role !== 'owner') throw new WorkspaceAuthorizationError()
@@ -1377,8 +1376,7 @@ export class PostgresAuthRepository {
                       AND plan.package_object_ref IS NOT NULL)
                     AS plan_object_reference_count
              FROM appsea.workspaces workspace
-            WHERE workspace.workspace_id = $1
-            FOR SHARE`,
+            WHERE workspace.workspace_id = $1`,
           [parsedWorkspaceId]
         )
       },
@@ -1479,8 +1477,7 @@ export class PostgresAuthRepository {
         const membership = await client.query<{ role: string }>(
           `SELECT role
              FROM appsea.workspace_memberships
-            WHERE workspace_id = $1 AND user_id = $2
-            FOR SHARE`,
+            WHERE workspace_id = $1 AND user_id = $2`,
           [parsedWorkspaceId, parsedUserId]
         )
         if (membership.rows[0]?.role !== 'owner') throw new WorkspaceAuthorizationError()
@@ -1493,8 +1490,7 @@ export class PostgresAuthRepository {
              FROM appsea.workspace_purge_requests
             WHERE workspace_id = $1
             ORDER BY requested_at DESC, request_id DESC
-            LIMIT 1
-            FOR SHARE`,
+            LIMIT 1`,
           [parsedWorkspaceId]
         )
       },
@@ -1549,11 +1545,11 @@ export class PostgresAuthRepository {
       async (client) => {
         const result = await client.query<SessionRow>(
           `SELECT session.session_id, session.user_id, session.expires_at,
-                  user.email, user.display_name, user.created_at AS user_created_at
+                  app_user.email, app_user.display_name, app_user.created_at AS user_created_at
              FROM appsea.auth_sessions session
-             JOIN appsea.users user ON user.user_id = session.user_id
+             JOIN appsea.users app_user ON app_user.user_id = session.user_id
             WHERE session.token_hash = $1
-              AND user.account_state = 'active'
+              AND app_user.account_state = 'active'
               AND session.revoked_at IS NULL
               AND session.expires_at > clock_timestamp()`,
           [sha256(parsedToken.data)]
@@ -1622,9 +1618,9 @@ export class PostgresAuthRepository {
                   (session.session_id = current_session.session_id) AS is_current
              FROM appsea.auth_sessions session
              JOIN current_session ON current_session.user_id = session.user_id
-             JOIN appsea.users user
-               ON user.user_id = current_session.user_id
-              AND user.account_state = 'active'
+             JOIN appsea.users app_user
+               ON app_user.user_id = current_session.user_id
+              AND app_user.account_state = 'active'
             WHERE session.revoked_at IS NULL
               AND session.expires_at > clock_timestamp()
             ORDER BY is_current DESC, session.last_seen_at DESC, session.session_id
@@ -1852,12 +1848,12 @@ export class PostgresAuthRepository {
         )
         if (actor.rows[0]?.role !== 'owner') throw new WorkspaceMembershipManagementError()
         const result = await client.query<WorkspaceMemberRow>(
-          `SELECT membership.user_id, user.email, user.display_name,
+          `SELECT membership.user_id, app_user.email, app_user.display_name,
                   membership.role, membership.created_at
              FROM appsea.workspace_memberships membership
-             JOIN appsea.users user ON user.user_id = membership.user_id
+             JOIN appsea.users app_user ON app_user.user_id = membership.user_id
             WHERE membership.workspace_id = $1
-            ORDER BY lower(user.email), membership.user_id`,
+            ORDER BY lower(app_user.email), membership.user_id`,
           [workspaceId]
         )
         return result.rows.map(mapWorkspaceMember)
@@ -2207,10 +2203,10 @@ export class PostgresAuthRepository {
     userId: string
   ): Promise<WorkspaceMemberReadModel> {
     const result = await client.query<WorkspaceMemberRow>(
-      `SELECT membership.user_id, user.email, user.display_name,
+      `SELECT membership.user_id, app_user.email, app_user.display_name,
               membership.role, membership.created_at
          FROM appsea.workspace_memberships membership
-         JOIN appsea.users user ON user.user_id = membership.user_id
+         JOIN appsea.users app_user ON app_user.user_id = membership.user_id
         WHERE membership.workspace_id = $1 AND membership.user_id = $2`,
       [workspaceId, userId]
     )
