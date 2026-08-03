@@ -4367,7 +4367,7 @@ describe.sequential('PostgreSQL fixture persistence lifecycle', () => {
       ])
     } finally {
       await withOwnerClient(async (client) => {
-        await client.query("SELECT set_config('appsea.workspace_id', $1, true)", [workspaceId])
+        await client.query("SELECT set_config('appsea.workspace_id', $1, false)", [workspaceId])
         await client.query('DELETE FROM appsea.workspace_purge_manifests WHERE workspace_id = $1', [
           workspaceId
         ])
