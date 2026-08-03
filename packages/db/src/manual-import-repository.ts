@@ -481,8 +481,10 @@ export class PostgresManualImportRepository {
         })
         await client.query(
           `INSERT INTO appsea.deletion_tombstones
-               (workspace_id, tombstone_id, source_id, source_record_id, reason, state, received_at)
-             VALUES ($1, $2, 'manual-owner-import', $3, 'owner-import-batch-deleted', 'pending', $4)
+               (workspace_id, tombstone_id, source_id, source_record_id, reason, state,
+                received_at, next_attempt_at)
+             VALUES ($1, $2, 'manual-owner-import', $3, 'owner-import-batch-deleted', 'pending',
+                     $4, clock_timestamp())
              ON CONFLICT (workspace_id, source_id, source_record_id, reason) DO NOTHING`,
           [workspaceId, tombstoneId, sourceRecordId, occurredAt]
         )
