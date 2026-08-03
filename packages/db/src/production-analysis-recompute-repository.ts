@@ -261,7 +261,7 @@ export class PostgresProductionAnalysisRecomputeRepository {
               )
               AND NOT EXISTS (
                 SELECT 1
-                  FROM appsea.production_analysis_run_outputs output
+                  FROM appsea.research_analysis_run_outputs output
                   JOIN appsea.production_analysis_runs analysis
                     ON analysis.workspace_id = output.workspace_id
                    AND analysis.analysis_run_id = output.analysis_run_id

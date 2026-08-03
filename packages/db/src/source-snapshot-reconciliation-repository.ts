@@ -747,7 +747,7 @@ export class PostgresSourceSnapshotReconciliationRepository {
           const inserted = await client.query(
             `INSERT INTO appsea.deletion_tombstones
                (workspace_id, tombstone_id, source_id, source_record_id,
-                reason, state, received_at)
+                reason, state, received_at, next_attempt_at)
              SELECT item.workspace_id,
                     'tombstone:full-snapshot:' || md5(
                       item.workspace_id || ':' || item.source_id || ':' ||
@@ -757,7 +757,8 @@ export class PostgresSourceSnapshotReconciliationRepository {
                     item.source_record_id,
                     'full-snapshot-reconciliation',
                     'pending',
-                    $4::timestamptz
+                    $4::timestamptz,
+                    clock_timestamp()
               FROM appsea.source_items item
               WHERE item.workspace_id = $1
                 AND item.source_id = $3
