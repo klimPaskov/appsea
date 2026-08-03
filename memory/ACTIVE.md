@@ -90,7 +90,9 @@ memory.
   PostCSS/`fast-uri`/sharp transitive versions, and adds `pnpm security:audit`
   to CI; the production audit currently reports zero vulnerabilities. Turbo
   now runs each package build after its typecheck so clean Linux checkouts do
-  not race Next route-type generation against build cleanup.
+  not race Next route-type generation against build cleanup. GitHub Actions
+  run `30819616149` is green for commit `1cc781c`, including the audit, full
+  verification, fresh PostgreSQL, and fresh Temporal checks.
 
 ## Next production tranche
 

@@ -27,6 +27,9 @@ security controls.
 - Turbo now serializes each package's `build` after its `typecheck`, preventing
   concurrent Next route-type generation/build cleanup from producing a false
   clean-checkout failure.
+- GitHub Actions run `30819616149` passed `pnpm security:audit`, the full
+  verification suite, fresh PostgreSQL persistence, and fresh Temporal
+  workflow checks for commit `1cc781c`.
 
 ## Remaining security scope
 
