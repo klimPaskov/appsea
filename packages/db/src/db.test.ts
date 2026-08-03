@@ -635,6 +635,12 @@ describe('database foundation', () => {
     expect(researchCampaignLifecycleMigration?.sql).toContain("'archived'")
     expect(researchCampaignRefreshMigration?.sql).toContain('refresh_claim_token')
     expect(researchCampaignRefreshMigration?.sql).toContain('refresh_pending_request')
+    expect(researchCampaignRefreshMigration?.sql).toContain(
+      'ALTER TABLE appsea.research_campaigns NO FORCE ROW LEVEL SECURITY'
+    )
+    expect(researchCampaignRefreshMigration?.sql).toContain(
+      'ALTER TABLE appsea.research_campaigns FORCE ROW LEVEL SECURITY'
+    )
     expect(competitorResearchObservationMigration?.sql).toContain(
       'CREATE TABLE appsea.competitor_research_observations'
     )

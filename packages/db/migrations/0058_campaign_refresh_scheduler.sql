@@ -21,6 +21,10 @@ ALTER TABLE appsea.research_campaigns
   ADD COLUMN refresh_failure_summary text,
   ADD COLUMN refresh_updated_at timestamptz;
 
+-- The migration role must backfill existing workspace rows even though this
+-- aggregate is force-RLS protected for runtime callers.
+ALTER TABLE appsea.research_campaigns NO FORCE ROW LEVEL SECURITY;
+
 UPDATE appsea.research_campaigns
    SET refresh_next_due_at = CASE
        WHEN state = 'archived' THEN NULL
@@ -35,6 +39,8 @@ UPDATE appsea.research_campaigns
 
 ALTER TABLE appsea.research_campaigns
   ALTER COLUMN refresh_updated_at SET NOT NULL;
+
+ALTER TABLE appsea.research_campaigns FORCE ROW LEVEL SECURITY;
 
 ALTER TABLE appsea.research_campaigns
   ADD CONSTRAINT research_campaign_refresh_claim_check CHECK (
