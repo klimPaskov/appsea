@@ -73,15 +73,13 @@ memory.
 
 ## Validated commands
 
-- Prior tranches passed the aggregate repository, fresh PostgreSQL, and fresh
-  Temporal CI gates; local Docker Desktop remains unavailable for reruns.
-- Dependency security hardening updates Next.js to `16.2.12`, locks patched
-  PostCSS/`fast-uri`/sharp transitive versions, and adds `pnpm security:audit`
-  to CI; the production audit currently reports zero vulnerabilities. Turbo
-  now runs each package build after its typecheck so clean Linux checkouts do
-  not race Next route-type generation against build cleanup. GitHub Actions
-  run `30819616149` is green for commit `1cc781c`, including the audit, full
-  verification, fresh PostgreSQL, and fresh Temporal checks.
+- OIDC commit `90f0cf2` passed GitHub Actions run `30838396204`, including the
+  fresh PostgreSQL migration `0088` install/upgrade proof, fresh Temporal,
+  aggregate verify/security audit, container smoke, and Windows desktop jobs.
+- Dependency security hardening locks patched Next.js/PostCSS/`fast-uri`/sharp
+  versions and adds `pnpm security:audit`; the production audit reports zero
+  vulnerabilities. GitHub Actions run `30819616149` passed audit, verification,
+  fresh PostgreSQL, and fresh Temporal checks.
 - Production runtime packaging now has `Dockerfile.web` (Next standalone)
   and `Dockerfile.worker` (durable worker/preflight/migration/maintenance)
   images plus `infra/production/compose.yaml`. Compose gates long-lived

@@ -2,7 +2,7 @@
 
 - Start broad work with instructions, memory, and `docs/INDEX.md`.
 - Fixture is the complete persisted path; approved collection is separate/non-synthetic. Leaderboard only.
-- Fixture/collection workflows are package-tested; Temporal/Docker proof and cloud/backup purge remain pending. `0043`/`0044` queue/retry output tombstones.
+- Fixture/collection tested; fresh PostgreSQL/Temporal CI-proven. Prod deployment/crash-drill and cloud/backup purge remain pending. `0043`/`0044` queue/retry output tombstones.
 - `CfpbConnector` is disabled pending legal/privacy/security approval; `StackExchangeConnector` is a disabled candidate for competitor/contrary research; no real source is active.
 - Web auth uses scrypt/revocable sessions, membership-before-RLS, step-up, and TOTP MFA with encrypted secrets, hash recovery codes, expiring challenges, `0081` markers, and `0086`/`0087` rewrap/status. Migration `0088` adds disabled OIDC links/sign-in with reviewed endpoints, private-host checks, state/nonce/PKCE, RS256/verified-email, POST step-up linking, database-bound MFA handoff, success-only telemetry, and closure deletion. Provider approval/delivery, retention/revocation, DNS/egress, provider-backed step-up, deployment review, and non-password-gated mutations remain open.
 - Production collection persists policy-bound evidence, complaints, gaps, cost, and lineage; private reads use `/workspace/:workspaceId/research/:runId`; outputs use filesystem/S3.
