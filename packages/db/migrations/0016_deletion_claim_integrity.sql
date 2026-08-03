@@ -8,7 +8,7 @@
 DROP POLICY IF EXISTS deletion_tombstone_migration_repair ON appsea.deletion_tombstones;
 CREATE POLICY deletion_tombstone_migration_repair ON appsea.deletion_tombstones
   FOR UPDATE
-  TO appsea_owner
+  TO appsea_owner, appsea_migrator
   USING (state = 'processing' AND processing_started_at IS NULL)
   WITH CHECK (state = 'processing' AND processing_started_at IS NOT NULL);
 

@@ -16,7 +16,7 @@ DROP POLICY IF EXISTS deletion_tombstone_retry_migration_repair
 CREATE POLICY deletion_tombstone_retry_migration_repair
   ON appsea.deletion_tombstones
   FOR UPDATE
-  TO appsea_owner
+  TO appsea_owner, appsea_migrator
   USING (true)
   WITH CHECK (true);
 
