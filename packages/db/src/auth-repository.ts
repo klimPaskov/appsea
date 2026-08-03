@@ -1208,8 +1208,8 @@ export class PostgresAuthRepository {
           const nextAttempts = Number(challengeRow.attempt_count) + 1
           await client.query(
             `UPDATE appsea.auth_mfa_challenges
-                SET attempt_count = $2,
-                    locked_until = CASE WHEN $2 >= $3
+                SET attempt_count = $2::integer,
+                    locked_until = CASE WHEN $2::integer >= $3::integer
                       THEN clock_timestamp() + ($4::bigint * interval '1 millisecond')
                       ELSE locked_until END
               WHERE challenge_id = $1`,
