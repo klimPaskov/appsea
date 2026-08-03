@@ -636,6 +636,9 @@ describe('database foundation', () => {
     expect(researchCampaignRefreshMigration?.sql).toContain('refresh_claim_token')
     expect(researchCampaignRefreshMigration?.sql).toContain('refresh_pending_request')
     expect(researchCampaignRefreshMigration?.sql).toContain(
+      'ADD COLUMN refresh_updated_at timestamptz DEFAULT clock_timestamp()'
+    )
+    expect(researchCampaignRefreshMigration?.sql).toContain(
       'ALTER TABLE appsea.research_campaigns NO FORCE ROW LEVEL SECURITY'
     )
     expect(researchCampaignRefreshMigration?.sql).toContain(

@@ -19,7 +19,7 @@ ALTER TABLE appsea.research_campaigns
   ADD COLUMN refresh_last_started_at timestamptz,
   ADD COLUMN refresh_failure_code text,
   ADD COLUMN refresh_failure_summary text,
-  ADD COLUMN refresh_updated_at timestamptz;
+  ADD COLUMN refresh_updated_at timestamptz DEFAULT clock_timestamp();
 
 -- The migration role must backfill existing workspace rows even though this
 -- aggregate is force-RLS protected for runtime callers.

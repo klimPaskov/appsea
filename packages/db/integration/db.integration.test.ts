@@ -497,7 +497,8 @@ describe.sequential('PostgreSQL fixture persistence lifecycle', () => {
       '0069',
       '0070',
       '0071',
-      '0072'
+      '0072',
+      '0073'
     ])
     expect(secondMigrationResult.applied).toEqual([])
     expect(secondMigrationResult.alreadyApplied).toEqual([
@@ -572,7 +573,8 @@ describe.sequential('PostgreSQL fixture persistence lifecycle', () => {
       '0069',
       '0070',
       '0071',
-      '0072'
+      '0072',
+      '0073'
     ])
   })
 
