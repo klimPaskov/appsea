@@ -35,6 +35,7 @@ import {
   authSignUpInputSchema,
   authMfaCodeSchema,
   authMfaDisableInputSchema,
+  authMfaStepUpInputSchema,
   authMfaEnrollmentConfirmInputSchema,
   authMfaEnrollmentReadModelSchema,
   authMfaSignInInputSchema,
@@ -84,6 +85,7 @@ import {
   type AuthSignInSuccessResult,
   type AuthSignUpInput,
   type AuthMfaDisableInput,
+  type AuthMfaStepUpInput,
   type AuthMfaEnrollmentConfirmInput,
   type AuthMfaEnrollmentReadModel,
   type AuthMfaSignInInput,
@@ -1233,7 +1235,7 @@ export class PostgresAuthRepository {
             WHERE challenge_id = $1`,
           [challengeRow.challenge_id, now]
         )
-        await this.insertSession(client, challengeRow.user_id, token, now)
+        await this.insertSession(client, challengeRow.user_id, token, now, now)
         await this.recordMfaEvent(
           client,
           'challenge_succeeded',
@@ -1658,15 +1660,16 @@ export class PostgresAuthRepository {
     client: PoolClient,
     userId: string,
     token: string,
-    now: Date
+    now: Date,
+    mfaAuthenticatedAt: Date | null = null
   ): Promise<void> {
     const expiresAt = new Date(now.getTime() + sessionLifetimeMs)
     await client.query(
       `INSERT INTO appsea.auth_sessions
          (session_id, user_id, token_hash, created_at, expires_at, last_seen_at,
-          last_reauthenticated_at)
-       VALUES ($1, $2, $3, $4, $5, $4, $4)`,
-      [identifier('session'), userId, sha256(token), now, expiresAt]
+          last_reauthenticated_at, last_mfa_reauthenticated_at)
+       VALUES ($1, $2, $3, $4, $5, $4, $4, $6)`,
+      [identifier('session'), userId, sha256(token), now, expiresAt, mfaAuthenticatedAt]
     )
   }
 
@@ -1732,6 +1735,103 @@ export class PostgresAuthRepository {
       { readOnly: true, maxSerializationRetries: 0 }
     )
     return result.rowCount === 1
+  }
+
+  /**
+   * High-risk bearer-token actions require a fresh MFA proof whenever the
+   * account has MFA enabled. Accounts without MFA continue to use the
+   * password step-up boundary alone; enabling MFA therefore strengthens the
+   * existing control without silently locking out accounts that have not
+   * enrolled it yet.
+   */
+  async hasRecentMfaReauthentication(token: string): Promise<boolean> {
+    const parsedToken = authSessionTokenSchema.safeParse(token)
+    if (!parsedToken.success) return false
+    const result = await withDatabaseTransaction(
+      this.pool,
+      (client) =>
+        client.query<{ allowed: boolean }>(
+          `SELECT (
+             NOT EXISTS (
+               SELECT 1
+                 FROM appsea.auth_mfa_totp mfa
+                WHERE mfa.user_id = session.user_id
+                  AND mfa.status = 'enabled'
+             )
+             OR (
+               session.last_mfa_reauthenticated_at IS NOT NULL
+               AND session.last_mfa_reauthenticated_at >
+                   clock_timestamp() - ($2::bigint * interval '1 millisecond')
+             )
+           ) AS allowed
+             FROM appsea.auth_sessions session
+             JOIN appsea.users app_user
+               ON app_user.user_id = session.user_id
+              AND app_user.account_state = 'active'
+            WHERE session.token_hash = $1
+              AND session.revoked_at IS NULL
+              AND session.expires_at > clock_timestamp()
+            LIMIT 1`,
+          [sha256(parsedToken.data), recentReauthenticationWindowMs]
+        ),
+      { readOnly: true, maxSerializationRetries: 0 }
+    )
+    return result.rows[0]?.allowed === true
+  }
+
+  /**
+   * Consume a TOTP or one-time recovery code and mark this session as
+   * recently MFA-authenticated. The session and MFA row are locked together
+   * so a code cannot authorize two concurrent high-risk actions.
+   */
+  async reauthenticateMfaSession(token: string, input: AuthMfaStepUpInput): Promise<void> {
+    const parsedToken = authSessionTokenSchema.safeParse(token)
+    const parsedInput = authMfaStepUpInputSchema.safeParse(input)
+    if (!parsedToken.success || !parsedInput.success) throw new AuthMfaVerificationError()
+    await withDatabaseTransaction(
+      this.pool,
+      async (client) => {
+        const current = await client.query<{ session_id: string; user_id: string }>(
+          `SELECT session.session_id, session.user_id
+             FROM appsea.auth_sessions session
+             JOIN appsea.users app_user
+               ON app_user.user_id = session.user_id
+              AND app_user.account_state = 'active'
+            WHERE session.token_hash = $1
+              AND session.revoked_at IS NULL
+              AND session.expires_at > clock_timestamp()
+            FOR UPDATE OF session`,
+          [sha256(parsedToken.data)]
+        )
+        const currentRow = current.rows[0]
+        if (!currentRow) throw new AuthenticationError()
+
+        const result = await client.query<MfaTotpRow>(
+          `SELECT mfa.user_id, app_user.email, mfa.secret_ciphertext,
+                  mfa.secret_nonce, mfa.secret_tag, mfa.status,
+                  mfa.verified_at, mfa.last_used_step
+             FROM appsea.auth_mfa_totp mfa
+             JOIN appsea.users app_user ON app_user.user_id = mfa.user_id
+            WHERE mfa.user_id = $1
+              AND mfa.status = 'enabled'
+            FOR UPDATE OF mfa`,
+          [currentRow.user_id]
+        )
+        const row = result.rows[0]
+        if (!row) throw new AuthMfaNotEnabledError()
+        if (!(await this.verifyMfaCode(client, row, parsedInput.data.code, Date.now()))) {
+          throw new AuthMfaVerificationError()
+        }
+        await client.query(
+          `UPDATE appsea.auth_sessions
+              SET last_mfa_reauthenticated_at = clock_timestamp(),
+                  last_seen_at = clock_timestamp()
+            WHERE session_id = $1`,
+          [currentRow.session_id]
+        )
+      },
+      { maxSerializationRetries: 0 }
+    )
   }
 
   /**

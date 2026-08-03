@@ -36,7 +36,7 @@ Open `http://localhost:3000` after the web server starts.
 - identifier-only production-analysis workflow v2; the worker reconstructs
   reviewed artifacts inside the activity so complaint text is absent from new
   Temporal histories
-- private workspace authentication with hashed/revocable sessions, authenticated active-session inventory and reauthenticated per-session revocation, password step-up for owner mutations, and membership-checked research reads
+- private workspace authentication with hashed/revocable sessions, authenticated active-session inventory and reauthenticated per-session revocation, password step-up for owner mutations, AppSea-owned TOTP MFA, conditional MFA step-up for agent-token issue/revoke, and membership-checked research reads
 - private workspace cost summaries over the immutable ledger, grouped by currency and cost type with exact micro-unit totals and bounded periods
 - private visibility for settled source-quota requests that lack a completed production result, with maintenance-role-only resolution and no automatic re-fetch
 - lease-owned, read-only quota-reconciliation alert inspection with bounded alert/incomplete/clear events and visible truncated coverage
@@ -46,7 +46,7 @@ Open `http://localhost:3000` after the web server starts.
 - direct CFPB source commands use the same bounded production admission ledger through the `appsea-worker` service principal; they cannot bypass private-workspace, fixture, or source-policy gates
 - owner-scoped invitations for existing AppSea accounts with hash-only tokens, encrypted outbox delivery, acceptance/revocation, and a production kill switch
 - owner-only, step-up-protected workspace archival that blocks active work, preserves research lineage, and records identifier-only lifecycle receipts
-- owner-issued, expiring workspace-scoped agent tokens with hash-only persistence and recent-step-up create/revoke controls
+- owner-issued, expiring workspace-scoped agent tokens with hash-only persistence, recent password step-up, and conditional recent-MFA create/revoke controls
 - authenticated read-only MCP-over-HTTP access to scoped private opportunities, evidence references, source coverage, and approved report/plan artifacts
 - provider-neutral password recovery mechanics with hash-only reset tokens,
   encrypted outbox delivery, fragment links, and a production kill switch
@@ -72,6 +72,6 @@ Open `http://localhost:3000` after the web server starts.
 - automatic activation of generated skills or connectors
 - deployed scheduler ownership, incident routing, and live alert delivery for quota-reconciliation and production-analysis recomputation cases
 - automatic source re-collection, downstream analysis, and report/plan generation after a re-collection
-- deployed MCP secret storage, HTTPS/rate limiting, token-rotation automation, and MFA/OIDC controls
+- deployed MCP secret storage, HTTPS/rate limiting, token-rotation automation, provider-backed MFA/OIDC controls, and identity key rotation
 
 Read `GOAL_PROMPT.md` to start the next implementation goal.

@@ -93,7 +93,8 @@ describe('database foundation', () => {
       '0077',
       '0078',
       '0079',
-      '0080'
+      '0080',
+      '0081'
     ])
     expect(migrations[0]?.checksum).toMatch(/^[a-f0-9]{64}$/)
     expect(migrations[0]?.sql).toContain('CREATE TABLE appsea.evidence_records')
@@ -163,6 +164,11 @@ describe('database foundation', () => {
     expect(authMfaMigration?.sql).toContain('CREATE TABLE appsea.auth_mfa_challenges')
     expect(authMfaMigration?.sql).toContain('purge_auth_mfa_material')
     expect(authMfaMigration?.sql).toContain('pending_enrollments_deleted')
+    const authMfaStepUpMigration = migrations.find((migration) => migration.version === '0081')
+    expect(authMfaStepUpMigration?.sql).toContain('last_mfa_reauthenticated_at')
+    expect(authMfaStepUpMigration?.sql).toContain(
+      'GRANT UPDATE (last_mfa_reauthenticated_at) ON appsea.auth_sessions TO appsea_service'
+    )
     const authMigration = migrations.find((migration) => migration.version === '0008')
     const privacyMigration = migrations.find((migration) => migration.version === '0009')
     const retentionMigration = migrations.find((migration) => migration.version === '0010')

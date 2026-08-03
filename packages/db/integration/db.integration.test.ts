@@ -25,6 +25,7 @@ import {
   migrateDatabase,
   MigrationHistoryError,
   AuthenticationError,
+  AuthMfaVerificationError,
   AuthSessionConflictError,
   WorkspaceMembershipConflictError,
   WorkspaceMembershipManagementError,
@@ -1690,9 +1691,20 @@ describe.sequential('PostgreSQL fixture persistence lifecycle', () => {
       const afterRecovery = await authRepository.readMfaStatus(token)
       expect(afterRecovery.recoveryCodesRemaining).toBe(9)
 
+      await expect(authRepository.hasRecentMfaReauthentication(token)).resolves.toBe(false)
+      await authRepository.reauthenticateMfaSession(token, {
+        code: enrollment.recoveryCodes[1]!
+      })
+      await expect(authRepository.hasRecentMfaReauthentication(token)).resolves.toBe(true)
+      await expect(
+        authRepository.reauthenticateMfaSession(token, {
+          code: enrollment.recoveryCodes[1]!
+        })
+      ).rejects.toBeInstanceOf(AuthMfaVerificationError)
+
       await authRepository.reauthenticateSession(token, { password })
       const disabled = await authRepository.disableMfa(token, {
-        code: enrollment.recoveryCodes[1]!
+        code: enrollment.recoveryCodes[2]!
       })
       expect(disabled.enabled).toBe(false)
       const normalLogin = await authRepository.signIn({ email, password })

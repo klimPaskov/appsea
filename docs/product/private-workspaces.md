@@ -23,6 +23,12 @@ The public AppSea leaderboard is a sparse, synthetic fixture surface. Private re
   `POST /api/auth/reauthenticate` verifies the password without storing it and
   marks the active session as recently reauthenticated for 15 minutes; stale
   mutations receive `428 Recent reauthentication required`.
+- Issuing or revoking an owner-scoped coding-agent bearer additionally requires
+  a fresh MFA step-up when the account has MFA enabled. The same-origin
+  `POST /api/auth/mfa/step-up` endpoint consumes one current TOTP or recovery
+  code and writes only a fifteen-minute session marker; stale token mutations
+  receive `428 Recent MFA verification required`. Accounts without enabled MFA
+  retain the password-only compatibility path.
 - Every workspace read checks membership before setting the database workspace context. A workspace ID in a URL is not an authorization grant.
 - Workspace owners can inspect the private member roster at `/workspace/:workspaceId/members` and
   through `GET /api/workspaces/:workspaceId/members`. Member emails are exposed only to an owner.
@@ -158,8 +164,9 @@ fixture-enabled workspace is provisioned.
 Owner-safe account closure is implemented as a profile/authentication operation; workspace-data,
 object-store, backup, and export deletion remain separate retention work. Production
 identity-provider policy remains open. Recovery and invitation mechanics are implemented behind reviewed provider/identity kill switches; external
-OIDC policy, verified-email policy, provider-backed step-up integration, and enforcement of MFA
-for every high-risk token action remain open. The
+OIDC policy, verified-email policy, provider-backed step-up integration, key
+rotation, and enforcement of MFA for high-risk mutations outside agent-token
+issue/revoke remain open. The
 current password step-up is an application boundary, not a substitute for a production identity
 provider. The current invitation simplification intentionally excludes new-account creation and
 email verification until that identity policy is approved.

@@ -473,17 +473,22 @@ Implemented:
 - authenticated active-session inventory at `/account/security` and same-origin, reauthenticated revocation of another session
 - owner-safe account closure at `/account/security`: recent step-up plus typed confirmation, session/reset revocation, profile anonymization, and workspace-owner blockers while shared research remains retained
 - private workspace opportunity/evidence/report/plan reads behind web API routes
+- migration `0081_auth_mfa_step_up.sql` and the private MFA step-up route now
+  require a fresh second factor before owner agent-token issue/revoke when
+  MFA is enabled; the marker is session-bound and expires with the existing
+  fifteen-minute step-up window
 - private campaign configuration page and list/create/read API with source
   policy readiness metadata and draft-only, non-activating writes
 - public leaderboard remains database-free and explicitly synthetic
 
 Remaining: verified account recovery/delivery policy, production
 secret/session-retention operations, OIDC/verified identity, provider-backed
-step-up, MFA key rotation, and enforcement for every high-risk token action.
-The AppSea-owned TOTP boundary is implemented in migration `0080` with
-encrypted enrollment secrets, hash-only recovery codes, expiring login
-challenges, and account-security routes; external identity-provider operations
-remain separate.
+step-up, MFA key rotation, and enforcement for high-risk mutations outside
+agent-token issue/revoke. The AppSea-owned TOTP boundary is implemented in
+migrations `0080`/`0081` with encrypted enrollment secrets, hash-only recovery
+codes, expiring login challenges, a session-bound MFA step-up marker for
+agent-token mutations, and account-security routes; external
+identity-provider operations remain separate.
 Recovery and invitation mechanics exist behind explicit production kill
 switches; invitations intentionally do not create accounts until identity policy
 is approved.

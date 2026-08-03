@@ -5,6 +5,7 @@ import { GET as readMfaStatus } from './api/auth/mfa/status/route'
 import { POST as beginMfaEnrollment } from './api/auth/mfa/enroll/route'
 import { POST as confirmMfaEnrollment } from './api/auth/mfa/enroll/confirm/route'
 import { DELETE as disableMfa } from './api/auth/mfa/route'
+import { POST as mfaStepUp } from './api/auth/mfa/step-up/route'
 
 const mocks = vi.hoisted(() => ({
   repository: {
@@ -13,6 +14,7 @@ const mocks = vi.hoisted(() => ({
     beginMfaEnrollment: vi.fn(),
     confirmMfaEnrollment: vi.fn(),
     disableMfa: vi.fn(),
+    reauthenticateMfaSession: vi.fn(),
     hasRecentReauthentication: vi.fn()
   },
   allowAuthAttempt: vi.fn(),
@@ -103,6 +105,7 @@ describe('MFA authentication routes', () => {
       recoveryCodesRemaining: 10
     })
     mocks.repository.disableMfa.mockResolvedValue(status)
+    mocks.repository.reauthenticateMfaSession.mockResolvedValue(undefined)
     mocks.repository.completeMfaSignIn.mockResolvedValue({
       mfaRequired: false,
       token: 'b'.repeat(48),
@@ -169,5 +172,29 @@ describe('MFA authentication routes', () => {
     mocks.repository.disableMfa.mockRejectedValue(new AuthMfaVerificationError())
     const invalid = await disableMfa(request('/api/auth/mfa', { code: 'ABCD-EFGH-IJKL-MNOP' }))
     expect(invalid.status).toBe(422)
+  })
+
+  it('requires same-origin authentication and rate limits high-risk MFA step-up', async () => {
+    const response = await mfaStepUp(request('/api/auth/mfa/step-up', { code: '123456' }))
+    expect(response.status).toBe(200)
+    await expect(response.json()).resolves.toEqual({ data: { verified: true } })
+    expect(mocks.repository.reauthenticateMfaSession).toHaveBeenCalledWith(token, {
+      code: '123456'
+    })
+    expect(mocks.allowAuthAttempt).toHaveBeenCalledWith(
+      expect.any(Request),
+      'user@example.com',
+      'mfa'
+    )
+
+    mocks.sameOriginRequest.mockReturnValue(false)
+    const crossOrigin = await mfaStepUp(request('/api/auth/mfa/step-up', { code: '123456' }))
+    expect(crossOrigin.status).toBe(403)
+
+    mocks.sameOriginRequest.mockReturnValue(true)
+    mocks.allowAuthAttempt.mockResolvedValue(false)
+    const limited = await mfaStepUp(request('/api/auth/mfa/step-up', { code: '123456' }))
+    expect(limited.status).toBe(429)
+    expect(mocks.repository.reauthenticateMfaSession).toHaveBeenCalledTimes(1)
   })
 })

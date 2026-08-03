@@ -19,6 +19,8 @@ import {
   authPasswordResetRequestInputSchema,
   authPasswordResetTokenSchema,
   authSignUpInputSchema,
+  authMfaStepUpInputSchema,
+  authMfaStepUpResultSchema,
   authSessionListReadModelSchema,
   authSessionReadModelSchema,
   authSessionSummaryReadModelSchema,
@@ -692,6 +694,16 @@ describe('contracts', () => {
       authPasswordResetAcceptedReadModelSchema.safeParse({ accepted: true, token: 'secret' })
         .success
     ).toBe(false)
+  })
+
+  it('keeps high-risk MFA step-up input and output strict', () => {
+    expect(authMfaStepUpInputSchema.safeParse({ code: '123456' }).success).toBe(true)
+    expect(
+      authMfaStepUpInputSchema.safeParse({ code: '123456', token: 'must-not-be-accepted' }).success
+    ).toBe(false)
+    expect(authMfaStepUpInputSchema.safeParse({ code: 'short' }).success).toBe(false)
+    expect(authMfaStepUpResultSchema.safeParse({ verified: true }).success).toBe(true)
+    expect(authMfaStepUpResultSchema.safeParse({ verified: false }).success).toBe(false)
   })
 
   it('bounds maintenance job inputs and outputs', () => {

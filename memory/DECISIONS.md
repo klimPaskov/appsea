@@ -13,10 +13,9 @@ proof, not production deployment.
 
 ## 2026-08-03: Global-auth TOTP MFA boundary
 
-Global browser TOTP stays outside workspace research: encrypt secrets, store
-only recovery/challenge hashes, and issue sessions only after TOTP/recovery
-verification. Closure removes active MFA; retention is bounded. OIDC, verified
-identity, provider review, key rotation, and high-risk enforcement stay separate.
+Browser TOTP stays outside research: encrypt secrets, store recovery/challenge
+hashes, and issue sessions after verification. Closure removes MFA; OIDC,
+provider, key rotation, and high-risk enforcement stay separate.
 
 ## 2026-07-24: Authenticated private workspaces
 
@@ -356,21 +355,25 @@ Migration `0067` adds an editor/owner-only, run-bound field-redaction receipt.
 The database function retains source identifiers, capture/policy lineage,
 original content hashes, and immutable analysis snapshots while replacing only
 selected current display fields. Private collection, opportunity/leaderboard,
-analysis, report, coding-plan, and export mappers apply the persisted masks;
-stored derived objects are not
-rewritten. A text mask is rejected while a raw source object reference exists,
-so source-policy deletion and cloud/backup purge remain separate reviewed
-operations. The stable generic marker avoids revealing the redaction reason or
-original content, and receipt replay is idempotent with conflict on reuse.
+analysis, report, coding-plan, and export mappers apply persisted masks; stored
+derived objects are not rewritten. Text masking is rejected while a raw source
+object reference exists. Receipt replay is idempotent and conflicts on reuse.
 
 ## 2026-08-03: Persist purge intent without authorizing deletion
 
-Workspace archival and destructive retention are separate boundaries. Migration
-`0073` lets an owner with a recent password step-up record a strict,
-database-ready purge intent with a readiness snapshot and identifier-only
-audit/outbox receipts. The intent remains `awaiting_external_controls` until
-cloud object-store, export-retention, backup-deletion, and provider approval
-are independently verified; it cannot be consumed as a deletion command.
-Repeating an active request is idempotent, and the owner can cancel
-the handoff. This keeps external deletion review visible without creating a
-second unreviewed destructive path.
+Workspace archival and destructive retention are separate. Migration `0073`
+lets an owner with recent password step-up record a strict database-ready purge
+intent with a readiness snapshot and identifier-only receipts. It remains
+`awaiting_external_controls` until cloud object-store, export-retention,
+backup-deletion, and provider approval are verified; it cannot authorize
+deletion. Repeating an active request is idempotent and cancellation is
+explicit.
+
+## 2026-08-03: Require MFA step-up for agent-token mutations
+
+Agent bearer credentials are a high-impact mutation even though MCP reads are
+read-only. Migration `0081` adds a session-bound MFA timestamp; the step-up
+route consumes a TOTP or recovery code before agent-token issue/revoke, while
+the password marker remains required. Accounts without MFA keep the reviewed
+password-only path; provider identity, key rotation, and other high-risk gates
+remain separate.

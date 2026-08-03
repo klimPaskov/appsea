@@ -1,6 +1,9 @@
 # TOTP MFA completion report — 2026-08-03
 
-Status: repository-complete for the AppSea-owned TOTP MFA boundary; external
+Status: repository-complete for the AppSea-owned TOTP MFA boundary; the
+agent-token high-risk follow-on is recorded in
+[`mfa-agent-token-step-up-completion-report-2026-08-03.md`](mfa-agent-token-step-up-completion-report-2026-08-03.md).
+External
 identity-provider, verified-email, delivery/DPA, key-rotation, and production
 identity-operation gates remain open.
 
@@ -46,8 +49,10 @@ identity-operation gates remain open.
 
 - TOTP is an AppSea-owned second factor, not an OIDC provider or verified
   identity system. OIDC, email ownership, provider delivery/DPA, secret
-  rotation, MFA enforcement for every existing high-risk token action, and
-  production identity monitoring still require reviewed deployment controls.
+  rotation, provider-backed step-up, and production identity monitoring still
+  require reviewed deployment controls. Agent-token issue/revoke now has its
+  separate AppSea-owned MFA step-up gate; other high-risk mutations remain
+  separate work.
 - The local Docker Desktop Linux engine is unavailable, so fresh PostgreSQL
   RLS/role execution remains remote-CI evidence.
 - The implementation does not display QR images; the reviewed provisioning URI

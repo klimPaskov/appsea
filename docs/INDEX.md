@@ -80,6 +80,7 @@
 - [`adrs/0011-complaint-analysis-snapshots.md`](adrs/0011-complaint-analysis-snapshots.md)
 - [`adrs/0012-source-policy-review-integrity.md`](adrs/0012-source-policy-review-integrity.md)
 - [`adrs/0013-global-auth-totp-mfa.md`](adrs/0013-global-auth-totp-mfa.md)
+- [`adrs/0014-mfa-step-up-for-agent-tokens.md`](adrs/0014-mfa-step-up-for-agent-tokens.md)
 
 ## Generated references
 
@@ -99,6 +100,7 @@
 - [`status/worker-maintenance-hardening-completion-report.md`](status/worker-maintenance-hardening-completion-report.md)
 - [`status/auth-recovery-completion-report.md`](status/auth-recovery-completion-report.md)
 - [`status/auth-mfa-completion-report-2026-08-03.md`](status/auth-mfa-completion-report-2026-08-03.md)
+- [`status/mfa-agent-token-step-up-completion-report-2026-08-03.md`](status/mfa-agent-token-step-up-completion-report-2026-08-03.md)
 - [`status/workspace-invitation-completion-report.md`](status/workspace-invitation-completion-report.md)
 - [`status/production-readiness-audit-2026-07-25.md`](status/production-readiness-audit-2026-07-25.md)
 - [`status/production-readiness-audit-2026-08-02.md`](status/production-readiness-audit-2026-08-02.md)

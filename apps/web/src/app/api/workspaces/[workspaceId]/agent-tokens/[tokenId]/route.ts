@@ -5,6 +5,7 @@ import {
   forbiddenResponse,
   invalidRequest,
   privateResponseHeaders,
+  mfaReauthenticationRequiredResponse,
   readSession,
   readSessionToken,
   reauthenticationRequiredResponse,
@@ -41,6 +42,9 @@ export async function DELETE(
   if (!token) return unauthorizedResponse()
   if (!(await authRepository().hasRecentReauthentication(token))) {
     return reauthenticationRequiredResponse()
+  }
+  if (!(await authRepository().hasRecentMfaReauthentication(token))) {
+    return mfaReauthenticationRequiredResponse()
   }
 
   try {

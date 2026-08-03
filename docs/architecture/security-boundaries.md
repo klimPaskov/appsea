@@ -6,16 +6,23 @@ Imported evidence is data, never instruction.
 
 Migration `0069_agent_access_tokens.sql` adds the coding-agent boundary. An
 owner can issue a workspace-scoped token only for an active private workspace
-after recent step-up authentication. The token secret is returned once and
-only its SHA-256 hash is stored; forced RLS, owner checks, expiry, revocation,
-and active-user/workspace checks are enforced in PostgreSQL. The HTTP MCP
+after recent password step-up authentication. When the account has MFA enabled,
+migration `0081_auth_mfa_step_up.sql` additionally requires the session's
+recent MFA marker, established only by `POST /api/auth/mfa/step-up`. The token
+secret is returned once and only its SHA-256 hash is stored; forced RLS, owner
+checks, expiry, revocation, and active-user/workspace checks are enforced in
+PostgreSQL. The HTTP MCP
 handler accepts no browser session cookie, verifies the bearer on every
 request, requires the workspace argument/URI to match the token, and filters
 tools by one of five read scopes. It returns only policy-bounded evidence
 representations, provenance, redaction state, coverage gaps, and approved
 non-synthetic report/plan artifacts. No workflow, source activation, policy,
 deployment, credential, or other mutation tool is exposed. Token audit/outbox
-receipts contain identifiers and scope metadata only.
+receipts contain identifiers and scope metadata only. MFA step-up consumes a
+current TOTP or one recovery code without sending the code to the token
+repository or exposing it in a read model. Accounts without enabled MFA remain
+on the password-only compatibility path; enrollment turns on the additional
+gate automatically.
 
 Blocked flows:
 
@@ -308,8 +315,9 @@ for that pre-context authorization lookup.
   OIDC, verified-email policy, and provider-backed step-up remain separate
   review gates. TOTP MFA is now a global-auth boundary: migration `0080` stores
   only encrypted enrollment material, hash-only recovery codes, expiring login
-  challenges, and bounded audit events; password sign-in cannot mint a session
-  until the challenge is consumed. Account recovery is a global-auth boundary:
+  challenges, and bounded audit events; migration `0081` adds a session-bound
+  recent-MFA marker for agent-token issue/revoke; password sign-in cannot mint
+  a session until the challenge is consumed. Account recovery is a global-auth boundary:
   migration `0023` creates hash-only reset rows without runtime grants, while
   migration `0024` adds
   encrypted-token outbox rows, identifier-only security events, latest-only

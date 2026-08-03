@@ -25,6 +25,10 @@ retaining only the non-sensitive event history. The authentication-retention
 worker purges expired/consumed challenges, old event rows, and abandoned
 pending enrollments in its existing bounded maintenance transaction.
 
+Migration `0081_auth_mfa_step_up.sql` adds a nullable
+`auth_sessions.last_mfa_reauthenticated_at` marker. It is updated only after a
+valid code is consumed and is never returned in a session or workspace read.
+
 ## Configuration
 
 Set `APPSEA_AUTH_MFA_ENCRYPTION_KEY` only through the deployment secret
@@ -49,6 +53,25 @@ longer needed before revoking the old key.
 5. Disabling MFA requires both recent password step-up and a current TOTP or
    unused recovery code. The secret and recovery rows are deleted on success.
 
+## High-risk agent-token step-up
+
+Issuing or revoking a workspace-scoped read-only MCP bearer at
+`/api/workspaces/:workspaceId/agent-tokens` requires the existing fifteen-minute
+password step-up. When MFA is enabled for the account, it also requires a fresh
+MFA proof from `POST /api/auth/mfa/step-up`:
+
+```json
+{ "code": "123456" }
+```
+
+The endpoint accepts a current TOTP or one unused recovery code, consumes it at
+the database boundary, and returns only `{ "data": { "verified": true } }`.
+The session marker expires with the same fifteen-minute window. Accounts that
+have not enabled MFA remain protected by the password step-up alone; enabling
+MFA automatically activates the additional gate. A stale or missing proof
+returns `428 Recent MFA verification required`, and a code is never sent to the
+agent-token repository.
+
 Every mutation is same-origin, schema-validated, no-store, and rate-limited.
 Codes are never echoed in errors or logs. Clock synchronization is a
 deployment responsibility; the verifier accepts only a bounded adjacent
@@ -59,12 +82,13 @@ TOTP timestep and rejects a previously used timestep.
 - `packages/db/src/auth-mfa.test.ts` covers base32, RFC 6238 vectors, replay,
   recovery-code normalization, and provisioning URIs.
 - `apps/web/src/app/mfa-routes.test.ts` covers same-origin, step-up, bounded
-  status, challenge rate limiting, enrollment, confirmation, and disable paths.
+  status, challenge rate limiting, enrollment, confirmation, disable, and
+  high-risk agent-token step-up paths.
 - `packages/db/integration/db.integration.test.ts` covers enrollment, a
-  challenged login, recovery-code consumption, and disable behavior when the
-  PostgreSQL integration gate is available.
+  challenged login, recovery-code consumption, MFA step-up replay rejection,
+  and disable behavior when the PostgreSQL integration gate is available.
 - `apps/worker/src/production-preflight.test.ts` covers the production key
   requirement, and authentication retention now reports MFA cleanup counters.
 
 TOTP MFA does not close the remaining OIDC, verified-identity, delivery/DPA,
-key-rotation, or production identity-operations gates.
+key-rotation, provider-backed step-up, or production identity-operations gates.

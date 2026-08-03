@@ -63,6 +63,13 @@ export function reauthenticationRequiredResponse(): Response {
   )
 }
 
+export function mfaReauthenticationRequiredResponse(): Response {
+  return Response.json(
+    { error: 'Recent MFA verification required' },
+    { status: 428, headers: privateResponseHeaders }
+  )
+}
+
 export function forbiddenResponse(): Response {
   return Response.json(
     { error: 'Workspace access denied' },

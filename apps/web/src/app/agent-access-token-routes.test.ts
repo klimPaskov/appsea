@@ -6,6 +6,7 @@ const mocks = vi.hoisted(() => ({
   readSession: vi.fn(),
   readSessionToken: vi.fn(),
   hasRecentReauthentication: vi.fn(),
+  hasRecentMfaReauthentication: vi.fn(),
   create: vi.fn(),
   listForOwner: vi.fn(),
   revoke: vi.fn(),
@@ -21,7 +22,10 @@ vi.mock('@appsea/db/agent-access-token', () => ({
 }))
 
 vi.mock('../server/auth-session', () => ({
-  authRepository: () => ({ hasRecentReauthentication: mocks.hasRecentReauthentication }),
+  authRepository: () => ({
+    hasRecentReauthentication: mocks.hasRecentReauthentication,
+    hasRecentMfaReauthentication: mocks.hasRecentMfaReauthentication
+  }),
   forbiddenResponse: () => Response.json({ error: 'Workspace access denied' }, { status: 403 }),
   invalidRequest: (message: string) => Response.json({ error: message }, { status: 400 }),
   privateResponseHeaders: { 'cache-control': 'private, no-store' },
@@ -29,6 +33,8 @@ vi.mock('../server/auth-session', () => ({
   readSessionToken: mocks.readSessionToken,
   reauthenticationRequiredResponse: () =>
     Response.json({ error: 'Recent reauthentication required' }, { status: 428 }),
+  mfaReauthenticationRequiredResponse: () =>
+    Response.json({ error: 'Recent MFA verification required' }, { status: 428 }),
   sameOriginRequest: () => true,
   unauthorizedResponse: () => Response.json({ error: 'Authentication required' }, { status: 401 })
 }))
@@ -54,6 +60,7 @@ describe('agent access token routes', () => {
     mocks.readSession.mockReset()
     mocks.readSessionToken.mockReset()
     mocks.hasRecentReauthentication.mockReset()
+    mocks.hasRecentMfaReauthentication.mockReset()
     mocks.create.mockReset()
     mocks.listForOwner.mockReset()
     mocks.revoke.mockReset()
@@ -61,6 +68,7 @@ describe('agent access token routes', () => {
     mocks.readSession.mockResolvedValue(session)
     mocks.readSessionToken.mockResolvedValue('session-token')
     mocks.hasRecentReauthentication.mockResolvedValue(true)
+    mocks.hasRecentMfaReauthentication.mockResolvedValue(true)
     mocks.getDatabasePool.mockReturnValue({})
     mocks.listForOwner.mockResolvedValue([
       {
@@ -119,6 +127,28 @@ describe('agent access token routes', () => {
     expect(mocks.create).not.toHaveBeenCalled()
 
     mocks.hasRecentReauthentication.mockResolvedValue(true)
+    mocks.hasRecentMfaReauthentication.mockResolvedValue(false)
+    const mfaBlocked = await POST(
+      new Request('https://appsea.example', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ label: 'Build agent', scopes: ['plans:read'], expiresInDays: 30 })
+      }),
+      { params }
+    )
+    expect(mfaBlocked.status).toBe(428)
+    expect(mocks.create).not.toHaveBeenCalled()
+
+    const revokeMfaBlocked = await DELETE(
+      new Request('https://appsea.example', { method: 'DELETE' }),
+      {
+        params: Promise.resolve({ workspaceId: 'workspace:one', tokenId: 'agent-token:one' })
+      }
+    )
+    expect(revokeMfaBlocked.status).toBe(428)
+    expect(mocks.revoke).not.toHaveBeenCalled()
+
+    mocks.hasRecentMfaReauthentication.mockResolvedValue(true)
     const revoked = await DELETE(new Request('https://appsea.example', { method: 'DELETE' }), {
       params: Promise.resolve({ workspaceId: 'workspace:one', tokenId: 'agent-token:one' })
     })

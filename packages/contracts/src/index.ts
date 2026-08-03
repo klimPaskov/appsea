@@ -3797,6 +3797,17 @@ export const authMfaEnrollmentConfirmInputSchema = z
 
 export const authMfaDisableInputSchema = z.object({ code: authMfaCodeSchema }).strict()
 
+// A high-risk token action may require a fresh MFA proof in addition to the
+// session's password step-up. The code is consumed only at the auth boundary;
+// it is never persisted or returned in a read model.
+export const authMfaStepUpInputSchema = z.object({ code: authMfaCodeSchema }).strict()
+
+export const authMfaStepUpResultSchema = z
+  .object({
+    verified: z.literal(true)
+  })
+  .strict()
+
 export const authMfaSignInInputSchema = z
   .object({
     challengeToken: authMfaChallengeTokenSchema,
@@ -5582,6 +5593,8 @@ export type AuthSignUpInput = z.infer<typeof authSignUpInputSchema>
 export type AuthSignInInput = z.infer<typeof authSignInInputSchema>
 export type AuthMfaEnrollmentConfirmInput = z.infer<typeof authMfaEnrollmentConfirmInputSchema>
 export type AuthMfaDisableInput = z.infer<typeof authMfaDisableInputSchema>
+export type AuthMfaStepUpInput = z.infer<typeof authMfaStepUpInputSchema>
+export type AuthMfaStepUpResult = z.infer<typeof authMfaStepUpResultSchema>
 export type AuthMfaSignInInput = z.infer<typeof authMfaSignInInputSchema>
 export type AuthMfaStatusReadModel = z.infer<typeof authMfaStatusReadModelSchema>
 export type AuthMfaEnrollmentReadModel = z.infer<typeof authMfaEnrollmentReadModelSchema>

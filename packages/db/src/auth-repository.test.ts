@@ -14,6 +14,8 @@ import {
   AuthSessionNotFoundError,
   AuthenticationError,
   AuthPasswordResetError,
+  AuthMfaNotEnabledError,
+  AuthMfaVerificationError,
   PostgresAuthRepository,
   WorkspaceMembershipConflictError,
   WorkspaceMembershipManagementError,
@@ -318,6 +320,58 @@ function stepUpPool(options: { validPassword?: boolean; recent?: boolean } = {})
           rows: options.recent === false ? [] : [{ '?column?': 1 }],
           rowCount: options.recent === false ? 0 : 1
         }
+      }
+      return { rows: [], rowCount: 1 }
+    },
+    release: () => undefined
+  } as unknown as PoolClient
+  return {
+    pool: { connect: async () => client } as unknown as Pool,
+    statements
+  }
+}
+
+function mfaStepUpPool(
+  options: { enabled?: boolean; validCode?: boolean; recent?: boolean } = {}
+): {
+  pool: Pool
+  statements: Array<{ text: string; values: unknown[] }>
+} {
+  const statements: Array<{ text: string; values: unknown[] }> = []
+  const client = {
+    query: async (text: string, values: unknown[] = []) => {
+      statements.push({ text, values })
+      if (text.includes('SELECT session.session_id, session.user_id')) {
+        return { rows: [{ session_id: 'session:one', user_id: 'user:one' }], rowCount: 1 }
+      }
+      if (text.includes('AS allowed')) {
+        return {
+          rows: [{ allowed: options.recent !== false }],
+          rowCount: 1
+        }
+      }
+      if (text.includes('FROM appsea.auth_mfa_totp mfa')) {
+        if (options.enabled === false) return { rows: [], rowCount: 0 }
+        return {
+          rows: [
+            {
+              user_id: 'user:one',
+              email: 'user@example.com',
+              secret_ciphertext: 'ciphertext',
+              secret_nonce: 'nonce-nonce-nonce',
+              secret_tag: 'tag-tag-tag-tag',
+              status: 'enabled',
+              verified_at: '2026-08-03T00:00:00.000Z',
+              last_used_step: null
+            }
+          ],
+          rowCount: 1
+        }
+      }
+      if (text.includes('FROM appsea.auth_mfa_recovery_codes')) {
+        return options.validCode === false
+          ? { rows: [], rowCount: 0 }
+          : { rows: [{ recovery_code_id: 'mfa-recovery:one' }], rowCount: 1 }
       }
       return { rows: [], rowCount: 1 }
     },
@@ -784,6 +838,35 @@ describe('PostgresAuthRepository', () => {
         password: 'correct horse battery staple'
       })
     ).rejects.toBeInstanceOf(AuthenticationError)
+  })
+
+  it('consumes a recovery code for high-risk MFA step-up and keeps the marker private', async () => {
+    const steppedUp = mfaStepUpPool()
+    const repository = new PostgresAuthRepository(steppedUp.pool)
+    await repository.reauthenticateMfaSession('a'.repeat(48), {
+      code: 'ABCD-EFGH-IJKL-MNOP'
+    })
+    await expect(repository.hasRecentMfaReauthentication('a'.repeat(48))).resolves.toBe(true)
+    expect(
+      steppedUp.statements.some((entry) =>
+        entry.text.includes('last_mfa_reauthenticated_at = clock_timestamp()')
+      )
+    ).toBe(true)
+    expect(JSON.stringify(steppedUp.statements)).not.toContain('ABCD-EFGH-IJKL-MNOP')
+
+    await expect(
+      new PostgresAuthRepository(mfaStepUpPool({ validCode: false }).pool).reauthenticateMfaSession(
+        'b'.repeat(48),
+        { code: 'ABCD-EFGH-IJKL-MNOP' }
+      )
+    ).rejects.toBeInstanceOf(AuthMfaVerificationError)
+
+    await expect(
+      new PostgresAuthRepository(mfaStepUpPool({ enabled: false }).pool).reauthenticateMfaSession(
+        'c'.repeat(48),
+        { code: 'ABCD-EFGH-IJKL-MNOP' }
+      )
+    ).rejects.toBeInstanceOf(AuthMfaNotEnabledError)
   })
 
   it('creates hashed single-use reset tokens and revokes sessions on consumption', async () => {
