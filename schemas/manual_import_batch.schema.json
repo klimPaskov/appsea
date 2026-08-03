@@ -1,0 +1,37 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.appsea.local/manual_import_batch.schema.json",
+  "title": "AppSea Owner-Authorized Manual Import Batch",
+  "description": "Normalized tenant-private records staged from an owner-authorized CSV or JSON export. Raw upload bytes are never retained.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "batch_id",
+    "campaign_id",
+    "source_id",
+    "policy_version",
+    "format",
+    "filename",
+    "record_count",
+    "warning_count",
+    "state",
+    "content_hash",
+    "created_at"
+  ],
+  "properties": {
+    "batch_id": { "type": "string", "pattern": "^[a-z][a-z0-9_:-]{2,159}$" },
+    "campaign_id": { "type": "string", "pattern": "^[a-z][a-z0-9_:-]{2,159}$" },
+    "source_id": { "const": "manual-owner-import" },
+    "policy_version": { "const": "manual-owner-import-v1" },
+    "format": { "enum": ["csv", "json"] },
+    "filename": { "type": "string", "minLength": 1, "maxLength": 240 },
+    "record_count": { "type": "integer", "minimum": 1, "maximum": 5000 },
+    "warning_count": { "type": "integer", "minimum": 0, "maximum": 500 },
+    "state": { "enum": ["staged", "consumed", "deleted", "failed"] },
+    "content_hash": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+    "run_id": { "type": ["string", "null"], "pattern": "^[a-z][a-z0-9_:-]{2,159}$" },
+    "created_at": { "type": "string", "format": "date-time" },
+    "consumed_at": { "type": ["string", "null"], "format": "date-time" },
+    "deleted_at": { "type": ["string", "null"], "format": "date-time" }
+  }
+}

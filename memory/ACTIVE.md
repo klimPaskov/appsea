@@ -2,12 +2,14 @@
 
 ## State
 
-AppSea remains a validated fixture product with production-shaped PostgreSQL,
-Temporal, source-policy, private-workspace, report/plan, and maintenance
-boundaries. The public leaderboard is intentionally synthetic and sparse; no
-real source is enabled.
+AppSea remains a validated fixture-first product with production-shaped
+PostgreSQL, Temporal, source-policy, private-workspace, report/plan, and
+maintenance boundaries. The public leaderboard is intentionally synthetic and
+sparse; no third-party public source is enabled. A reviewed internal
+`manual-owner-import` policy now supports tenant-private owner-authorized CSV/
+JSON intake without claiming public market coverage.
 
-Migrations `0027`-`0088` cover policy evidence, collection checkpoints,
+Migrations `0027`-`0089` cover policy evidence, collection checkpoints,
 deletion/recomputation repair, leases, admissions, campaign orchestration and
 cancellation, source reconciliation, analysis history, report/plan governance,
 cost and alert projections, object references, workspace archival/purge intent/
@@ -65,14 +67,18 @@ alert delivery. Migration `0082` adds the scalar operational-alert outbox and
 durable drain. Deployment scheduler ownership, incident routing, provider
 billing, cloud/backup purge, and production topology remain open.
 
-Migrations `0083`-`0087` add the forced-RLS purge manifest, PostgreSQL 18
-archival/read repairs, versioned MFA ciphertext, and identifier-only rewrap
-event. The manifest is a deterministic 24-hour metadata handoff, never a delete
-authorization; provider object/export/backup purge remains open.
-
 Imported complaints, pages, reports, and model output remain untrusted data;
 they cannot update code, skills, instructions, permissions, or repository
 memory.
+
+The current tranche adds `packages/connectors/src/manual-import.ts`,
+`packages/db/src/manual-import-repository.ts`, migration `0089`, private
+`/api/workspaces/:workspaceId/imports` routes, and the manual source policy and
+runbook. Uploads are bounded at 2 MiB/5,000 rows, normalized and PII-scrubbed;
+Temporal receives only a batch identifier. Batch consumption is committed with
+collection persistence, and owner deletion clears staged payloads and emits
+tombstones for existing downstream deletion propagation. URL import is
+intentionally deferred to avoid SSRF and unreviewed third-party acquisition.
 
 ## Validated commands
 
@@ -83,20 +89,9 @@ memory.
   versions and adds `pnpm security:audit`; the production audit reports zero
   vulnerabilities. GitHub Actions run `30819616149` passed audit, verification,
   fresh PostgreSQL, and fresh Temporal checks.
-- Production runtime packaging now has `Dockerfile.web` (Next standalone)
-  and `Dockerfile.worker` (durable worker/preflight/migration/maintenance)
-  images plus `infra/production/compose.yaml`. Compose gates long-lived
-  services on the one-shot preflight, keeps migrations explicit, defaults web
-  binding to loopback, and uses non-root/read-only/capability-dropped
-  services. GitHub Actions run `30822047661` passed both image builds and
-  Compose validation for commit `bd713ee`; external provider provisioning,
-  image signing/registry, and source-policy activation remain blockers. Run
-  `30827192223` passed web liveness/health smoke and fail-closed worker
-  preflight without production settings.
-- Desktop shell has a Tauri hook, Rust lockfile, Windows icon, minimal
-  capability, restrictive CSP, and Windows CI compile. Run `30824653661`
-  passed for `98ef62e`; bundling remains disabled; hosted-origin, updater,
-  signing, notarization, installation, and security evidence remain open.
+- Production runtime packaging and the staged Tauri shell pass their hosted
+  build/boundary checks; provider provisioning, image signing, hosted-origin,
+  updater, notarization, installation, and deployment evidence remain open.
 
 ## Next production tranche
 
@@ -116,7 +111,8 @@ memory.
 
 ## Current blockers
 
-- No real source is active; fixture rankings are not market research.
+- No third-party public source is active; fixture rankings and owner-import
+  evidence are not public market research.
 - Production DB/Temporal, role separation, HA, backups, scheduler ownership,
   endpoint operation, provider recovery/incident routing, alerting, billing, and
   deployment validation remain. The repository outbox and drain are implemented

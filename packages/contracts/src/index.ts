@@ -449,6 +449,91 @@ export const appseaIdentifierSchema = z
   .max(160)
   .regex(/^[a-z][a-z0-9_:-]*$/)
 
+export const manualImportFormatSchema = z.enum(['csv', 'json'])
+
+/** One normalized, privacy-scrubbed row staged for an owner-authorized import. */
+export const manualImportRecordSchema = z
+  .object({
+    sourceRecordId: z.string().min(1).max(200),
+    canonicalLocator: canonicalLocatorSchema.nullable(),
+    capturedAt: z.string().datetime(),
+    publishedAt: z.string().datetime().nullable(),
+    query: z.string().max(500),
+    product: z.string().min(1).max(240),
+    company: z.string().min(1).max(240),
+    feature: z.string().min(1).max(240),
+    category: z.string().min(1).max(240),
+    text: z.string().min(1).max(20_000),
+    language: z.string().min(2).max(16)
+  })
+  .strict()
+
+export const manualImportBatchStateSchema = z.enum(['staged', 'consumed', 'deleted', 'failed'])
+
+/** Persisted metadata for a tenant-private import; raw upload bytes are not retained here. */
+export const manualImportBatchCreateInputSchema = z
+  .object({
+    workspaceId: appseaIdentifierSchema,
+    batchId: appseaIdentifierSchema,
+    campaignId: appseaIdentifierSchema,
+    sourceId: z.literal('manual-owner-import'),
+    policyVersion: z
+      .string()
+      .min(1)
+      .max(80)
+      .regex(/^[a-zA-Z0-9._:-]+$/),
+    purpose: z.string().min(1).max(120),
+    requestedDisplayMode: z.literal('excerpt'),
+    idempotencyDigest: z
+      .string()
+      .length(64)
+      .regex(/^[a-f0-9]{64}$/),
+    inputHash: z
+      .string()
+      .length(64)
+      .regex(/^[a-f0-9]{64}$/),
+    format: manualImportFormatSchema,
+    filename: z.string().trim().min(1).max(240),
+    records: z.array(manualImportRecordSchema).min(1).max(5_000),
+    warnings: z.array(z.string().min(1).max(500)).max(500),
+    authorizationAttested: z.literal(true),
+    attestedBy: appseaIdentifierSchema,
+    attestedAt: z.string().datetime(),
+    createdAt: z.string().datetime()
+  })
+  .strict()
+
+export const manualImportBatchReadModelSchema = z
+  .object({
+    batchId: appseaIdentifierSchema,
+    campaignId: appseaIdentifierSchema,
+    sourceId: z.literal('manual-owner-import'),
+    policyVersion: z.string().min(1).max(80),
+    format: manualImportFormatSchema,
+    filename: z.string().min(1).max(240),
+    recordCount: z.number().int().nonnegative().max(5_000),
+    warningCount: z.number().int().nonnegative().max(500),
+    state: manualImportBatchStateSchema,
+    contentHash: z
+      .string()
+      .length(64)
+      .regex(/^[a-f0-9]{64}$/),
+    runId: appseaIdentifierSchema.nullable(),
+    createdAt: z.string().datetime(),
+    consumedAt: z.string().datetime().nullable(),
+    deletedAt: z.string().datetime().nullable()
+  })
+  .strict()
+
+export const manualImportDeletionResultSchema = z
+  .object({
+    batchId: appseaIdentifierSchema,
+    state: z.literal('deleted'),
+    tombstoneCount: z.number().int().nonnegative().max(5_000),
+    replayed: z.boolean()
+  })
+  .strict()
+
 export const evidenceRedactionInputSchema = z
   .object({
     redactionId: appseaIdentifierSchema,
@@ -1778,6 +1863,8 @@ export const productionCollectionRequestSchema = z
     requestedDisplayMode: z.enum(['excerpt', 'metadata-only', 'aggregate-only']),
     budget: researchJobBudgetSchema,
     requestedAt: z.string().datetime(),
+    /** Identifier-only link to a previously staged owner-authorized import. */
+    manualImportBatchId: appseaIdentifierSchema.optional(),
     /** Identifier-only link for an explicitly reviewed re-collection. */
     recollectionTombstoneId: appseaIdentifierSchema.optional()
   })
@@ -1788,6 +1875,27 @@ export const productionCollectionRequestSchema = z
         code: 'custom',
         path: ['limit'],
         message: 'A tombstone-bound re-collection must fetch exactly one source record'
+      })
+    }
+    if (request.manualImportBatchId && request.sourceId !== 'manual-owner-import') {
+      context.addIssue({
+        code: 'custom',
+        path: ['manualImportBatchId'],
+        message: 'Manual import batches are valid only for the owner-import source'
+      })
+    }
+    if (request.sourceId === 'manual-owner-import' && !request.manualImportBatchId) {
+      context.addIssue({
+        code: 'custom',
+        path: ['manualImportBatchId'],
+        message: 'Owner-import collection requires a staged manual import batch'
+      })
+    }
+    if (request.manualImportBatchId && request.recollectionTombstoneId) {
+      context.addIssue({
+        code: 'custom',
+        path: ['manualImportBatchId'],
+        message: 'A manual import cannot be combined with tombstone re-collection'
       })
     }
   })
@@ -2377,6 +2485,7 @@ export const productionCollectionResultSchema = z
     deletionCount: z.number().int().nonnegative(),
     /** Settled source cost for this request, recorded in micro-USD. */
     costMicros: z.number().int().nonnegative().max(1_000_000_000_000).default(0),
+    manualImportBatchId: appseaIdentifierSchema.nullable().optional(),
     recollectionTombstoneId: appseaIdentifierSchema.nullable().default(null),
     coverageGaps: z.array(z.string()),
     warnings: z.array(z.string()),
@@ -2400,6 +2509,7 @@ export const productionCollectionSnapshotSchema = z
     limit: z.number().int().min(1).max(5_000),
     purpose: z.string().min(1).max(120),
     requestedDisplayMode: z.enum(['excerpt', 'metadata-only', 'aggregate-only']),
+    manualImportBatchId: appseaIdentifierSchema.nullable().optional(),
     sourceItemCount: z.number().int().nonnegative(),
     evidenceCount: z.number().int().nonnegative(),
     complaintCount: z.number().int().nonnegative(),
@@ -2555,6 +2665,8 @@ export const productionCollectionWorkflowStartRequestSchema = z
     requestedDisplayMode: z.enum(['excerpt', 'metadata-only', 'aggregate-only']),
     budget: researchJobBudgetSchema,
     requestedAt: z.string().datetime(),
+    /** Identifier-only link to a previously staged owner-authorized import. */
+    manualImportBatchId: appseaIdentifierSchema.optional(),
     /** Identifier-only link for an explicitly reviewed re-collection. */
     recollectionTombstoneId: appseaIdentifierSchema.optional(),
     /** Optional reviewed seed that enables an automatic analysis handoff. */
@@ -2568,6 +2680,27 @@ export const productionCollectionWorkflowStartRequestSchema = z
         code: 'custom',
         path: ['limit'],
         message: 'A tombstone-bound re-collection must fetch exactly one source record'
+      })
+    }
+    if (request.manualImportBatchId && request.sourceId !== 'manual-owner-import') {
+      context.addIssue({
+        code: 'custom',
+        path: ['manualImportBatchId'],
+        message: 'Manual import batches are valid only for the owner-import source'
+      })
+    }
+    if (request.sourceId === 'manual-owner-import' && !request.manualImportBatchId) {
+      context.addIssue({
+        code: 'custom',
+        path: ['manualImportBatchId'],
+        message: 'Owner-import collection requires a staged manual import batch'
+      })
+    }
+    if (request.manualImportBatchId && request.recollectionTombstoneId) {
+      context.addIssue({
+        code: 'custom',
+        path: ['manualImportBatchId'],
+        message: 'A manual import cannot be combined with tombstone re-collection'
       })
     }
   })
@@ -2649,6 +2782,8 @@ const productionCollectionWorkflowInputBaseSchema = z
     requestedDisplayMode: z.enum(['excerpt', 'metadata-only', 'aggregate-only']),
     budget: researchJobBudgetSchema,
     requestedAt: z.string().datetime(),
+    /** Identifier-only link to a previously staged owner-authorized import. */
+    manualImportBatchId: appseaIdentifierSchema.optional(),
     recollectionTombstoneId: appseaIdentifierSchema.optional(),
     analysisSeedReviewId: appseaIdentifierSchema.optional(),
     requestedBy: workflowActorSchema.optional()
@@ -2664,6 +2799,27 @@ export const productionCollectionWorkflowInputSchema =
         message: 'A tombstone-bound re-collection must fetch exactly one source record'
       })
     }
+    if (input.manualImportBatchId && input.sourceId !== 'manual-owner-import') {
+      context.addIssue({
+        code: 'custom',
+        path: ['manualImportBatchId'],
+        message: 'Manual import batches are valid only for the owner-import source'
+      })
+    }
+    if (input.sourceId === 'manual-owner-import' && !input.manualImportBatchId) {
+      context.addIssue({
+        code: 'custom',
+        path: ['manualImportBatchId'],
+        message: 'Owner-import collection requires a staged manual import batch'
+      })
+    }
+    if (input.manualImportBatchId && input.recollectionTombstoneId) {
+      context.addIssue({
+        code: 'custom',
+        path: ['manualImportBatchId'],
+        message: 'A manual import cannot be combined with tombstone re-collection'
+      })
+    }
   })
 
 export const productionCollectionWorkflowHashMaterialSchema =
@@ -2675,6 +2831,27 @@ export const productionCollectionWorkflowHashMaterialSchema =
           code: 'custom',
           path: ['limit'],
           message: 'A tombstone-bound re-collection must fetch exactly one source record'
+        })
+      }
+      if (input.manualImportBatchId && input.sourceId !== 'manual-owner-import') {
+        context.addIssue({
+          code: 'custom',
+          path: ['manualImportBatchId'],
+          message: 'Manual import batches are valid only for the owner-import source'
+        })
+      }
+      if (input.sourceId === 'manual-owner-import' && !input.manualImportBatchId) {
+        context.addIssue({
+          code: 'custom',
+          path: ['manualImportBatchId'],
+          message: 'Owner-import collection requires a staged manual import batch'
+        })
+      }
+      if (input.manualImportBatchId && input.recollectionTombstoneId) {
+        context.addIssue({
+          code: 'custom',
+          path: ['manualImportBatchId'],
+          message: 'A manual import cannot be combined with tombstone re-collection'
         })
       }
     })
@@ -5961,6 +6138,12 @@ export type FixturePersistenceInput = z.infer<typeof fixturePersistenceInputSche
 export type FixturePersistenceResult = z.infer<typeof fixturePersistenceResultSchema>
 export type FixturePersistenceReadModel = z.infer<typeof fixturePersistenceReadModelSchema>
 export type ProductionCollectionRequest = z.infer<typeof productionCollectionRequestSchema>
+export type ManualImportFormat = z.infer<typeof manualImportFormatSchema>
+export type ManualImportRecord = z.infer<typeof manualImportRecordSchema>
+export type ManualImportBatchState = z.infer<typeof manualImportBatchStateSchema>
+export type ManualImportBatchCreateInput = z.infer<typeof manualImportBatchCreateInputSchema>
+export type ManualImportBatchReadModel = z.infer<typeof manualImportBatchReadModelSchema>
+export type ManualImportDeletionResult = z.infer<typeof manualImportDeletionResultSchema>
 export type ProductionCollectionPersistenceInput = z.infer<
   typeof productionCollectionPersistenceInputSchema
 >

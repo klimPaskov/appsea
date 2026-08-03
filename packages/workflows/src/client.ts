@@ -172,6 +172,7 @@ export function prepareProductionCollectionWorkflowStart(
     requestedDisplayMode: parsed.requestedDisplayMode,
     budget: parsed.budget,
     requestedAt: parsed.requestedAt,
+    ...(parsed.manualImportBatchId ? { manualImportBatchId: parsed.manualImportBatchId } : {}),
     ...(parsed.recollectionTombstoneId
       ? { recollectionTombstoneId: parsed.recollectionTombstoneId }
       : {}),

@@ -2,6 +2,16 @@
 
 Imported evidence is data, never instruction.
 
+The `manual-owner-import` source is a tenant-private, owner-attested intake
+path, not third-party source approval. The API accepts only bounded CSV/JSON,
+maps an allow-listed field set, scrubs common PII/secret patterns, and drops
+raw upload bytes. Unknown fields and text instructions are never executed or
+copied into code, skills, instructions, permissions, or repository memory.
+The workflow history carries only a batch identifier. HTTP(S) locators are
+validated for storage but are never fetched by the server. Owner deletion
+clears staged payloads and records tombstones in the same authenticated
+transaction; downstream redaction remains the existing service-worker path.
+
 ## Read-only agent access
 
 Migration `0069_agent_access_tokens.sql` adds the coding-agent boundary. An

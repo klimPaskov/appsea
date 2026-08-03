@@ -57,6 +57,7 @@ Open `http://localhost:3000` after the web server starts.
 - owner-only, step-up-protected workspace archival that blocks active work, preserves research lineage, and records identifier-only lifecycle receipts
 - owner-issued, expiring workspace-scoped agent tokens with hash-only persistence, recent password step-up, and conditional recent-MFA create/revoke controls
 - authenticated read-only MCP-over-HTTP access to scoped private opportunities, evidence references, source coverage, and approved report/plan artifacts
+- owner-authorized, tenant-private CSV/JSON intake through the `manual-owner-import-v1` policy, with bounded parsing, PII scrubbing, identifier-only Temporal handoff, durable batch consumption, and owner deletion/tombstones; this is not public market coverage and never fetches imported URLs
 - provider-neutral password recovery mechanics with hash-only reset tokens,
   encrypted outbox delivery, fragment links, and a production kill switch
 - native Codex skills and bounded subagents
@@ -67,7 +68,7 @@ Open `http://localhost:3000` after the web server starts.
 
 ## What remains intentionally blocked
 
-- real social source access
+- real social or other third-party public source access (CFPB and Stack Exchange remain disabled pending independent review; owner imports are private and bounded)
 - production identity operations (recovery and invitation mechanics are
   implemented behind provider/identity kill switches; verified email policy,
   delivery approval, OIDC provider approval, and provider policy remain;

@@ -29,15 +29,30 @@ const budget = {
   maxActivityAttempts: 3
 }
 
-const sourceRow = {
+type ConfiguredSource = {
+  source_id: string
+  display_name: string
+  source_type: 'api' | 'manual'
+  lifecycle_state: string
+  policy_version: string
+  policy_state: 'approved' | 'pending_review' | 'expired' | 'revoked'
+  permitted_purposes: string[]
+  display_mode: 'excerpt'
+  policy_enabled: boolean
+  coverage_notes: string[]
+  reviewed_at: string | null
+  expires_at: string | null
+}
+
+const sourceRow: ConfiguredSource = {
   source_id: 'source:cfpb',
   display_name: 'CFPB',
-  source_type: 'api' as const,
+  source_type: 'api',
   lifecycle_state: 'active',
   policy_version: 'cfpb-v1',
-  policy_state: 'pending_review' as 'approved' | 'pending_review' | 'expired' | 'revoked',
+  policy_state: 'pending_review',
   permitted_purposes: ['opportunity-research'],
-  display_mode: 'excerpt' as const,
+  display_mode: 'excerpt',
   policy_enabled: false,
   coverage_notes: ['Pending review'],
   reviewed_at: null,
@@ -63,7 +78,7 @@ class FakeClient {
   readonly statements: string[] = []
   readonly campaigns = new Map<string, ReturnType<typeof campaignRow>>()
 
-  constructor(private readonly configuredSource = sourceRow) {}
+  constructor(private readonly configuredSource: ConfiguredSource = sourceRow) {}
 
   async query<T extends Record<string, unknown>>(text: string, values: unknown[] = []) {
     this.statements.push(text)
@@ -209,6 +224,42 @@ describe('research campaign repository', () => {
     })
 
     expect(result.sources[0]?.enabled).toBe(true)
+  })
+
+  it('requires manual refresh when a campaign uses owner-authorized imports', async () => {
+    const client = new FakeClient({
+      source_id: 'manual-owner-import',
+      display_name: 'Owner-authorized private import',
+      source_type: 'manual',
+      lifecycle_state: 'active',
+      policy_version: 'manual-owner-import-v1',
+      policy_state: 'approved',
+      permitted_purposes: ['opportunity-research'],
+      display_mode: 'excerpt',
+      policy_enabled: true,
+      coverage_notes: ['Tenant-private only'],
+      reviewed_at: now,
+      expires_at: null
+    })
+    const repository = new PostgresResearchCampaignRepository(fakePool(client))
+    await expect(
+      repository.createForUser('user:one', 'workspace:one', {
+        campaignId: 'campaign:manual',
+        name: 'Private import research',
+        purpose: 'opportunity-research',
+        configuration: {
+          ...configuration,
+          sourceIds: ['manual-owner-import'],
+          refreshPolicy: 'daily'
+        },
+        budget
+      })
+    ).rejects.toThrow('require manual refresh')
+    expect(
+      client.statements.some((statement) =>
+        statement.includes('INSERT INTO appsea.research_campaigns')
+      )
+    ).toBe(false)
   })
 
   it('reads legacy workflow campaigns without claiming the new configuration shape', async () => {

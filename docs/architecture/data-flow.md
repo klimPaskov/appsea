@@ -57,6 +57,10 @@ before either status source is queried.
    that retries replay; it contains no source text or personal data.
 4. An approved connector emits bounded observations with source metadata; raw
    provider payloads stop at the connector boundary.
+   The `manual-owner-import` connector is the owner-authorized exception: an
+   authenticated owner first stages normalized, PII-scrubbed CSV/JSON rows in
+   PostgreSQL, and the workflow carries only the staged `manualImportBatchId`.
+   No imported URL is fetched and no raw upload bytes enter Temporal history.
 5. The source registry gate checks the active policy version, purpose, quota,
    display mode, and deletion obligations.
 6. Contracts validate shape and required provenance.
@@ -71,6 +75,10 @@ before either status source is queried.
    identifier travels through the workflow and persistence transaction; the
    deleted row remains historical, and maintenance or quota recovery cannot
    invoke this branch automatically.
+   For an owner import, batch consumption is committed in this same
+   persistence transaction. Owner deletion clears staged payloads and creates
+   source tombstones before the existing deletion propagation worker redacts
+   downstream evidence and outputs.
 9. Workspace editors and owners review active complaint observations through
    the private collection surface. Migration `0032` permits only
    `unreviewed` -> `confirmed`/`rejected` and `confirmed` -> `rejected`

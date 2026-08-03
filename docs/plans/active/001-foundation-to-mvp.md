@@ -25,7 +25,7 @@ Status: production-shaped foundation implemented and validated locally; producti
 
 Implemented:
 
-- PostgreSQL 18 schema and eighty-eight forward, checksummed migrations
+- PostgreSQL 18 schema and eighty-nine forward, checksummed migrations
 - normalized source, evidence, complaint, cluster, competitor, opportunity, score, report, plan, audit, cost, deletion, outbox, and lineage tables
 - no-login owner, separate migrator, and least-privilege runtime role contract
 - forced workspace RLS and transaction-scoped workspace context
@@ -142,6 +142,18 @@ repository permissions and bounded stale-run cancellation.
 The invalidated production-analysis output queue is a deliberate narrow slice:
 it does not claim source-wide retention purge, cloud backup deletion, or
 destructive workspace-closure deletion (archival is separate).
+
+Migration `0089_manual_owner_import.sql` adds the first usable non-fixture
+intake path. An authenticated workspace owner can stage a bounded CSV/JSON
+export after an explicit authority attestation; the connector allow-lists and
+PII-scrubs fields, stores only normalized tenant-private rows, and sends only
+the batch identifier through Temporal. Collection consumes the staged batch in
+the same transaction as source/evidence persistence. Owner deletion clears
+staged payloads and emits existing deletion tombstones. This path is not public
+market coverage, does not fetch imported URLs, and does not activate CFPB,
+Stack Exchange, or any other third-party source. See
+[`manual-import-source-policy.md`](../../product/manual-import-source-policy.md)
+and [`manual-import.md`](../../runbooks/manual-import.md).
 
 Remaining deployment work and the non-fixture object-store integration are
 tracked in `docs/status/known-gaps.md` and are not part of the completed

@@ -12,6 +12,7 @@
   },
   "dependencies": {
     "@appsea/catalog": "workspace:*",
+    "@appsea/connectors": "workspace:*",
     "@appsea/contracts": "workspace:*",
     "@appsea/db": "workspace:*",
     "@appsea/object-store": "workspace:*",

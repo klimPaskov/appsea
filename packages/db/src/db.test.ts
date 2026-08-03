@@ -101,7 +101,8 @@ describe('database foundation', () => {
       '0085',
       '0086',
       '0087',
-      '0088'
+      '0088',
+      '0089'
     ])
     expect(migrations[0]?.checksum).toMatch(/^[a-f0-9]{64}$/)
     expect(migrations[0]?.sql).toContain('CREATE TABLE appsea.evidence_records')
@@ -225,6 +226,14 @@ describe('database foundation', () => {
     expect(authOidcMigration?.sql).toContain("position('@' IN issuer) = 0")
     expect(authOidcMigration?.sql).toContain('oidc_identity_id text')
     expect(authOidcMigration?.sql).toContain('auth_mfa_challenges_oidc_identity_binding_check')
+    const manualImportMigration = migrations.find((migration) => migration.version === '0089')
+    expect(manualImportMigration?.sql).toContain('CREATE TABLE appsea.manual_import_batches')
+    expect(manualImportMigration?.sql).toContain('CREATE TABLE appsea.manual_import_records')
+    expect(manualImportMigration?.sql).toContain('enforce_manual_import_batch_boundary')
+    expect(manualImportMigration?.sql).toContain('manual-owner-import-v1')
+    expect(manualImportMigration?.sql).toContain(
+      'GRANT UPDATE (state, run_id, consumed_at, deleted_at)'
+    )
     const authMigration = migrations.find((migration) => migration.version === '0008')
     const privacyMigration = migrations.find((migration) => migration.version === '0009')
     const retentionMigration = migrations.find((migration) => migration.version === '0010')

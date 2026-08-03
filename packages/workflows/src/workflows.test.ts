@@ -512,6 +512,22 @@ describe.sequential('production collection Temporal workflow', () => {
     })
   })
 
+  it('carries only the staged manual batch identifier into workflow input', () => {
+    const prepared = prepareProductionCollectionWorkflowStart({
+      ...productionRequest,
+      workspaceId: 'workspace-production-manual-test',
+      campaignId: 'campaign-production-manual-test',
+      runId: 'run-production-manual-test',
+      idempotencyKey: 'production-manual-idempotency-key',
+      sourceId: 'manual-owner-import',
+      policyVersion: 'manual-owner-import-v1',
+      manualImportBatchId: 'batch:manual:test',
+      limit: 1
+    })
+    expect(prepared.input.manualImportBatchId).toBe('batch:manual:test')
+    expect(JSON.stringify(prepared.input)).not.toContain('complaint')
+  })
+
   it('accepts and exposes explicit tombstone re-collection lineage', async () => {
     const prepared = prepareProductionCollectionWorkflowStart({
       ...productionRequest,

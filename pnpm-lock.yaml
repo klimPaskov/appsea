@@ -51,6 +51,9 @@ importers:
       '@appsea/catalog':
         specifier: workspace:*
         version: link:../../packages/catalog
+      '@appsea/connectors':
+        specifier: workspace:*
+        version: link:../../packages/connectors
       '@appsea/contracts':
         specifier: workspace:*
         version: link:../../packages/contracts

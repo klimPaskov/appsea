@@ -1,11 +1,12 @@
 import {
   CfpbConnector,
+  ManualImportConnector,
   isProductionConnectorSourceId,
   SourceQuotaReservationReplayError,
   SourceCollectionPreflightDeniedError,
   StackExchangeConnector
 } from '@appsea/connectors'
-import type { SourceQuotaLedger } from '@appsea/connectors'
+import type { ManualImportBatchReader, SourceQuotaLedger } from '@appsea/connectors'
 import {
   productionCollectionRequestSchema,
   type SourcePolicy,
@@ -16,6 +17,7 @@ import {
   contentHash,
   ProductionCollectionLeaseAssertionError,
   PostgresProductionCollectionRepository,
+  PostgresManualImportRepository,
   PostgresSourcePolicyRepository,
   PostgresSourceQuotaRepository,
   PostgresSourceCollectionLeaseRepository,
@@ -38,16 +40,29 @@ interface ProductionConnectorOptions {
   policy: SourcePolicy
   quotaLedger: SourceQuotaLedger
   now: () => string
+  manualImportBatchReader?: ManualImportBatchReader
 }
 
 function createProductionConnector(
   options: ProductionConnectorOptions
-): CfpbConnector | StackExchangeConnector {
+): CfpbConnector | StackExchangeConnector | ManualImportConnector {
   switch (options.policy.sourceId) {
     case 'cfpb-consumer-complaints':
       return new CfpbConnector(options)
     case 'stackexchange-stackoverflow':
       return new StackExchangeConnector(options)
+    case 'manual-owner-import':
+      if (!options.manualImportBatchReader) {
+        throw new ProductionCollectionPolicyDeniedError(
+          'The manual import worker requires its staged batch reader'
+        )
+      }
+      return new ManualImportConnector({
+        policy: options.policy,
+        quotaLedger: options.quotaLedger,
+        now: options.now,
+        batchReader: options.manualImportBatchReader
+      })
     default:
       throw new ProductionCollectionPolicyDeniedError(
         'The production worker has no connector for this source'
@@ -94,6 +109,8 @@ export interface ProductionCollectionOptions {
     idempotencyDigest: string
     inputHash: string
   }
+  /** Test/hosting override for the narrow staged manual-import capability. */
+  manualImportBatchReader?: ManualImportBatchReader
 }
 
 /** Backwards-compatible name for the explicit CFPB command wrapper. */
@@ -139,6 +156,7 @@ export async function runProductionCollection(
       completed.limit === effectiveRequest.limit &&
       completed.purpose === effectiveRequest.purpose &&
       completed.requestedDisplayMode === effectiveRequest.requestedDisplayMode &&
+      completed.manualImportBatchId === (effectiveRequest.manualImportBatchId ?? null) &&
       completed.recollectionTombstoneId === (effectiveRequest.recollectionTombstoneId ?? null)
     if (!matches) {
       throw new Error('Production collection run identity conflicts with a completed result')
@@ -242,7 +260,12 @@ export async function runProductionCollection(
     const connectorOptions = {
       policy: collectible.policy,
       quotaLedger: new PostgresSourceQuotaRepository(pool),
-      now: () => stableObservedAt
+      now: () => stableObservedAt,
+      ...(options.manualImportBatchReader
+        ? { manualImportBatchReader: options.manualImportBatchReader }
+        : effectiveRequest.manualImportBatchId
+          ? { manualImportBatchReader: new PostgresManualImportRepository(pool) }
+          : {})
     }
     const connector = createProductionConnector(connectorOptions)
     const collected = await connector.collect({
@@ -254,6 +277,9 @@ export async function runProductionCollection(
       runId: effectiveRequest.runId,
       policyVersion: effectiveRequest.policyVersion,
       idempotencyKey: effectiveRequest.idempotencyKey,
+      ...(effectiveRequest.manualImportBatchId
+        ? { manualImportBatchId: effectiveRequest.manualImportBatchId }
+        : {}),
       beforeRequest: () =>
         leaseRepository.assertActive(effectiveRequest.workspaceId, leaseId, requestHash),
       ...(recollectionTarget ? { sourceRecordId: recollectionTarget.sourceRecordId } : {})

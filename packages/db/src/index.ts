@@ -65,6 +65,15 @@ export {
   type ProductionCollectionRecollectionTarget
 } from './production-collection-repository'
 export {
+  ManualImportConflictError,
+  ManualImportPermissionError,
+  ManualImportUnavailableError,
+  PostgresManualImportRepository,
+  consumeManualImportBatchInTransaction,
+  type ManualImportBatchConsumeInput,
+  type ManualImportCollectionRead
+} from './manual-import-repository'
+export {
   OpportunitySeedReviewConflictError,
   OpportunitySeedReviewLineageError,
   OpportunitySeedReviewNotFoundError,

@@ -319,6 +319,17 @@ async function validateCampaignSources(
   }
 }
 
+function validateManualImportRefresh(configuration: ResearchCampaignConfiguration): void {
+  if (
+    configuration.sourceIds.includes('manual-owner-import') &&
+    configuration.refreshPolicy !== 'manual'
+  ) {
+    throw new ResearchCampaignSourceError(
+      'Owner-authorized manual imports require manual refresh; a scheduled refresh cannot invent a staged batch'
+    )
+  }
+}
+
 async function readModel(client: PoolClient, row: CampaignRow): Promise<ResearchCampaignReadModel> {
   const sourceIds = sourceIdsFromConfiguration(row.configuration)
   const refreshPolicy = refreshPolicyFromConfiguration(row.configuration)
@@ -414,6 +425,7 @@ export class PostgresResearchCampaignRepository {
           parsedInput.purpose,
           parsedInput.configuration.sourceIds
         )
+        validateManualImportRefresh(parsedInput.configuration)
 
         const existingResult = await client.query<CampaignRow>(
           `${selectCampaignColumns()}
@@ -569,6 +581,7 @@ export class PostgresResearchCampaignRepository {
           parsedInput.purpose,
           parsedInput.configuration.sourceIds
         )
+        validateManualImportRefresh(parsedInput.configuration)
         const requestedHash = campaignContentHash({
           name: parsedInput.name,
           purpose: parsedInput.purpose,

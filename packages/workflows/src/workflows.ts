@@ -488,6 +488,7 @@ function sanitizeProductionCollectionInput(
     'idempotencyDigest',
     'inputHash',
     'limit',
+    'manualImportBatchId',
     'policyVersion',
     'purpose',
     'query',
@@ -502,7 +503,10 @@ function sanitizeProductionCollectionInput(
   ]
   const requiredAllowed = allowed.filter(
     (key) =>
-      key !== 'requestedBy' && key !== 'analysisSeedReviewId' && key !== 'recollectionTombstoneId'
+      key !== 'requestedBy' &&
+      key !== 'analysisSeedReviewId' &&
+      key !== 'manualImportBatchId' &&
+      key !== 'recollectionTombstoneId'
   )
   const allowedKeys = new Set(allowed)
   const hasOnlyAllowedKeys = keys.every((key) => allowedKeys.has(key))

@@ -3,6 +3,8 @@ import { seedComplaints } from '@appsea/catalog'
 import type { Complaint, SourceDeletionEvent, SourcePolicy } from '@appsea/contracts'
 import { complaintSchema, sourceDeletionEventSchema, sourcePolicySchema } from '@appsea/contracts'
 
+export * from './manual-import'
+
 const CFPB_API_BASE_URL =
   'https://www.consumerfinance.gov/data-research/consumer-complaints/search/api/v1/'
 const CFPB_REQUEST_TIMEOUT_MS = 30_000
@@ -58,6 +60,8 @@ export interface CollectionRequest {
   policyVersion?: string
   /** Caller-provided idempotency material; it is hashed before persistence. */
   idempotencyKey?: string
+  /** Identifier-only link to a staged owner-authorized import batch. */
+  manualImportBatchId?: string
   /** Identifier-only exact lookup used by an approved source re-collection. */
   sourceRecordId?: string
   /**
@@ -333,10 +337,64 @@ const stackExchangeSourcePolicy = freezePolicy(
 
 export { stackExchangeSourcePolicy }
 
+/**
+ * Owner-authorized tenant-private imports are the first usable non-fixture
+ * source. This policy covers only data a workspace owner is authorized to
+ * analyze; it deliberately provides no public-market coverage claim and does
+ * not fetch URLs or activate a third-party provider.
+ */
+export const manualOwnerImportSourcePolicy = freezePolicy(
+  sourcePolicySchema.parse({
+    sourceId: 'manual-owner-import',
+    displayName: 'Owner-authorized private import',
+    sourceType: 'manual',
+    enabled: true,
+    policyState: 'approved',
+    permittedPurposes: [
+      'opportunity-research',
+      'customer-authorized-analysis',
+      'development',
+      'testing'
+    ],
+    commercialUse: 'allowed',
+    accessMethod:
+      'Authenticated workspace owner uploads a bounded CSV or JSON export they are authorized to analyze; no server-side URL fetching',
+    retentionDays: 30,
+    deletionRequired: true,
+    attributionRequired: false,
+    displayMode: 'excerpt',
+    coverageNotes: [
+      'Tenant-private owner-authorized evidence only; it is not public market coverage.',
+      'The operator must attest that the workspace is authorized to analyze the imported records.',
+      'Only normalized, PII-scrubbed complaint fields are retained; raw upload bytes are discarded.',
+      'URL fields are retained only as validated HTTP(S) locators and are never fetched by AppSea.',
+      'Deleting a batch clears staged records and propagates tombstones through downstream evidence.'
+    ],
+    reviewedAt: '2026-08-03T00:00:00.000Z',
+    policyOwner: 'AppSea internal source-policy review queue',
+    policyDocumentRef:
+      'https://github.com/klimPaskov/appsea/blob/main/docs/product/manual-import-source-policy.md',
+    expiresAt: '2026-11-03T00:00:00.000Z',
+    quota: {
+      requestsPerMinute: 60,
+      maxRecordsPerRequest: 5_000,
+      maxRecordsPerRun: 5_000,
+      costPerRequestMicros: 0
+    },
+    deletion: {
+      sourceRecordIdField: 'source_record_id',
+      supportsTombstones: true,
+      deletionPollIntervalHours: 0,
+      retentionAction: 'redact'
+    }
+  })
+)
+
 /** Production worker connector identities; fixture sources are intentionally excluded. */
 export const productionConnectorSourceIds = [
   cfpbSourcePolicy.sourceId,
-  stackExchangeSourcePolicy.sourceId
+  stackExchangeSourcePolicy.sourceId,
+  manualOwnerImportSourcePolicy.sourceId
 ] as const
 
 export function isProductionConnectorSourceId(sourceId: string): boolean {

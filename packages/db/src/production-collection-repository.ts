@@ -35,7 +35,12 @@ import {
 import { analyzeComplaint } from '@appsea/research'
 import { contentHash } from './hash'
 import { IdempotencyConflictError, ImmutableRecordConflictError } from './fixture-repository'
-import { withAuthenticatedWorkspaceTransaction, withWorkspaceTransaction } from './transaction'
+import { consumeManualImportBatchInTransaction } from './manual-import-repository'
+import {
+  withAuthenticatedWorkspaceTransaction,
+  withServiceWorkspaceTransaction,
+  withWorkspaceTransaction
+} from './transaction'
 
 export interface ProductionCollectionPersistenceLease {
   leaseId: string
@@ -149,6 +154,7 @@ export interface ProductionCollectionCompletedIdentity {
   limit: number
   purpose: string
   requestedDisplayMode: 'excerpt' | 'metadata-only' | 'aggregate-only'
+  manualImportBatchId: string | null
   recollectionTombstoneId: string | null
 }
 
@@ -248,6 +254,11 @@ function coverageGaps(input: ProductionCollectionPersistenceInput): string[] {
     'This collection covers only the requested source and query route; it is not a statistical sample.',
     'Opportunity clustering, competitor research, contrary-evidence review, deterministic scoring, and report generation have not run for this collection.'
   ]
+  if (input.request.manualImportBatchId) {
+    gaps.push(
+      'This run uses owner-authorized tenant-private import evidence; it does not establish public market coverage or population-level prevalence.'
+    )
+  }
   if (!input.policy.deletion.supportsTombstones) {
     gaps.push(
       'The source has no tombstone feed; deletion absence requires a full-snapshot reconciliation.'
@@ -283,6 +294,7 @@ function buildSnapshot(
     limit: input.request.limit,
     purpose: input.request.purpose,
     requestedDisplayMode: input.request.requestedDisplayMode,
+    manualImportBatchId: input.request.manualImportBatchId ?? null,
     recollectionTombstoneId: input.request.recollectionTombstoneId ?? null,
     sourceItemCount,
     evidenceCount,
@@ -314,6 +326,7 @@ async function resultFromRun(
     complaintCount: snapshot.complaintCount,
     deletionCount: snapshot.deletionCount,
     costMicros: snapshot.costMicros,
+    manualImportBatchId: snapshot.manualImportBatchId,
     recollectionTombstoneId: snapshot.recollectionTombstoneId,
     coverageGaps: snapshot.coverageGaps,
     warnings: snapshot.warnings,
@@ -436,6 +449,7 @@ export class PostgresProductionCollectionRepository {
           limit: snapshot.limit,
           purpose: snapshot.purpose,
           requestedDisplayMode: snapshot.requestedDisplayMode,
+          manualImportBatchId: snapshot.manualImportBatchId ?? null,
           recollectionTombstoneId: snapshot.recollectionTombstoneId
         }
       },
@@ -515,6 +529,9 @@ export class PostgresProductionCollectionRepository {
       requestedDisplayMode: snapshot.requestedDisplayMode,
       budget: researchJobBudgetSchema.parse(campaign.budget),
       requestedAt: asIso(run.requested_at),
+      ...(snapshot.manualImportBatchId
+        ? { manualImportBatchId: snapshot.manualImportBatchId }
+        : {}),
       ...(snapshot.recollectionTombstoneId
         ? { recollectionTombstoneId: snapshot.recollectionTombstoneId }
         : {})
@@ -773,7 +790,10 @@ export class PostgresProductionCollectionRepository {
     })
 
     try {
-      return await withWorkspaceTransaction(
+      const transaction = parsed.request.manualImportBatchId
+        ? withServiceWorkspaceTransaction
+        : withWorkspaceTransaction
+      return await transaction(
         this.pool,
         parsed.request.workspaceId,
         async (client) => {
@@ -937,6 +957,9 @@ export class PostgresProductionCollectionRepository {
                 policyVersion: parsed.request.policyVersion,
                 query: parsed.request.query,
                 requestedDisplayMode: parsed.request.requestedDisplayMode,
+                ...(parsed.request.manualImportBatchId
+                  ? { manualImportBatchId: parsed.request.manualImportBatchId }
+                  : {}),
                 ...(parsed.request.recollectionTombstoneId
                   ? { recollectionTombstoneId: parsed.request.recollectionTombstoneId }
                   : {})
@@ -1216,6 +1239,17 @@ export class PostgresProductionCollectionRepository {
                 deletion.observedAt
               ]
             )
+          }
+
+          if (parsed.request.manualImportBatchId) {
+            await consumeManualImportBatchInTransaction(client, {
+              workspaceId: parsed.request.workspaceId,
+              batchId: parsed.request.manualImportBatchId,
+              campaignId: parsed.request.campaignId,
+              policyVersion: parsed.request.policyVersion,
+              runId: parsed.request.runId,
+              observedAt: parsed.observedAt
+            })
           }
 
           const sourceItemCount = await countRows(

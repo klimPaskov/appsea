@@ -3,6 +3,7 @@ import { sourcePolicySchema } from '@appsea/contracts'
 import {
   CfpbConnector,
   FixtureConnector,
+  ManualImportConnector,
   SourceCollectionPreflightDeniedError,
   SourceQuotaExceededError,
   SourceQuotaReservationReplayError,
@@ -12,9 +13,11 @@ import {
   assertPolicyAllowsCollection,
   cfpbSourcePolicy,
   fixtureSourcePolicy,
+  manualOwnerImportSourcePolicy,
   mapStackExchangeQuestion,
   mapCfpbRecord,
   isProductionConnectorSourceId,
+  parseManualImportContent,
   productionConnectorSourceIds,
   stackExchangeSourcePolicy,
   syncCfpbDeletions
@@ -58,10 +61,12 @@ describe('connector policy gate', () => {
   it('exposes only reviewed production connector identities to the worker registry', () => {
     expect(productionConnectorSourceIds).toEqual([
       'cfpb-consumer-complaints',
-      'stackexchange-stackoverflow'
+      'stackexchange-stackoverflow',
+      'manual-owner-import'
     ])
     expect(isProductionConnectorSourceId('cfpb-consumer-complaints')).toBe(true)
     expect(isProductionConnectorSourceId('stackexchange-stackoverflow')).toBe(true)
+    expect(isProductionConnectorSourceId('manual-owner-import')).toBe(true)
     expect(isProductionConnectorSourceId('fixture-community-feed')).toBe(false)
   })
 
@@ -75,6 +80,88 @@ describe('connector policy gate', () => {
     expect(result.complaints.length).toBeGreaterThan(0)
     expect(result.complaints.every((entry) => entry.synthetic)).toBe(true)
     expect(result.costMicros).toBe(0)
+  })
+
+  it('normalizes bounded owner CSV imports and scrubs personal data without fetching URLs', () => {
+    const parsed = parseManualImportContent(
+      'source_record_id,text,canonical_locator,captured_at\n' +
+        'ticket-1,"Email me at jane@example.com; token=secret-value",https://example.com/ticket/1,2026-08-01',
+      { format: 'csv', defaultQuery: 'support export', now: '2026-08-03T00:00:00.000Z' }
+    )
+    expect(parsed.records).toHaveLength(1)
+    expect(parsed.records[0]).toMatchObject({
+      sourceRecordId: 'ticket-1',
+      canonicalLocator: 'https://example.com/ticket/1',
+      capturedAt: '2026-08-01T00:00:00.000Z'
+    })
+    expect(parsed.records[0]?.text).not.toContain('jane@example.com')
+    expect(parsed.records[0]?.text).toContain('[redacted-email]')
+    expect(parsed.warnings).toContain('AppSea does not fetch URLs from imported records.')
+  })
+
+  it('skips malformed owner JSON rows while retaining valid provenance', () => {
+    const parsed = parseManualImportContent(
+      JSON.stringify([
+        { id: 'one', text: 'A valid complaint', captured_at: '2026-08-01T00:00:00Z' },
+        { id: 'two', text: '', captured_at: 'not-a-date' }
+      ]),
+      { format: 'json', now: '2026-08-03T00:00:00.000Z' }
+    )
+    expect(parsed.records).toHaveLength(1)
+    expect(parsed.rejectedCount).toBe(1)
+    expect(parsed.warnings.some((warning) => warning.includes('Row 2 rejected'))).toBe(true)
+  })
+
+  it('collects staged owner records through a lease-checked connector', async () => {
+    let leaseChecks = 0
+    const connector = new ManualImportConnector({
+      batchReader: {
+        async readForCollection() {
+          return {
+            records: [
+              {
+                sourceRecordId: 'ticket-1',
+                canonicalLocator: null,
+                capturedAt: '2026-08-01T00:00:00.000Z',
+                publishedAt: null,
+                query: 'support export',
+                product: 'Imported product',
+                company: 'Imported company',
+                feature: 'handoff',
+                category: 'workflow',
+                text: 'The handoff history disappears.',
+                language: 'en'
+              }
+            ],
+            warnings: ['batch warning']
+          }
+        }
+      },
+      now: () => '2026-08-03T00:00:00.000Z',
+      policy: { ...manualOwnerImportSourcePolicy, expiresAt: null }
+    })
+    const result = await connector.collect({
+      query: 'support export',
+      limit: 1,
+      purpose: 'opportunity-research',
+      requestedDisplayMode: 'excerpt',
+      workspaceId: 'workspace:one',
+      runId: 'run:manual-1',
+      policyVersion: 'manual-owner-import-v1',
+      manualImportBatchId: 'batch:one',
+      beforeRequest: async () => {
+        leaseChecks += 1
+        return true
+      }
+    })
+    expect(leaseChecks).toBe(1)
+    expect(result.complaints[0]).toMatchObject({
+      sourceId: 'manual-owner-import',
+      synthetic: false,
+      redacted: true,
+      allowedRepresentation: 'excerpt'
+    })
+    expect(result.warnings).toContain('batch warning')
   })
 
   it('fails closed for an unapproved purpose', () => {

@@ -76,6 +76,14 @@ The public AppSea leaderboard is a sparse, synthetic fixture surface. Private re
   provenance, and content hashes remain available for traceability. A narrative mask cannot be
   applied while a raw source object reference remains. Source deletion, object-store/export purge,
   backups, and downstream re-analysis are separate reviewed operations.
+- Workspace owners can stage an authorized CSV/JSON export at
+  `/api/workspaces/:workspaceId/imports` after selecting a private production
+  campaign that includes `manual-owner-import`. The endpoint bounds the upload,
+  ignores unknown fields, scrubs common PII/secret patterns, discards raw bytes,
+  and starts a durable identifier-only collection workflow. Batch metadata is
+  private; owner deletion clears staged rows and creates deletion tombstones.
+  Owner imports are not public market coverage, and AppSea never fetches their
+  URL fields.
 
 ## Research detail
 
