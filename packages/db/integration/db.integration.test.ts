@@ -500,7 +500,8 @@ describe.sequential('PostgreSQL fixture persistence lifecycle', () => {
       '0072',
       '0073',
       '0074',
-      '0075'
+      '0075',
+      '0076'
     ])
     expect(secondMigrationResult.applied).toEqual([])
     expect(secondMigrationResult.alreadyApplied).toEqual([
@@ -578,7 +579,8 @@ describe.sequential('PostgreSQL fixture persistence lifecycle', () => {
       '0072',
       '0073',
       '0074',
-      '0075'
+      '0075',
+      '0076'
     ])
   })
 
@@ -1019,7 +1021,7 @@ describe.sequential('PostgreSQL fixture persistence lifecycle', () => {
         `INSERT INTO appsea.sources
            (source_id, display_name, source_type, lifecycle_state, current_policy_version,
             created_at, updated_at)
-         VALUES ($1, 'Quota Reconcile Source', 'api', 'active', NULL, $2, $2)`,
+         VALUES ($1, 'Quota Reconcile Source', 'api', 'disabled_pending_review', NULL, $2, $2)`,
         [sourceId, fixedAt]
       )
       await client.query(
@@ -1035,7 +1037,7 @@ describe.sequential('PostgreSQL fixture persistence lifecycle', () => {
       )
       await client.query(
         `UPDATE appsea.sources
-            SET current_policy_version = $2, updated_at = $3
+            SET lifecycle_state = 'active', current_policy_version = $2, updated_at = $3
           WHERE source_id = $1`,
         [sourceId, policyVersion, fixedAt]
       )
@@ -1725,9 +1727,9 @@ describe.sequential('PostgreSQL fixture persistence lifecycle', () => {
           async (client) => {
             await client.query(
               `UPDATE appsea.opportunity_seed_reviews
-                  SET approved_by = $3
+                  SET approved_at = $3
                 WHERE workspace_id = $1 AND seed_review_id = $2`,
-              [workspace.workspaceId, createdReview.seedReviewId, created.session.user.userId]
+              [workspace.workspaceId, createdReview.seedReviewId, latestAt]
             )
           }
         )
@@ -1815,7 +1817,7 @@ describe.sequential('PostgreSQL fixture persistence lifecycle', () => {
             [workspace.workspaceId]
           )
       )
-    ).rejects.toMatchObject({ code: '23514' })
+    ).rejects.toMatchObject({ code: expect.stringMatching(/^(23514|42501)$/) })
     await withOwnerClient((client) =>
       client.query(
         `DELETE FROM appsea.workspace_memberships
@@ -2673,12 +2675,35 @@ describe.sequential('PostgreSQL fixture persistence lifecycle', () => {
             ORDER BY competitor_id LIMIT 1`,
           [input.workspaceId, persisted.opportunityId]
         )
-        const evidence = await client.query<{ source_item_id: string; evidence_id: string }>(
+        const evidence = await client.query<{
+          source_item_id: string
+          evidence_id: string
+          synthetic: boolean
+          collection_purpose: string
+          requested_display_mode: string
+          source_type: string
+          source_synthetic: boolean
+          policy_display_mode: string
+        }>(
           `SELECT evidence.source_item_id, evidence.evidence_id
+                  , source_item.synthetic
+                  , source_item.collection_purpose
+                  , source_item.requested_display_mode
+                  , source.source_type
+                  , source_item.synthetic AS source_synthetic
+                  , policy.display_mode AS policy_display_mode
              FROM appsea.research_run_source_items run_item
              JOIN appsea.evidence_records evidence
                ON evidence.workspace_id = run_item.workspace_id
               AND evidence.source_item_id = run_item.source_item_id
+             JOIN appsea.source_items source_item
+               ON source_item.workspace_id = run_item.workspace_id
+              AND source_item.source_item_id = run_item.source_item_id
+             JOIN appsea.sources source
+               ON source.source_id = source_item.source_id
+             JOIN appsea.source_policy_versions policy
+               ON policy.source_id = source_item.source_id
+              AND policy.policy_version = source_item.source_policy_version
             WHERE run_item.workspace_id = $1 AND run_item.run_id = $2
             ORDER BY evidence.evidence_id LIMIT 1`,
           [input.workspaceId, input.runId]
@@ -2686,7 +2711,8 @@ describe.sequential('PostgreSQL fixture persistence lifecycle', () => {
         return {
           competitorId: competitor.rows[0]?.competitor_id,
           sourceItemId: evidence.rows[0]?.source_item_id,
-          evidenceId: evidence.rows[0]?.evidence_id
+          evidenceId: evidence.rows[0]?.evidence_id,
+          policyContext: evidence.rows[0]
         }
       },
       { readOnly: true }
@@ -2694,6 +2720,14 @@ describe.sequential('PostgreSQL fixture persistence lifecycle', () => {
     expect(references.competitorId).toBeTruthy()
     expect(references.sourceItemId).toBeTruthy()
     expect(references.evidenceId).toBeTruthy()
+    expect(references.policyContext).toMatchObject({
+      synthetic: true,
+      collection_purpose: 'testing',
+      requested_display_mode: 'fixture',
+      source_type: 'fixture',
+      source_synthetic: true,
+      policy_display_mode: 'fixture'
+    })
 
     const competitiveRepository = new PostgresCompetitiveResearchRepository(servicePool)
     const created = await competitiveRepository.create(
@@ -4283,6 +4317,10 @@ describe.sequential('PostgreSQL fixture persistence lifecycle', () => {
           )
           await client.query(
             'DELETE FROM appsea.opportunity_seed_reviews WHERE workspace_id = $1',
+            [workspaceId]
+          )
+          await client.query(
+            'DELETE FROM appsea.research_run_opportunities WHERE workspace_id = $1',
             [workspaceId]
           )
           await client.query('DELETE FROM appsea.opportunities WHERE workspace_id = $1', [

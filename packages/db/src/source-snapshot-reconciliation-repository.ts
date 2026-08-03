@@ -163,6 +163,15 @@ const snapshotJobColumns = `
   source_record_count, deletion_count, coverage_gaps, warnings, failure_code,
   failure_summary, finished_at, next_attempt_at, updated_at`
 
+const qualifiedSnapshotJobColumns = `
+  job.workspace_id, job.reconciliation_id, job.source_id, job.policy_version,
+  job.idempotency_key, job.input_hash, job.requested_by_actor_type,
+  job.requested_by_actor_id, job.page_size, job.max_records, job.requested_at,
+  job.state, job.attempt_count, job.claim_token_hash, job.claim_expires_at,
+  job.observed_at, job.next_offset, job.pages_scanned, job.source_record_count,
+  job.deletion_count, job.coverage_gaps, job.warnings, job.failure_code,
+  job.failure_summary, job.finished_at, job.next_attempt_at, job.updated_at`
+
 function iso(value: Date | string | null): string | null {
   if (value === null) return null
   return value instanceof Date ? value.toISOString() : new Date(value).toISOString()
@@ -552,7 +561,7 @@ export class PostgresSourceSnapshotReconciliationRepository {
            FROM candidate
           WHERE job.workspace_id = candidate.workspace_id
             AND job.reconciliation_id = candidate.reconciliation_id
-         RETURNING ${snapshotJobColumns}`,
+         RETURNING ${qualifiedSnapshotJobColumns}`,
         parameters
       )
       const row = claimed.rows[0]

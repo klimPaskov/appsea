@@ -88,7 +88,8 @@ describe('database foundation', () => {
       '0072',
       '0073',
       '0074',
-      '0075'
+      '0075',
+      '0076'
     ])
     expect(migrations[0]?.checksum).toMatch(/^[a-f0-9]{64}$/)
     expect(migrations[0]?.sql).toContain('CREATE TABLE appsea.evidence_records')
@@ -130,6 +131,10 @@ describe('database foundation', () => {
     expect(invitationRlsMigration?.sql).toContain('ALTER POLICY workspace_invitation_owner_scope')
     expect(invitationRlsMigration?.sql).toContain(
       'ALTER TABLE appsea.workspace_invitation_deliveries FORCE ROW LEVEL SECURITY'
+    )
+    const admissionReadGrantMigration = migrations.find((migration) => migration.version === '0076')
+    expect(admissionReadGrantMigration?.sql).toContain(
+      'production_analysis_workflow_admissions TO appsea_service'
     )
     const authMigration = migrations.find((migration) => migration.version === '0008')
     const privacyMigration = migrations.find((migration) => migration.version === '0009')

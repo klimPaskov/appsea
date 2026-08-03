@@ -210,8 +210,7 @@ async function insertCheckpoint(
   const existing = await client.query<StoredCheckpointHashRow>(
     `SELECT content_hash
        FROM appsea.workflow_job_checkpoints
-      WHERE workspace_id = $1 AND workflow_id = $2 AND checkpoint_key = $3
-      FOR SHARE`,
+      WHERE workspace_id = $1 AND workflow_id = $2 AND checkpoint_key = $3`,
     [checkpoint.workspaceId, checkpoint.execution.workflowId, checkpoint.checkpointKey]
   )
   if (existing.rows[0]) {
