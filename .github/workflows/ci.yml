@@ -4,9 +4,17 @@ on:
   push:
   pull_request:
 
+permissions:
+  contents: read
+
+concurrency:
+  group: appsea-ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   verify:
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
@@ -17,12 +25,11 @@ jobs:
           node-version: 22
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      - run: pnpm agents:sync
-      - run: pnpm check
-      - run: pnpm build
+      - run: pnpm verify
 
   persistence:
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
@@ -37,6 +44,7 @@ jobs:
 
   workflows:
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4

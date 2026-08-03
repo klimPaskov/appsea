@@ -91,6 +91,12 @@ memory.
   from the private read function. GitHub Actions run `30800490289` is green
   for verify/build, fresh PostgreSQL persistence, and fresh Temporal workflow
   checks on commit `a20bb1d`. Local Docker Desktop remains unavailable.
+- The CI release-proof tranche updates `.github/workflows/ci.yml` to run the
+  full `pnpm verify` aggregate (including fixture, sample, build, route smoke,
+  and repository checks), grants only `contents: read`, cancels stale runs per
+  ref, and bounds each job to 30 minutes. The pre-change GitHub Actions run
+  `30801121625` is green for commit `c41818d`; the first post-change run is
+  pending and must prove the new aggregate job.
 
 ## Next production tranche
 

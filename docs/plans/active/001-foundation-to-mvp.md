@@ -25,7 +25,7 @@ Status: production-shaped foundation implemented and validated locally; producti
 
 Implemented:
 
-- PostgreSQL 18 schema and eighty-three forward, checksummed migrations
+- PostgreSQL 18 schema and eighty-five forward, checksummed migrations
 - normalized source, evidence, complaint, cluster, competitor, opportunity, score, report, plan, audit, cost, deletion, outbox, and lineage tables
 - no-login owner, separate migrator, and least-privilege runtime role contract
 - forced workspace RLS and transaction-scoped workspace context
@@ -118,6 +118,14 @@ and manifest ID make replay idempotent; the database-generated manifest expires
 after 24 hours, and audit/outbox receipts store only identifiers, hash, count,
 and expiry. The manifest is metadata for external coordination, not approval
 and not a delete command.
+
+Migrations `0084_workspace_archival_function_qualification.sql` and
+`0085_workspace_purge_manifest_read_only.sql` are append-only PostgreSQL 18
+repairs: the first qualifies the archival function's workspace predicates, and
+the second keeps the private manifest read compatible with a read-only
+transaction. The CI release workflow now runs the complete `pnpm verify`
+fixture/build/route-smoke proof with read-only repository permissions and
+bounded stale-run cancellation.
 
 The invalidated production-analysis output queue is a deliberate narrow slice:
 it does not claim source-wide retention purge, cloud backup deletion, or
