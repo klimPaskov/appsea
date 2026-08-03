@@ -459,6 +459,22 @@ GRANT EXECUTE ON FUNCTION appsea.purge_operational_alerts(timestamptz, integer)
 -- alert scans and the durable outbox drain without editing released history.
 -- The old functions remain available for legacy callers.
 
+ALTER TABLE appsea.maintenance_scheduler_runs
+  DROP CONSTRAINT maintenance_scheduler_runs_scheduler_name_check;
+ALTER TABLE appsea.maintenance_scheduler_runs
+  ADD CONSTRAINT maintenance_scheduler_runs_scheduler_name_check CHECK (
+    scheduler_name IN (
+      'appsea-source-maintenance-v1',
+      'appsea-auth-maintenance-v1',
+      'appsea-auth-recovery-v1',
+      'appsea-workspace-invitations-v1',
+      'appsea-source-quota-alerts-v1',
+      'appsea-production-analysis-recompute-alerts-v1',
+      'appsea-workspace-cost-alerts-v1',
+      'appsea-operational-alert-delivery-v1'
+    )
+  );
+
 CREATE OR REPLACE FUNCTION appsea.is_allowed_maintenance_scheduler_name(
   p_scheduler_name text
 )
