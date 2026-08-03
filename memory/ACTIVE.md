@@ -7,7 +7,7 @@ Temporal, source-policy, private-workspace, report/plan, and maintenance
 boundaries. The public leaderboard is intentionally synthetic and sparse; no
 real source is enabled.
 
-Migrations `0027`-`0083` cover policy evidence, collection checkpoints,
+Migrations `0027`-`0084` cover policy evidence, collection checkpoints,
 deletion/recomputation repair, leases, admissions, campaign orchestration and
 cancellation, source reconciliation, analysis history, report/plan governance,
 cost and alert projections, object references, workspace archival/purge intent/
@@ -53,7 +53,9 @@ exhaustion, retention purge, and a durable `alerts:deliver` drain. Deployment
 scheduler ownership, incident routing, provider billing, cloud/backup purge,
 and production topology remain open.
 
-Migration `0083` adds an archived-owner, forced-RLS purge-manifest boundary.
+Migrations `0083`-`0084` add an archived-owner, forced-RLS purge-manifest
+boundary and repair the PostgreSQL 18 archival-function qualification exposed
+when the manifest integration fixture archives a workspace.
 `PostgresAuthRepository.prepareWorkspacePurgeManifest` inventories sorted,
 deduplicated object URI/kind pairs from persisted source/report/plan and
 production-analysis references, hashes the canonical workspace/object list,
@@ -83,8 +85,10 @@ memory.
 - The purge-manifest slice passes contracts (94), database (138), and web (147)
   focused suites plus affected typechecks and lints locally. Migration `0083`
   adds archived-owner integration coverage for deterministic replay, read
-  authorization, and identifier-only receipts. A fresh PostgreSQL CI rerun is
-  pending; local Docker Desktop remains unavailable.
+  authorization, and identifier-only receipts; migration `0084` repairs the
+  PostgreSQL 18 archival predicate discovered by that fixture. The first
+  fresh PostgreSQL CI run failed on the pre-repair ambiguity; a rerun is
+  pending. Local Docker Desktop remains unavailable.
 
 ## Next production tranche
 

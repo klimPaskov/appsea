@@ -360,13 +360,13 @@ explicit.
 ## 2026-08-04: Keep purge manifests metadata-only and provider-neutral
 
 Migration `0083` stores one deterministic, expiring inventory per workspace
-and object-list hash after archival. The repository gathers only persisted
-object URI/kind references, deduplicates them, and records identifier-only
-audit/outbox receipts. Owner membership, password step-up, MFA step-up, forced
-RLS, and an exact confirmation protect the web boundary. The manifest is a
-coordination artifact for separately operated object-store/export/backup
-controls; it cannot authorize or perform deletion, refresh an expired replay,
-or contain object bodies, source payloads, or credentials.
+and object-list hash after archival. Migration `0084` repairs PostgreSQL 18
+output-column qualification in `archive_workspace`. The repository gathers
+only persisted object URI/kind references, deduplicates them, and records
+identifier-only audit/outbox receipts. Owner membership, password step-up,
+MFA step-up, forced RLS, and confirmation protect the web boundary. The
+manifest coordinates separately operated object-store/export/backup controls;
+it cannot authorize deletion or contain bodies, source payloads, or credentials.
 
 ## 2026-08-03: Require conditional MFA for password-gated mutations
 

@@ -2,7 +2,8 @@
 
 ## Current state
 
-Migration `0083_workspace_purge_manifests.sql`, contracts, repository methods,
+Migrations `0083_workspace_purge_manifests.sql` and
+`0084_workspace_archival_function_qualification.sql`, contracts, repository methods,
 private API, and owner members-page controls implement a deterministic,
 24-hour, metadata-only purge manifest for archived workspaces. Object URIs are
 sorted/deduplicated and validated against the workspace; no bodies, source
@@ -21,7 +22,9 @@ the exact confirmation phrase.
 
 ## Remaining work
 
-Run the full repository checks and push for the fresh PostgreSQL/Temporal CI
-gate. Local Docker Desktop's Linux engine is unavailable. Provider object,
-export, and backup retention operations, manifest consumption, and a reviewed
-destructive purge workflow remain external blockers.
+The first fresh PostgreSQL CI run exposed a PostgreSQL 18 ambiguity in the
+pre-existing `archive_workspace` function; migration `0084` qualifies its
+workspace predicates. Run the full repository checks and push for the fresh
+PostgreSQL/Temporal CI gate again. Local Docker Desktop's Linux engine is
+unavailable. Provider object, export, and backup retention operations, manifest
+consumption, and a reviewed destructive purge workflow remain external blockers.

@@ -11,6 +11,9 @@ Status: repository slice implemented; external retention operation remains open.
   direct-table revocation, validation triggers, owner/archived checks,
   idempotent security-definer create/read functions, and identifier-only
   audit/outbox receipts.
+- Added corrective migration `0084_workspace_archival_function_qualification.sql`
+  after PostgreSQL 18 exposed an ambiguous `workspace_id` output-column
+  reference in the pre-existing archival function.
 - Added repository methods that collect and deduplicate persisted source,
   report, plan, and production-analysis object references without reading
   object bodies or provider credentials.
@@ -25,9 +28,12 @@ Status: repository slice implemented; external retention operation remains open.
 - `pnpm --filter @appsea/db test` — 138 tests passed.
 - `pnpm --filter @appsea/web test` — 147 tests passed.
 - Affected package typechecks and lints passed.
-- Docker-backed PostgreSQL integration was not rerun locally because the
-  Docker Desktop Linux engine is unavailable. CI fresh-install/upgrade proof
-  is required before treating migration `0083` as remotely validated.
+- Focused suites and affected typechecks/lints passed locally. The first fresh
+  PostgreSQL CI run failed in the archival setup path on the PostgreSQL 18
+  ambiguity fixed by migration `0084`; Docker-backed integration cannot be
+  rerun locally because the Docker Desktop Linux engine is unavailable. A
+  fresh CI rerun is required before treating migrations `0083`-`0084` as
+  remotely validated.
 
 ## Deliberate simplifications and remaining blockers
 

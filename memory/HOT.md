@@ -14,7 +14,7 @@
   Owner purge requests remain `awaiting_external_controls`; no destructive
   operation is wired. Deployment ownership/alerting and cloud/backup remain
   open.
-- Migration `0083` adds an archived-owner, 24-hour, metadata-only purge manifest of deduplicated workspace object URI/kind pairs; it is private/idempotent and never authorizes deletion.
+- Migrations `0083`-`0084` add the archived-owner metadata-only purge manifest and PostgreSQL 18 archival repair; it is private/idempotent and never authorizes deletion.
 - Re-collection is explicit: matching tombstone, `limit: 1`, exact lookup,
   immutable lineage, no automatic retry/refetch.
 - Web/worker share fail-closed Temporal config; production requires TLS/API-key/namespace/CA. Maintenance uses `0046` leases/`0052` fencing; direct source commands use `0051`; deployment alerting, role rotation, recovery, and proof remain open.
