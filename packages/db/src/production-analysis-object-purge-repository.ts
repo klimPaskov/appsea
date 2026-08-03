@@ -62,7 +62,7 @@ export interface ProductionAnalysisObjectPurgeResult {
 
 const columns = `
   workspace_id, purge_id, analysis_run_id, object_uri, object_kind, object_ref,
-  authorization, requested_at, eligible_at, state, attempt_count,
+  "authorization", requested_at, eligible_at, state, attempt_count,
   processing_started_at, completed_at, next_attempt_at, failure_code, failure_summary`
 
 function identifier(value: string, label: string): string {

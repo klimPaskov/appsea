@@ -532,6 +532,7 @@ describe('database foundation', () => {
     expect(productionAnalysisObjectPurgeMigration?.sql).toContain(
       'enqueue_invalidated_production_analysis_objects'
     )
+    expect(productionAnalysisObjectPurgeMigration?.sql).toContain('"authorization" text')
     expect(productionAnalysisObjectPurgeMigration?.sql).toContain('FORCE ROW LEVEL SECURITY')
     expect(retryableDeletionMigration?.sql).toContain('deletion_tombstone_attempt_count_check')
     expect(retryableDeletionMigration?.sql).toContain(

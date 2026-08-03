@@ -15,7 +15,7 @@ CREATE TABLE appsea.production_analysis_object_purge_jobs (
     object_kind IN ('report-json', 'plan-package', 'workflow-artifact')
   ),
   object_ref jsonb NOT NULL,
-  authorization text NOT NULL CHECK (authorization = 'retention-expired'),
+  "authorization" text NOT NULL CHECK ("authorization" = 'retention-expired'),
   requested_at timestamptz NOT NULL,
   eligible_at timestamptz NOT NULL,
   state text NOT NULL CHECK (
@@ -91,7 +91,7 @@ BEGIN
     retention_until := NULLIF(object_ref->>'retentionUntil', '')::timestamptz;
     INSERT INTO appsea.production_analysis_object_purge_jobs
       (workspace_id, purge_id, analysis_run_id, object_uri, object_kind, object_ref,
-       authorization, requested_at, eligible_at, state, next_attempt_at)
+       "authorization", requested_at, eligible_at, state, next_attempt_at)
     VALUES
       (NEW.workspace_id,
        'object-purge:' || md5(NEW.workspace_id || ':' || object_uri),
