@@ -47,6 +47,10 @@ shape passed; a non-zero exit means the deployment must not proceed.
 - Recovery and invitation switches accept only `true` or `false`. Enabling
   either requires the 32-byte encryption key and HTTPS signed-delivery gateway
   configuration; leaving both disabled keeps delivery kill-switched.
+- `APPSEA_AUTH_MFA_ENCRYPTION_KEY` is always required in production and must be
+  a separate 32-byte base64url key. It encrypts TOTP enrollment secrets; rotate
+  it through the deployment secret manager with an explicit re-enrollment or
+  key-migration plan, because the application never stores plaintext secrets.
 - An optional trusted-proxy secret must be exactly 32 bytes in base64url form.
 
 The web readiness endpoint remains the live dependency check: it verifies

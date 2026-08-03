@@ -17,6 +17,9 @@ export interface WorkerEvent {
   rateLimitsDeleted?: number
   passwordResetTokensDeleted?: number
   workspaceInvitationsDeleted?: number
+  mfaChallengesDeleted?: number
+  mfaEventsDeleted?: number
+  mfaPendingEnrollmentsDeleted?: number
   passwordResetDeliveriesClaimed?: number
   passwordResetDeliveriesSent?: number
   passwordResetDeliveriesFailed?: number
@@ -151,6 +154,15 @@ export function workerEventPayload(event: WorkerEvent): WorkerEventPayload {
       : {}),
     ...(finiteInteger(event.workspaceInvitationsDeleted) !== undefined
       ? { workspaceInvitationsDeleted: finiteInteger(event.workspaceInvitationsDeleted) }
+      : {}),
+    ...(finiteInteger(event.mfaChallengesDeleted) !== undefined
+      ? { mfaChallengesDeleted: finiteInteger(event.mfaChallengesDeleted) }
+      : {}),
+    ...(finiteInteger(event.mfaEventsDeleted) !== undefined
+      ? { mfaEventsDeleted: finiteInteger(event.mfaEventsDeleted) }
+      : {}),
+    ...(finiteInteger(event.mfaPendingEnrollmentsDeleted) !== undefined
+      ? { mfaPendingEnrollmentsDeleted: finiteInteger(event.mfaPendingEnrollmentsDeleted) }
       : {}),
     ...(finiteInteger(event.passwordResetDeliveriesClaimed) !== undefined
       ? { passwordResetDeliveriesClaimed: finiteInteger(event.passwordResetDeliveriesClaimed) }

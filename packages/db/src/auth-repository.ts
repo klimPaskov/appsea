@@ -31,7 +31,14 @@ import {
   authSessionReadModelSchema,
   authSignInInputSchema,
   authSignInResultSchema,
+  authSignInSuccessResultSchema,
   authSignUpInputSchema,
+  authMfaCodeSchema,
+  authMfaDisableInputSchema,
+  authMfaEnrollmentConfirmInputSchema,
+  authMfaEnrollmentReadModelSchema,
+  authMfaSignInInputSchema,
+  authMfaStatusReadModelSchema,
   authSessionTokenSchema,
   fixtureResearchArtifactSchema,
   opportunityReportSchema,
@@ -74,7 +81,13 @@ import {
   type WorkspacePurgeReadiness,
   type AuthSignInInput,
   type AuthSignInResult,
+  type AuthSignInSuccessResult,
   type AuthSignUpInput,
+  type AuthMfaDisableInput,
+  type AuthMfaEnrollmentConfirmInput,
+  type AuthMfaEnrollmentReadModel,
+  type AuthMfaSignInInput,
+  type AuthMfaStatusReadModel,
   type WorkspaceEvidenceReadModel,
   type EvidenceRedactionMask,
   type WorkspaceMemberReadModel,
@@ -96,6 +109,15 @@ import { decodeOpportunityReport, decodePlanPackage } from '@appsea/reports'
 import type { ObjectStore } from '@appsea/object-store'
 import { sha256 } from './hash'
 import {
+  buildMfaOtpAuthUri,
+  generateMfaRecoveryCodes,
+  generateMfaSecret,
+  hashMfaRecoveryCode,
+  isMfaRecoveryCode,
+  verifyMfaTotpCode,
+  normalizeMfaCode
+} from './auth-mfa'
+import {
   WorkspaceAuthorizationError,
   withAuthenticatedWorkspaceTransaction,
   withDatabaseTransaction
@@ -114,6 +136,9 @@ const scryptParallelization = 1
 const scryptKeyBytes = 32
 const authRateLimitWindowMs = 15 * 60 * 1_000
 const recentReauthenticationWindowMs = 15 * 60 * 1_000
+const mfaChallengeLifetimeMs = 10 * 60 * 1_000
+const mfaChallengeMaxAttempts = 5
+const mfaChallengeLockMs = 10 * 60 * 1_000
 
 export class AuthenticationError extends Error {
   constructor() {
@@ -154,6 +179,34 @@ export class AuthPasswordResetConfigurationError extends Error {
   constructor() {
     super('Password recovery encryption is not configured')
     this.name = 'AuthPasswordResetConfigurationError'
+  }
+}
+
+export class AuthMfaConfigurationError extends Error {
+  constructor() {
+    super('MFA encryption is not configured')
+    this.name = 'AuthMfaConfigurationError'
+  }
+}
+
+export class AuthMfaAlreadyEnabledError extends Error {
+  constructor() {
+    super('MFA is already enabled for this account')
+    this.name = 'AuthMfaAlreadyEnabledError'
+  }
+}
+
+export class AuthMfaNotEnabledError extends Error {
+  constructor() {
+    super('MFA is not enabled for this account')
+    this.name = 'AuthMfaNotEnabledError'
+  }
+}
+
+export class AuthMfaVerificationError extends Error {
+  constructor() {
+    super('The MFA code is invalid or expired')
+    this.name = 'AuthMfaVerificationError'
   }
 }
 
@@ -301,6 +354,38 @@ interface SessionRow extends QueryResultRow {
 interface ReauthenticationSessionRow extends QueryResultRow {
   session_id: string
   password_hash: string
+}
+
+interface MfaSessionUserRow extends QueryResultRow {
+  user_id: string
+  email: string
+}
+
+interface MfaTotpRow extends QueryResultRow {
+  user_id: string
+  email: string
+  secret_ciphertext: string
+  secret_nonce: string
+  secret_tag: string
+  status: 'pending' | 'enabled'
+  verified_at: Date | string | null
+  last_used_step: number | string | null
+}
+
+interface MfaStatusRow extends QueryResultRow {
+  status: 'pending' | 'enabled' | null
+  verified_at: Date | string | null
+  recovery_codes_remaining: number | string
+}
+
+interface MfaChallengeRow extends QueryResultRow {
+  challenge_id: string
+  user_id: string
+  email: string
+  expires_at: Date | string
+  attempt_count: number | string
+  locked_until: Date | string | null
+  consumed_at: Date | string | null
 }
 
 export interface PasswordResetDeliveryRecord {
@@ -573,6 +658,54 @@ function passwordResetEncryptionKey(): Buffer {
   const key = Buffer.from(configured, 'base64url')
   if (key.length !== 32) throw new AuthPasswordResetConfigurationError()
   return key
+}
+
+function mfaEncryptionKey(): Buffer {
+  const configured = process.env.APPSEA_AUTH_MFA_ENCRYPTION_KEY
+  if (!configured) {
+    if (process.env.NODE_ENV === 'test') return Buffer.alloc(32, 8)
+    throw new AuthMfaConfigurationError()
+  }
+  if (!/^[A-Za-z0-9_-]{43}$/.test(configured)) throw new AuthMfaConfigurationError()
+  const key = Buffer.from(configured, 'base64url')
+  if (key.length !== 32) throw new AuthMfaConfigurationError()
+  return key
+}
+
+function encryptMfaSecret(secret: string): {
+  ciphertext: string
+  nonce: string
+  tag: string
+} {
+  const nonce = randomBytes(12)
+  const cipher = createCipheriv('aes-256-gcm', mfaEncryptionKey(), nonce)
+  const ciphertext = Buffer.concat([cipher.update(secret, 'utf8'), cipher.final()])
+  return {
+    ciphertext: ciphertext.toString('base64url'),
+    nonce: nonce.toString('base64url'),
+    tag: cipher.getAuthTag().toString('base64url')
+  }
+}
+
+function decryptMfaSecret(row: {
+  secret_ciphertext: string
+  secret_nonce: string
+  secret_tag: string
+}): string {
+  try {
+    const decipher = createDecipheriv(
+      'aes-256-gcm',
+      mfaEncryptionKey(),
+      Buffer.from(row.secret_nonce, 'base64url')
+    )
+    decipher.setAuthTag(Buffer.from(row.secret_tag, 'base64url'))
+    return Buffer.concat([
+      decipher.update(Buffer.from(row.secret_ciphertext, 'base64url')),
+      decipher.final()
+    ]).toString('utf8')
+  } catch {
+    throw new AuthMfaConfigurationError()
+  }
 }
 
 function encryptPasswordResetToken(token: string): {
@@ -927,7 +1060,7 @@ export class PostgresAuthRepository {
     private readonly objectStore?: ObjectStore
   ) {}
 
-  async signUp(input: AuthSignUpInput): Promise<AuthSignInResult> {
+  async signUp(input: AuthSignUpInput): Promise<AuthSignInSuccessResult> {
     const parsed = authSignUpInputSchema.parse(input)
     const now = new Date()
     const userId = identifier('user')
@@ -969,14 +1102,14 @@ export class PostgresAuthRepository {
 
     const session = await this.readSession(token)
     if (!session) throw new Error('New authentication session could not be read')
-    return authSignInResultSchema.parse({ token, session })
+    return authSignInSuccessResultSchema.parse({ mfaRequired: false, token, session })
   }
 
   async signIn(input: AuthSignInInput): Promise<AuthSignInResult> {
     const parsed = authSignInInputSchema.parse(input)
     const token = sessionToken()
     const now = new Date()
-    await withDatabaseTransaction(this.pool, async (client) => {
+    const mfaChallenge = await withDatabaseTransaction(this.pool, async (client) => {
       const user = await client.query<UserRow & { password_hash: string }>(
         `SELECT user_id, email, display_name, password_hash, created_at
            FROM appsea.users
@@ -988,11 +1121,311 @@ export class PostgresAuthRepository {
       if (!row || !(await verifyPassword(parsed.password, row.password_hash))) {
         throw new AuthenticationError()
       }
+      const mfa = await client.query<{ enabled: boolean }>(
+        `SELECT EXISTS (
+           SELECT 1
+             FROM appsea.auth_mfa_totp
+            WHERE user_id = $1
+              AND status = 'enabled'
+         ) AS enabled`,
+        [row.user_id]
+      )
+      if (mfa.rows[0]?.enabled === true) {
+        const challengeToken = sessionToken()
+        const expiresAt = new Date(now.getTime() + mfaChallengeLifetimeMs)
+        await client.query(
+          `INSERT INTO appsea.auth_mfa_challenges
+             (challenge_id, user_id, challenge_hash, created_at, expires_at)
+           VALUES ($1, $2, $3, $4, $5)`,
+          [identifier('mfa-challenge'), row.user_id, sha256(challengeToken), now, expiresAt]
+        )
+        await this.recordMfaEvent(client, 'challenge_created', row.user_id, null, now)
+        return { challengeToken, expiresAt }
+      }
       await this.insertSession(client, row.user_id, token, now)
+      return null
     })
+    if (mfaChallenge) {
+      return authSignInResultSchema.parse({
+        mfaRequired: true,
+        challengeToken: mfaChallenge.challengeToken,
+        expiresAt: mfaChallenge.expiresAt.toISOString()
+      })
+    }
     const session = await this.readSession(token)
     if (!session) throw new Error('Authentication session could not be read')
-    return authSignInResultSchema.parse({ token, session })
+    return authSignInResultSchema.parse({ mfaRequired: false, token, session })
+  }
+
+  async completeMfaSignIn(input: AuthMfaSignInInput): Promise<AuthSignInResult> {
+    const parsed = authMfaSignInInputSchema.parse(input)
+    const token = sessionToken()
+    let userId: string | null = null
+    let verificationFailed = false
+    await withDatabaseTransaction(
+      this.pool,
+      async (client) => {
+        const challenge = await client.query<MfaChallengeRow>(
+          `SELECT challenge.challenge_id, challenge.user_id,
+                  app_user.email, challenge.expires_at,
+                  challenge.attempt_count, challenge.locked_until,
+                  challenge.consumed_at
+             FROM appsea.auth_mfa_challenges challenge
+             JOIN appsea.users app_user ON app_user.user_id = challenge.user_id
+            WHERE challenge.challenge_hash = $1
+              AND app_user.account_state = 'active'
+              AND challenge.expires_at > clock_timestamp()
+              AND challenge.consumed_at IS NULL
+            FOR UPDATE`,
+          [sha256(parsed.challengeToken)]
+        )
+        const challengeRow = challenge.rows[0]
+        if (
+          !challengeRow ||
+          Number(challengeRow.attempt_count) >= mfaChallengeMaxAttempts ||
+          (challengeRow.locked_until !== null &&
+            new Date(challengeRow.locked_until).getTime() > Date.now())
+        ) {
+          throw new AuthMfaVerificationError()
+        }
+
+        const totp = await client.query<MfaTotpRow>(
+          `SELECT mfa.user_id, app_user.email, mfa.secret_ciphertext,
+                  mfa.secret_nonce, mfa.secret_tag, mfa.status,
+                  mfa.verified_at, mfa.last_used_step
+             FROM appsea.auth_mfa_totp mfa
+             JOIN appsea.users app_user ON app_user.user_id = mfa.user_id
+            WHERE mfa.user_id = $1
+              AND mfa.status = 'enabled'
+            FOR UPDATE`,
+          [challengeRow.user_id]
+        )
+        const mfaRow = totp.rows[0]
+        if (!mfaRow) throw new AuthMfaVerificationError()
+
+        const verified = await this.verifyMfaCode(client, mfaRow, parsed.code, Date.now())
+        if (!verified) {
+          const nextAttempts = Number(challengeRow.attempt_count) + 1
+          await client.query(
+            `UPDATE appsea.auth_mfa_challenges
+                SET attempt_count = $2,
+                    locked_until = CASE WHEN $2 >= $3
+                      THEN clock_timestamp() + ($4::bigint * interval '1 millisecond')
+                      ELSE locked_until END
+              WHERE challenge_id = $1`,
+            [challengeRow.challenge_id, nextAttempts, mfaChallengeMaxAttempts, mfaChallengeLockMs]
+          )
+          await this.recordMfaEvent(
+            client,
+            'challenge_failed',
+            challengeRow.user_id,
+            challengeRow.challenge_id,
+            new Date()
+          )
+          verificationFailed = true
+          return
+        }
+
+        const now = new Date()
+        await client.query(
+          `UPDATE appsea.auth_mfa_challenges
+              SET consumed_at = $2
+            WHERE challenge_id = $1`,
+          [challengeRow.challenge_id, now]
+        )
+        await this.insertSession(client, challengeRow.user_id, token, now)
+        await this.recordMfaEvent(
+          client,
+          'challenge_succeeded',
+          challengeRow.user_id,
+          challengeRow.challenge_id,
+          now
+        )
+        userId = challengeRow.user_id
+      },
+      { maxSerializationRetries: 0 }
+    )
+    if (verificationFailed) throw new AuthMfaVerificationError()
+    if (!userId) throw new AuthMfaVerificationError()
+    const session = await this.readSession(token)
+    if (!session) throw new Error('MFA authentication session could not be read')
+    return authSignInResultSchema.parse({ mfaRequired: false, token, session })
+  }
+
+  async readMfaStatus(token: string): Promise<AuthMfaStatusReadModel> {
+    const parsedToken = authSessionTokenSchema.safeParse(token)
+    if (!parsedToken.success) throw new AuthenticationError()
+    const result = await withDatabaseTransaction(
+      this.pool,
+      (client) =>
+        client.query<MfaStatusRow>(
+          `SELECT mfa.status, mfa.verified_at,
+                  COUNT(recovery.recovery_code_id) FILTER (WHERE recovery.consumed_at IS NULL)
+                    AS recovery_codes_remaining
+             FROM appsea.auth_sessions session
+             JOIN appsea.users app_user
+               ON app_user.user_id = session.user_id
+              AND app_user.account_state = 'active'
+             LEFT JOIN appsea.auth_mfa_totp mfa
+               ON mfa.user_id = session.user_id
+             LEFT JOIN appsea.auth_mfa_recovery_codes recovery
+               ON recovery.user_id = session.user_id
+            WHERE session.token_hash = $1
+              AND session.revoked_at IS NULL
+              AND session.expires_at > clock_timestamp()
+            GROUP BY mfa.status, mfa.verified_at`,
+          [sha256(parsedToken.data)]
+        ),
+      { readOnly: true, maxSerializationRetries: 0 }
+    )
+    const row = result.rows[0]
+    if (!row) throw new AuthenticationError()
+    return authMfaStatusReadModelSchema.parse({
+      enabled: row?.status === 'enabled',
+      enrolledAt: row?.status === 'enabled' && row.verified_at ? iso(row.verified_at) : null,
+      recoveryCodesRemaining: Number(row?.recovery_codes_remaining ?? 0)
+    })
+  }
+
+  async beginMfaEnrollment(token: string): Promise<AuthMfaEnrollmentReadModel> {
+    const parsedToken = authSessionTokenSchema.safeParse(token)
+    if (!parsedToken.success) throw new AuthenticationError()
+    const secret = generateMfaSecret()
+    const recoveryCodes = generateMfaRecoveryCodes()
+    const encrypted = encryptMfaSecret(secret)
+    const now = new Date()
+    const expiresAt = new Date(now.getTime() + mfaChallengeLifetimeMs)
+    let email: string | null = null
+    await withDatabaseTransaction(
+      this.pool,
+      async (client) => {
+        const current = await this.currentMfaSessionUser(client, parsedToken.data)
+        if (!current) throw new AuthenticationError()
+        email = current.email
+        const existing = await client.query<{ status: 'pending' | 'enabled' }>(
+          `SELECT status
+             FROM appsea.auth_mfa_totp
+            WHERE user_id = $1
+            FOR UPDATE`,
+          [current.user_id]
+        )
+        if (existing.rows[0]?.status === 'enabled') throw new AuthMfaAlreadyEnabledError()
+        await client.query(`DELETE FROM appsea.auth_mfa_recovery_codes WHERE user_id = $1`, [
+          current.user_id
+        ])
+        await client.query(
+          `INSERT INTO appsea.auth_mfa_totp
+             (user_id, secret_ciphertext, secret_nonce, secret_tag, status,
+              created_at, verified_at, last_used_step)
+           VALUES ($1, $2, $3, $4, 'pending', $5, NULL, NULL)
+           ON CONFLICT (user_id) DO UPDATE
+             SET secret_ciphertext = EXCLUDED.secret_ciphertext,
+                 secret_nonce = EXCLUDED.secret_nonce,
+                 secret_tag = EXCLUDED.secret_tag,
+                 status = 'pending',
+                 created_at = EXCLUDED.created_at,
+                 verified_at = NULL,
+                 last_used_step = NULL`,
+          [current.user_id, encrypted.ciphertext, encrypted.nonce, encrypted.tag, now]
+        )
+        for (const code of recoveryCodes) {
+          await client.query(
+            `INSERT INTO appsea.auth_mfa_recovery_codes
+               (recovery_code_id, user_id, code_hash, created_at)
+             VALUES ($1, $2, $3, $4)`,
+            [identifier('mfa-recovery'), current.user_id, hashMfaRecoveryCode(code), now]
+          )
+        }
+        await this.recordMfaEvent(client, 'enrollment_started', current.user_id, null, now)
+      },
+      { maxSerializationRetries: 0 }
+    )
+    if (!email) throw new AuthenticationError()
+    return authMfaEnrollmentReadModelSchema.parse({
+      secret,
+      otpauthUri: buildMfaOtpAuthUri(email, secret),
+      recoveryCodes,
+      expiresAt: expiresAt.toISOString()
+    })
+  }
+
+  async confirmMfaEnrollment(
+    token: string,
+    input: AuthMfaEnrollmentConfirmInput
+  ): Promise<AuthMfaStatusReadModel> {
+    const parsedToken = authSessionTokenSchema.safeParse(token)
+    const parsedInput = authMfaEnrollmentConfirmInputSchema.safeParse(input)
+    if (!parsedToken.success || !parsedInput.success) throw new AuthMfaVerificationError()
+    await withDatabaseTransaction(
+      this.pool,
+      async (client) => {
+        const current = await this.currentMfaSessionUser(client, parsedToken.data)
+        if (!current) throw new AuthenticationError()
+        const result = await client.query<MfaTotpRow>(
+          `SELECT mfa.user_id, app_user.email, mfa.secret_ciphertext,
+                  mfa.secret_nonce, mfa.secret_tag, mfa.status,
+                  mfa.verified_at, mfa.last_used_step
+            FROM appsea.auth_mfa_totp mfa
+             JOIN appsea.users app_user ON app_user.user_id = mfa.user_id
+            WHERE mfa.user_id = $1
+              AND mfa.status = 'pending'
+              AND mfa.created_at > $2
+            FOR UPDATE`,
+          [current.user_id, new Date(Date.now() - mfaChallengeLifetimeMs)]
+        )
+        const row = result.rows[0]
+        if (!row) throw new AuthMfaVerificationError()
+        const secret = decryptMfaSecret(row)
+        const step = verifyMfaTotpCode(secret, parsedInput.data.code, Date.now(), null)
+        if (step === null) throw new AuthMfaVerificationError()
+        const now = new Date()
+        await client.query(
+          `UPDATE appsea.auth_mfa_totp
+              SET status = 'enabled', verified_at = $2, last_used_step = $3
+            WHERE user_id = $1`,
+          [current.user_id, now, step]
+        )
+        await this.recordMfaEvent(client, 'enrollment_completed', current.user_id, null, now)
+      },
+      { maxSerializationRetries: 0 }
+    )
+    return this.readMfaStatus(parsedToken.data)
+  }
+
+  async disableMfa(token: string, input: AuthMfaDisableInput): Promise<AuthMfaStatusReadModel> {
+    const parsedToken = authSessionTokenSchema.safeParse(token)
+    const parsedInput = authMfaDisableInputSchema.safeParse(input)
+    if (!parsedToken.success || !parsedInput.success) throw new AuthMfaVerificationError()
+    await withDatabaseTransaction(
+      this.pool,
+      async (client) => {
+        const current = await this.currentMfaSessionUser(client, parsedToken.data)
+        if (!current) throw new AuthenticationError()
+        const result = await client.query<MfaTotpRow>(
+          `SELECT mfa.user_id, app_user.email, mfa.secret_ciphertext,
+                  mfa.secret_nonce, mfa.secret_tag, mfa.status,
+                  mfa.verified_at, mfa.last_used_step
+             FROM appsea.auth_mfa_totp mfa
+             JOIN appsea.users app_user ON app_user.user_id = mfa.user_id
+            WHERE mfa.user_id = $1
+              AND mfa.status = 'enabled'
+            FOR UPDATE`,
+          [current.user_id]
+        )
+        const row = result.rows[0]
+        if (!row) throw new AuthMfaNotEnabledError()
+        if (!(await this.verifyMfaCode(client, row, parsedInput.data.code, Date.now()))) {
+          throw new AuthMfaVerificationError()
+        }
+        await client.query(`DELETE FROM appsea.auth_mfa_recovery_codes WHERE user_id = $1`, [
+          current.user_id
+        ])
+        await client.query(`DELETE FROM appsea.auth_mfa_totp WHERE user_id = $1`, [current.user_id])
+        await this.recordMfaEvent(client, 'disabled', current.user_id, null, new Date())
+      },
+      { maxSerializationRetries: 0 }
+    )
+    return this.readMfaStatus(parsedToken.data)
   }
 
   /** Queue a single-use reset token without exposing it to the web response. */
@@ -1135,6 +1568,90 @@ export class PostgresAuthRepository {
       },
       { maintenanceFence }
     )
+  }
+
+  private async currentMfaSessionUser(
+    client: PoolClient,
+    token: string
+  ): Promise<MfaSessionUserRow | null> {
+    const result = await client.query<MfaSessionUserRow>(
+      `SELECT session.user_id, app_user.email
+         FROM appsea.auth_sessions session
+         JOIN appsea.users app_user
+           ON app_user.user_id = session.user_id
+          AND app_user.account_state = 'active'
+        WHERE session.token_hash = $1
+          AND session.revoked_at IS NULL
+          AND session.expires_at > clock_timestamp()
+        FOR SHARE`,
+      [sha256(token)]
+    )
+    return result.rows[0] ?? null
+  }
+
+  private async recordMfaEvent(
+    client: PoolClient,
+    eventType:
+      | 'enrollment_started'
+      | 'enrollment_completed'
+      | 'disabled'
+      | 'challenge_created'
+      | 'challenge_succeeded'
+      | 'challenge_failed'
+      | 'recovery_code_used',
+    userId: string,
+    challengeId: string | null,
+    occurredAt: Date
+  ): Promise<void> {
+    await client.query(
+      `INSERT INTO appsea.auth_mfa_events
+         (event_id, event_type, user_id, challenge_id, occurred_at)
+       VALUES ($1, $2, $3, $4, $5)`,
+      [identifier('mfa-event'), eventType, userId, challengeId, occurredAt]
+    )
+  }
+
+  private async verifyMfaCode(
+    client: PoolClient,
+    row: MfaTotpRow,
+    inputCode: string,
+    timestampMs: number
+  ): Promise<boolean> {
+    const parsedCode = authMfaCodeSchema.safeParse(inputCode)
+    if (!parsedCode.success) return false
+    const normalized = normalizeMfaCode(parsedCode.data)
+    if (isMfaRecoveryCode(normalized)) {
+      const recovery = await client.query<{ recovery_code_id: string }>(
+        `SELECT recovery_code_id
+           FROM appsea.auth_mfa_recovery_codes
+          WHERE user_id = $1
+            AND code_hash = $2
+            AND consumed_at IS NULL
+          FOR UPDATE`,
+        [row.user_id, hashMfaRecoveryCode(normalized)]
+      )
+      const recoveryRow = recovery.rows[0]
+      if (!recoveryRow) return false
+      await client.query(
+        `UPDATE appsea.auth_mfa_recovery_codes
+            SET consumed_at = clock_timestamp()
+          WHERE recovery_code_id = $1`,
+        [recoveryRow.recovery_code_id]
+      )
+      await this.recordMfaEvent(client, 'recovery_code_used', row.user_id, null, new Date())
+      return true
+    }
+    const lastUsedStep = row.last_used_step === null ? null : Number(row.last_used_step)
+    const step = verifyMfaTotpCode(decryptMfaSecret(row), normalized, timestampMs, lastUsedStep)
+    if (step === null) return false
+    await client.query(
+      `UPDATE appsea.auth_mfa_totp
+          SET last_used_step = $2
+        WHERE user_id = $1
+          AND status = 'enabled'`,
+      [row.user_id, step]
+    )
+    return true
   }
 
   private async insertSession(
@@ -1726,6 +2243,9 @@ export class PostgresAuthRepository {
     rateLimitsDeleted: number
     passwordResetTokensDeleted: number
     workspaceInvitationsDeleted: number
+    mfaChallengesDeleted: number
+    mfaEventsDeleted: number
+    mfaPendingEnrollmentsDeleted: number
   }> {
     if (!Number.isSafeInteger(retentionDays) || retentionDays < 1 || retentionDays > 3650) {
       throw new Error('Authentication retention days is invalid')
@@ -1780,6 +2300,17 @@ export class PostgresAuthRepository {
                   AS workspace_invitations_deleted`,
           [retentionDays, batchSize]
         )
+        const mfa = await client.query<{
+          challenges_deleted: number | string
+          events_deleted: number | string
+          pending_enrollments_deleted: number | string
+        }>(
+          `SELECT *
+             FROM appsea.purge_auth_mfa_material(
+               clock_timestamp() - ($1::bigint * interval '1 day'), $2
+             )`,
+          [retentionDays, batchSize]
+        )
         return {
           sessionsDeleted: sessions.rowCount ?? 0,
           rateLimitsDeleted: rateLimits.rowCount ?? 0,
@@ -1788,7 +2319,10 @@ export class PostgresAuthRepository {
           ),
           workspaceInvitationsDeleted: Number(
             workspaceInvitations.rows[0]?.workspace_invitations_deleted ?? 0
-          )
+          ),
+          mfaChallengesDeleted: Number(mfa.rows[0]?.challenges_deleted ?? 0),
+          mfaEventsDeleted: Number(mfa.rows[0]?.events_deleted ?? 0),
+          mfaPendingEnrollmentsDeleted: Number(mfa.rows[0]?.pending_enrollments_deleted ?? 0)
         }
       },
       { maintenanceFence }

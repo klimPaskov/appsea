@@ -44,6 +44,7 @@
 - [`runbooks/worker-observability.md`](runbooks/worker-observability.md)
 - [`runbooks/auth-retention.md`](runbooks/auth-retention.md)
 - [`runbooks/auth-recovery.md`](runbooks/auth-recovery.md)
+- [`runbooks/auth-mfa.md`](runbooks/auth-mfa.md)
 - [`runbooks/workspace-invitations.md`](runbooks/workspace-invitations.md)
 - [`runbooks/account-closure.md`](runbooks/account-closure.md)
 - [`runbooks/workspace-archival.md`](runbooks/workspace-archival.md)
@@ -78,6 +79,7 @@
 - [`adrs/0010-maintenance-transaction-fencing.md`](adrs/0010-maintenance-transaction-fencing.md)
 - [`adrs/0011-complaint-analysis-snapshots.md`](adrs/0011-complaint-analysis-snapshots.md)
 - [`adrs/0012-source-policy-review-integrity.md`](adrs/0012-source-policy-review-integrity.md)
+- [`adrs/0013-global-auth-totp-mfa.md`](adrs/0013-global-auth-totp-mfa.md)
 
 ## Generated references
 
@@ -96,6 +98,7 @@
 - [`status/account-session-lifecycle-completion-report.md`](status/account-session-lifecycle-completion-report.md)
 - [`status/worker-maintenance-hardening-completion-report.md`](status/worker-maintenance-hardening-completion-report.md)
 - [`status/auth-recovery-completion-report.md`](status/auth-recovery-completion-report.md)
+- [`status/auth-mfa-completion-report-2026-08-03.md`](status/auth-mfa-completion-report-2026-08-03.md)
 - [`status/workspace-invitation-completion-report.md`](status/workspace-invitation-completion-report.md)
 - [`status/production-readiness-audit-2026-07-25.md`](status/production-readiness-audit-2026-07-25.md)
 - [`status/production-readiness-audit-2026-08-02.md`](status/production-readiness-audit-2026-08-02.md)

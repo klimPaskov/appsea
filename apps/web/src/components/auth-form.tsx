@@ -9,6 +9,8 @@ export function AuthForm({ mode }: { mode: AuthMode }) {
   const [password, setPassword] = useState('')
   const [displayName, setDisplayName] = useState('')
   const [workspaceName, setWorkspaceName] = useState('')
+  const [mfaChallengeToken, setMfaChallengeToken] = useState<string | null>(null)
+  const [mfaCode, setMfaCode] = useState('')
   const [message, setMessage] = useState<string | null>(null)
   const [pending, setPending] = useState(false)
 
@@ -17,16 +19,34 @@ export function AuthForm({ mode }: { mode: AuthMode }) {
     setPending(true)
     setMessage(null)
     try {
-      const response = await fetch(`/api/auth/${mode === 'signup' ? 'signup' : 'login'}`, {
-        method: 'POST',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify(
-          mode === 'signup' ? { email, password, displayName, workspaceName } : { email, password }
-        )
-      })
-      const body = (await response.json()) as { error?: string }
+      const response = await fetch(
+        mfaChallengeToken
+          ? '/api/auth/mfa/login'
+          : `/api/auth/${mode === 'signup' ? 'signup' : 'login'}`,
+        {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify(
+            mfaChallengeToken
+              ? { challengeToken: mfaChallengeToken, code: mfaCode }
+              : mode === 'signup'
+                ? { email, password, displayName, workspaceName }
+                : { email, password }
+          )
+        }
+      )
+      const body = (await response.json()) as {
+        error?: string
+        data?: { mfaRequired?: boolean; challengeToken?: string }
+      }
       if (!response.ok) {
         setMessage(body.error ?? 'Unable to continue')
+        return
+      }
+      if (body.data?.mfaRequired === true && body.data.challengeToken) {
+        setMfaChallengeToken(body.data.challengeToken)
+        setMfaCode('')
+        setMessage('Enter the six-digit code from your authenticator app.')
         return
       }
       window.location.assign('/workspace')
@@ -39,7 +59,7 @@ export function AuthForm({ mode }: { mode: AuthMode }) {
 
   return (
     <form className="auth-form" onSubmit={submit}>
-      {mode === 'signup' ? (
+      {mode === 'signup' && !mfaChallengeToken ? (
         <>
           <label>
             Name
@@ -63,32 +83,71 @@ export function AuthForm({ mode }: { mode: AuthMode }) {
           </label>
         </>
       ) : null}
-      <label>
-        Email
-        <input
-          autoComplete="email"
-          name="email"
-          onChange={(event) => setEmail(event.target.value)}
-          required
-          type="email"
-          value={email}
-        />
-      </label>
-      <label>
-        Password
-        <input
-          autoComplete={mode === 'signup' ? 'new-password' : 'current-password'}
-          minLength={12}
-          name="password"
-          onChange={(event) => setPassword(event.target.value)}
-          required
-          type="password"
-          value={password}
-        />
-      </label>
+      {!mfaChallengeToken ? (
+        <label>
+          Email
+          <input
+            autoComplete="email"
+            name="email"
+            onChange={(event) => setEmail(event.target.value)}
+            required
+            type="email"
+            value={email}
+          />
+        </label>
+      ) : null}
+      {!mfaChallengeToken ? (
+        <label>
+          Password
+          <input
+            autoComplete={mode === 'signup' ? 'new-password' : 'current-password'}
+            minLength={12}
+            name="password"
+            onChange={(event) => setPassword(event.target.value)}
+            required
+            type="password"
+            value={password}
+          />
+        </label>
+      ) : null}
+      {mfaChallengeToken ? (
+        <label>
+          Authenticator code
+          <input
+            autoComplete="one-time-code"
+            maxLength={19}
+            minLength={6}
+            name="mfaCode"
+            onChange={(event) => setMfaCode(event.target.value)}
+            required
+            value={mfaCode}
+          />
+          <span className="form-help">Use a recovery code if you cannot access the app.</span>
+        </label>
+      ) : null}
       <button disabled={pending} type="submit">
-        {pending ? 'Working…' : mode === 'signup' ? 'Create workspace' : 'Sign in'}
+        {pending
+          ? 'Working…'
+          : mfaChallengeToken
+            ? 'Verify code'
+            : mode === 'signup'
+              ? 'Create workspace'
+              : 'Sign in'}
       </button>
+      {mfaChallengeToken ? (
+        <button
+          className="quiet-button"
+          disabled={pending}
+          type="button"
+          onClick={() => {
+            setMfaChallengeToken(null)
+            setMfaCode('')
+            setMessage(null)
+          }}
+        >
+          Start over
+        </button>
+      ) : null}
       {message ? (
         <p className="form-error" role="alert">
           {message}

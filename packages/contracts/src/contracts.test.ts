@@ -911,7 +911,10 @@ describe('contracts', () => {
         sessionsDeleted: 2,
         rateLimitsDeleted: 4,
         passwordResetTokensDeleted: 1,
-        workspaceInvitationsDeleted: 2
+        workspaceInvitationsDeleted: 2,
+        mfaChallengesDeleted: 3,
+        mfaEventsDeleted: 4,
+        mfaPendingEnrollmentsDeleted: 5
       }).success
     ).toBe(true)
     expect(authRecoveryBatchInputSchema.safeParse({ batchSize: 100 }).success).toBe(true)

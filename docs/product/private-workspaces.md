@@ -6,6 +6,7 @@ The public AppSea leaderboard is a sparse, synthetic fixture surface. Private re
 
 - Signup creates a private workspace and makes the new user its owner.
 - Sign-in accepts a bounded email/password input and issues an opaque session token in an `HttpOnly`, `SameSite=Lax` cookie.
+- Accounts can enroll TOTP MFA from `/account/security` after a recent password step-up. The encrypted secret is never returned after enrollment; ten recovery codes are shown once and stored only as hashes. When MFA is enabled, password sign-in creates a short-lived challenge and no session cookie is issued until a current TOTP or one-time recovery code succeeds.
 - Sessions expire after 30 days and can be revoked at sign-out. Read models never include passwords, password hashes, or session tokens.
 - Authenticated users can inspect active sessions at `/account/security`; each session exposes only a stable identifier and timestamps. Revoking another session requires same-origin password reauthentication, while the current session cannot be revoked from that page.
 - Account closure is available from `/account/security` after the same password step-up and a typed `DELETE MY ACCOUNT` confirmation. It revokes sessions/reset material and anonymizes the profile but retains shared workspace research; closure is blocked until the user transfers every owned workspace.
@@ -157,7 +158,8 @@ fixture-enabled workspace is provisioned.
 Owner-safe account closure is implemented as a profile/authentication operation; workspace-data,
 object-store, backup, and export deletion remain separate retention work. Production
 identity-provider policy remains open. Recovery and invitation mechanics are implemented behind reviewed provider/identity kill switches; external
-OIDC/MFA policy, verified-email policy, and provider-backed step-up integration remain open. The
+OIDC policy, verified-email policy, provider-backed step-up integration, and enforcement of MFA
+for every high-risk token action remain open. The
 current password step-up is an application boundary, not a substitute for a production identity
 provider. The current invitation simplification intentionally excludes new-account creation and
 email verification until that identity policy is approved.

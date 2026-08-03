@@ -22,10 +22,13 @@ pnpm --filter @appsea/worker auth:retention
 `APPSEA_AUTH_RETENTION_DAYS` defaults to 7 and
 `APPSEA_AUTH_RETENTION_BATCH_SIZE` defaults to 1000. The command deletes only
 expired or revoked sessions older than the retention window, expired/consumed
-reset material, and stale rate-limit buckets. `authRetentionInputSchema` bounds
+reset material, stale rate-limit buckets, and expired/consumed MFA login
+challenges plus bounded MFA event history. `authRetentionInputSchema` bounds
 those values, and the
 `runAuthRetention` runner returns a validated result with the scheduler job ID
-and deletion counters, including `workspaceInvitationsDeleted`. Set `APPSEA_AUTH_MAINTENANCE_JOB_ID` when a scheduler
+and deletion counters, including `workspaceInvitationsDeleted`,
+`mfaChallengesDeleted`, `mfaEventsDeleted`, and
+`mfaPendingEnrollmentsDeleted`. Set `APPSEA_AUTH_MAINTENANCE_JOB_ID` when a scheduler
 retry must keep the same correlation ID; otherwise the command uses a
 UTC-minute bucket. It emits secret-free `auth_retention_finished` or
 `auth_retention_failed` events and should be retried by the supervisor on

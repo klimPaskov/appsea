@@ -305,9 +305,13 @@ for that pre-context authorization lookup.
   owner actor while recording the accepting user. Invitation creation and
   revocation require the same web step-up as membership changes, and both API
   and worker paths have an explicit production kill switch. Invitations,
-  MFA/OIDC, verified-email policy, and provider-backed step-up remain separate
-  review gates. Account recovery is a global-auth boundary: migration `0023` creates
-  hash-only reset rows without runtime grants, while migration `0024` adds
+  OIDC, verified-email policy, and provider-backed step-up remain separate
+  review gates. TOTP MFA is now a global-auth boundary: migration `0080` stores
+  only encrypted enrollment material, hash-only recovery codes, expiring login
+  challenges, and bounded audit events; password sign-in cannot mint a session
+  until the challenge is consumed. Account recovery is a global-auth boundary:
+  migration `0023` creates hash-only reset rows without runtime grants, while
+  migration `0024` adds
   encrypted-token outbox rows, identifier-only security events, latest-only
   active-token semantics, and narrow `SECURITY DEFINER` functions. The runtime
   role can execute those functions but cannot select reset rows, read encrypted

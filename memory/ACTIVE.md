@@ -5,12 +5,14 @@
 Fixture product, PostgreSQL persistence, durable workflows, policy-gated CFPB
 collection, private workspaces, report/plan approval/export, recovery, and
 invitations are implemented. Migrations
-`0027`-`0079` add policy evidence, collection checkpoints, deletion repair,
+`0027`-`0080` add policy evidence, collection checkpoints, deletion repair,
 leases, snapshot reconciliation, workflow admissions, source-reconciliation
 admission, retryable tombstones, maintenance-run telemetry, a durable source-
 quota case ledger, recomputation alerts, cost-threshold projection, alert
-routing, and owner-only non-destructive workspace archival, plus a durable
-owner-confirmed workspace purge intent that never performs deletion.
+routing, owner-only non-destructive workspace archival, and global-auth TOTP
+MFA with encrypted enrollment secrets, hash-only recovery codes, expiring
+login challenges, and bounded retention, plus a durable owner-confirmed
+workspace purge intent that never performs deletion.
 The 2026-08-02 purge-readiness tranche adds an owner-only read-only
 `WorkspacePurgeReadiness` inventory with deterministic blockers; it names
 cloud/object/export/backup requirements and never deletes. The 2026-08-03

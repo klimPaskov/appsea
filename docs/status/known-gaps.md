@@ -9,7 +9,8 @@ source-coverage, report, and plan reads for owner-issued workspace-scoped
 tokens. It preserves policy representation, redaction, synthetic disclosure,
 and coverage gaps, but it is not a general REST/MCP write API. Token management
 is API-only, and HTTPS termination, external secret storage, rate limiting,
-MFA/OIDC, rotation automation, and deployment monitoring remain open.
+OIDC/provider identity, MFA enforcement for every high-risk token action,
+rotation automation, and deployment monitoring remain open.
 
 Private campaign configuration is now persisted and source-policy readiness is
 visible. Owners/editors can start a bounded one-source run from the campaign
@@ -112,6 +113,10 @@ retention, membership-checked RLS transactions, and fixture/production workflow
 start/status gateways. Signup creates an active private non-fixture workspace;
 source-policy approval and deployment controls still gate production starts,
 while a reviewed provisioning path for broader limits and roles remains open.
+TOTP MFA is now implemented at the global-auth boundary: enrollment requires
+recent password step-up, the encrypted secret never enters a read model, login
+issues a short-lived hash-only challenge, and recovery codes are one-time
+hashes. Production requires a separate `APPSEA_AUTH_MFA_ENCRYPTION_KEY`.
 Account recovery mechanics
 (hash-only single-use tokens, encrypted delivery outbox, retryable worker,
 fragment links, and generic responses) are implemented behind a production
@@ -130,8 +135,9 @@ until every owned workspace has another owner. Owner-only member listing, role c
 implemented through the private workspace settings route and protected by a
 15-minute password step-up window. Owner-only workspace archival is now also
 implemented through the same route: it blocks active workflow/run/lease work,
-retains lineage, and records identifier-only receipts. MFA/OIDC and a production
-identity-provider control plane remain open.
+retains lineage, and records identifier-only receipts. OIDC and a production
+identity-provider control plane remain open; the TOTP implementation does not
+prove verified email ownership or external OIDC operations.
 
 The owner-only `GET /api/workspaces/:workspaceId/purge-readiness` projection and
 members-page inventory now expose bounded active-work and raw/analysis/report/
@@ -149,7 +155,7 @@ The repository refuses to auto-create fixture workspaces when `NODE_ENV` is
 Authenticated workflow jobs persist an immutable user or `appsea-worker`
 requesting actor, with a database check for owner/editor membership. This is
 not a substitute for production Temporal namespace authorization or complete
-identity operations such as MFA/OIDC and provider-backed identity controls.
+identity operations such as external OIDC and provider-backed identity controls.
 Account closure is a shared-workspace-safe profile closure, not workspace
 research deletion. Recovery mechanics exist behind a production kill switch;
 delivery and identity verification remain unapproved.

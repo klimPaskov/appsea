@@ -26,6 +26,7 @@ function baseEnvironment(): NodeJS.ProcessEnv {
     APPSEA_PUBLIC_ORIGIN: 'https://appsea.example',
     APPSEA_AUTH_RECOVERY_ENABLED: 'false',
     APPSEA_AUTH_INVITATIONS_ENABLED: 'false',
+    APPSEA_AUTH_MFA_ENCRYPTION_KEY: Buffer.alloc(32, 6).toString('base64url'),
     APPSEA_ALERT_ROUTING_ENABLED: 'true',
     APPSEA_ALERT_ROUTING_URL: 'https://alerts.internal/appsea',
     APPSEA_ALERT_ROUTING_SECRET: Buffer.alloc(32, 9).toString('base64url'),
@@ -67,6 +68,23 @@ describe('production deployment configuration preflight', () => {
     environment.APPSEA_AUTH_RECOVERY_DELIVERY_SECRET = Buffer.alloc(32, 8).toString('base64url')
     const ready = validateProductionEnvironment(environment)
     expect(ready.status).toBe('ready')
+  })
+
+  it('requires a separate 32-byte MFA encryption key', () => {
+    const environment = baseEnvironment()
+    delete environment.APPSEA_AUTH_MFA_ENCRYPTION_KEY
+    const missing = validateProductionEnvironment(environment)
+    expect(check(missing, 'authMfa')).toMatchObject({
+      status: 'failed',
+      failureCode: 'APPSEA_PREFLIGHT_AUTH_MFA'
+    })
+
+    environment.APPSEA_AUTH_MFA_ENCRYPTION_KEY = 'not-a-key'
+    const malformed = validateProductionEnvironment(environment)
+    expect(check(malformed, 'authMfa')).toMatchObject({
+      status: 'failed',
+      failureCode: 'APPSEA_PREFLIGHT_AUTH_MFA'
+    })
   })
 
   it('rejects local database roles, loopback endpoints, and insecure production mode', () => {

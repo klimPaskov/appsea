@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { AccountSessionsPanel } from '../../../components/account-sessions-panel'
 import { AccountClosurePanel } from '../../../components/account-closure-panel'
+import { AccountMfaPanel } from '../../../components/account-mfa-panel'
 import { authRepository, readSession, readSessionToken } from '../../../server/auth-session'
 
 export const dynamic = 'force-dynamic'
@@ -13,6 +14,7 @@ export default async function AccountSecurityPage() {
   if (!token) redirect('/login')
 
   const sessions = await authRepository().listActiveSessions(token)
+  const mfaStatus = await authRepository().readMfaStatus(token)
 
   return (
     <main className="workspace-page account-security-page">
@@ -42,6 +44,7 @@ export default async function AccountSecurityPage() {
         </div>
         <AccountSessionsPanel initialSessions={sessions} />
       </section>
+      <AccountMfaPanel initialStatus={mfaStatus} />
       <AccountClosurePanel />
     </main>
   )

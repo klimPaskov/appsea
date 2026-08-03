@@ -3729,7 +3729,10 @@ export const authRetentionResultSchema = z
     sessionsDeleted: z.number().int().nonnegative().max(10_000),
     rateLimitsDeleted: z.number().int().nonnegative().max(10_000),
     passwordResetTokensDeleted: z.number().int().nonnegative().max(10_000),
-    workspaceInvitationsDeleted: z.number().int().nonnegative().max(10_000)
+    workspaceInvitationsDeleted: z.number().int().nonnegative().max(10_000),
+    mfaChallengesDeleted: z.number().int().nonnegative().max(10_000),
+    mfaEventsDeleted: z.number().int().nonnegative().max(10_000),
+    mfaPendingEnrollmentsDeleted: z.number().int().nonnegative().max(10_000)
   })
   .strict()
 
@@ -3766,6 +3769,63 @@ export const authSignInInputSchema = z
   .object({
     email: authEmailSchema,
     password: authPasswordSchema
+  })
+  .strict()
+
+// MFA codes are accepted only at the authentication boundary. Recovery codes
+// are displayed once during enrollment and are never persisted in plaintext.
+export const authMfaTotpCodeSchema = z
+  .string()
+  .trim()
+  .regex(/^\d{6}$/)
+export const authMfaRecoveryCodeSchema = z
+  .string()
+  .trim()
+  .toUpperCase()
+  .regex(/^[A-Z2-7]{4}(?:-[A-Z2-7]{4}){3}$/)
+export const authMfaCodeSchema = z.union([authMfaTotpCodeSchema, authMfaRecoveryCodeSchema])
+
+export const authMfaChallengeTokenSchema = z
+  .string()
+  .min(32)
+  .max(256)
+  .regex(/^[A-Za-z0-9_-]+$/)
+
+export const authMfaEnrollmentConfirmInputSchema = z
+  .object({ code: authMfaTotpCodeSchema })
+  .strict()
+
+export const authMfaDisableInputSchema = z.object({ code: authMfaCodeSchema }).strict()
+
+export const authMfaSignInInputSchema = z
+  .object({
+    challengeToken: authMfaChallengeTokenSchema,
+    code: authMfaCodeSchema
+  })
+  .strict()
+
+export const authMfaStatusReadModelSchema = z
+  .object({
+    enabled: z.boolean(),
+    enrolledAt: z.string().datetime().nullable(),
+    recoveryCodesRemaining: z.number().int().nonnegative().max(20)
+  })
+  .strict()
+
+export const authMfaEnrollmentReadModelSchema = z
+  .object({
+    secret: z.string().regex(/^[A-Z2-7]{32}$/),
+    otpauthUri: z.string().regex(/^otpauth:\/\/totp\//),
+    recoveryCodes: z.array(authMfaRecoveryCodeSchema).length(10),
+    expiresAt: z.string().datetime()
+  })
+  .strict()
+
+export const authMfaRequiredResultSchema = z
+  .object({
+    mfaRequired: z.literal(true),
+    challengeToken: authMfaChallengeTokenSchema,
+    expiresAt: z.string().datetime()
   })
   .strict()
 
@@ -4776,12 +4836,18 @@ export const productionAnalysisRecomputeAlertResultSchema = z
   })
   .strict()
 
-export const authSignInResultSchema = z
+export const authSignInSuccessResultSchema = z
   .object({
+    mfaRequired: z.literal(false),
     token: authSessionTokenSchema,
     session: authSessionReadModelSchema
   })
   .strict()
+
+export const authSignInResultSchema = z.discriminatedUnion('mfaRequired', [
+  authSignInSuccessResultSchema,
+  authMfaRequiredResultSchema
+])
 
 export const workspaceOpportunityReadModelSchema = z
   .object({
@@ -5514,6 +5580,11 @@ export type WorkspaceInvitationDeliveryBatchInput = z.infer<
 >
 export type AuthSignUpInput = z.infer<typeof authSignUpInputSchema>
 export type AuthSignInInput = z.infer<typeof authSignInInputSchema>
+export type AuthMfaEnrollmentConfirmInput = z.infer<typeof authMfaEnrollmentConfirmInputSchema>
+export type AuthMfaDisableInput = z.infer<typeof authMfaDisableInputSchema>
+export type AuthMfaSignInInput = z.infer<typeof authMfaSignInInputSchema>
+export type AuthMfaStatusReadModel = z.infer<typeof authMfaStatusReadModelSchema>
+export type AuthMfaEnrollmentReadModel = z.infer<typeof authMfaEnrollmentReadModelSchema>
 export type AuthReauthenticationInput = z.infer<typeof authReauthenticationInputSchema>
 export type AuthAccountDeletionInput = z.infer<typeof authAccountDeletionInputSchema>
 export type WorkspaceArchiveInput = z.infer<typeof workspaceArchiveInputSchema>
@@ -5580,6 +5651,8 @@ export type ProductionAnalysisRecomputeAlertResult = z.infer<
   typeof productionAnalysisRecomputeAlertResultSchema
 >
 export type AuthSignInResult = z.infer<typeof authSignInResultSchema>
+export type AuthSignInSuccessResult = z.infer<typeof authSignInSuccessResultSchema>
+export type AuthMfaRequiredResult = z.infer<typeof authMfaRequiredResultSchema>
 export type AuthUserReadModel = z.infer<typeof authUserReadModelSchema>
 export type WorkspaceRole = z.infer<typeof workspaceRoleSchema>
 export type WorkspaceInvitationRole = z.infer<typeof workspaceInvitationRoleSchema>

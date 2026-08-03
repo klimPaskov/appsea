@@ -11,7 +11,8 @@ This runbook covers the repository's PostgreSQL 18 development and integration-t
 - Every private workspace transaction must use `withAuthenticatedWorkspaceTransaction`,
   which checks membership before setting `appsea.workspace_id`. The controlled
   fixture worker may use `withWorkspaceTransaction` only for its fixture-only path.
-- Authentication uses `appsea.users`, `appsea.auth_sessions`, and
+- Authentication uses `appsea.users`, `appsea.auth_sessions`, and the global
+  `appsea.auth_mfa_*` tables from migration `0080`, plus
   `appsea.workspace_memberships` (migration `0008`), durable auth rate limits,
   and session retention (migration `0010`). Migration `0021` adds only a
   short-lived `last_reauthenticated_at` marker for explicit owner-action

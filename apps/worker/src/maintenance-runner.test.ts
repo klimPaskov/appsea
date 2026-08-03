@@ -713,7 +713,10 @@ describe('maintenance runners', () => {
               sessionsDeleted: 3,
               rateLimitsDeleted: 4,
               passwordResetTokensDeleted: 5,
-              workspaceInvitationsDeleted: 6
+              workspaceInvitationsDeleted: 6,
+              mfaChallengesDeleted: 7,
+              mfaEventsDeleted: 8,
+              mfaPendingEnrollmentsDeleted: 9
             }
           }
         },
@@ -727,7 +730,10 @@ describe('maintenance runners', () => {
       sessionsDeleted: 3,
       rateLimitsDeleted: 4,
       passwordResetTokensDeleted: 5,
-      workspaceInvitationsDeleted: 6
+      workspaceInvitationsDeleted: 6,
+      mfaChallengesDeleted: 7,
+      mfaEventsDeleted: 8,
+      mfaPendingEnrollmentsDeleted: 9
     })
   })
 })

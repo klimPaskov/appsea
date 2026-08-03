@@ -725,6 +725,11 @@ describe('PostgresAuthRepository', () => {
     ).resolves.toBeNull()
     expect(invalid.statements).toHaveLength(0)
 
+    await expect(
+      new PostgresAuthRepository(invalid.pool).readMfaStatus('too-short')
+    ).rejects.toThrow(AuthenticationError)
+    expect(invalid.statements).toHaveLength(0)
+
     const expired = fakePool({ expired: true })
     await expect(
       new PostgresAuthRepository(expired.pool).readSession('b'.repeat(48))
@@ -738,6 +743,8 @@ describe('PostgresAuthRepository', () => {
       email: 'user@example.com',
       password: 'correct horse battery staple'
     })
+
+    if (result.mfaRequired) throw new Error('test fixture unexpectedly required MFA')
 
     expect(result.token).toMatch(/^[A-Za-z0-9_-]{32,}$/)
     const insert = statements.find((entry) =>

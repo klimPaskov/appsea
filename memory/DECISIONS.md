@@ -11,13 +11,20 @@ owns RLS, checkpoints, lineage, and ledgers; the persistence safe point and
 terminal reconciliation handle late cancellation. Local Compose is development
 proof, not production deployment.
 
+## 2026-08-03: Global-auth TOTP MFA boundary
+
+Global browser TOTP stays outside workspace research: encrypt secrets, store
+only recovery/challenge hashes, and issue sessions only after TOTP/recovery
+verification. Closure removes active MFA; retention is bounded. OIDC, verified
+identity, provider review, key rotation, and high-risk enforcement stay separate.
+
 ## 2026-07-24: Authenticated private workspaces
 
 Store users/memberships in PostgreSQL, hash passwords/tokens, and use
 HttpOnly SameSite cookies. Every private read checks membership before RLS
 context. Keep the public leaderboard synthetic. Owner membership mutations use
-last-owner and password-step-up guards with identifier-only receipts; recovery,
-invitations, closure, MFA/OIDC, and production identity remain reviewed work.
+last-owner and password-step-up guards with identifier-only receipts; provider
+recovery/invitations, OIDC, and production identity remain reviewed work.
 
 ## 2026-07-24: Durable source quota and deletion projections
 
@@ -29,36 +36,30 @@ provenance; recomputation and external purge remain open.
 
 ## 2026-07-24: Review before report export
 
-Keep report governance in the private workspace boundary. Owners and editors may
-move a draft to `reviewed`; only owners may approve or withdraw; transitions are
-monotonic and the database trigger repeats the role/order check while emitting
-identifier-only audit/outbox receipts. Export returns only a schema-validated,
-approved report read model with its manifest hash, never raw source payloads.
-This proves an operator-safe fixture export; non-fixture storage, retention,
-and deletion duties remain incomplete.
+Keep report governance private: editors/owners review, owners approve or
+withdraw, and a database trigger repeats the role/order check with
+identifier-only receipts. Export only a schema-validated approved read model
+and manifest hash; fixture export is proven, non-fixture storage/retention is
+not.
 
 ## 2026-07-24: Explicit session inventory and revocation
 
-Expose active sessions privately using stable IDs/timestamps. Revoke another
-session only after same-origin password reauthentication and reject the current
-session; the database resolves the current token before updating the target.
-Recovery, MFA/OIDC, and account deletion remain separate work.
+Expose active sessions privately with stable IDs/timestamps. Revoke another only
+after same-origin password reauthentication; reject the current session and
+resolve the current token in the database. Provider recovery and deletion remain separate.
 
 ## 2026-07-24: Bounded maintenance runners and scheduler correlation
 
-Keep quota/deletion and auth retention as pure, contract-validated runners with
-capped inputs, independent budgets, and stable scheduler IDs. PostgreSQL is the
-idempotency boundary; deployment, alerting, and recovery
-ownership require review before production scheduling.
+Keep quota/deletion and auth retention pure, contract-validated, capped, and
+independently budgeted with stable scheduler IDs. PostgreSQL is the idempotency
+boundary; deployment, alerting, and recovery ownership remain review gates.
 
 ## 2026-07-24: Provider-neutral password recovery boundary
 
-Keep recovery in the global authentication boundary with hash-only reset
-tokens, encrypted outbox material, latest-only uniqueness, narrow
-`SECURITY DEFINER` functions, generic web responses, and bounded idempotent
-worker delivery. Production delivery stays kill-switched until identity/email,
-provider DPA/retention, key rotation, monitoring, and failure evidence are
-approved.
+Keep recovery global: hash-only reset tokens, encrypted outbox, latest-only
+uniqueness, narrow `SECURITY DEFINER` functions, generic responses, and bounded
+idempotent worker delivery. Production delivery stays kill-switched until
+identity/email, DPA/retention, key rotation, monitoring, and failure approval.
 
 ## 2026-07-25: Existing-account workspace invitations
 

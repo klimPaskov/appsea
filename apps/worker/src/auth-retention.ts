@@ -55,7 +55,10 @@ try {
           sessionsDeleted: result.sessionsDeleted,
           rateLimitsDeleted: result.rateLimitsDeleted,
           passwordResetTokensDeleted: result.passwordResetTokensDeleted,
-          workspaceInvitationsDeleted: result.workspaceInvitationsDeleted
+          workspaceInvitationsDeleted: result.workspaceInvitationsDeleted,
+          mfaChallengesDeleted: result.mfaChallengesDeleted,
+          mfaEventsDeleted: result.mfaEventsDeleted,
+          mfaPendingEnrollmentsDeleted: result.mfaPendingEnrollmentsDeleted
         })
       }
     },
@@ -83,7 +86,10 @@ try {
       sessionsDeleted: result.sessionsDeleted,
       rateLimitsDeleted: result.rateLimitsDeleted,
       passwordResetTokensDeleted: result.passwordResetTokensDeleted,
-      workspaceInvitationsDeleted: result.workspaceInvitationsDeleted
+      workspaceInvitationsDeleted: result.workspaceInvitationsDeleted,
+      mfaChallengesDeleted: result.mfaChallengesDeleted,
+      mfaEventsDeleted: result.mfaEventsDeleted,
+      mfaPendingEnrollmentsDeleted: result.mfaPendingEnrollmentsDeleted
     })
   }
 } catch (error) {

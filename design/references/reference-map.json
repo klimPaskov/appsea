@@ -59,7 +59,7 @@
     {
       "id": "security",
       "route": "/account/security",
-      "purpose": "Private active-session review and revocation",
+      "purpose": "Private session review, revocation, and MFA enrollment",
       "desktop": "desktop/security.png",
       "mobile": "mobile/security.png"
     },

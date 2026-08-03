@@ -329,6 +329,23 @@ def security_screen(width: int, height: int, mobile: bool) -> str:
             content += text(margin + 390, row_y + 38, seen, 12, 400, MUTED)
             content += text(width - margin, row_y + 38, action, 12, 650 if action == 'Revoke' else 400, INK, 'end')
         content += line(margin, row_y + row_height, width - margin, row_y + row_height)
+    mfa_y = list_y + 20 + row_height * len(sessions) + (24 if mobile else 28)
+    mfa_height = 132 if mobile else 112
+    content += rect(margin, mfa_y, width - margin * 2, mfa_height, SURFACE, 6, LINE)
+    content += text(margin + 18, mfa_y + 28, 'MULTI-FACTOR AUTHENTICATION', 10, 700, MUTED, letter=1.0)
+    content += multiline(
+        margin + 18,
+        mfa_y + 55,
+        'Enable TOTP sign-in with one-time recovery codes.',
+        13,
+        width - margin * 2 - 36,
+        21,
+        fill='#41444a',
+    )
+    if mobile:
+        content += text(margin + 18, mfa_y + 108, 'Password step-up required', 11, 400, MUTED)
+    else:
+        content += text(margin + 18, mfa_y + 88, 'Password step-up required', 12, 400, MUTED)
     return shell(width, height, content, mobile)
 
 

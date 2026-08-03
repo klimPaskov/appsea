@@ -103,6 +103,13 @@ function assertProductionDelivery(environment: NodeJS.ProcessEnv): void {
   }
 }
 
+function assertProductionMfa(environment: NodeJS.ProcessEnv): void {
+  const key = requiredEnvironmentValue(environment, 'APPSEA_AUTH_MFA_ENCRYPTION_KEY')
+  if (!/^[A-Za-z0-9_-]{43}$/.test(key) || Buffer.from(key, 'base64url').length !== 32) {
+    throw new ProductionPreflightConfigurationError()
+  }
+}
+
 function assertProductionObjectStore(environment: NodeJS.ProcessEnv): void {
   const endpoint = requiredEnvironmentValue(environment, 'APPSEA_OBJECT_STORE_ENDPOINT')
   let parsed: URL
@@ -222,6 +229,7 @@ export function validateProductionEnvironment(
     check('authDelivery', 'APPSEA_PREFLIGHT_AUTH_DELIVERY', () =>
       assertProductionDelivery(environment)
     ),
+    check('authMfa', 'APPSEA_PREFLIGHT_AUTH_MFA', () => assertProductionMfa(environment)),
     check('trustedProxy', 'APPSEA_PREFLIGHT_TRUSTED_PROXY', () =>
       assertProductionProxy(environment)
     ),

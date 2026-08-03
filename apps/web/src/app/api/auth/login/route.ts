@@ -33,6 +33,9 @@ export async function POST(request: Request): Promise<Response> {
       )
     }
     const result = await authRepository().signIn(parsed.data)
+    if (result.mfaRequired) {
+      return Response.json({ data: result }, { headers: privateResponseHeaders })
+    }
     const response = NextResponse.json(
       { data: result.session },
       { headers: privateResponseHeaders }

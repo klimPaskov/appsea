@@ -14,6 +14,8 @@ import {
 import { generatePlanPackage } from '@appsea/reports'
 import { buildFixtureResearchArtifact } from '@appsea/research'
 import { InvalidScoreSnapshotError } from '@appsea/scoring'
+import { totpCodeAt } from '../src/auth-mfa'
+import { sha256 } from '../src/hash'
 import {
   createDatabasePool,
   contentHash,
@@ -1611,6 +1613,7 @@ describe.sequential('PostgreSQL fixture persistence lifecycle', () => {
     expect(read?.user.userId).toBe(created.session.user.userId)
     expect(read?.workspaces[0]?.workspaceId).toBe(workspace?.workspaceId)
     const secondSession = await authRepository.signIn({ email, password })
+    if (secondSession.mfaRequired) throw new Error('MFA was not enrolled for this integration user')
     const activeSessions = await authRepository.listActiveSessions(created.token)
     expect(activeSessions.map((session) => session.current)).toEqual([true, false])
     expect(activeSessions.map((session) => session.id)).toContain(secondSession.session.sessionId)
@@ -1633,6 +1636,70 @@ describe.sequential('PostgreSQL fixture persistence lifecycle', () => {
         created.session.user.userId
       ])
     })
+  })
+
+  it('requires TOTP or a one-time recovery code before minting a session', async () => {
+    const email = `mfa-${Date.now()}@example.test`
+    const password = 'a deliberately long MFA integration password'
+    const created = await authRepository.signUp({
+      email,
+      password,
+      displayName: 'MFA Integration User',
+      workspaceName: 'MFA Integration Workspace'
+    })
+    const token = created.token
+    try {
+      await authRepository.reauthenticateSession(token, { password })
+      const enrollment = await authRepository.beginMfaEnrollment(token)
+      expect(enrollment.recoveryCodes).toHaveLength(10)
+      const confirmed = await authRepository.confirmMfaEnrollment(token, {
+        code: totpCodeAt(enrollment.secret, Date.now())
+      })
+      expect(confirmed.enabled).toBe(true)
+      expect(confirmed.recoveryCodesRemaining).toBe(10)
+
+      const challenged = await authRepository.signIn({ email, password })
+      expect(challenged.mfaRequired).toBe(true)
+      if (!challenged.mfaRequired) throw new Error('expected an MFA challenge')
+      await expect(
+        authRepository.completeMfaSignIn({
+          challengeToken: challenged.challengeToken,
+          code: totpCodeAt(enrollment.secret, Date.now() - 10 * 60 * 1_000)
+        })
+      ).rejects.toThrow('MFA code is invalid or expired')
+      const failedAttempt = await withOwnerClient((client) =>
+        client.query<{ attempt_count: number }>(
+          `SELECT attempt_count
+             FROM appsea.auth_mfa_challenges
+            WHERE challenge_hash = $1`,
+          [sha256(challenged.challengeToken)]
+        )
+      )
+      expect(failedAttempt.rows[0]?.attempt_count).toBe(1)
+      const completed = await authRepository.completeMfaSignIn({
+        challengeToken: challenged.challengeToken,
+        code: enrollment.recoveryCodes[0]!
+      })
+      expect(completed.mfaRequired).toBe(false)
+      if (completed.mfaRequired) throw new Error('expected a completed MFA session')
+      await expect(authRepository.readSession(completed.token)).resolves.toMatchObject({
+        user: { email }
+      })
+      const afterRecovery = await authRepository.readMfaStatus(token)
+      expect(afterRecovery.recoveryCodesRemaining).toBe(9)
+
+      await authRepository.reauthenticateSession(token, { password })
+      const disabled = await authRepository.disableMfa(token, {
+        code: enrollment.recoveryCodes[1]!
+      })
+      expect(disabled.enabled).toBe(false)
+      const normalLogin = await authRepository.signIn({ email, password })
+      expect(normalLogin.mfaRequired).toBe(false)
+    } finally {
+      await withOwnerClient((client) =>
+        client.query('DELETE FROM appsea.users WHERE user_id = $1', [created.session.user.userId])
+      )
+    }
   })
 
   it('keeps opportunity seed content immutable and requires owner approval', async () => {

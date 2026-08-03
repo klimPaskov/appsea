@@ -478,7 +478,12 @@ Implemented:
 - public leaderboard remains database-free and explicitly synthetic
 
 Remaining: verified account recovery/delivery policy, production
-secret/session-retention operations, MFA/OIDC, and external identity review.
+secret/session-retention operations, OIDC/verified identity, provider-backed
+step-up, MFA key rotation, and enforcement for every high-risk token action.
+The AppSea-owned TOTP boundary is implemented in migration `0080` with
+encrypted enrollment secrets, hash-only recovery codes, expiring login
+challenges, and account-security routes; external identity-provider operations
+remain separate.
 Recovery and invitation mechanics exist behind explicit production kill
 switches; invitations intentionally do not create accounts until identity policy
 is approved.

@@ -99,6 +99,7 @@ export async function allowAuthAttempt(
   email: string,
   scope:
     | 'login'
+    | 'mfa'
     | 'signup'
     | 'reauthenticate'
     | 'recovery'
@@ -113,17 +114,19 @@ export async function allowAuthAttempt(
   const maxAttempts =
     scope === 'signup'
       ? 4
-      : scope === 'reauthenticate'
-        ? 6
-        : scope === 'recovery'
-          ? 5
-          : scope === 'invitation'
-            ? 8
-            : scope === 'invitation-accept'
-              ? 20
-              : scope === 'account-deletion'
-                ? 3
-                : 10
+      : scope === 'mfa'
+        ? 8
+        : scope === 'reauthenticate'
+          ? 6
+          : scope === 'recovery'
+            ? 5
+            : scope === 'invitation'
+              ? 8
+              : scope === 'invitation-accept'
+                ? 20
+                : scope === 'account-deletion'
+                  ? 3
+                  : 10
   if (clientMarker) {
     keys.push(`${scope}:client:${clientMarker}`)
   } else {

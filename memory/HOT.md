@@ -1,11 +1,11 @@
 # Hot memory
 
 - Start broad work with instructions, memory, and `docs/INDEX.md`.
-- Fixture mode is the complete persisted path; approved collection stores non-synthetic evidence separately. Leaderboard is leaderboard-only.
+- Fixture is the complete persisted path; approved collection is separate/non-synthetic. Leaderboard only.
 - PostgreSQL/RLS: `packages/db`; Temporal: `packages/workflows` and `apps/worker`.
 - Fixture/collection workflows are package-tested; Temporal/Docker proof and cloud/backup purge remain pending. `0043` queues output purge; `0044` retries tombstones.
-- `CfpbConnector` is typed and quota/deletion-aware but disabled pending legal/privacy/security approval; `0027` records operator-only policy evidence. `StackExchangeConnector` is a disabled, attribution-bound candidate for competitor/contrary research; the production worker selects it only from an approved registry snapshot, and no real source is active.
-- Web research uses scrypt credentials, revocable sessions, membership-before-RLS, owner mutations, and 15-minute step-up; invitation/recovery delivery is kill-switched; MFA/OIDC remain open.
+- `CfpbConnector` is disabled pending legal/privacy/security approval; `StackExchangeConnector` is a disabled candidate for competitor/contrary research; no real source is active.
+- Web auth uses scrypt, revocable sessions, membership-before-RLS, and step-up; TOTP MFA uses encrypted secrets, hash recovery codes, and expiring challenges. Recovery/delivery, OIDC/provider identity, key rotation, and high-risk token enforcement remain open.
 - Production collection persists policy-bound evidence, complaints, tombstones, gaps, cost, and lineage; private reads: `/workspace/:workspaceId/research/:runId`; outputs use filesystem/S3.
 - `0067` adds step-up owner/editor redaction receipts and masks; provenance, hashes, snapshots, raw deletion, and cloud/backup purge remain separate.
 - Analysis v2 carries IDs/digests; the worker rebuilds artifacts in-activity. Private reads carry approval state; legacy v1 drain, cloud/backup purge, role rotation, and scheduler ownership remain open. Collection writes lock leases; `0037` recovers stale dispatches.
