@@ -23,14 +23,18 @@ does not claim a deployed provider, scheduler, or incident-response operation.
 - Contracts: 93 tests, typecheck, and lint pass locally.
 - Database: 137 unit tests, typecheck, and lint pass locally; integration
   coverage includes idempotent enqueue, service/maintenance direct-table
-  denial, retry/reclaim/complete, and v2 scheduler names. A fresh PostgreSQL
-  run is required for SQL execution proof.
+  denial, retry/reclaim/complete, and v2 scheduler names. GitHub Actions run
+  `30793442326` passed fresh PostgreSQL persistence, including migration `0082`
+  SQL execution and role-bound integration behavior.
 - Worker: 116 tests, typecheck, and lint pass locally, including provider
   failure redaction and outbox-first delivery.
 - Full `pnpm verify` passes locally: all 56 package tasks, fixture worker,
   sample plan/analysis generation, web smoke, agents synchronization, and
   repository validation. `pnpm memory:check`, `pnpm docs:check`,
   `pnpm format:check`, and `git diff --check` also pass.
+- GitHub Actions run `30793442326` is green for commit `4fa2fb5`, including
+  aggregate verification/build, fresh PostgreSQL persistence, and fresh
+  Temporal workflow gates.
 
 ## Security review
 
@@ -44,9 +48,9 @@ the table directly; provider effects are intentionally outside the transaction.
 - The provider endpoint, HMAC secret rotation, scheduler uptime, billing and
   incident routing, production PostgreSQL/Temporal topology, and deployment
   crash/recovery proof remain external gates.
-- Local Docker-backed PostgreSQL integration cannot run until the Docker
-  Desktop Linux engine is available; remote CI is required to prove migration
-  syntax and role behavior.
+- Local Docker-backed PostgreSQL integration remains unavailable until the
+  Docker Desktop Linux engine is available; remote CI provides the fresh
+  migration syntax and role-behavior proof for this tranche.
 - The outbox retains fixed scalar telemetry only; it does not make the provider
   itself transactional or guarantee delivery when the external service is
   permanently unavailable.

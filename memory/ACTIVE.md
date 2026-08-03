@@ -89,8 +89,10 @@ memory.
   and worker (116) tests plus affected typechecks and lints locally. Migration
   `0082` integration coverage exercises maintenance-role function access,
   idempotent enqueue, stale retry/reclaim, completion, direct-table denial, and
-  v2 alert scheduler names. Fresh PostgreSQL CI proof is pending for the new
-  migration; local Docker Desktop is unavailable.
+  v2 alert scheduler names. GitHub Actions run `30793442326` is green for
+  commit `4fa2fb5`, including aggregate verification/build, fresh PostgreSQL
+  persistence, and fresh Temporal workflow gates. Local Docker Desktop remains
+  unavailable.
 
 ## Next production tranche
 

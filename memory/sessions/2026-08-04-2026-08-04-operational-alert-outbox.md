@@ -23,13 +23,14 @@
   enqueue idempotency, direct access denial, retry/reclaim/complete, and v2
   scheduler names.
 - Worker: 116 tests, typecheck, lint.
-- Fresh PostgreSQL/Temporal CI proof is still required after commit; local
-  Docker Desktop was unavailable in this session.
+- GitHub Actions run `30793442326` is green for commit `4fa2fb5`, including
+  aggregate verification/build, fresh PostgreSQL persistence, and fresh
+  Temporal workflow gates. Local Docker Desktop was unavailable in this
+  session.
 
 ## Next
 
-Run the repository-wide verification and documentation/memory checks, commit and
-push the private `main` branch, wait for CI, then record the CI run in the
-completion report and memory. Do not claim production readiness: source policy
-approval, deployed infrastructure, provider operations, identity controls,
-object/export/backup purge, and signed desktop releases remain open.
+The durable alert outbox tranche is complete at repository level. Do not claim
+production readiness: source policy approval, deployed infrastructure, provider
+operations, identity controls, object/export/backup purge, and signed desktop
+releases remain open.
