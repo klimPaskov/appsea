@@ -88,8 +88,9 @@ memory.
   authorization, and identifier-only receipts; migration `0084` repairs the
   PostgreSQL 18 archival predicate discovered by that fixture. Fresh CI then
   exposed the read-only `FOR SHARE` check; migration `0085` removes that lock
-  from the private read function. A fresh CI rerun is pending. Local Docker
-  Desktop remains unavailable.
+  from the private read function. GitHub Actions run `30800490289` is green
+  for verify/build, fresh PostgreSQL persistence, and fresh Temporal workflow
+  checks on commit `a20bb1d`. Local Docker Desktop remains unavailable.
 
 ## Next production tranche
 

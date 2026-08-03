@@ -33,9 +33,10 @@ Status: repository slice implemented; external retention operation remains open.
 - Affected package typechecks and lints passed.
 - Focused suites and affected typechecks/lints passed locally. Fresh CI exposed
   and the repository fixed the PostgreSQL 18 archival ambiguity (`0084`), the
-  forced-RLS cleanup context, and the read-only membership lock (`0085`). The
-  latest fresh CI rerun is required before treating migrations `0083`-`0085`
-  as remotely validated; Docker-backed integration is unavailable locally.
+  forced-RLS cleanup context, and the read-only membership lock (`0085`).
+  GitHub Actions run `30800490289` passed verify/build, fresh PostgreSQL
+  persistence, and fresh Temporal workflow checks for commit `a20bb1d`.
+  Docker-backed integration remains unavailable locally.
 
 ## Deliberate simplifications and remaining blockers
 

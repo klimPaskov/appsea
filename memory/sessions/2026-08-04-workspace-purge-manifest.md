@@ -27,6 +27,7 @@ Fresh PostgreSQL CI first exposed a PostgreSQL 18 ambiguity in the pre-existing
 `archive_workspace` function; migration `0084` qualifies its workspace
 predicates. A subsequent run exposed `FOR SHARE` in the read-only manifest
 function; migration `0085` removes that lock. Run the fresh PostgreSQL/Temporal
-CI gate again. Local Docker Desktop's Linux engine is unavailable. Provider
-object, export, and backup retention operations, manifest consumption, and a
-reviewed destructive purge workflow remain external blockers.
+CI gate `30800490289` is green for commit `a20bb1d`. Local Docker Desktop's
+Linux engine is unavailable. Provider object, export, and backup retention
+operations, manifest consumption, and a reviewed destructive purge workflow
+remain external blockers.
