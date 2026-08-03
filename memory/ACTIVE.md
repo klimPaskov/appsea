@@ -65,6 +65,9 @@ memory.
 - The history-safety slice passes contracts (92), workflows (30), and worker
   (110) tests plus affected typechecks/lint locally. The external Temporal
   checker, archive/retention operation, and deployment proof remain pending.
+  GitHub Actions run `30788668850` is green for commit `bf1756e` across
+  aggregate verification, fresh PostgreSQL persistence, and fresh Temporal
+  workflow gates.
 
 ## Next production tranche
 

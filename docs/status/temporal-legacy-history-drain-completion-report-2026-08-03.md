@@ -25,6 +25,11 @@ ready.
   redaction, reviewed retention, and invalid manifest handling.
 - Workflow client tests prove the v2 memo is the only history metadata added by
   the start boundary.
+- Local `pnpm verify` passed (56/56 package tasks, fixture/sample generation,
+  web smoke, and repository checks). GitHub Actions run
+  [`30788668850`](https://github.com/klimPaskov/appsea/actions/runs/30788668850)
+  passed aggregate verification, fresh PostgreSQL persistence, and fresh
+  Temporal workflow gates for commit `bf1756e`.
 
 ## Remaining deployment gate
 

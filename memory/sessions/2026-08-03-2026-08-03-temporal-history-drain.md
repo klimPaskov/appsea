@@ -23,7 +23,9 @@
 
 ## Remaining integration
 
-- Run the full `pnpm verify` and `pnpm repo:check` before committing.
-- Push the commit to the existing private `klimPaskov/appsea` GitHub remote and
-  wait for CI. A live production Temporal checker run and approved archive or
-  retention operation remain external deployment gates; do not claim them.
+- The full `pnpm verify` and `pnpm repo:check` passed locally. Commit `bf1756e`
+  is pushed to the existing private `klimPaskov/appsea` GitHub remote, and CI
+  run `30788668850` passed aggregate verification plus fresh PostgreSQL and
+  Temporal gates.
+- A live production Temporal checker run and approved archive or retention
+  operation remain external deployment gates; do not claim them.
