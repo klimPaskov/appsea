@@ -6,6 +6,7 @@ import {
   decodeOidcState,
   discoverOidcProvider,
   encodeOidcState,
+  assertOidcEndpointNetworkSafety,
   oidcConfigFromEnv,
   OidcConfigurationError,
   stateMatches,
@@ -145,6 +146,27 @@ describe('OIDC boundary', () => {
       redirectUri: config.redirectUri,
       endpointOrigins: ['https://issuer.example.test']
     })
+  })
+
+  it('rejects production provider hosts that resolve into private address space', async () => {
+    const privateLookup = async () => [{ address: '127.0.0.1', family: 4 }] as const
+    await expect(
+      assertOidcEndpointNetworkSafety('https://127.0.0.1.nip.io/.well-known', privateLookup)
+    ).rejects.toThrow('OIDC endpoint resolved to a non-public address')
+
+    const publicLookup = async () => [{ address: '93.184.216.34', family: 4 }] as const
+    await expect(
+      assertOidcEndpointNetworkSafety('https://issuer.example.test/.well-known', publicLookup)
+    ).resolves.toBeUndefined()
+
+    const mixedLookup = async () =>
+      [
+        { address: '93.184.216.34', family: 4 },
+        { address: '::1', family: 6 }
+      ] as const
+    await expect(
+      assertOidcEndpointNetworkSafety('https://issuer.example.test/.well-known', mixedLookup)
+    ).rejects.toThrow('OIDC endpoint resolved to a non-public address')
   })
 
   it('requires the production redirect origin to match the public application origin', () => {

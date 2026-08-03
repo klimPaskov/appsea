@@ -55,8 +55,9 @@ adds disabled-by-default OIDC identities: explicit step-up-protected
 issuer/subject link/unlink, strict state/nonce/PKCE plus RS256/verified-email
 checks, linked-only sign-in, and local-MFA challenge handoff. The identity
 binding survives the MFA handoff in the database, and sign-in telemetry runs
-only after a session is issued. Provider approval, verified email, delivery/
-DPA, account-lifetime retention/revocation, DNS/egress, provider-backed
+only after a session is issued. Production OIDC requests now resolve provider
+addresses and fail closed on private answers. Provider approval, verified email,
+delivery/DPA, account-lifetime retention/revocation, DNS pinning/egress, provider-backed
 step-up, and deployed identity operations remain external gates. MFA key
 rotation is a reviewed deployment procedure rather than an automatic operation.
 
@@ -77,8 +78,8 @@ The current tranche adds `packages/connectors/src/manual-import.ts`,
 runbook plus the private `/workspace/:workspaceId/imports` owner screen. Uploads
 are bounded at 2 MiB/5,000 rows, normalized and PII-scrubbed;
 Temporal receives only a batch identifier. Batch consumption is committed with
-collection persistence, and owner deletion clears staged payloads and emits
-tombstones for existing downstream deletion propagation. URL import is
+collection persistence; owner deletion clears staged payloads and emits
+tombstones. URL import is
 intentionally deferred to avoid SSRF and unreviewed third-party acquisition.
 Integration coverage now exercises owner staging/replay, service consumption,
 deletion payload clearing, RLS, and tombstones; local Docker is unavailable.

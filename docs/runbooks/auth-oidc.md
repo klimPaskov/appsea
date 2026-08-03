@@ -58,10 +58,12 @@ deployment secret manager; never put it in source, fixtures, or logs. Discovery
 authorization, token, and JWKS endpoints must resolve to the issuer origin or
 an explicitly reviewed origin in `APPSEA_AUTH_OIDC_ENDPOINT_ORIGINS`; paths,
 queries, fragments, literal private/loopback/mapped/unspecified/multicast
-hosts, and more than eight origins are rejected. The provider metadata and
-response body reads are bounded and have a 10-second request timeout, but
-deployment egress/DNS policy must still prevent private-address resolution and
-rebinding.
+hosts, and more than eight origins are rejected. In production, each metadata,
+token, and JWKS request also resolves every returned address and fails closed if
+any answer is private, loopback, link-local, multicast, or otherwise unsafe.
+The provider metadata and response body reads are bounded and have a 10-second
+request timeout, but deployment egress/DNS pinning must still prevent a
+time-of-check/time-of-use rebinding race.
 
 ## Browser flow
 
@@ -86,7 +88,8 @@ The provider/config verifier is covered by `apps/web/src/server/oidc.test.ts`,
 route state/redirect tests by `apps/web/src/app/oidc-routes.test.ts`, MFA
 cookie handoff by `apps/web/src/app/mfa-routes.test.ts`, repository authorization
 and identity-view tests by `packages/db/src/auth-repository.test.ts`, and the
-deployment gate by `apps/worker/src/production-preflight.test.ts`. Fresh
+production DNS safety helper by the same OIDC test file, and the deployment gate
+by `apps/worker/src/production-preflight.test.ts`. Fresh
 PostgreSQL migration execution remains a deployment/CI check when the local
 Docker engine is unavailable.
 

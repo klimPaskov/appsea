@@ -5,6 +5,7 @@ import {
   randomBytes,
   timingSafeEqual
 } from 'node:crypto'
+import { lookup } from 'node:dns/promises'
 import { isIP } from 'node:net'
 import { authEmailSchema } from '@appsea/contracts'
 
@@ -212,6 +213,46 @@ function assertProviderUrl(value: string, name: string, production: boolean): st
     throw new OidcConfigurationError(`${name} must not use a private host in production`)
   }
   return parsed.toString()
+}
+
+type OidcDnsLookup = (
+  hostname: string,
+  options: { all: true; verbatim: true }
+) => Promise<readonly { address: string; family: number }[]>
+
+/**
+ * Resolve the provider host before a production request and reject any answer
+ * that lands in a private, loopback, link-local, multicast, or otherwise
+ * non-public address range. Literal hostname checks alone do not stop hosts
+ * such as 127.0.0.1.nip.io from resolving into the application network.
+ * Deployment egress policy and DNS pinning remain required for a complete
+ * rebinding-resistant production control.
+ */
+export async function assertOidcEndpointNetworkSafety(
+  value: string,
+  lookupImpl: OidcDnsLookup = (hostname, options) => lookup(hostname, options)
+): Promise<void> {
+  let parsed: URL
+  try {
+    parsed = new URL(value)
+  } catch {
+    throw new OidcProviderError('OIDC endpoint URL is invalid')
+  }
+  if (isPrivateProductionHostname(parsed.hostname)) {
+    throw new OidcProviderError('OIDC endpoint resolved to a non-public host')
+  }
+  let addresses: readonly { address: string; family: number }[]
+  try {
+    addresses = await lookupImpl(parsed.hostname, { all: true, verbatim: true })
+  } catch {
+    throw new OidcProviderError('OIDC endpoint host could not be resolved')
+  }
+  if (
+    addresses.length === 0 ||
+    addresses.some(({ address }) => isPrivateProductionHostname(address))
+  ) {
+    throw new OidcProviderError('OIDC endpoint resolved to a non-public address')
+  }
 }
 
 function requiredEnvironment(environment: NodeJS.ProcessEnv, name: string): string {
@@ -444,6 +485,9 @@ async function fetchOidcJson(
   const controller = new AbortController()
   const timeout = setTimeout(() => controller.abort(), oidcRequestTimeoutMs)
   try {
+    if (process.env.NODE_ENV === 'production') {
+      await assertOidcEndpointNetworkSafety(input)
+    }
     const response = await fetchImpl(input, { ...init, signal: controller.signal })
     return await readJsonResponse(response, maxBytes, error)
   } finally {
