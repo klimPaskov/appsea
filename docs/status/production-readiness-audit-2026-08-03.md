@@ -23,11 +23,12 @@ Passing on 2026-08-03:
 
 - `pnpm verify` — all package lint, typecheck, test, build, fixture, sample,
   smoke, and repository checks passed.
-- GitHub Actions run `30801121625` passed the pre-change aggregate verify/build,
+- GitHub Actions run `30810550754` passed the updated full `pnpm verify` job,
   fresh PostgreSQL persistence, and fresh Temporal workflow checks for commit
-  `c41818d`. This tranche updates the workflow to grant only `contents: read`,
-  cancel stale runs per ref, and bound each job with a 30-minute timeout; the
-  updated workflow must be proven by the next push.
+  `54a045e`. The workflow grants only `contents: read`, cancels stale runs per
+  ref, and bounds each job with a 30-minute timeout. GitHub emitted a
+  non-failing Node.js 20 action-runtime deprecation annotation; action-runtime
+  upgrades remain a maintenance follow-up.
 - MFA-focused contract, PostgreSQL repository/migration, web-route, worker
   preflight, and retention tests pass; the conditional-MFA route scenario
   passed in GitHub Actions run `30786965857` for commit `b9cb95e`.
