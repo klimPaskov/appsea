@@ -1,4 +1,5 @@
 import { createHash } from 'node:crypto'
+import { resolve } from 'node:path'
 import { describe, expect, it } from 'vitest'
 import {
   FileObjectStore,
@@ -193,6 +194,8 @@ describe('S3ObjectStore', () => {
 })
 
 describe('object-store configuration', () => {
+  const localRoot = resolve('appsea-object-store-test-root')
+
   it('selects S3 only from a complete cloud configuration', () => {
     const fake = fakeS3()
     const store = objectStoreFromEnv(
@@ -217,11 +220,11 @@ describe('object-store configuration', () => {
 
   it('keeps local defaults explicit and rejects an absent production adapter', () => {
     expect(
-      objectStoreFromEnv({ NODE_ENV: 'development' }, { defaultRoot: 'C:\\appsea-objects' })
+      objectStoreFromEnv({ NODE_ENV: 'development' }, { defaultRoot: localRoot })
     ).toBeInstanceOf(FileObjectStore)
     expect(() => objectStoreFromEnv({ NODE_ENV: 'production' })).toThrowError(ObjectStoreError)
     expect(() =>
-      objectStoreFromEnv({ NODE_ENV: 'production', APPSEA_OBJECT_STORE_ROOT: 'C:\\appsea-objects' })
+      objectStoreFromEnv({ NODE_ENV: 'production', APPSEA_OBJECT_STORE_ROOT: localRoot })
     ).toThrowError(ObjectStoreError)
     expect(() =>
       objectStoreFromEnv({
