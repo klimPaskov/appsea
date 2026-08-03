@@ -97,7 +97,8 @@ describe('database foundation', () => {
       '0081',
       '0082',
       '0083',
-      '0084'
+      '0084',
+      '0085'
     ])
     expect(migrations[0]?.checksum).toMatch(/^[a-f0-9]{64}$/)
     expect(migrations[0]?.sql).toContain('CREATE TABLE appsea.evidence_records')
@@ -193,6 +194,13 @@ describe('database foundation', () => {
     expect(workspaceArchivalQualificationMigration?.sql).toContain(
       'WHERE workspace.workspace_id = p_workspace_id'
     )
+    const workspacePurgeManifestReadMigration = migrations.find(
+      (migration) => migration.version === '0085'
+    )
+    expect(workspacePurgeManifestReadMigration?.sql).toContain(
+      'workspace purge manifest read requires an owner'
+    )
+    expect(workspacePurgeManifestReadMigration?.sql).not.toContain('FOR SHARE')
     const authMigration = migrations.find((migration) => migration.version === '0008')
     const privacyMigration = migrations.find((migration) => migration.version === '0009')
     const retentionMigration = migrations.find((migration) => migration.version === '0010')

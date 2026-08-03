@@ -7,7 +7,7 @@ Temporal, source-policy, private-workspace, report/plan, and maintenance
 boundaries. The public leaderboard is intentionally synthetic and sparse; no
 real source is enabled.
 
-Migrations `0027`-`0084` cover policy evidence, collection checkpoints,
+Migrations `0027`-`0085` cover policy evidence, collection checkpoints,
 deletion/recomputation repair, leases, admissions, campaign orchestration and
 cancellation, source reconciliation, analysis history, report/plan governance,
 cost and alert projections, object references, workspace archival/purge intent/
@@ -53,9 +53,9 @@ exhaustion, retention purge, and a durable `alerts:deliver` drain. Deployment
 scheduler ownership, incident routing, provider billing, cloud/backup purge,
 and production topology remain open.
 
-Migrations `0083`-`0084` add an archived-owner, forced-RLS purge-manifest
-boundary and repair the PostgreSQL 18 archival-function qualification exposed
-when the manifest integration fixture archives a workspace.
+Migrations `0083`-`0085` add an archived-owner, forced-RLS purge-manifest
+boundary, repair PostgreSQL 18 archival qualification, and keep its private
+read function compatible with read-only transactions.
 `PostgresAuthRepository.prepareWorkspacePurgeManifest` inventories sorted,
 deduplicated object URI/kind pairs from persisted source/report/plan and
 production-analysis references, hashes the canonical workspace/object list,
@@ -86,9 +86,10 @@ memory.
   focused suites plus affected typechecks and lints locally. Migration `0083`
   adds archived-owner integration coverage for deterministic replay, read
   authorization, and identifier-only receipts; migration `0084` repairs the
-  PostgreSQL 18 archival predicate discovered by that fixture. The first
-  fresh PostgreSQL CI run failed on the pre-repair ambiguity; a rerun is
-  pending. Local Docker Desktop remains unavailable.
+  PostgreSQL 18 archival predicate discovered by that fixture. Fresh CI then
+  exposed the read-only `FOR SHARE` check; migration `0085` removes that lock
+  from the private read function. A fresh CI rerun is pending. Local Docker
+  Desktop remains unavailable.
 
 ## Next production tranche
 
