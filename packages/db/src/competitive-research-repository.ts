@@ -328,10 +328,9 @@ export class PostgresCompetitiveResearchRepository {
           const competitor = await client.query(
             `SELECT 1
                FROM appsea.opportunity_competitors
-              WHERE workspace_id = $1
+             WHERE workspace_id = $1
                 AND opportunity_id = $2
-                AND competitor_id = $3
-              FOR SHARE`,
+                AND competitor_id = $3`,
             [parsedWorkspaceId, parsedOpportunityId, parsedInput.competitorId]
           )
           if (competitor.rowCount !== 1) throw new CompetitiveResearchObservationNotFoundError()
