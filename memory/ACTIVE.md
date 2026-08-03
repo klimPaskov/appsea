@@ -91,6 +91,11 @@ memory.
   services. GitHub Actions run `30822047661` passed both image builds and
   Compose validation for commit `bd713ee`; external provider provisioning,
   image signing/registry, and source-policy activation remain blockers.
+- Desktop shell now has a Tauri build hook, committed Rust lockfile,
+  deterministic Windows icon, minimal capability, restrictive local CSP, and
+  a Windows CI compile job. Bundling remains disabled; hosted-origin review,
+  updater trust, signing, notarization, installation tests, and desktop
+  security evidence remain open.
 
 ## Next production tranche
 
@@ -123,8 +128,6 @@ memory.
 - Cloud/object/export/backup purge and automatic source re-collection remain
   separate reviewed operations; workspace archival, purge intent, and the
   metadata-only manifest do not delete research.
-- One-/multi-source cancellation and recomputation are durable repository
-  boundaries, and the worker now has an idempotent signal-driven drain path,
-  but deployed Temporal cancellation, graceful replacement, and crash-drill
+- Deployed Temporal cancellation, graceful replacement, and crash-drill
   evidence are not claimed.
-- Windows/macOS release remains open.
+- Signed Windows/macOS release evidence remains open.

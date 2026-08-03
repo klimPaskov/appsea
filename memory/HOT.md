@@ -16,4 +16,4 @@
 - Purge manifests and re-collection are explicit, private, idempotent, and
   never authorize deletion or automatic refetch.
 - Web/worker share fail-closed Temporal config; production requires TLS/API-key/namespace/CA. Maintenance uses `0046` leases/`0052` fencing; direct source commands use `0051`; deployment alerting, role rotation, recovery, and proof remain open.
-- Production runtime packaging now includes non-root web/worker images and a preflight-gated Compose topology; provider provisioning, signed registry images, and deployment drills remain open.
+- Production runtime packaging includes non-root web/worker images and a preflight-gated Compose topology; the Tauri shell has a compilable, CSP/capability-bounded boundary, but provider provisioning, signed registry/desktop images, and deployment drills remain open.

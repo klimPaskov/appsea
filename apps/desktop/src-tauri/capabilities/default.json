@@ -1,0 +1,6 @@
+{
+  "identifier": "main-capability",
+  "description": "Minimal AppSea desktop capability set.",
+  "windows": ["main"],
+  "permissions": ["core:default"]
+}

@@ -3,6 +3,8 @@ node_modules/
 .next/
 dist/
 .turbo/
+target/
+apps/*/src-tauri/gen/
 *.tsbuildinfo
 __pycache__/
 *.pyc

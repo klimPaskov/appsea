@@ -621,3 +621,18 @@ Remaining: push signed images through an approved registry, provision the
 role-separated external services and secrets, run deployment/restore/crash
 drills, and record provider/incident/source-policy evidence. The package does
 not activate a source or perform a production migration automatically.
+
+### 9. Desktop shell boundary
+
+Status: the Tauri shell is compilable and security-bounded; a signed
+Windows/macOS release remains open.
+
+Implemented:
+
+- Tauri build hook, committed Rust lockfile, deterministic Windows icon, and
+  minimal capability file.
+- Restrictive local CSP with explicit development-origin allowance.
+- Windows CI job for the desktop contract and Rust compile.
+
+Remaining: hosted-origin review, updater trust, signed installers, macOS
+notarization, platform installation tests, and desktop-specific release review.

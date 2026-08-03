@@ -9,6 +9,7 @@
   "scripts": {
     "dev": "turbo dev",
     "dev:web": "pnpm --filter @appsea/web dev",
+    "desktop:check": "cargo check --manifest-path apps/desktop/src-tauri/Cargo.toml",
     "build": "turbo build",
     "typecheck": "turbo typecheck",
     "test": "turbo test",

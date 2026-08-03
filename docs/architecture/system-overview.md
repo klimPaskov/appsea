@@ -262,3 +262,13 @@ uses read-only filesystems, dropped capabilities, and `no-new-privileges`.
 The profile connects to externally operated PostgreSQL, Temporal, object
 storage, identity/delivery, and alert providers; it is a packaging and process
 topology contract, not provider provisioning or source activation proof.
+
+## Desktop shell boundary
+
+`apps/desktop` is a Tauri 2 wrapper around the web contract. Its Rust build
+hook, committed lockfile, deterministic Windows icon, minimal `core:default`
+capability, and restrictive local CSP are compiled and checked in the Windows
+CI job. The shell does not duplicate research, authentication, or persistence
+logic. `bundle.active` stays disabled until hosted-origin review, updater trust,
+signing, notarization, platform installation tests, and a desktop security
+review are complete.
