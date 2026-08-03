@@ -273,8 +273,7 @@ export class PostgresCompetitiveResearchRepository {
              FROM appsea.opportunities
             WHERE workspace_id = $1
               AND opportunity_id = $2
-              AND availability_state = 'active'
-            FOR SHARE`,
+              AND availability_state = 'active'`,
           [parsedWorkspaceId, parsedOpportunityId]
         )
         if (opportunity.rowCount !== 1) throw new CompetitiveResearchObservationNotFoundError()
