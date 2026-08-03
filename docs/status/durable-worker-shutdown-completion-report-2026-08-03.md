@@ -17,8 +17,10 @@ does not claim a deployed process-supervisor or crash-drill result.
   focused lifecycle tests prove repeated signals invoke cleanup once and the
   shutdown marker is set before cleanup begins.
 - Full `pnpm verify` passes locally: all 56 package tasks, fixture worker,
-  sample plan/analysis generation, web smoke, and repository validation. Remote
-  CI remains required after the commit is pushed.
+  sample plan/analysis generation, web smoke, and repository validation.
+- GitHub Actions run `30790024810` is green for commit `557ec62`, including
+  aggregate verification, fresh PostgreSQL persistence, and fresh Temporal
+  workflow gates.
 
 ## Remaining deployment gate
 

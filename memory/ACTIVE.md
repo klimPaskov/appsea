@@ -78,8 +78,10 @@ memory.
 - The durable-worker shutdown slice passes the focused lifecycle tests plus
   worker typecheck and lint locally. Full `pnpm verify` also passes all 56
   package tasks, fixture worker, sample plan/analysis generation, web smoke,
-  and repository validation. Remote CI and a deployed drain/crash drill remain
-  pending for this slice.
+  and repository validation. GitHub Actions run `30790024810` is green for
+  commit `557ec62`, including aggregate verification, fresh PostgreSQL
+  persistence, and fresh Temporal workflow gates. A deployed drain/crash drill
+  remains pending.
 
 ## Next production tranche
 

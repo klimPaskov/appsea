@@ -19,7 +19,8 @@
   lifecycle module has two focused tests.
 - Full `pnpm verify` and repository checks pass locally (56 package tasks,
   fixture worker, sample plan/analysis generation, web smoke, and validation).
-  Remote CI still needs to run after push.
+  GitHub Actions run `30790024810` is green for commit `557ec62`, including
+  aggregate, fresh PostgreSQL, and fresh Temporal gates.
 
 ## Remaining integration
 
