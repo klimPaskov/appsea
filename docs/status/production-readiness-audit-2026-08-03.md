@@ -24,9 +24,9 @@ Passing on 2026-08-03:
 - `pnpm verify` — all package lint, typecheck, test, build, fixture, sample,
   smoke, and repository checks passed.
 - MFA-focused contract, PostgreSQL repository/migration, web-route, worker
-  preflight, and retention tests pass; the MFA integration scenario passed in
-  GitHub Actions run `30785696385` for commit `1b45c8a`.
-- GitHub Actions run `30785696385` passed the aggregate verify, fresh
+  preflight, and retention tests pass; the conditional-MFA route scenario
+  passed in GitHub Actions run `30786965857` for commit `b9cb95e`.
+- GitHub Actions run `30786965857` passed the aggregate verify, fresh
   PostgreSQL persistence, and fresh Temporal workflow jobs.
 - `pnpm --filter @appsea/contracts test` — 89 passed.
 - `pnpm --filter @appsea/db test` — 135 passed.

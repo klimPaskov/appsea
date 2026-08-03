@@ -45,16 +45,18 @@ memory.
 
 - `pnpm verify` passed 2026-08-03 for the MFA step-up tranche; it covered
   package lint/typecheck/test/build, fixture worker, sample plan, smoke web,
-  and repository checks.
+  and repository checks. GitHub Actions run `30786965857` for commit
+  `b9cb95e` also passed aggregate verification, fresh PostgreSQL persistence,
+  and fresh Temporal workflow gates.
 - The prior MFA step-up tranche passed contracts (89), db (135), and web (144)
-  focused suites plus affected typechecks and lints; GitHub Actions run
-  `30785696385` passed the fresh PostgreSQL and Temporal gates. The current
+  focused suites plus affected typechecks and lints. The current
   conditional-MFA route slice passes the web suite (144), web typecheck, and
-  web lint locally; its repository-wide gate is still pending.
+  web lint locally; GitHub Actions run `30786965857` passed the aggregate,
+  fresh PostgreSQL, and fresh Temporal gates for commit `b9cb95e`.
 - PostgreSQL and Temporal fresh integration is staged but local Docker is
   blocked by the unavailable Docker Desktop Linux engine pipe. Remote CI is the
   authoritative fresh-install/upgrade and workflow proof; that remote gate is
-  green for commit `1b45c8a`.
+  green for commit `b9cb95e`.
 
 ## Next production tranche
 

@@ -23,8 +23,12 @@ provider identity, production delivery, or production readiness.
 - `pnpm --filter @appsea/web test`: 144 tests passed across 41 files.
 - `pnpm --filter @appsea/web typecheck`: passed.
 - `pnpm --filter @appsea/web lint`: passed.
-- Formatting and the broader repository checks remain part of the final
-  tranche gate.
+- `pnpm verify`: all 56 repository tasks passed, including formatting,
+  package checks, fixture worker, sample plan, analysis sample, web smoke, and
+  repository checks.
+- GitHub Actions run `30786965857` for commit `b9cb95e` passed aggregate
+  verification, fresh PostgreSQL persistence, and fresh Temporal workflow
+  gates.
 
 ## Deliberate boundaries and remaining blockers
 
