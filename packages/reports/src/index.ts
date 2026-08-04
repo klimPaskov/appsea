@@ -4,6 +4,7 @@ import type {
   PlanPackage,
   ProductionResearchArtifact
 } from '@appsea/contracts'
+import { scoreConfidence, scoreForRanking } from '@appsea/scoring'
 import {
   fixtureResearchArtifactSchema,
   opportunityReportSchema,
@@ -86,10 +87,15 @@ export function generateOpportunityReport(
     observationCount: sourceCounts.get(policy.sourceId) ?? 0,
     synthetic: artifact.mode === 'fixture'
   }))
-  const evidenceQuality = artifact.opportunity.scoreSnapshot.factors.evidenceQuality
-  const confidence = evidenceQuality >= 70 ? 'high' : evidenceQuality >= 40 ? 'medium' : 'low'
-  const score = artifact.opportunity.scoreSnapshot.score
-  const decision = score >= 75 ? 'explore' : score >= 50 ? 'validate' : 'defer'
+  const evidenceConfidence = scoreConfidence(artifact.opportunity.scoreSnapshot)
+  const confidence =
+    evidenceConfidence >= 0.7 ? 'high' : evidenceConfidence >= 0.4 ? 'medium' : 'low'
+  const rankingScore = scoreForRanking(artifact.opportunity.scoreSnapshot)
+  const decision = rankingScore >= 75 ? 'explore' : rankingScore >= 50 ? 'validate' : 'defer'
+  const scoreRationale =
+    'rankingScore' in artifact.opportunity.scoreSnapshot
+      ? `The deterministic ${artifact.opportunity.scoreSnapshot.version} score has raw ${artifact.opportunity.scoreSnapshot.rawScore.toFixed(1)}, risk-adjusted ${artifact.opportunity.scoreSnapshot.riskAdjustedScore.toFixed(1)}, ranking ${rankingScore.toFixed(1)}, and evidence confidence ${(evidenceConfidence * 100).toFixed(0)}%.`
+      : `The deterministic ${artifact.opportunity.scoreSnapshot.version} score is ${rankingScore.toFixed(1)} out of 100.`
   return opportunityReportSchema.parse({
     schemaVersion: '1.0.0',
     reportType: 'opportunity',
@@ -124,7 +130,7 @@ export function generateOpportunityReport(
       confidence,
       rationale: [
         `${artifact.complaints.length} retained observations form ${artifact.clusters.length} complaint clusters.`,
-        `The deterministic ${artifact.opportunity.scoreSnapshot.version} score is ${score.toFixed(1)} out of 100.`,
+        scoreRationale,
         artifact.opportunity.contraryEvidence.length > 0
           ? `${artifact.opportunity.contraryEvidence.length} contrary signal${artifact.opportunity.contraryEvidence.length === 1 ? '' : 's'} remain visible.`
           : 'No contrary evidence was recorded in this artifact.'

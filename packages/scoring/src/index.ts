@@ -1,7 +1,18 @@
-import type { ScoreFactors, ScoreSnapshot } from '@appsea/contracts'
-import { scoreSnapshotSchema } from '@appsea/contracts'
+import type {
+  BalancedScoreInput,
+  ScoreFactors,
+  ScoreSnapshot,
+  ScoreSnapshotV1
+} from '@appsea/contracts'
+import {
+  balancedScoreInputSchema,
+  scoreSnapshotSchema,
+  scoreSnapshotV1Schema
+} from '@appsea/contracts'
 
 export const SCORE_VERSION = 'opportunity-score-v0.2.0'
+export const SCORE_V1_VERSION = 'opportunity-score-v1.0.0'
+export const SCORE_V1_MODEL_VERSION = 'balanced-reviewed-input-v1'
 
 export const scoreWeights: ScoreFactors = {
   complaintVolume: 20,
@@ -31,6 +42,242 @@ const positiveFactorNames: Array<keyof Omit<ScoreFactors, 'contraryEvidencePenal
   'evidenceQuality'
 ]
 
+const v1Weights = {
+  demand: {
+    complaintFrequency: 8,
+    independentUserCount: 6,
+    sourceDiversity: 5,
+    recentVelocity: 5,
+    timePersistence: 3,
+    segmentDensity: 3
+  },
+  pain: {
+    severity: 7,
+    workflowCriticality: 5,
+    workaroundCost: 4,
+    switchingIntent: 4
+  },
+  marketOpening: {
+    competitorDissatisfaction: 6,
+    unresolvedSolutionGap: 7,
+    substituteWeakness: 4,
+    timing: 3
+  },
+  businessQuality: {
+    willingnessToPay: 5,
+    repeatUseRetention: 4,
+    audienceReachability: 3,
+    expansionPotential: 3
+  },
+  executionQuality: {
+    mvpFeasibility: 5,
+    dataIntegrationFeasibility: 4,
+    trustComplianceFeasibility: 3,
+    platformIndependence: 3
+  }
+} as const
+
+const v1RiskMaximums = {
+  sourceLegal: 10,
+  platformConcentration: 7,
+  commoditization: 5,
+  regulatoryTrust: 5,
+  manipulation: 4,
+  eventDriven: 4
+} as const
+
+const v1ConfidenceWeights = {
+  sample: 25,
+  sourceDiversity: 20,
+  directness: 15,
+  entityConfidence: 10,
+  timeStability: 10,
+  manipulationSpam: 10,
+  methodAgreementHumanReview: 10
+} as const
+
+type V1Dimension = keyof typeof v1Weights
+
+function round(value: number, digits = 1): number {
+  const factor = 10 ** digits
+  return Math.round(value * factor) / factor
+}
+
+function clamp(value: number, minimum: number, maximum: number): number {
+  return Math.max(minimum, Math.min(maximum, value))
+}
+
+function v1PositiveScore(input: BalancedScoreInput): number {
+  let total = 0
+  for (const dimension of Object.keys(v1Weights) as V1Dimension[]) {
+    const values = input[dimension]
+    const weights = v1Weights[dimension]
+    for (const key of Object.keys(weights) as Array<keyof typeof weights>) {
+      total += values[key] * (weights[key] / 100)
+    }
+  }
+  return round(clamp(total, 0, 100))
+}
+
+function v1RiskScore(input: BalancedScoreInput): number {
+  const total = (Object.keys(v1RiskMaximums) as Array<keyof typeof v1RiskMaximums>).reduce(
+    (sum, key) => sum + input.riskPenalties[key],
+    0
+  )
+  return round(clamp(total, 0, 35))
+}
+
+function v1EvidenceConfidence(input: BalancedScoreInput): number {
+  const total = (
+    Object.keys(v1ConfidenceWeights) as Array<keyof typeof v1ConfidenceWeights>
+  ).reduce(
+    (sum, key) => sum + input.confidenceComponents[key] * (v1ConfidenceWeights[key] / 100),
+    0
+  )
+  return round(clamp(total, 0, 1), 3)
+}
+
+function buildV1Explanations(input: BalancedScoreInput, confidence: number) {
+  const explanations: Array<{
+    key: string
+    value: number
+    weight: number
+    contribution: number
+    evidenceIds: string[]
+    transformation: string
+    confidence: number
+    changeReason: string
+  }> = []
+  for (const dimension of Object.keys(v1Weights) as V1Dimension[]) {
+    const values = input[dimension]
+    const weights = v1Weights[dimension]
+    for (const key of Object.keys(weights) as Array<keyof typeof weights>) {
+      explanations.push({
+        key: `${dimension}.${String(key)}`,
+        value: values[key],
+        weight: weights[key],
+        contribution: round(values[key] * (weights[key] / 100)),
+        evidenceIds: [input.evidenceSnapshotId],
+        transformation: 'linear normalized signal (0..100) multiplied by fixed spec weight',
+        confidence,
+        changeReason: 'Reviewed seed input; no complaint text is used to derive this factor.'
+      })
+    }
+  }
+  for (const key of Object.keys(v1RiskMaximums) as Array<keyof typeof v1RiskMaximums>) {
+    explanations.push({
+      key: `risk.${String(key)}`,
+      value: input.riskPenalties[key] * (100 / v1RiskMaximums[key]),
+      weight: v1RiskMaximums[key],
+      contribution: -input.riskPenalties[key],
+      evidenceIds: [input.evidenceSnapshotId],
+      transformation: 'bounded risk penalty subtracted after positive score',
+      confidence,
+      changeReason: 'Reviewed seed risk assessment; displayed as a visible penalty.'
+    })
+  }
+  for (const key of Object.keys(v1ConfidenceWeights) as Array<keyof typeof v1ConfidenceWeights>) {
+    explanations.push({
+      key: `confidence.${String(key)}`,
+      value: input.confidenceComponents[key] * 100,
+      weight: v1ConfidenceWeights[key],
+      contribution: round((input.confidenceComponents[key] * v1ConfidenceWeights[key]) / 100, 3),
+      evidenceIds: [input.evidenceSnapshotId],
+      transformation: 'weighted evidence-confidence component (0..1)',
+      confidence: input.confidenceComponents[key],
+      changeReason: 'Reviewed evidence-quality component retained for replay.'
+    })
+  }
+  return explanations
+}
+
+function compatibilityFactors(
+  input: BalancedScoreInput,
+  confidence: number,
+  riskPenalty: number
+): ScoreFactors {
+  return {
+    complaintVolume: input.demand.complaintFrequency,
+    painSeverity: input.pain.severity,
+    recurrence: input.demand.timePersistence,
+    willingnessToPay: input.businessQuality.willingnessToPay,
+    competitiveGap: input.marketOpening.unresolvedSolutionGap,
+    buildFeasibility: input.executionQuality.mvpFeasibility,
+    evidenceQuality: round(confidence * 100),
+    contraryEvidencePenalty: round((riskPenalty / 35) * 100)
+  }
+}
+
+export function calculateOpportunityScoreV1(
+  input: BalancedScoreInput,
+  calculatedAt = new Date().toISOString()
+): ScoreSnapshotV1 {
+  const parsed = balancedScoreInputSchema.parse(input)
+  const rawScore = v1PositiveScore(parsed)
+  const riskPenalty = v1RiskScore(parsed)
+  const riskAdjustedScore = round(clamp(rawScore - riskPenalty, 0, 100))
+  const evidenceConfidence = v1EvidenceConfidence(parsed)
+  const uncertaintyMargin = round(20 * (1 - evidenceConfidence))
+  const rankingScore = round(clamp(riskAdjustedScore - uncertaintyMargin, 0, 100))
+  const factors = compatibilityFactors(parsed, evidenceConfidence, riskPenalty)
+  return scoreSnapshotV1Schema.parse({
+    score: rawScore,
+    rawScore,
+    riskPenalty,
+    riskAdjustedScore,
+    evidenceConfidence,
+    uncertaintyMargin,
+    rankingScore,
+    version: SCORE_V1_VERSION,
+    modelVersion: SCORE_V1_MODEL_VERSION,
+    scoringProfile: parsed.profile,
+    calculatedAt,
+    evidenceSnapshotId: parsed.evidenceSnapshotId,
+    coverageSummary: parsed.coverageSummary,
+    freshnessSummary: parsed.freshnessSummary,
+    factors,
+    weights: scoreWeights,
+    positiveFactors: {
+      demand: parsed.demand,
+      pain: parsed.pain,
+      marketOpening: parsed.marketOpening,
+      businessQuality: parsed.businessQuality,
+      executionQuality: parsed.executionQuality
+    },
+    scoringWeights: {
+      ...v1Weights,
+      riskPenalties: v1RiskMaximums
+    },
+    riskPenalties: parsed.riskPenalties,
+    confidenceComponents: parsed.confidenceComponents,
+    componentExplanations: buildV1Explanations(parsed, evidenceConfidence)
+  })
+}
+
+export function assertDeterministicScoreSnapshotV1(snapshot: ScoreSnapshotV1): ScoreSnapshotV1 {
+  const parsed = scoreSnapshotV1Schema.parse(snapshot)
+  const expected = calculateOpportunityScoreV1(
+    {
+      profile: parsed.scoringProfile,
+      demand: parsed.positiveFactors.demand,
+      pain: parsed.positiveFactors.pain,
+      marketOpening: parsed.positiveFactors.marketOpening,
+      businessQuality: parsed.positiveFactors.businessQuality,
+      executionQuality: parsed.positiveFactors.executionQuality,
+      riskPenalties: parsed.riskPenalties,
+      confidenceComponents: parsed.confidenceComponents,
+      evidenceSnapshotId: parsed.evidenceSnapshotId,
+      coverageSummary: parsed.coverageSummary,
+      freshnessSummary: parsed.freshnessSummary
+    },
+    parsed.calculatedAt
+  )
+  if (JSON.stringify(parsed) !== JSON.stringify(expected)) {
+    throw new InvalidScoreSnapshotError()
+  }
+  return parsed
+}
+
 export function calculateOpportunityScore(
   factors: ScoreFactors,
   calculatedAt = new Date().toISOString()
@@ -52,11 +299,12 @@ export function calculateOpportunityScore(
 }
 
 export function compareScoreSnapshots(a: ScoreSnapshot, b: ScoreSnapshot): number {
-  return b.score - a.score
+  return scoreForRanking(b) - scoreForRanking(a)
 }
 
 export function assertDeterministicScoreSnapshot(snapshot: ScoreSnapshot): ScoreSnapshot {
   const parsed = scoreSnapshotSchema.parse(snapshot)
+  if ('rankingScore' in parsed) return assertDeterministicScoreSnapshotV1(parsed)
   const expected = calculateOpportunityScore(parsed.factors, parsed.calculatedAt)
   const weightsMatch = Object.entries(scoreWeights).every(
     ([factor, weight]) => parsed.weights[factor as keyof ScoreFactors] === weight
@@ -65,4 +313,14 @@ export function assertDeterministicScoreSnapshot(snapshot: ScoreSnapshot): Score
     throw new InvalidScoreSnapshotError()
   }
   return parsed
+}
+
+export function scoreForRanking(snapshot: ScoreSnapshot): number {
+  return 'rankingScore' in snapshot ? snapshot.rankingScore : snapshot.score
+}
+
+export function scoreConfidence(snapshot: ScoreSnapshot): number {
+  return 'evidenceConfidence' in snapshot
+    ? snapshot.evidenceConfidence
+    : snapshot.factors.evidenceQuality / 100
 }

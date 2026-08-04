@@ -387,6 +387,15 @@ editor/owner review and approval transitions; analysis start accepts only an
 approved seed-review identifier and the persistence repository rechecks its
 stored content hash and version.
 
+The reviewed seed contract now has an additive balanced v1 scoring envelope.
+When present, deterministic scoring persists raw, bounded risk penalty,
+risk-adjusted score, evidence confidence, uncertainty margin, ranking score,
+coverage/freshness summaries, and component explanations; legacy v0.2 snapshots
+remain readable and replayable. This does not supply calibration benchmarks,
+additional scoring profiles, independently verified market inputs, or a live
+source. Seeds without the v1 envelope intentionally retain a visible legacy
+scoring coverage gap.
+
 The Stack Exchange connector is now a second policy-drafted candidate for
 `competitor-research` and `contrary-evidence`. The production collection worker
 and scheduled refresh dispatcher select it only from the approved source-policy

@@ -9,7 +9,7 @@ sparse; no third-party public source is enabled. A reviewed internal
 `manual-owner-import` policy now supports tenant-private owner-authorized CSV/
 JSON intake without claiming public market coverage.
 
-Migrations `0027`-`0095` cover policy evidence, checkpoints,
+Migrations `0027`-`0096` cover policy evidence, checkpoints,
 deletion/recomputation repair, leases, admissions, campaign orchestration and
 cancellation, source reconciliation, analysis history, report/plan governance,
 cost and alert projections, object references, workspace archival/purge intent/
@@ -62,17 +62,22 @@ source connector imports this registry, so no runtime skill or production
 permission became active. A reviewed persistence/identity/audit adapter remains
 open.
 
-Manual owner-import (migration `0089`) is the active non-fixture path: uploads
-are bounded, normalized, PII-scrubbed, tenant-private, and represented in
-Temporal by batch ID only. Local smoke covers owner intake, durable completion,
-reviewed analysis, private report/plan readback, and the visible public-market
-gap; URL fetching and public sources remain disabled. Migrations `0090`-`0095`
-keep policy/deletion/privilege surfaces narrow; the shared web path decoder is
-single-use and legacy plan rows cannot start analysis. Fresh local
-PostgreSQL/Temporal persistence and worker replacement pass across all 95
-migrations; private-stack pages and isolated backup/restore through 95
-migrations pass. Provider-encrypted backups, HA, and restore/failover remain
-deployment-owned.
+Manual owner-import (migration `0089`) is the active non-fixture path: bounded,
+normalized, PII-scrubbed, tenant-private, and represented in Temporal by batch
+ID only. Local smoke covers intake, durable completion, reviewed analysis,
+private report/plan readback, and the visible public-market gap; URL fetching and
+public sources remain disabled. Migrations `0090`-`0096` keep policy/deletion/
+privilege surfaces narrow; local PostgreSQL/Temporal, worker replacement,
+private-stack pages, and backup/restore through 96 pass. Provider-encrypted
+backups, HA, and restore/failover remain deployment-owned.
+
+Scoring preserves legacy `opportunity-score-v0.2.0` and adds reviewed-input
+balanced `opportunity-score-v1.0.0`: raw/risk-adjusted/ranking scores, bounded
+risk, confidence, uncertainty, coverage/freshness, and explanations. Migration
+`0096` stores queryable v1 fields and private ordering uses ranking. Seeds
+without v1 retain a visible gap; no live source or calibration evidence is
+implied. Backup/restore through `0096` passes locally; provider proof remains
+open.
 
 `pnpm verify:release` checks Compose, secret-free defaults, hardened images, and
 fail-closed preflight; CI runs Docker mode and `--static` supports no Docker.

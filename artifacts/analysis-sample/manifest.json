@@ -7,7 +7,7 @@
   "transport": "offline-sample",
   "files": {
     "README.md": "170be8d3e482d61ff691dce0138ea2dbc12e85617b8755805c8524c8e237e8ad",
-    "01-product-brief.md": "7767e0cba964e3579987767472dddd65c1705fb0cfc746a9ea1d2a8e86d1783b",
+    "01-product-brief.md": "9e0bb3e758250f0c4d3f447012227542c0566ee4dbcdf92151b55ae9e595749d",
     "02-mvp-scope.md": "6b6d5cb23ce336862bbc52b6731e0b6897081507c85524c1970bbff04e9ca8ce",
     "03-architecture.md": "ffe9dd5771019fc717750c30912d6fb0b604cf8181f4494e4bf0f0ab6aecd982",
     "04-task-graph.json": "aeefa35dacf6b72c11fcde41c8711a24b9129dff53db4af3499ef5da5408c22d",

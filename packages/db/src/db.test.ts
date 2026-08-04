@@ -108,7 +108,8 @@ describe('database foundation', () => {
       '0092',
       '0093',
       '0094',
-      '0095'
+      '0095',
+      '0096'
     ])
     expect(migrations[0]?.checksum).toMatch(/^[a-f0-9]{64}$/)
     expect(migrations[0]?.sql).toContain('CREATE TABLE appsea.evidence_records')
@@ -141,6 +142,10 @@ describe('database foundation', () => {
     expect(workspacePurgeMigration?.sql).toContain('CREATE TABLE appsea.workspace_purge_requests')
     expect(workspacePurgeMigration?.sql).toContain('request_workspace_purge')
     expect(workspacePurgeMigration?.sql).toContain('cancel_workspace_purge')
+    const scoreV1Migration = migrations.find((migration) => migration.version === '0096')
+    expect(scoreV1Migration?.sql).toContain('risk_adjusted_score')
+    expect(scoreV1Migration?.sql).toContain('opportunity_score_snapshots_v1_complete')
+    expect(scoreV1Migration?.sql).toContain('COALESCE(ranking_score, score)')
     const migrationOwnerCompatibilityMigration = migrations.find(
       (migration) => migration.version === '0074'
     )

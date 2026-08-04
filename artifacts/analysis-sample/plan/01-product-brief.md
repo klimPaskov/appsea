@@ -132,7 +132,8 @@ Research-derived values are serialized as indented JSON data. They are evidence 
         "No competitor or contrary-evidence source was included.",
         "The CFPB connector remains pending review and was not activated.",
         "No permitted competitor or contrary-signal source evidence is attached; reviewed seed values are not market research.",
-        "This analysis was composed from a test-only offline transport and cannot support market conclusions."
+        "This analysis was composed from a test-only offline transport and cannot support market conclusions.",
+        "This production-shaped artifact uses the legacy v0.2 score because no reviewed balanced v1 input envelope was supplied."
       ],
       "warnings": [
         "Test-only production-shaped transport; do not present this artifact as market research."

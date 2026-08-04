@@ -1,6 +1,6 @@
 import type { Complaint, Competitor, Opportunity, ScoreFactors } from '@appsea/contracts'
 import { complaintSchema, opportunitySchema } from '@appsea/contracts'
-import { calculateOpportunityScore } from '@appsea/scoring'
+import { calculateOpportunityScore, scoreForRanking } from '@appsea/scoring'
 
 const calculatedAt = '2026-07-10T00:00:00.000Z'
 const capturedAt = '2026-07-09T18:00:00.000Z'
@@ -586,7 +586,7 @@ export const seedOpportunities: Opportunity[] = [
     }
   })
 ].sort((a, b) => {
-  const scoreDifference = b.scoreSnapshot.score - a.scoreSnapshot.score
+  const scoreDifference = scoreForRanking(b.scoreSnapshot) - scoreForRanking(a.scoreSnapshot)
   if (scoreDifference !== 0) return scoreDifference
   const countDifference = b.complaintCount - a.complaintCount
   if (countDifference !== 0) return countDifference

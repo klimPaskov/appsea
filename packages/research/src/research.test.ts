@@ -250,6 +250,69 @@ const productionInput = productionAnalysisInputSchema.parse({
   analysisAt: '2026-07-26T00:00:00.000Z'
 })
 
+const reviewedBalancedInput = {
+  profile: 'balanced' as const,
+  demand: {
+    complaintFrequency: 60,
+    independentUserCount: 50,
+    sourceDiversity: 40,
+    recentVelocity: 45,
+    timePersistence: 55,
+    segmentDensity: 35
+  },
+  pain: { severity: 70, workflowCriticality: 60, workaroundCost: 50, switchingIntent: 40 },
+  marketOpening: {
+    competitorDissatisfaction: 45,
+    unresolvedSolutionGap: 55,
+    substituteWeakness: 50,
+    timing: 40
+  },
+  businessQuality: {
+    willingnessToPay: 35,
+    repeatUseRetention: 40,
+    audienceReachability: 50,
+    expansionPotential: 30
+  },
+  executionQuality: {
+    mvpFeasibility: 75,
+    dataIntegrationFeasibility: 65,
+    trustComplianceFeasibility: 70,
+    platformIndependence: 60
+  },
+  riskPenalties: {
+    sourceLegal: 1,
+    platformConcentration: 1,
+    commoditization: 1,
+    regulatoryTrust: 0,
+    manipulation: 0,
+    eventDriven: 0
+  },
+  confidenceComponents: {
+    sample: 0.6,
+    sourceDiversity: 0.5,
+    directness: 0.7,
+    entityConfidence: 0.8,
+    timeStability: 0.6,
+    manipulationSpam: 0.9,
+    methodAgreementHumanReview: 0.65
+  },
+  evidenceSnapshotId: 'evidence-snapshot-reviewed',
+  coverageSummary: {
+    sourceCount: 1,
+    observationCount: 3,
+    independentUserCount: 3,
+    gapCount: 1,
+    summary: 'One approved test source with visible coverage limits.'
+  },
+  freshnessSummary: {
+    oldestObservationAt: '2026-07-23T00:00:00.000Z',
+    newestObservationAt: '2026-07-25T00:00:00.000Z',
+    asOf: '2026-07-26T00:00:00.000Z',
+    ageDays: 3,
+    summary: 'Recent test observations.'
+  }
+}
+
 describe('production analysis composition', () => {
   it('is deterministic and preserves complete cluster membership', () => {
     const first = buildProductionResearchArtifact(productionInput)
@@ -311,5 +374,32 @@ describe('production analysis composition', () => {
   it('keeps production clustering wording separate from fixture wording', () => {
     const clusters = clusterComplaints(productionInput.complaints, { mode: 'production' })
     expect(clusters[0]?.summary).not.toContain('synthetic')
+  })
+
+  it('uses only an explicitly reviewed balanced input envelope for v1 scoring', () => {
+    const input = {
+      ...productionInput,
+      opportunitySeed: {
+        ...productionInput.opportunitySeed,
+        seed: {
+          ...productionInput.opportunitySeed.seed,
+          balancedScoreInput: reviewedBalancedInput
+        }
+      }
+    }
+    const artifact = buildProductionResearchArtifact(input)
+    expect(artifact.opportunity.scoreSnapshot).toMatchObject({
+      version: 'opportunity-score-v1.0.0',
+      scoringProfile: 'balanced',
+      evidenceSnapshotId: 'evidence-snapshot-reviewed'
+    })
+    const changedText = buildProductionResearchArtifact({
+      ...input,
+      complaints: input.complaints.map((complaint) => ({
+        ...complaint,
+        text: `${complaint.text} unrelated text that must not alter reviewed score.`
+      }))
+    })
+    expect(changedText.opportunity.scoreSnapshot).toEqual(artifact.opportunity.scoreSnapshot)
   })
 })

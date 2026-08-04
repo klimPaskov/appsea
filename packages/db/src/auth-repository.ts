@@ -51,6 +51,7 @@ import {
   authMfaStatusReadModelSchema,
   authSessionTokenSchema,
   fixtureResearchArtifactSchema,
+  productionResearchArtifactSchema,
   opportunityReportSchema,
   opportunitySchema,
   planPackageSchema,
@@ -624,6 +625,10 @@ interface OpportunityRow extends QueryResultRow {
   current_score_snapshot_id: string | null
   current_plan_package_id: string | null
   score: number | string | null
+  raw_score: number | string | null
+  risk_adjusted_score: number | string | null
+  ranking_score: number | string | null
+  evidence_confidence: number | string | null
   scoring_version: string | null
   score_calculated_at: Date | string | null
   current_report_id: string | null
@@ -957,6 +962,18 @@ function mapOpportunity(row: OpportunityRow): WorkspaceOpportunityReadModel {
     complaintCount: Number(row.complaint_count),
     synthetic: row.synthetic,
     score: Number(row.score ?? 0),
+    ...(row.raw_score === null || row.raw_score === undefined
+      ? {}
+      : { rawScore: Number(row.raw_score) }),
+    ...(row.risk_adjusted_score === null || row.risk_adjusted_score === undefined
+      ? {}
+      : { riskAdjustedScore: Number(row.risk_adjusted_score) }),
+    ...(row.ranking_score === null || row.ranking_score === undefined
+      ? {}
+      : { rankingScore: Number(row.ranking_score) }),
+    ...(row.evidence_confidence === null || row.evidence_confidence === undefined
+      ? {}
+      : { evidenceConfidence: Number(row.evidence_confidence) }),
     scoreVersion: row.scoring_version ?? 'unknown',
     scoreCalculatedAt: iso(row.score_calculated_at ?? new Date(0)),
     state: row.state,
@@ -3910,7 +3927,9 @@ export class PostgresAuthRepository {
                   opportunity.tags, opportunity.contrary_evidence, opportunity.state,
                   opportunity.source_run_id, opportunity.current_score_snapshot_id,
                   opportunity.current_plan_package_id, score.score, score.scoring_version,
-                  score.calculated_at AS score_calculated_at, score.factors, score.weights,
+                   score.calculated_at AS score_calculated_at, score.factors, score.weights,
+                   score.score AS raw_score, score.risk_adjusted_score,
+                   score.ranking_score, score.evidence_confidence,
                   report.report_id AS current_report_id
              FROM appsea.opportunities opportunity
              LEFT JOIN appsea.opportunity_score_snapshots score
@@ -3927,7 +3946,7 @@ export class PostgresAuthRepository {
               ) report ON true
              WHERE opportunity.workspace_id = $1
                AND opportunity.availability_state = 'active'
-             ORDER BY score.score DESC NULLS LAST,
+              ORDER BY COALESCE(score.ranking_score, score.score) DESC NULLS LAST,
                      opportunity.complaint_count DESC,
                      opportunity.slug`,
           [workspaceId]
@@ -3966,7 +3985,9 @@ export class PostgresAuthRepository {
                   opportunity.tags, opportunity.contrary_evidence, opportunity.state,
                   opportunity.source_run_id, opportunity.current_score_snapshot_id,
                   opportunity.current_plan_package_id, score.score, score.scoring_version,
-                  score.calculated_at AS score_calculated_at, score.factors, score.weights,
+                   score.calculated_at AS score_calculated_at, score.factors, score.weights,
+                   score.score AS raw_score, score.risk_adjusted_score,
+                   score.ranking_score, score.evidence_confidence,
                   report.report_id AS current_report_id
              FROM appsea.opportunities opportunity
              LEFT JOIN appsea.opportunity_score_snapshots score
@@ -4000,7 +4021,14 @@ export class PostgresAuthRepository {
           [workspaceId, row.source_run_id]
         )
         const artifact = run.rows[0]
-          ? fixtureResearchArtifactSchema.safeParse(run.rows[0].artifact_snapshot)
+          ? (() => {
+              const production = productionResearchArtifactSchema.safeParse(
+                run.rows[0].artifact_snapshot
+              )
+              return production.success
+                ? production
+                : fixtureResearchArtifactSchema.safeParse(run.rows[0].artifact_snapshot)
+            })()
           : undefined
         const fallbackOpportunity = opportunitySchema.parse({
           id: row.opportunity_id,

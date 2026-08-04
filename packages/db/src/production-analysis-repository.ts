@@ -1581,8 +1581,12 @@ export class PostgresProductionAnalysisRepository {
           await client.query(
             `INSERT INTO appsea.opportunity_score_snapshots
              (workspace_id, score_snapshot_id, opportunity_id, scoring_version, score,
-              factors, weights, input_hash, explanation, calculated_at)
-           VALUES ($1, $2, $3, $4, $5, $6::jsonb, $7::jsonb, $8, $9::jsonb, $10)
+              factors, weights, input_hash, explanation, calculated_at,
+              risk_penalty, risk_adjusted_score, evidence_confidence,
+              uncertainty_margin, ranking_score, scoring_profile, model_version,
+              evidence_snapshot_id, coverage_summary, freshness_summary)
+           VALUES ($1, $2, $3, $4, $5, $6::jsonb, $7::jsonb, $8, $9::jsonb, $10,
+                   $11, $12, $13, $14, $15, $16, $17, $18, $19::jsonb, $20::jsonb)
            ON CONFLICT DO NOTHING`,
             [
               parsed.workspaceId,
@@ -1596,9 +1600,40 @@ export class PostgresProductionAnalysisRepository {
               JSON.stringify({
                 production: true,
                 analysisRunId: parsed.analysisRunId,
-                contraryEvidence: parsed.artifact.opportunity.contraryEvidence
+                contraryEvidence: parsed.artifact.opportunity.contraryEvidence,
+                scoreSnapshot: parsed.artifact.opportunity.scoreSnapshot
               }),
-              parsed.artifact.opportunity.scoreSnapshot.calculatedAt
+              parsed.artifact.opportunity.scoreSnapshot.calculatedAt,
+              'riskPenalty' in parsed.artifact.opportunity.scoreSnapshot
+                ? parsed.artifact.opportunity.scoreSnapshot.riskPenalty
+                : null,
+              'riskAdjustedScore' in parsed.artifact.opportunity.scoreSnapshot
+                ? parsed.artifact.opportunity.scoreSnapshot.riskAdjustedScore
+                : null,
+              'evidenceConfidence' in parsed.artifact.opportunity.scoreSnapshot
+                ? parsed.artifact.opportunity.scoreSnapshot.evidenceConfidence
+                : null,
+              'uncertaintyMargin' in parsed.artifact.opportunity.scoreSnapshot
+                ? parsed.artifact.opportunity.scoreSnapshot.uncertaintyMargin
+                : null,
+              'rankingScore' in parsed.artifact.opportunity.scoreSnapshot
+                ? parsed.artifact.opportunity.scoreSnapshot.rankingScore
+                : null,
+              'scoringProfile' in parsed.artifact.opportunity.scoreSnapshot
+                ? parsed.artifact.opportunity.scoreSnapshot.scoringProfile
+                : null,
+              'modelVersion' in parsed.artifact.opportunity.scoreSnapshot
+                ? parsed.artifact.opportunity.scoreSnapshot.modelVersion
+                : null,
+              'evidenceSnapshotId' in parsed.artifact.opportunity.scoreSnapshot
+                ? parsed.artifact.opportunity.scoreSnapshot.evidenceSnapshotId
+                : null,
+              'coverageSummary' in parsed.artifact.opportunity.scoreSnapshot
+                ? JSON.stringify(parsed.artifact.opportunity.scoreSnapshot.coverageSummary)
+                : null,
+              'freshnessSummary' in parsed.artifact.opportunity.scoreSnapshot
+                ? JSON.stringify(parsed.artifact.opportunity.scoreSnapshot.freshnessSummary)
+                : null
             ]
           )
           await assertStoredHash(

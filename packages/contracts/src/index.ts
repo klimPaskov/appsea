@@ -406,6 +406,12 @@ export const competitorSchema = z.object({
   featureMatrix: competitorFeatureMatrixSchema.default([])
 })
 
+export const appseaIdentifierSchema = z
+  .string()
+  .min(3)
+  .max(160)
+  .regex(/^[a-z][a-z0-9_:-]*$/)
+
 export const scoreFactorsSchema = z.object({
   complaintVolume: z.number().min(0).max(100),
   painSeverity: z.number().min(0).max(100),
@@ -417,13 +423,217 @@ export const scoreFactorsSchema = z.object({
   contraryEvidencePenalty: z.number().min(0).max(100)
 })
 
-export const scoreSnapshotSchema = z.object({
-  score: z.number().min(0).max(100),
-  version: z.string().min(1),
-  calculatedAt: z.string().datetime(),
-  factors: scoreFactorsSchema,
-  weights: scoreFactorsSchema
-})
+const scoreSnapshotLegacySchema = z
+  .object({
+    score: z.number().min(0).max(100),
+    version: z.string().min(1),
+    calculatedAt: z.string().datetime(),
+    factors: scoreFactorsSchema,
+    weights: scoreFactorsSchema
+  })
+  .strict()
+
+const scoreSignalSchema = z.number().min(0).max(100)
+const confidenceSignalSchema = z.number().min(0).max(1)
+
+/** Reviewed inputs for the balanced v1 opportunity score. Values are supplied
+ * by a reviewed seed; the scorer never derives market claims from complaint
+ * text. Each signal is normalized to 0..100 before its fixed spec weight is
+ * applied. */
+export const balancedScoreInputSchema = z
+  .object({
+    profile: z.literal('balanced'),
+    demand: z
+      .object({
+        complaintFrequency: scoreSignalSchema,
+        independentUserCount: scoreSignalSchema,
+        sourceDiversity: scoreSignalSchema,
+        recentVelocity: scoreSignalSchema,
+        timePersistence: scoreSignalSchema,
+        segmentDensity: scoreSignalSchema
+      })
+      .strict(),
+    pain: z
+      .object({
+        severity: scoreSignalSchema,
+        workflowCriticality: scoreSignalSchema,
+        workaroundCost: scoreSignalSchema,
+        switchingIntent: scoreSignalSchema
+      })
+      .strict(),
+    marketOpening: z
+      .object({
+        competitorDissatisfaction: scoreSignalSchema,
+        unresolvedSolutionGap: scoreSignalSchema,
+        substituteWeakness: scoreSignalSchema,
+        timing: scoreSignalSchema
+      })
+      .strict(),
+    businessQuality: z
+      .object({
+        willingnessToPay: scoreSignalSchema,
+        repeatUseRetention: scoreSignalSchema,
+        audienceReachability: scoreSignalSchema,
+        expansionPotential: scoreSignalSchema
+      })
+      .strict(),
+    executionQuality: z
+      .object({
+        mvpFeasibility: scoreSignalSchema,
+        dataIntegrationFeasibility: scoreSignalSchema,
+        trustComplianceFeasibility: scoreSignalSchema,
+        platformIndependence: scoreSignalSchema
+      })
+      .strict(),
+    riskPenalties: z
+      .object({
+        sourceLegal: z.number().min(0).max(10),
+        platformConcentration: z.number().min(0).max(7),
+        commoditization: z.number().min(0).max(5),
+        regulatoryTrust: z.number().min(0).max(5),
+        manipulation: z.number().min(0).max(4),
+        eventDriven: z.number().min(0).max(4)
+      })
+      .strict(),
+    confidenceComponents: z
+      .object({
+        sample: confidenceSignalSchema,
+        sourceDiversity: confidenceSignalSchema,
+        directness: confidenceSignalSchema,
+        entityConfidence: confidenceSignalSchema,
+        timeStability: confidenceSignalSchema,
+        manipulationSpam: confidenceSignalSchema,
+        methodAgreementHumanReview: confidenceSignalSchema
+      })
+      .strict(),
+    evidenceSnapshotId: appseaIdentifierSchema,
+    coverageSummary: z
+      .object({
+        sourceCount: z.number().int().nonnegative().max(10_000),
+        observationCount: z.number().int().nonnegative().max(1_000_000),
+        independentUserCount: z.number().int().nonnegative().max(1_000_000),
+        gapCount: z.number().int().nonnegative().max(10_000),
+        summary: z.string().min(1).max(1_000)
+      })
+      .strict(),
+    freshnessSummary: z
+      .object({
+        oldestObservationAt: z.string().datetime().nullable(),
+        newestObservationAt: z.string().datetime().nullable(),
+        asOf: z.string().datetime(),
+        ageDays: z.number().nonnegative().max(36_500),
+        summary: z.string().min(1).max(1_000)
+      })
+      .strict()
+  })
+  .strict()
+
+export const scoreComponentExplanationSchema = z
+  .object({
+    key: z.string().min(1).max(120),
+    value: z.number().min(0).max(100),
+    weight: z.number().positive().max(100),
+    contribution: z.number().min(-100).max(100),
+    evidenceIds: z.array(appseaIdentifierSchema).max(100),
+    transformation: z.string().min(1).max(240),
+    confidence: confidenceSignalSchema,
+    changeReason: z.string().min(1).max(500)
+  })
+  .strict()
+
+const scoreWeightSchema = z.number().positive().max(100)
+const scoreWeightDimensionSchema = z
+  .object({
+    demand: z
+      .object({
+        complaintFrequency: scoreWeightSchema,
+        independentUserCount: scoreWeightSchema,
+        sourceDiversity: scoreWeightSchema,
+        recentVelocity: scoreWeightSchema,
+        timePersistence: scoreWeightSchema,
+        segmentDensity: scoreWeightSchema
+      })
+      .strict(),
+    pain: z
+      .object({
+        severity: scoreWeightSchema,
+        workflowCriticality: scoreWeightSchema,
+        workaroundCost: scoreWeightSchema,
+        switchingIntent: scoreWeightSchema
+      })
+      .strict(),
+    marketOpening: z
+      .object({
+        competitorDissatisfaction: scoreWeightSchema,
+        unresolvedSolutionGap: scoreWeightSchema,
+        substituteWeakness: scoreWeightSchema,
+        timing: scoreWeightSchema
+      })
+      .strict(),
+    businessQuality: z
+      .object({
+        willingnessToPay: scoreWeightSchema,
+        repeatUseRetention: scoreWeightSchema,
+        audienceReachability: scoreWeightSchema,
+        expansionPotential: scoreWeightSchema
+      })
+      .strict(),
+    executionQuality: z
+      .object({
+        mvpFeasibility: scoreWeightSchema,
+        dataIntegrationFeasibility: scoreWeightSchema,
+        trustComplianceFeasibility: scoreWeightSchema,
+        platformIndependence: scoreWeightSchema
+      })
+      .strict(),
+    riskPenalties: z
+      .object({
+        sourceLegal: scoreWeightSchema,
+        platformConcentration: scoreWeightSchema,
+        commoditization: scoreWeightSchema,
+        regulatoryTrust: scoreWeightSchema,
+        manipulation: scoreWeightSchema,
+        eventDriven: scoreWeightSchema
+      })
+      .strict()
+  })
+  .strict()
+
+export const scoreSnapshotV1Schema = z
+  .object({
+    score: z.number().min(0).max(100),
+    rawScore: z.number().min(0).max(100),
+    riskPenalty: z.number().min(0).max(35),
+    riskAdjustedScore: z.number().min(0).max(100),
+    evidenceConfidence: confidenceSignalSchema,
+    uncertaintyMargin: z.number().min(0).max(20),
+    rankingScore: z.number().min(0).max(100),
+    version: z.literal('opportunity-score-v1.0.0'),
+    modelVersion: z.string().min(1).max(120),
+    scoringProfile: z.literal('balanced'),
+    calculatedAt: z.string().datetime(),
+    evidenceSnapshotId: appseaIdentifierSchema,
+    coverageSummary: balancedScoreInputSchema.shape.coverageSummary,
+    freshnessSummary: balancedScoreInputSchema.shape.freshnessSummary,
+    factors: scoreFactorsSchema,
+    weights: scoreFactorsSchema,
+    positiveFactors: z
+      .object({
+        demand: balancedScoreInputSchema.shape.demand,
+        pain: balancedScoreInputSchema.shape.pain,
+        marketOpening: balancedScoreInputSchema.shape.marketOpening,
+        businessQuality: balancedScoreInputSchema.shape.businessQuality,
+        executionQuality: balancedScoreInputSchema.shape.executionQuality
+      })
+      .strict(),
+    scoringWeights: scoreWeightDimensionSchema,
+    riskPenalties: balancedScoreInputSchema.shape.riskPenalties,
+    confidenceComponents: balancedScoreInputSchema.shape.confidenceComponents,
+    componentExplanations: z.array(scoreComponentExplanationSchema).min(1).max(64)
+  })
+  .strict()
+
+export const scoreSnapshotSchema = z.union([scoreSnapshotV1Schema, scoreSnapshotLegacySchema])
 
 export const opportunitySchema = z.object({
   id: z.string().min(1),
@@ -442,12 +652,6 @@ export const opportunitySchema = z.object({
   contraryEvidence: z.array(z.string()),
   planFiles: z.array(z.string())
 })
-
-export const appseaIdentifierSchema = z
-  .string()
-  .min(3)
-  .max(160)
-  .regex(/^[a-z][a-z0-9_:-]*$/)
 
 export const manualImportFormatSchema = z.enum(['csv', 'json'])
 
@@ -1056,6 +1260,7 @@ const productionOpportunitySeedStorageSchema = z
     competitors: z.array(competitorSchema).max(500),
     contraryEvidence: z.array(z.string().min(1).max(2_000)).max(500),
     scoreFactors: scoreFactorsSchema,
+    balancedScoreInput: balancedScoreInputSchema.optional(),
     planFiles: z
       .array(
         z
@@ -5605,6 +5810,10 @@ export const workspaceOpportunityReadModelSchema = z
     complaintCount: z.number().int().nonnegative(),
     synthetic: z.boolean(),
     score: z.number().min(0).max(100),
+    rawScore: z.number().min(0).max(100).optional(),
+    riskAdjustedScore: z.number().min(0).max(100).optional(),
+    rankingScore: z.number().min(0).max(100).optional(),
+    evidenceConfidence: z.number().min(0).max(1).optional(),
     scoreVersion: z.string().min(1),
     scoreCalculatedAt: z.string().datetime(),
     state: z.enum([
@@ -6057,6 +6266,10 @@ export type CompetitorFeatureMatrixEvidenceBasis = z.infer<
 export type CompetitorFeatureMatrixEntry = z.infer<typeof competitorFeatureMatrixEntrySchema>
 export type Competitor = z.infer<typeof competitorSchema>
 export type ScoreFactors = z.infer<typeof scoreFactorsSchema>
+export type BalancedScoreInput = z.infer<typeof balancedScoreInputSchema>
+export type ScoreComponentExplanation = z.infer<typeof scoreComponentExplanationSchema>
+export type ScoreWeightDimension = z.infer<typeof scoreWeightDimensionSchema>
+export type ScoreSnapshotV1 = z.infer<typeof scoreSnapshotV1Schema>
 export type ScoreSnapshot = z.infer<typeof scoreSnapshotSchema>
 export type Opportunity = z.infer<typeof opportunitySchema>
 export type ResearchCampaignState = z.infer<typeof researchCampaignStateSchema>

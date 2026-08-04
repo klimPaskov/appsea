@@ -14,7 +14,8 @@
   },
   "dependencies": {
     "@appsea/contracts": "workspace:*",
-    "@appsea/object-store": "workspace:*"
+    "@appsea/object-store": "workspace:*",
+    "@appsea/scoring": "workspace:*"
   },
   "devDependencies": {
     "@appsea/research": "workspace:*",

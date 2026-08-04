@@ -277,6 +277,9 @@ importers:
       '@appsea/object-store':
         specifier: workspace:*
         version: link:../object-store
+      '@appsea/scoring':
+        specifier: workspace:*
+        version: link:../scoring
     devDependencies:
       '@appsea/research':
         specifier: workspace:*

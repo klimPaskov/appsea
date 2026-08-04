@@ -25,7 +25,7 @@ Status: production-shaped foundation implemented and validated locally; producti
 
 Implemented:
 
-- PostgreSQL 18 schema and ninety-five forward, checksummed migrations
+- PostgreSQL 18 schema and ninety-six forward, checksummed migrations
 - normalized source, evidence, complaint, cluster, competitor, opportunity, score, report, plan, audit, cost, deletion, outbox, and lineage tables
 - no-login owner, separate migrator, and least-privilege runtime role contract
 - forced workspace RLS and transaction-scoped workspace context
@@ -35,7 +35,7 @@ Implemented:
 - populated upgrade, fresh install, privilege, RLS, provenance, policy, cross-wire, and replay tests
 - local runbook and CI persistence gate
 - isolated local PostgreSQL backup/restore runbook and CI gate; the drill
-  restores a disposable dump through all ninety-five migrations and verifies
+  restores a disposable dump through all ninety-six migrations and verifies
   forced workspace RLS plus runtime/maintenance privileges without accepting a
   remote URL
 - one-command loopback private-workspace stack with migration, worker, and web
@@ -193,6 +193,13 @@ Migration `0095_workspace_purge_readiness_lease_grant.sql` grants the
 authenticated runtime only the `workspace_id` and `state` lease columns needed
 for the private members purge-readiness count; lease lifecycle mutations and
 other lease columns remain maintenance-only.
+
+Migration `0096_opportunity_score_v1_envelope.sql` adds nullable, range-checked
+balanced v1 score fields, reviewed evidence/coverage/freshness references, and
+a private ranking index. Legacy score rows remain readable and keep `score` as
+their raw-score compatibility field. `pnpm verify:backup-restore` now passes
+through `0096`; provider backup, HA, retention, and production restore remain
+deployment work.
 
 Remaining deployment work and the non-fixture object-store integration are
 tracked in `docs/status/known-gaps.md` and are not part of the completed
@@ -532,8 +539,12 @@ bounded command or the production-collection Temporal boundary, with idempotent
 source/evidence/complaint/deletion lineage plus a private inspection route. A
 separate production-shaped offline analysis checkpoint now composes validated
 collection payloads into clusters, an explicitly seeded opportunity, a
-deterministic score, a generic report, and a generic coding package. It remains
-test-only and does not activate a source or public UI. The additive contract
+deterministic score, a generic report, and a generic coding package. The
+reviewed seed contract now also supports an additive balanced v1 score
+envelope with risk-adjusted ranking, confidence, coverage, freshness, and
+component explanations; seeds without that envelope retain the legacy score
+with a visible gap. It remains test-only and does not activate a source or
+public UI. The additive contract
 now carries policy review hashes, distinct analysis-run identity,
 evidence/source-item mappings, and a reviewed seed envelope resolved from the
 workspace seed-review registry. Migration `0033` and the private seed-review
@@ -620,6 +631,10 @@ opportunity pages do not infer stale draft defaults.
 The report contract keeps retained observations and their derived analysis,
 deterministic score inference,
 contrary evidence, recommendation, source coverage, and coverage gaps separate.
+Balanced v1 reports preserve raw, risk-adjusted, ranking, uncertainty, and
+evidence-confidence semantics from the reviewed score snapshot; legacy fixture
+reports continue to expose the v0.2 raw score. The ranking envelope is a
+reviewed-input checkpoint, not calibration or live market evidence.
 Private opportunity reads now expose a separate competitive-research coverage
 record, per-claim provenance observations, and a competitors/contrary-signals
 route; it does not promote reviewed seed assumptions to source-backed market

@@ -41,6 +41,14 @@ export function mapProductionAnalysisToOpportunityDetail(
     complaintCount: opportunity.complaintCount,
     synthetic: false,
     score: opportunity.scoreSnapshot.score,
+    ...('rawScore' in opportunity.scoreSnapshot
+      ? {
+          rawScore: opportunity.scoreSnapshot.rawScore,
+          riskAdjustedScore: opportunity.scoreSnapshot.riskAdjustedScore,
+          rankingScore: opportunity.scoreSnapshot.rankingScore,
+          evidenceConfidence: opportunity.scoreSnapshot.evidenceConfidence
+        }
+      : {}),
     scoreVersion: opportunity.scoreSnapshot.version,
     scoreCalculatedAt: opportunity.scoreSnapshot.calculatedAt,
     state: 'researched',

@@ -1,7 +1,7 @@
 import { createHash } from 'node:crypto'
 import { getOpportunity } from '@appsea/catalog'
 import { FixtureConnector } from '@appsea/connectors'
-import { calculateOpportunityScore } from '@appsea/scoring'
+import { calculateOpportunityScore, calculateOpportunityScoreV1 } from '@appsea/scoring'
 import type {
   Complaint,
   ComplaintAnalysis,
@@ -291,7 +291,9 @@ export function buildProductionResearchArtifact(
   const clusters = clusterComplaints(complaints, { mode: 'production' })
   const complaintIds = clusters.flatMap((cluster) => cluster.complaintIds)
   const seed = parsed.opportunitySeed.seed
-  const scoreSnapshot = calculateOpportunityScore(seed.scoreFactors, parsed.analysisAt)
+  const scoreSnapshot = seed.balancedScoreInput
+    ? calculateOpportunityScoreV1(seed.balancedScoreInput, parsed.analysisAt)
+    : calculateOpportunityScore(seed.scoreFactors, parsed.analysisAt)
   const opportunity = opportunitySchema.parse({
     id: seed.id,
     slug: seed.slug,
@@ -318,6 +320,11 @@ export function buildProductionResearchArtifact(
       'This analysis was composed from a test-only offline transport and cannot support market conclusions.'
     )
   }
+  if (!seed.balancedScoreInput) {
+    coverageGaps.add(
+      'This production-shaped artifact uses the legacy v0.2 score because no reviewed balanced v1 input envelope was supplied.'
+    )
+  }
   const artifactId = `analysis:${stableHash({
     collectionArtifactId: parsed.collectionArtifactId,
     runId: parsed.runId,
@@ -327,6 +334,7 @@ export function buildProductionResearchArtifact(
     analyses,
     opportunityId: opportunity.id,
     scoreFactors: seed.scoreFactors,
+    ...(seed.balancedScoreInput ? { balancedScoreInput: seed.balancedScoreInput } : {}),
     policySnapshot: parsed.policySnapshot,
     opportunitySeed: parsed.opportunitySeed,
     evidenceIds: complaints.map((complaint) => complaint.evidenceId)
