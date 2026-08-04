@@ -255,12 +255,8 @@ describe('database foundation', () => {
     const campaignSourcePrivilegeMigration = migrations.find(
       (migration) => migration.version === '0092'
     )
-    expect(campaignSourcePrivilegeMigration?.sql).toContain(
-      'GRANT SELECT ON appsea.sources'
-    )
-    expect(campaignSourcePrivilegeMigration?.sql).toContain(
-      'appsea.source_policy_versions'
-    )
+    expect(campaignSourcePrivilegeMigration?.sql).toContain('GRANT SELECT ON appsea.sources')
+    expect(campaignSourcePrivilegeMigration?.sql).toContain('appsea.source_policy_versions')
     const authMigration = migrations.find((migration) => migration.version === '0008')
     const privacyMigration = migrations.find((migration) => migration.version === '0009')
     const retentionMigration = migrations.find((migration) => migration.version === '0010')
