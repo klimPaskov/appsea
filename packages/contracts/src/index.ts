@@ -3209,6 +3209,72 @@ export const researchCampaignRunHistoryPageSchema = z
   })
   .strict()
 
+/** Scalar metadata safely projected from the immutable audit ledger. */
+export const auditEventMetadataSchema = z
+  .record(
+    z
+      .string()
+      .min(1)
+      .max(64)
+      .regex(/^[A-Za-z][A-Za-z0-9_]*$/),
+    z.union([z.string().max(200), z.number().finite(), z.boolean(), z.null()])
+  )
+  .refine((value) => Object.keys(value).length <= 24, {
+    message: 'Audit metadata has too many fields'
+  })
+
+export const auditEventActorTypeSchema = z.enum(['user', 'service', 'system'])
+
+const auditEventActionSchema = z
+  .string()
+  .min(1)
+  .max(160)
+  .regex(/^[a-z][a-z0-9_.:-]*$/)
+
+/** Private audit history projection; raw source payloads are never included. */
+export const auditEventReadModelSchema = z
+  .object({
+    auditEventId: appseaIdentifierSchema,
+    actorType: auditEventActorTypeSchema,
+    actorId: appseaIdentifierSchema,
+    action: auditEventActionSchema,
+    targetType: auditEventActionSchema,
+    targetId: z.string().min(1).max(240),
+    correlationId: z.string().min(1).max(240),
+    metadata: auditEventMetadataSchema,
+    occurredAt: z.string().datetime()
+  })
+  .strict()
+
+/** Opaque cursor payload for descending audit history. */
+export const auditEventHistoryCursorSchema = z
+  .object({
+    version: z.literal(1),
+    occurredAt: z.string().datetime(),
+    itemId: appseaIdentifierSchema
+  })
+  .strict()
+
+/** Bounded query for an authenticated workspace audit-history read. */
+export const auditEventHistoryPageQuerySchema = z
+  .object({
+    limit: z.number().int().min(1).max(100).default(25),
+    cursor: z
+      .string()
+      .min(1)
+      .max(512)
+      .regex(/^[A-Za-z0-9_-]+$/)
+      .optional()
+  })
+  .strict()
+
+export const auditEventHistoryPageSchema = z
+  .object({
+    data: z.array(auditEventReadModelSchema).max(100),
+    nextCursor: z.string().min(1).max(512).nullable()
+  })
+  .strict()
+
 /** Durable parent state for a multi-source campaign collection request. */
 export const researchCampaignOrchestrationStateSchema = z.enum([
   'queued',
@@ -6336,6 +6402,12 @@ export type ResearchCampaignRunInput = z.infer<typeof researchCampaignRunInputSc
 export type CampaignHistoryCursor = z.infer<typeof campaignHistoryCursorSchema>
 export type CampaignHistoryPageQuery = z.infer<typeof campaignHistoryPageQuerySchema>
 export type ResearchCampaignRunHistoryPage = z.infer<typeof researchCampaignRunHistoryPageSchema>
+export type AuditEventMetadata = z.infer<typeof auditEventMetadataSchema>
+export type AuditEventActorType = z.infer<typeof auditEventActorTypeSchema>
+export type AuditEventReadModel = z.infer<typeof auditEventReadModelSchema>
+export type AuditEventHistoryCursor = z.infer<typeof auditEventHistoryCursorSchema>
+export type AuditEventHistoryPageQuery = z.infer<typeof auditEventHistoryPageQuerySchema>
+export type AuditEventHistoryPage = z.infer<typeof auditEventHistoryPageSchema>
 export type ResearchCampaignOrchestrationState = z.infer<
   typeof researchCampaignOrchestrationStateSchema
 >

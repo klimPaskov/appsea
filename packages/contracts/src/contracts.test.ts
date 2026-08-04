@@ -80,6 +80,11 @@ import {
   campaignHistoryCursorSchema,
   campaignHistoryPageQuerySchema,
   researchCampaignRunHistoryPageSchema,
+  auditEventMetadataSchema,
+  auditEventHistoryCursorSchema,
+  auditEventHistoryPageQuerySchema,
+  auditEventReadModelSchema,
+  auditEventHistoryPageSchema,
   researchCampaignOrchestrationReadModelSchema,
   researchCampaignOrchestrationHistoryPageSchema,
   researchCampaignOrchestrationCancelResultSchema,
@@ -2286,6 +2291,47 @@ describe('contracts', () => {
       researchCampaignOrchestrationHistoryPageSchema.safeParse({ data: [], nextCursor: null })
         .success
     ).toBe(true)
+  })
+
+  it('keeps private audit history bounded to scalar metadata and opaque cursors', () => {
+    expect(
+      auditEventReadModelSchema.parse({
+        auditEventId: 'audit:workspace-member-role',
+        actorType: 'user',
+        actorId: 'user:owner',
+        action: 'workspace.member.role_changed',
+        targetType: 'workspace_membership',
+        targetId: 'user:member',
+        correlationId: 'workspace-member-role:one',
+        metadata: { previousRole: 'viewer', nextRole: 'editor', changed: true },
+        occurredAt: now
+      })
+    ).toMatchObject({ action: 'workspace.member.role_changed' })
+    expect(
+      auditEventMetadataSchema.safeParse({ unsafe: { sourceText: 'do not execute' } }).success
+    ).toBe(false)
+    expect(
+      auditEventHistoryCursorSchema.safeParse({
+        version: 1,
+        occurredAt: now,
+        itemId: 'audit:workspace-member-role'
+      }).success
+    ).toBe(true)
+    expect(auditEventHistoryPageQuerySchema.parse({})).toEqual({ limit: 25 })
+    expect(auditEventHistoryPageSchema.safeParse({ data: [], nextCursor: null }).success).toBe(true)
+    expect(
+      auditEventReadModelSchema.safeParse({
+        auditEventId: 'audit:unsafe',
+        actorType: 'user',
+        actorId: 'user:owner',
+        action: 'workspace.member.role_changed',
+        targetType: 'workspace_membership',
+        targetId: 'user:member',
+        correlationId: 'correlation:unsafe',
+        metadata: { nested: ['raw', 'payload'] },
+        occurredAt: now
+      }).success
+    ).toBe(false)
   })
 
   it('accepts an explicit approved-seed reference for automatic analysis handoff', () => {

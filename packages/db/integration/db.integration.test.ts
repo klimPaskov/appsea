@@ -44,6 +44,7 @@ import {
   PostgresOperationalAlertOutboxRepository,
   PostgresWorkspaceCostRepository,
   PostgresWorkspaceCostAlertRepository,
+  PostgresAuditEventRepository,
   PostgresCompetitiveResearchRepository,
   PostgresEvidenceRedactionRepository,
   PostgresSourceCollectionLeaseRepository,
@@ -531,7 +532,8 @@ describe.sequential('PostgreSQL fixture persistence lifecycle', () => {
       '0094',
       '0095',
       '0096',
-      '0097'
+      '0097',
+      '0098'
     ])
     expect(secondMigrationResult.applied).toEqual([])
     expect(secondMigrationResult.alreadyApplied).toEqual([
@@ -631,7 +633,8 @@ describe.sequential('PostgreSQL fixture persistence lifecycle', () => {
       '0094',
       '0095',
       '0096',
-      '0097'
+      '0097',
+      '0098'
     ])
   })
 
@@ -1033,6 +1036,95 @@ describe.sequential('PostgreSQL fixture persistence lifecycle', () => {
         await client.query('DELETE FROM appsea.cost_ledger_entries WHERE workspace_id = $1', [
           workspaceId
         ])
+        await client.query('DELETE FROM appsea.workspace_memberships WHERE workspace_id = $1', [
+          workspaceId
+        ])
+        await client.query('DELETE FROM appsea.workspaces WHERE workspace_id = $1', [workspaceId])
+        await client.query('DELETE FROM appsea.users WHERE user_id = $1', [userId])
+      })
+    }
+  })
+
+  it('reads workspace audit history with RLS, stable pagination, and scalar metadata projection', async () => {
+    const workspaceId = 'workspace-audit-history'
+    const userId = 'user-audit-history'
+    await withOwnerClient(async (client) => {
+      await client.query(
+        `INSERT INTO appsea.users
+           (user_id, email, display_name, password_hash, created_at, updated_at)
+         VALUES ($1, 'audit-history@example.test', 'Audit history', repeat('x', 64), $2, $2)`,
+        [userId, fixedAt]
+      )
+      await client.query(
+        `INSERT INTO appsea.workspaces
+           (workspace_id, slug, display_name, visibility, fixture_only, status, created_at, updated_at)
+         VALUES ($1, 'audit-history-workspace', 'Audit history', 'private', false, 'active', $2, $2)`,
+        [workspaceId, fixedAt]
+      )
+      await client.query(
+        `INSERT INTO appsea.workspace_memberships
+           (workspace_id, user_id, role, created_at, updated_at)
+         VALUES ($1, $2, 'viewer', $3, $3)`,
+        [workspaceId, userId, fixedAt]
+      )
+    })
+
+    try {
+      await withServiceWorkspaceTransaction(servicePool, workspaceId, async (client) => {
+        await client.query(
+          `INSERT INTO appsea.audit_events
+             (workspace_id, audit_event_id, actor_type, actor_id, action, target_type,
+              target_id, correlation_id, metadata, occurred_at)
+           VALUES
+             ($1, 'audit:history:new', 'service', 'appsea-worker', 'research.run.completed',
+                    'research_run', 'run:audit:new', 'correlation:audit:new',
+                    '{"sourceItems":2,"safe":true}'::jsonb, $2),
+             ($1, 'audit:history:old', 'user', $3, 'workspace.member.role_changed',
+                    'workspace_membership', $3, 'correlation:audit:old',
+                    '{"previousRole":"viewer","nextRole":"editor"}'::jsonb, $4)`,
+          [workspaceId, laterAt, userId, fixedAt]
+        )
+      })
+
+      const auditRepository = new PostgresAuditEventRepository(servicePool)
+      const first = await auditRepository.listPageForUser(userId, workspaceId, { limit: 1 })
+      expect(first.data).toHaveLength(1)
+      expect(first.data[0]).toMatchObject({
+        auditEventId: 'audit:history:new',
+        actorType: 'service',
+        metadata: { sourceItems: 2, safe: true }
+      })
+      expect(first.nextCursor).not.toBeNull()
+      const second = await auditRepository.listPageForUser(userId, workspaceId, {
+        limit: 1,
+        cursor: first.nextCursor!
+      })
+      expect(second.data[0]).toMatchObject({
+        auditEventId: 'audit:history:old',
+        actorId: userId,
+        metadata: { previousRole: 'viewer', nextRole: 'editor' }
+      })
+      await expect(
+        new PostgresAuditEventRepository(servicePool).listPageForUser(
+          'user:audit-history-other',
+          workspaceId
+        )
+      ).rejects.toMatchObject({ name: 'WorkspaceAuthorizationError' })
+      await expect(
+        servicePool.query('SELECT * FROM appsea.audit_events WHERE workspace_id = $1', [
+          'workspace-not-audit-history'
+        ])
+      ).resolves.toMatchObject({ rows: [] })
+      const indexes = await servicePool.query<{ indexname: string }>(
+        `SELECT indexname FROM pg_indexes
+          WHERE schemaname = 'appsea' AND tablename = 'audit_events'`
+      )
+      expect(indexes.rows.map((row) => row.indexname)).toContain(
+        'audit_events_workspace_history_idx'
+      )
+    } finally {
+      await withOwnerClient(async (client) => {
+        await client.query('DELETE FROM appsea.audit_events WHERE workspace_id = $1', [workspaceId])
         await client.query('DELETE FROM appsea.workspace_memberships WHERE workspace_id = $1', [
           workspaceId
         ])

@@ -110,7 +110,8 @@ describe('database foundation', () => {
       '0094',
       '0095',
       '0096',
-      '0097'
+      '0097',
+      '0098'
     ])
     expect(migrations[0]?.checksum).toMatch(/^[a-f0-9]{64}$/)
     expect(migrations[0]?.sql).toContain('CREATE TABLE appsea.evidence_records')
@@ -157,6 +158,8 @@ describe('database foundation', () => {
     )
     expect(mcpAdmissionMigration?.sql).toContain('workspace_memberships membership')
     expect(mcpAdmissionMigration?.sql).toContain('rate_window_request_count')
+    const auditHistoryMigration = migrations.find((migration) => migration.version === '0098')
+    expect(auditHistoryMigration?.sql).toContain('audit_events_workspace_history_idx')
     const migrationOwnerCompatibilityMigration = migrations.find(
       (migration) => migration.version === '0074'
     )

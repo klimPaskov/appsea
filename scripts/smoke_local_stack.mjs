@@ -216,6 +216,7 @@ function assertPrivateWorkspaceResponses({
   reportPage,
   planPage,
   usagePage,
+  auditEvents,
   privatePages,
   campaignId,
   batchId,
@@ -358,9 +359,11 @@ function assertPrivateWorkspaceResponses({
     !planPage.body.includes('README.md') ||
     usagePage.status !== 200 ||
     !usagePage.body.includes('Cost summary') ||
-    !usagePage.body.includes('Quota reconciliation')
+    !usagePage.body.includes('Quota reconciliation') ||
+    auditEvents.status !== 200 ||
+    !Array.isArray(auditEvents.payload?.data)
   ) {
-    throw new Error('private report, coding-plan, and usage pages were not renderable')
+    throw new Error('private report, coding-plan, usage, and audit reads were not available')
   }
   const expectedPrivatePages = [
     ['source coverage', privatePages?.sources, 'Source coverage'],
@@ -723,6 +726,9 @@ async function runPrivateWorkspaceSmoke() {
     headers: privateHeaders
   })
   const usagePage = { status: usagePageResponse.status, body: await usagePageResponse.text() }
+  const auditEvents = await requestJson(`/api/workspaces/${workspaceId}/audit-events?limit=25`, {
+    headers: privateHeaders
+  })
   const privatePageResponse = async (route) => {
     const response = await fetchResponse(`/workspace/${encodedWorkspaceId}${route}`, {
       headers: privateHeaders
@@ -764,6 +770,7 @@ async function runPrivateWorkspaceSmoke() {
     reportPage,
     planPage,
     usagePage,
+    auditEvents: { status: auditEvents.response.status, payload: auditEvents.payload },
     privatePages,
     campaignId,
     batchId,

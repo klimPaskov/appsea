@@ -9,24 +9,20 @@ sparse; no third-party public source is enabled. A reviewed internal
 `manual-owner-import` policy now supports tenant-private owner-authorized CSV/
 JSON intake without claiming public market coverage.
 
-Migrations `0027`-`0097` cover policy evidence, checkpoints,
+Migrations `0027`-`0098` cover policy evidence, checkpoints,
 deletion/recomputation repair, leases, admissions, campaign orchestration and
 cancellation, source reconciliation, analysis history, report/plan governance,
 cost and alert projections, object references, workspace archival/purge intent/
 manifest,
 field-level evidence redaction, agent access tokens, and global-auth TOTP MFA.
-MFA rotation, OIDC, and read-only MCP remain provider/deployment-gated;
-previous-key removal still requires operator review.
+MFA rotation, OIDC, and read-only MCP remain provider/deployment-gated.
 
 The fixture workflow is the complete persisted path. Production collection and
 analysis v2 are policy-gated/replay-safe; CFPB and Stack Exchange remain
 disabled pending independent approval. Reports/plans preserve provenance,
 coverage gaps, approval state, synthetic disclosure, and object references.
 
-Production-analysis v2 carries only a reviewed history memo; the history-check
-command inspects visibility metadata and never archives or deletes history.
-
-The `pnpm verify:worker:recovery` drill proves local/CI process replacement: a
+`pnpm verify:worker:recovery` proves local/CI process replacement: a
 separate fixture client observes a persisted checkpoint, the first worker is
 stopped during persistence, and a replacement resumes the same execution with
 one job/run/output/checkpoint/cost effect, distinct outbox rows, and
@@ -66,21 +62,24 @@ Manual owner-import (migration `0089`) is the active non-fixture path: bounded,
 normalized, PII-scrubbed, tenant-private, and represented in Temporal by batch
 ID only. Local smoke covers intake, durable completion, reviewed analysis,
 private report/plan readback, and the visible public-market gap; URL fetching and
-public sources remain disabled. Migrations `0090`-`0097` keep policy/deletion/
+public sources remain disabled. Migrations `0090`-`0098` keep policy/deletion/
 privilege surfaces narrow; `0097` binds MCP tokens to current membership and
 enforces a 60-per-60-second window, four in-flight leases, and
-30-second stale recovery. Local PostgreSQL/Temporal/MinIO S3, worker replacement,
-private-stack pages, and backup/restore through 97 pass. Provider-encrypted
+30-second stale recovery; `0098` adds the ordered private audit-history index.
+The authenticated `/api/workspaces/:workspaceId/audit-events` route exposes
+bounded identifier/scalar audit receipts with an opaque cursor and no raw source
+payloads. Local PostgreSQL/Temporal/MinIO S3, worker replacement,
+private-stack pages, and backup/restore through 98 pass. Provider-encrypted
 backups, HA, and restore/failover remain deployment-owned.
 
-Scoring preserves legacy `opportunity-score-v0.2.0` and adds reviewed-input
+Scoring preserves `opportunity-score-v0.2.0` and adds reviewed-input
 balanced `opportunity-score-v1.0.0`: raw/risk-adjusted/ranking scores, bounded
 risk, confidence, uncertainty, coverage/freshness, and explanations. Migration
 `0096` stores v1 fields and private ordering uses ranking. Seeds
 without v1 retain a visible gap; no live source or calibration evidence is
 implied. Smoke carries a reviewed v1 seed through owner
 intake, durable analysis, persistence, and private readback. Backup/restore
-through `0097` passes locally; provider proof remains open.
+through `0098` passes locally; provider proof remains open.
 
 `pnpm verify:release` checks Compose, secret-free defaults, hardened images, and
 fail-closed preflight; CI runs Docker mode and `--static` supports no Docker.

@@ -25,7 +25,7 @@ Status: production-shaped foundation implemented and validated locally; producti
 
 Implemented:
 
-- PostgreSQL 18 schema and ninety-seven forward, checksummed migrations
+- PostgreSQL 18 schema and ninety-eight forward, checksummed migrations
 - normalized source, evidence, complaint, cluster, competitor, opportunity, score, report, plan, audit, cost, deletion, outbox, and lineage tables
 - no-login owner, separate migrator, and least-privilege runtime role contract
 - forced workspace RLS and transaction-scoped workspace context
@@ -35,7 +35,7 @@ Implemented:
 - populated upgrade, fresh install, privilege, RLS, provenance, policy, cross-wire, and replay tests
 - local runbook and CI persistence gate
 - isolated local PostgreSQL backup/restore runbook and CI gate; the drill
-  restores a disposable dump through all ninety-seven migrations and verifies
+  restores a disposable dump through all ninety-eight migrations and verifies
   forced workspace RLS plus runtime/maintenance privileges without accepting a
   remote URL
 - one-command loopback private-workspace stack with migration, worker, and web
@@ -209,6 +209,13 @@ in-flight requests, and a 30-second server-clock lease with stale recovery.
 The web handler releases leases in a `finally` path and returns bounded
 `Retry-After` responses. Edge limiting, secret storage, and deployment
 monitoring remain external controls.
+
+Migration `0098_audit_event_history_index.sql` adds the ordered workspace
+index for the private audit-history projection. The authenticated
+`GET /api/workspaces/:workspaceId/audit-events` route uses the existing forced
+RLS transaction and an opaque time/id cursor; its strict read model keeps only
+bounded identifiers and scalar metadata, filtering nested values and never
+exposing raw source payloads or exception text.
 
 Remaining deployment work and the non-fixture object-store integration are
 tracked in `docs/status/known-gaps.md` and are not part of the completed

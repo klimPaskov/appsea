@@ -22,15 +22,15 @@ describe('PostgreSQL backup/restore verification helpers', () => {
     const summary = parseVerificationOutput(
       `noise\n${JSON.stringify({
         database: restoreDatabaseName,
-        latestMigration: '0097',
-        migrationCount: 97,
+        latestMigration: '0098',
+        migrationCount: 98,
         appseaSchema: true,
         workspaceRlsForced: true,
         runtimeCanSelectOperationalOutbox: false,
         maintenanceCanClaimOperationalAlerts: true
       })}`
     )
-    expect(summary.latestMigration).toBe('0097')
+    expect(summary.latestMigration).toBe('0098')
   })
 
   it('rejects malformed or privilege-weakened summaries', () => {
@@ -39,8 +39,8 @@ describe('PostgreSQL backup/restore verification helpers', () => {
       parseVerificationOutput(
         JSON.stringify({
           database: restoreDatabaseName,
-          latestMigration: '0097',
-          migrationCount: 97,
+          latestMigration: '0098',
+          migrationCount: 98,
           appseaSchema: true,
           workspaceRlsForced: true,
           runtimeCanSelectOperationalOutbox: true,

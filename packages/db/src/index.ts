@@ -167,6 +167,12 @@ export {
   agentAccessAdmissionLimits,
   PostgresAgentAccessTokenRepository
 } from './agent-access-token-repository'
+export { PostgresAuditEventRepository } from './audit-event-repository'
+export {
+  decodeAuditEventHistoryCursor,
+  encodeAuditEventHistoryCursor,
+  AuditEventHistoryCursorError
+} from './audit-event-pagination'
 export {
   MfaEncryptionKeyConfigurationError,
   mfaEncryptionConfigFromEnv,

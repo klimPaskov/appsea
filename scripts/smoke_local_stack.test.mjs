@@ -113,6 +113,7 @@ const privateWorkspaceResponses = {
   reportPage: { status: 200, body: 'Evidence-backed report Coverage limits' },
   planPage: { status: 200, body: 'Coding-agent plan README.md' },
   usagePage: { status: 200, body: 'Cost summary Quota reconciliation' },
+  auditEvents: { status: 200, payload: { data: [] } },
   privatePages: {
     sources: { status: 200, body: 'Source coverage' },
     seedReviews: { status: 200, body: 'Seed reviews' },

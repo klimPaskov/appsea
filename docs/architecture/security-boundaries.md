@@ -45,6 +45,15 @@ descriptor labels are static so untrusted opportunity names and summaries
 cannot become agent-facing protocol instructions; those values remain payload
 data.
 
+Audit history is a separate read-only projection at
+`GET /api/workspaces/:workspaceId/audit-events`. The repository repeats
+authenticated membership/RLS checks and orders events by server-recorded time
+with an opaque workspace-bound cursor. The response contains only bounded
+identifiers, fixed actor/action fields, and scalar metadata; nested metadata,
+raw source payloads, and dependency errors are hidden or rejected. Migration
+`0098_audit_event_history_index.sql` adds only the ordered workspace index and
+does not grant new write access or authorize destructive retention.
+
 Blocked flows:
 
 - complaint text to shell execution

@@ -6,7 +6,6 @@
   worker replacement covers persistence loss, one-time row, and sanitized
   history; backup/restore covers schema/roles, while hosted
   restore/crash drill and cloud/backup purge remain pending.
-  `0043`/`0044` queue/retry output tombstones.
 - `CfpbConnector` is disabled pending legal/privacy/security approval;
   `StackExchangeConnector` is a disabled candidate for competitor/contrary
   research. `manual-owner-import-v1` is the only active non-fixture path and
@@ -24,4 +23,5 @@
   persistence/audit/policy-specific activation remain open.
 - Read-only MCP tokens recheck workspace membership and use PostgreSQL
   60-per-60-second windows, four in-flight leases, and 30-second stale recovery;
-  edge limits, secret storage, and hosted monitoring remain open.
+  edge limits, secret storage, and hosted monitoring remain open. `0098` adds
+  the audit index; its cursor read is RLS-bound and scalar-only.

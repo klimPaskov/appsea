@@ -15,6 +15,10 @@ repository-owned membership revalidation, a 60-per-60-second token window,
 four in-flight leases, 30-second stale-lease recovery, and fixed
 `429`/`Retry-After` handling; deployment HTTPS termination, edge/proxy limits,
 external secret storage, and monitoring remain open.
+Authenticated private members can also inspect the immutable audit ledger at
+`GET /api/workspaces/:workspaceId/audit-events` through a bounded time/id cursor
+and scalar metadata projection. It is not an export or retention/purge path;
+provider audit retention and backup deletion remain deployment gates.
 Optional OIDC/provider identity
 linking and sign-in now have a disabled-by-default, explicit issuer/subject
 boundary plus a production DNS-resolution preflight for every provider request,
