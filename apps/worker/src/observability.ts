@@ -86,6 +86,8 @@ export interface WorkerEvent {
   operationalAlertDeliveryExhausted?: number
   operationalAlertDeliveryPurged?: number
   failureCode?: string
+  /** Bounded failure identity for diagnosis; never includes raw messages. */
+  failureContext?: string
 }
 
 export const workerHeartbeatIntervalMs = 30_000
@@ -96,6 +98,10 @@ function finiteInteger(value: number | undefined): number | undefined {
 
 function schedulerName(value: string | undefined): string | undefined {
   return value && /^[a-z][a-z0-9_-]{2,79}$/.test(value) ? value : undefined
+}
+
+function boundedFailureContext(value: string | undefined): string | undefined {
+  return value && /^[a-zA-Z0-9_.:-]{1,240}$/.test(value) ? value : undefined
 }
 
 /**
@@ -456,7 +462,10 @@ export function workerEventPayload(event: WorkerEvent): WorkerEventPayload {
     ...(finiteInteger(event.operationalAlertDeliveryPurged) !== undefined
       ? { operationalAlertDeliveryPurged: finiteInteger(event.operationalAlertDeliveryPurged) }
       : {}),
-    ...(event.failureCode ? { failureCode: event.failureCode } : {})
+    ...(event.failureCode ? { failureCode: event.failureCode } : {}),
+    ...(boundedFailureContext(event.failureContext)
+      ? { failureContext: boundedFailureContext(event.failureContext) }
+      : {})
   }
   return payload as WorkerEventPayload
 }

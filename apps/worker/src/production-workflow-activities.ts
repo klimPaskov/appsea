@@ -37,6 +37,23 @@ function errorName(error: unknown): string {
   return typeof error === 'object' && error !== null && 'name' in error ? String(error.name) : ''
 }
 
+function boundedErrorField(error: unknown, field: string): string | undefined {
+  if (typeof error !== 'object' || error === null || !(field in error)) return undefined
+  const value = String((error as Record<string, unknown>)[field])
+  return /^[a-zA-Z0-9_.:-]{1,80}$/.test(value) ? value : undefined
+}
+
+function productionFailureContext(error: unknown): string | undefined {
+  const fields = [
+    boundedErrorField(error, 'name'),
+    boundedErrorField(error, 'code'),
+    boundedErrorField(error, 'table'),
+    boundedErrorField(error, 'column'),
+    boundedErrorField(error, 'constraint')
+  ].filter((value): value is string => Boolean(value))
+  return fields.length > 0 ? fields.join(':') : undefined
+}
+
 function sanitizedProductionActivityFailure(error: unknown): ApplicationFailure {
   if (error instanceof ApplicationFailure) return error
   if (
@@ -101,10 +118,12 @@ async function runSanitized<T>(operation: () => Promise<T>): Promise<T> {
     return await operation()
   } catch (error) {
     const failure = sanitizedProductionActivityFailure(error)
+    const failureContext = productionFailureContext(error)
     emitWorkerEvent({
       event: 'production_collection_activity_failed',
       taskQueue: fixtureResearchTaskQueue,
-      failureCode: failure.type ?? 'APPSEA_ACTIVITY_FAILED'
+      failureCode: failure.type ?? 'APPSEA_ACTIVITY_FAILED',
+      ...(failureContext ? { failureContext } : {})
     })
     throw failure
   }
