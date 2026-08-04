@@ -9,7 +9,7 @@ sparse; no third-party public source is enabled. A reviewed internal
 `manual-owner-import` policy now supports tenant-private owner-authorized CSV/
 JSON intake without claiming public market coverage.
 
-Migrations `0027`-`0096` cover policy evidence, checkpoints,
+Migrations `0027`-`0097` cover policy evidence, checkpoints,
 deletion/recomputation repair, leases, admissions, campaign orchestration and
 cancellation, source reconciliation, analysis history, report/plan governance,
 cost and alert projections, object references, workspace archival/purge intent/
@@ -35,10 +35,10 @@ pause is bounded and production-rejected; hosted restore/failover and topology
 proof remain open.
 
 Authentication uses scrypt hashes, revocable sessions, membership-before-RLS,
-password step-up, TOTP/recovery codes, owner-safe closure, archival, and scoped
-read-only agent tokens. The private owner Agent access page issues/revokes
-least-privilege tokens; raw credentials remain one-time and later reads
-metadata-only. Members have a read-only Usage page for exact cost and quota
+password step-up, TOTP/recovery codes, closure, archival, and scoped read-only
+agent tokens. The Agent access page issues/revokes least-privilege tokens;
+credentials remain one-time and later reads metadata-only. Members have a
+read-only Usage page for exact cost and quota
 cases; maintenance resolution stays outside the browser. OIDC remains disabled
 by default and provider identity, delivery/DPA, retention, egress, and
 deployment operations remain external.
@@ -66,19 +66,21 @@ Manual owner-import (migration `0089`) is the active non-fixture path: bounded,
 normalized, PII-scrubbed, tenant-private, and represented in Temporal by batch
 ID only. Local smoke covers intake, durable completion, reviewed analysis,
 private report/plan readback, and the visible public-market gap; URL fetching and
-public sources remain disabled. Migrations `0090`-`0096` keep policy/deletion/
-privilege surfaces narrow; local PostgreSQL/Temporal/MinIO S3, worker replacement,
-private-stack pages, and backup/restore through 96 pass. Provider-encrypted
+public sources remain disabled. Migrations `0090`-`0097` keep policy/deletion/
+privilege surfaces narrow; `0097` binds MCP tokens to current membership and
+enforces a 60-per-60-second window, four in-flight leases, and
+30-second stale recovery. Local PostgreSQL/Temporal/MinIO S3, worker replacement,
+private-stack pages, and backup/restore through 97 pass. Provider-encrypted
 backups, HA, and restore/failover remain deployment-owned.
 
 Scoring preserves legacy `opportunity-score-v0.2.0` and adds reviewed-input
 balanced `opportunity-score-v1.0.0`: raw/risk-adjusted/ranking scores, bounded
 risk, confidence, uncertainty, coverage/freshness, and explanations. Migration
-`0096` stores queryable v1 fields and private ordering uses ranking. Seeds
+`0096` stores v1 fields and private ordering uses ranking. Seeds
 without v1 retain a visible gap; no live source or calibration evidence is
 implied. Smoke carries a reviewed v1 seed through owner
 intake, durable analysis, persistence, and private readback. Backup/restore
-through `0096` passes locally; provider proof remains open.
+through `0097` passes locally; provider proof remains open.
 
 `pnpm verify:release` checks Compose, secret-free defaults, hardened images, and
 fail-closed preflight; CI runs Docker mode and `--static` supports no Docker.

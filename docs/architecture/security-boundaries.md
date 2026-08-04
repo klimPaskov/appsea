@@ -36,7 +36,14 @@ receipts contain identifiers and scope metadata only. MFA step-up consumes a
 current TOTP or one recovery code without sending the code to the token
 repository or exposing it in a read model. Accounts without enabled MFA remain
 on the password-only compatibility path; enrollment turns on the additional
-gate automatically.
+gate automatically. Migration `0097` re-checks current workspace membership
+during bearer authentication and durable request admission. It enforces a
+server-clock 60-per-60-second token window, four in-flight leases, and
+30-second stale-lease recovery; the handler releases each lease in a `finally`
+path and returns a fixed `429`/`Retry-After` on bounded denial. MCP resource
+descriptor labels are static so untrusted opportunity names and summaries
+cannot become agent-facing protocol instructions; those values remain payload
+data.
 
 Blocked flows:
 

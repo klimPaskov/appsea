@@ -109,7 +109,8 @@ describe('database foundation', () => {
       '0093',
       '0094',
       '0095',
-      '0096'
+      '0096',
+      '0097'
     ])
     expect(migrations[0]?.checksum).toMatch(/^[a-f0-9]{64}$/)
     expect(migrations[0]?.sql).toContain('CREATE TABLE appsea.evidence_records')
@@ -146,6 +147,16 @@ describe('database foundation', () => {
     expect(scoreV1Migration?.sql).toContain('risk_adjusted_score')
     expect(scoreV1Migration?.sql).toContain('opportunity_score_snapshots_v1_complete')
     expect(scoreV1Migration?.sql).toContain('COALESCE(ranking_score, score)')
+    const mcpAdmissionMigration = migrations.find((migration) => migration.version === '0097')
+    expect(mcpAdmissionMigration?.sql).toContain('CREATE TABLE appsea.agent_access_request_leases')
+    expect(mcpAdmissionMigration?.sql).toContain(
+      'CREATE OR REPLACE FUNCTION appsea.admit_agent_access_request'
+    )
+    expect(mcpAdmissionMigration?.sql).toContain(
+      'CREATE OR REPLACE FUNCTION appsea.release_agent_access_request'
+    )
+    expect(mcpAdmissionMigration?.sql).toContain('workspace_memberships membership')
+    expect(mcpAdmissionMigration?.sql).toContain('rate_window_request_count')
     const migrationOwnerCompatibilityMigration = migrations.find(
       (migration) => migration.version === '0074'
     )

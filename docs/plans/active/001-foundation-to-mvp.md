@@ -25,7 +25,7 @@ Status: production-shaped foundation implemented and validated locally; producti
 
 Implemented:
 
-- PostgreSQL 18 schema and ninety-six forward, checksummed migrations
+- PostgreSQL 18 schema and ninety-seven forward, checksummed migrations
 - normalized source, evidence, complaint, cluster, competitor, opportunity, score, report, plan, audit, cost, deletion, outbox, and lineage tables
 - no-login owner, separate migrator, and least-privilege runtime role contract
 - forced workspace RLS and transaction-scoped workspace context
@@ -35,7 +35,7 @@ Implemented:
 - populated upgrade, fresh install, privilege, RLS, provenance, policy, cross-wire, and replay tests
 - local runbook and CI persistence gate
 - isolated local PostgreSQL backup/restore runbook and CI gate; the drill
-  restores a disposable dump through all ninety-six migrations and verifies
+  restores a disposable dump through all ninety-seven migrations and verifies
   forced workspace RLS plus runtime/maintenance privileges without accepting a
   remote URL
 - one-command loopback private-workspace stack with migration, worker, and web
@@ -201,6 +201,14 @@ a private ranking index. Legacy score rows remain readable and keep `score` as
 their raw-score compatibility field. `pnpm verify:backup-restore` now passes
 through `0096`; provider backup, HA, retention, and production restore remain
 deployment work.
+
+Migration `0097_mcp_agent_access_admission.sql` rechecks workspace membership
+for bearer authentication and adds a forced-RLS request-lease projection. The
+repository-owned MCP gate allows 60 requests per 60-second token window, four
+in-flight requests, and a 30-second server-clock lease with stale recovery.
+The web handler releases leases in a `finally` path and returns bounded
+`Retry-After` responses. Edge limiting, secret storage, and deployment
+monitoring remain external controls.
 
 Remaining deployment work and the non-fixture object-store integration are
 tracked in `docs/status/known-gaps.md` and are not part of the completed

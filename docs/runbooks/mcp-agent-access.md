@@ -82,6 +82,22 @@ only with an explicit `synthetic` marker and warning; they are not market
 research. Evidence text is returned only when its allowed representation is
 `excerpt` or `fixture`; metadata-only or redacted evidence keeps text null.
 
+Every authenticated request also passes a PostgreSQL admission boundary from
+migration `0097_mcp_agent_access_admission.sql`. The token must still belong to
+an active member of the private workspace. The database enforces a fixed
+60-request/60-second token window, at most four in-flight requests, and a
+30-second server-clock lease. The web handler releases the lease in a
+`finally` path; expired leases are reclaimed by the next admission, so a
+crashed request cannot permanently consume concurrency. A denied rate or
+concurrency request returns HTTP `429` with a bounded `Retry-After` header.
+Membership removal or workspace/token revocation returns the same generic
+bearer authentication failure on the next request.
+
+Resource-list names and descriptions are static labels. Opportunity names,
+summaries, and evidence remain untrusted payload data and are never copied
+into MCP descriptor metadata, where an agent could mistake them for protocol
+instructions.
+
 ## Operations
 
 Rotate before expiry or immediately after suspected disclosure: create a new
@@ -89,5 +105,6 @@ scoped token, update the agent secret, verify one read request, then revoke the
 old token. Keep scopes minimal and do not put tokens in source control, URLs,
 logs, prompts, reports, or workflow inputs. Review `lastUsedAt` and revoke
 unused or unexpected credentials. Deployment still owns HTTPS termination,
-rate limiting, secret-store integration, alert routing, and identity-provider
-approval.
+edge/proxy rate limiting and concurrency controls, secret-store integration,
+alert routing, and identity-provider approval. The PostgreSQL admission is
+repository evidence, not a substitute for those deployment controls.

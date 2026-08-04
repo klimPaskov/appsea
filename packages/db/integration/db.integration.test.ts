@@ -530,7 +530,8 @@ describe.sequential('PostgreSQL fixture persistence lifecycle', () => {
       '0093',
       '0094',
       '0095',
-      '0096'
+      '0096',
+      '0097'
     ])
     expect(secondMigrationResult.applied).toEqual([])
     expect(secondMigrationResult.alreadyApplied).toEqual([
@@ -629,7 +630,8 @@ describe.sequential('PostgreSQL fixture persistence lifecycle', () => {
       '0093',
       '0094',
       '0095',
-      '0096'
+      '0096',
+      '0097'
     ])
   })
 
@@ -2131,6 +2133,147 @@ describe.sequential('PostgreSQL fixture persistence lifecycle', () => {
         coOwnerId
       ])
     )
+  })
+
+  it('binds MCP admission to membership and enforces durable rate/concurrency limits', async () => {
+    const workspaceId = 'workspace-mcp-admission'
+    const userId = 'user-mcp-admission'
+    const tokenId = 'agent-token:mcp-admission'
+    const tokenHash = sha256('mcp-admission-secret')
+    const futureAt = '2099-01-01T00:00:00.000Z'
+    const admissionId = (index: number) => `mcp-admission:${index.toString(16).padStart(32, '0')}`
+
+    await withOwnerClient(async (client) => {
+      await client.query(
+        `INSERT INTO appsea.workspaces
+           (workspace_id, slug, display_name, visibility, fixture_only, status, created_at, updated_at)
+         VALUES ($1, $2, 'MCP admission workspace', 'private', false, 'active', $3, $3)`,
+        [workspaceId, workspaceId, fixedAt]
+      )
+      await client.query(
+        `INSERT INTO appsea.users
+           (user_id, email, display_name, password_hash, created_at, updated_at)
+         VALUES ($1, $2, 'MCP admission user', repeat('x', 64), $3, $3)`,
+        [userId, `${userId}@example.com`, fixedAt]
+      )
+      await client.query(
+        `INSERT INTO appsea.workspace_memberships
+           (workspace_id, user_id, role, created_at, updated_at)
+         VALUES ($1, $2, 'owner', $3, $3)`,
+        [workspaceId, userId, fixedAt]
+      )
+      await client.query(
+        `INSERT INTO appsea.agent_access_tokens
+           (token_id, workspace_id, user_id, token_hash, label, scopes, created_at, expires_at)
+         VALUES ($1, $2, $3, $4, 'integration token', ARRAY['opportunities:read'], $5, $6)`,
+        [tokenId, workspaceId, userId, tokenHash, fixedAt, futureAt]
+      )
+    })
+
+    const authenticated = await servicePool.query<{
+      token_id: string
+      workspace_id: string
+      user_id: string
+    }>(
+      `SELECT token_id, workspace_id, user_id
+         FROM appsea.authenticate_agent_access_token($1)`,
+      [tokenHash]
+    )
+    expect(authenticated.rows).toEqual([
+      { token_id: tokenId, workspace_id: workspaceId, user_id: userId }
+    ])
+
+    const client = await servicePool.connect()
+    try {
+      await client.query('BEGIN')
+      const admittedIds: string[] = []
+      for (let index = 0; index < 4; index += 1) {
+        const result = await client.query<{
+          admitted: boolean
+          reason: string
+          retry_after_seconds: number
+          admission_id: string | null
+        }>(
+          `SELECT admitted, reason, retry_after_seconds, admission_id
+             FROM appsea.admit_agent_access_request($1, $2, $3, $4)`,
+          [tokenId, workspaceId, userId, admissionId(index)]
+        )
+        expect(result.rows[0]).toMatchObject({ admitted: true, reason: 'admitted' })
+        admittedIds.push(admissionId(index))
+      }
+      const concurrencyDenied = await client.query<{
+        admitted: boolean
+        reason: string
+        retry_after_seconds: number
+        admission_id: string | null
+      }>(
+        `SELECT admitted, reason, retry_after_seconds, admission_id
+           FROM appsea.admit_agent_access_request($1, $2, $3, $4)`,
+        [tokenId, workspaceId, userId, admissionId(4)]
+      )
+      expect(concurrencyDenied.rows[0]).toMatchObject({
+        admitted: false,
+        reason: 'concurrency_limited',
+        admission_id: null
+      })
+      for (const id of admittedIds) {
+        await client.query(
+          `SELECT appsea.release_agent_access_request($1, $2, $3, $4) AS released`,
+          [tokenId, workspaceId, userId, id]
+        )
+      }
+
+      for (let index = 5; index < 61; index += 1) {
+        const result = await client.query<{ admitted: boolean }>(
+          `SELECT admitted
+             FROM appsea.admit_agent_access_request($1, $2, $3, $4)`,
+          [tokenId, workspaceId, userId, admissionId(index)]
+        )
+        expect(result.rows[0]?.admitted).toBe(true)
+        await client.query(
+          `SELECT appsea.release_agent_access_request($1, $2, $3, $4) AS released`,
+          [tokenId, workspaceId, userId, admissionId(index)]
+        )
+      }
+      const rateDenied = await client.query<{
+        admitted: boolean
+        reason: string
+        retry_after_seconds: number
+        admission_id: string | null
+      }>(
+        `SELECT admitted, reason, retry_after_seconds, admission_id
+           FROM appsea.admit_agent_access_request($1, $2, $3, $4)`,
+        [tokenId, workspaceId, userId, admissionId(61)]
+      )
+      expect(rateDenied.rows[0]).toMatchObject({
+        admitted: false,
+        reason: 'rate_limited',
+        admission_id: null
+      })
+      expect(rateDenied.rows[0]?.retry_after_seconds).toBeGreaterThanOrEqual(1)
+      await client.query('COMMIT')
+    } catch (error) {
+      await client.query('ROLLBACK')
+      throw error
+    } finally {
+      client.release()
+    }
+
+    await withOwnerClient((client) =>
+      client.query('DELETE FROM appsea.workspace_memberships WHERE workspace_id = $1', [
+        workspaceId
+      ])
+    )
+    const afterRemoval = await servicePool.query(
+      `SELECT * FROM appsea.authenticate_agent_access_token($1)`,
+      [tokenHash]
+    )
+    expect(afterRemoval.rows).toEqual([])
+
+    await withOwnerClient(async (client) => {
+      await client.query('DELETE FROM appsea.workspaces WHERE workspace_id = $1', [workspaceId])
+      await client.query('DELETE FROM appsea.users WHERE user_id = $1', [userId])
+    })
   })
 
   it('forces the workspace policy on every workspace-scoped table', async () => {

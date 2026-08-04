@@ -46,6 +46,21 @@ class FakeClient {
         ]
       } as unknown as { rows: T[] }
     }
+    if (text.includes('admit_agent_access_request')) {
+      return {
+        rows: [
+          {
+            admitted: true,
+            reason: 'admitted',
+            retry_after_seconds: 0,
+            admission_id: 'mcp-admission:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa'
+          }
+        ]
+      } as unknown as { rows: T[] }
+    }
+    if (text.includes('release_agent_access_request')) {
+      return { rows: [{ released: true }] } as unknown as { rows: T[] }
+    }
     if (text.includes('revoke_agent_access_token')) {
       return { rows: [{ revoked: true }] } as unknown as { rows: T[] }
     }
@@ -92,11 +107,30 @@ describe('agent access token repository', () => {
       tokenId: 'agent-token:one',
       workspaceId: 'workspace:one',
       userId: 'user:owner',
-      scopes: ['opportunities:read']
+      scopes: ['opportunities:read'] as Array<'opportunities:read'>
     })
     await expect(repository.authenticate('invalid')).resolves.toBeNull()
     await expect(repository.revoke('user:owner', 'workspace:one', 'agent-token:one')).resolves.toBe(
       true
     )
+    const authentication = {
+      tokenId: 'agent-token:one',
+      workspaceId: 'workspace:one',
+      userId: 'user:owner',
+      scopes: ['opportunities:read'] as Array<'opportunities:read'>
+    }
+    await expect(repository.admitRequest(authentication)).resolves.toEqual({
+      admitted: true,
+      reason: 'admitted',
+      retryAfterSeconds: 0,
+      admissionId: 'mcp-admission:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa'
+    })
+    const admission = client.statements.find((entry) =>
+      entry.text.includes('admit_agent_access_request')
+    )
+    expect(admission?.values[3]).toMatch(/^mcp-admission:[a-f0-9]{48}$/)
+    await expect(
+      repository.releaseRequest(authentication, 'mcp-admission:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa')
+    ).resolves.toBe(true)
   })
 })

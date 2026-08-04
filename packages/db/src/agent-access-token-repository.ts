@@ -1,6 +1,7 @@
 import { randomBytes } from 'node:crypto'
 import type { Pool, QueryResultRow } from 'pg'
 import {
+  agentAccessAdmissionResultSchema,
   agentAccessTokenAuthenticationSchema,
   agentAccessTokenCreateInputSchema,
   agentAccessTokenCreateResultSchema,
@@ -8,6 +9,7 @@ import {
   agentAccessTokenSchema,
   appseaIdentifierSchema,
   type AgentAccessTokenAuthentication,
+  type AgentAccessAdmissionResult,
   type AgentAccessTokenCreateInput,
   type AgentAccessTokenCreateResult,
   type AgentAccessTokenReadModel
@@ -38,6 +40,20 @@ interface AuthenticatedTokenRow extends QueryResultRow {
   user_id: string
   scopes: string[]
 }
+
+interface AdmissionRow extends QueryResultRow {
+  admitted: boolean
+  reason: string
+  retry_after_seconds: number
+  admission_id: string | null
+}
+
+export const agentAccessAdmissionLimits = {
+  requestsPerWindow: 60,
+  windowSeconds: 60,
+  maxConcurrent: 4,
+  leaseSeconds: 30
+} as const
 
 function iso(value: Date | string): string {
   return value instanceof Date ? value.toISOString() : new Date(value).toISOString()
@@ -166,6 +182,53 @@ export class PostgresAgentAccessTokenRepository {
         userId: row.user_id,
         scopes: row.scopes
       })
+    })
+  }
+
+  async admitRequest(
+    authentication: AgentAccessTokenAuthentication
+  ): Promise<AgentAccessAdmissionResult> {
+    const parsedAuthentication = agentAccessTokenAuthenticationSchema.parse(authentication)
+    const admissionId = `mcp-admission:${randomBytes(24).toString('hex')}`
+    return withDatabaseTransaction(this.pool, async (client) => {
+      const result = await client.query<AdmissionRow>(
+        `SELECT admitted, reason, retry_after_seconds, admission_id
+           FROM appsea.admit_agent_access_request($1, $2, $3, $4)`,
+        [
+          parsedAuthentication.tokenId,
+          parsedAuthentication.workspaceId,
+          parsedAuthentication.userId,
+          admissionId
+        ]
+      )
+      const row = result.rows[0]
+      if (!row) throw new Error('Agent access request admission returned no decision')
+      return agentAccessAdmissionResultSchema.parse({
+        admitted: row.admitted,
+        reason: row.reason,
+        retryAfterSeconds: row.retry_after_seconds,
+        admissionId: row.admission_id
+      })
+    })
+  }
+
+  async releaseRequest(
+    authentication: AgentAccessTokenAuthentication,
+    admissionId: string
+  ): Promise<boolean> {
+    const parsedAuthentication = agentAccessTokenAuthenticationSchema.parse(authentication)
+    const parsedAdmissionId = appseaIdentifierSchema.parse(admissionId)
+    return withDatabaseTransaction(this.pool, async (client) => {
+      const result = await client.query<{ released: boolean }>(
+        `SELECT appsea.release_agent_access_request($1, $2, $3, $4) AS released`,
+        [
+          parsedAuthentication.tokenId,
+          parsedAuthentication.workspaceId,
+          parsedAuthentication.userId,
+          parsedAdmissionId
+        ]
+      )
+      return result.rows[0]?.released === true
     })
   }
 }

@@ -10,8 +10,11 @@ tokens. It preserves policy representation, redaction, synthetic disclosure,
 and coverage gaps, but it is not a general REST/MCP write API. Token issue and
 revoke now require the existing password step-up plus a fresh MFA proof when
 MFA is enabled; accounts without MFA retain the password-only path. The private
-Agent access page provides the owner convenience UI; HTTPS termination,
-external secret storage, rate limiting, and deployment monitoring remain open.
+Agent access page provides the owner convenience UI. Migration `0097` adds
+repository-owned membership revalidation, a 60-per-60-second token window,
+four in-flight leases, 30-second stale-lease recovery, and fixed
+`429`/`Retry-After` handling; deployment HTTPS termination, edge/proxy limits,
+external secret storage, and monitoring remain open.
 Optional OIDC/provider identity
 linking and sign-in now have a disabled-by-default, explicit issuer/subject
 boundary plus a production DNS-resolution preflight for every provider request,

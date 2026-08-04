@@ -5011,6 +5011,52 @@ export const agentAccessTokenAuthenticationSchema = z
   })
   .strict()
 
+export const agentAccessAdmissionReasonSchema = z.enum([
+  'admitted',
+  'rate_limited',
+  'concurrency_limited',
+  'not_authorized'
+])
+
+export const agentAccessAdmissionResultSchema = z
+  .object({
+    admitted: z.boolean(),
+    reason: agentAccessAdmissionReasonSchema,
+    retryAfterSeconds: z.number().int().min(0).max(60),
+    admissionId: appseaIdentifierSchema.nullable()
+  })
+  .strict()
+  .superRefine((value, context) => {
+    if (value.admitted && (value.reason !== 'admitted' || value.admissionId === null)) {
+      context.addIssue({
+        code: 'custom',
+        path: ['admissionId'],
+        message: 'An admitted request requires an admission identifier'
+      })
+    }
+    if (value.admitted && value.retryAfterSeconds !== 0) {
+      context.addIssue({
+        code: 'custom',
+        path: ['retryAfterSeconds'],
+        message: 'An admitted request cannot ask the caller to retry'
+      })
+    }
+    if (!value.admitted && (value.reason === 'admitted' || value.admissionId !== null)) {
+      context.addIssue({
+        code: 'custom',
+        path: ['reason'],
+        message: 'A denied request cannot carry an admission identifier'
+      })
+    }
+    if (!value.admitted && value.reason !== 'not_authorized' && value.retryAfterSeconds < 1) {
+      context.addIssue({
+        code: 'custom',
+        path: ['retryAfterSeconds'],
+        message: 'A rate or concurrency denial requires a retry interval'
+      })
+    }
+  })
+
 export const mcpJsonRpcIdSchema = z.union([
   z.string().min(1).max(200),
   z.number().int().safe(),
@@ -6615,6 +6661,8 @@ export type AgentAccessTokenCreateInput = z.infer<typeof agentAccessTokenCreateI
 export type AgentAccessTokenCreateResult = z.infer<typeof agentAccessTokenCreateResultSchema>
 export type AgentAccessTokenReadModel = z.infer<typeof agentAccessTokenReadModelSchema>
 export type AgentAccessTokenAuthentication = z.infer<typeof agentAccessTokenAuthenticationSchema>
+export type AgentAccessAdmissionReason = z.infer<typeof agentAccessAdmissionReasonSchema>
+export type AgentAccessAdmissionResult = z.infer<typeof agentAccessAdmissionResultSchema>
 export type McpJsonRpcId = z.infer<typeof mcpJsonRpcIdSchema>
 export type McpJsonRpcRequest = z.infer<typeof mcpJsonRpcRequestSchema>
 export type McpToolCallInput = z.infer<typeof mcpToolCallInputSchema>

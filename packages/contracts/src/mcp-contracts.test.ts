@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
+  agentAccessAdmissionResultSchema,
   agentAccessTokenCreateInputSchema,
   agentAccessTokenSchema,
   mcpJsonRpcRequestSchema,
@@ -27,6 +28,14 @@ describe('MCP and agent access contracts', () => {
     expect(mcpToolCallInputSchema.parse({ name: 'appsea.search_opportunities' }).arguments).toEqual(
       {}
     )
+    expect(
+      agentAccessAdmissionResultSchema.parse({
+        admitted: true,
+        reason: 'admitted',
+        retryAfterSeconds: 0,
+        admissionId: 'mcp-admission:test'
+      })
+    ).toMatchObject({ admitted: true, reason: 'admitted' })
   })
 
   it('rejects duplicate scopes, malformed tokens, and unknown JSON-RPC fields', () => {
@@ -44,6 +53,38 @@ describe('MCP and agent access contracts', () => {
         id: 1,
         method: 'tools/list',
         unexpected: true
+      }).success
+    ).toBe(false)
+    expect(
+      agentAccessAdmissionResultSchema.safeParse({
+        admitted: true,
+        reason: 'rate_limited',
+        retryAfterSeconds: 2,
+        admissionId: 'mcp-admission:invalid'
+      }).success
+    ).toBe(false)
+    expect(
+      agentAccessAdmissionResultSchema.safeParse({
+        admitted: true,
+        reason: 'admitted',
+        retryAfterSeconds: 1,
+        admissionId: 'mcp-admission:invalid'
+      }).success
+    ).toBe(false)
+    expect(
+      agentAccessAdmissionResultSchema.safeParse({
+        admitted: false,
+        reason: 'rate_limited',
+        retryAfterSeconds: 0,
+        admissionId: null
+      }).success
+    ).toBe(false)
+    expect(
+      agentAccessAdmissionResultSchema.safeParse({
+        admitted: false,
+        reason: 'concurrency_limited',
+        retryAfterSeconds: 1,
+        admissionId: 'mcp-admission:unexpected'
       }).success
     ).toBe(false)
   })

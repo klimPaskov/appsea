@@ -95,6 +95,7 @@
 - [`adrs/0019-workspace-purge-manifest.md`](adrs/0019-workspace-purge-manifest.md)
 - [`adrs/0020-runtime-skill-approval-integrity.md`](adrs/0020-runtime-skill-approval-integrity.md)
 - [`adrs/0021-versioned-opportunity-score-envelope.md`](adrs/0021-versioned-opportunity-score-envelope.md)
+- [`adrs/0022-mcp-agent-admission.md`](adrs/0022-mcp-agent-admission.md)
 
 ## Generated references
 
@@ -127,6 +128,7 @@
 - [`status/postgresql-backup-restore-completion-report-2026-08-04.md`](status/postgresql-backup-restore-completion-report-2026-08-04.md)
 - [`status/workspace-purge-manifest-completion-report-2026-08-04.md`](status/workspace-purge-manifest-completion-report-2026-08-04.md)
 - [`status/runtime-skill-governance-completion-report-2026-08-04.md`](status/runtime-skill-governance-completion-report-2026-08-04.md)
+- [`status/mcp-agent-admission-completion-report-2026-08-04.md`](status/mcp-agent-admission-completion-report-2026-08-04.md)
 - [`status/opportunity-scoring-v1-completion-report-2026-08-04.md`](status/opportunity-scoring-v1-completion-report-2026-08-04.md)
 - [`status/workspace-invitation-completion-report.md`](status/workspace-invitation-completion-report.md)
 - [`status/production-readiness-audit-2026-07-25.md`](status/production-readiness-audit-2026-07-25.md)

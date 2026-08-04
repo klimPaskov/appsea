@@ -163,7 +163,10 @@ export {
   EvidenceRedactionNotFoundError,
   EvidenceRedactionPermissionError
 } from './evidence-redaction-repository'
-export { PostgresAgentAccessTokenRepository } from './agent-access-token-repository'
+export {
+  agentAccessAdmissionLimits,
+  PostgresAgentAccessTokenRepository
+} from './agent-access-token-repository'
 export {
   MfaEncryptionKeyConfigurationError,
   mfaEncryptionConfigFromEnv,
