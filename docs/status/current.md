@@ -10,6 +10,9 @@
   Temporal, applies migrations with the dedicated local migrator, and runs the
   durable worker plus web process with filesystem object storage; it is a
   development workflow and never activates a third-party source.
+- Local stack smoke: `pnpm verify:local-stack` now exercises loopback dependency
+  readiness, migrations, worker/web startup, auth pages, sparse fixture
+  disclosure, and container cleanup; GitHub CI runs it on every change.
 - Hosted validation: GitHub Actions run `30884529524` passed for commit
   `0978640`, including verification/security, fresh PostgreSQL and Temporal,
   worker replacement, container smoke, and the Windows desktop boundary.

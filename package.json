@@ -36,6 +36,7 @@
     "verify:workflows": "node scripts/run_workflow_integration.mjs",
     "verify:workflows:fresh": "node scripts/run_workflow_integration.mjs --fresh",
     "verify:worker:recovery": "node scripts/run_worker_recovery.mjs",
+    "verify:local-stack": "node scripts/smoke_local_stack.mjs",
     "verify:worker:recovery:fresh": "node scripts/run_worker_recovery.mjs --fresh",
     "worker:fixture": "pnpm --filter @appsea/worker fixture",
     "worker:fixture:persist": "pnpm --filter @appsea/worker fixture:persist",

@@ -82,7 +82,7 @@ deferred to avoid SSRF and unreviewed third-party acquisition.
 Integration coverage exercises staging/replay/consumption/deletion, RLS,
 tombstones; migration `0090` keeps policy validation in a narrow definer
 function. Docker is unavailable locally; `pnpm dev:local` runs the loopback
-stack.
+stack and `pnpm verify:local-stack` smoke-tests it in CI.
 Migration `0091` preserves `consumed_at` when an already-consumed owner
 batch is later deleted, matching its deletion trigger.
 

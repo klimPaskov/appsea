@@ -36,6 +36,9 @@ Implemented:
 - local runbook and CI persistence gate
 - one-command loopback private-workspace stack with migration, worker, and web
   startup (`pnpm dev:local`)
+- end-to-end loopback stack smoke (`pnpm verify:local-stack`) covering
+  dependency readiness, migrations, worker/web startup, auth pages, fixture
+  disclosure, and Compose cleanup in CI
 - PostgreSQL-backed source quota reservations shared across workspaces, with
   idempotent commit/release and bounded expiry
 - policy-derived, bounded retention tombstone enqueue reusing the deletion

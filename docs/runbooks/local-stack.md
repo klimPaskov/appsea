@@ -37,6 +37,17 @@ docker compose -f infra/local/compose.yaml down
 Use `pnpm dev:local --dry-run` to inspect the commands and loopback endpoints
 without contacting Docker or the database.
 
+To run the disposable end-to-end smoke (loopback services, migrations, worker,
+web readiness, auth pages, fixture disclosure, and dependency cleanup), use:
+
+```bash
+pnpm verify:local-stack
+```
+
+The smoke leaves named local volumes in place but removes the Compose
+containers. GitHub CI runs this command on every change. It is safe to run
+locally only when Docker Desktop is available.
+
 ## Boundaries
 
 This is a development workflow, not a production deployment. It uses local
