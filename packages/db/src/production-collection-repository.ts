@@ -825,10 +825,12 @@ export class PostgresProductionCollectionRepository {
           }
 
           const existingCampaign = await client.query<{ synthetic: boolean }>(
+            // The later campaign upsert takes the write lock. This admission
+            // read must remain lock-free because the worker only has the
+            // narrow column grants needed for the production state update.
             `SELECT synthetic
                FROM appsea.research_campaigns
-              WHERE workspace_id = $1 AND campaign_id = $2
-              FOR UPDATE`,
+              WHERE workspace_id = $1 AND campaign_id = $2`,
             [parsed.request.workspaceId, parsed.request.campaignId]
           )
           if (existingCampaign.rows[0]?.synthetic) {
