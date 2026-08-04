@@ -12,14 +12,16 @@ claimed.
 - Added a minimal `core:default` capability for the main window.
 - Replaced the permissive `null` CSP with a local same-origin policy that
   denies plugin content and keeps the development web origin explicit.
-- Added a Windows GitHub Actions job that runs the boundary check and Rust
-  compile independently of the web/worker CI jobs.
+- Added independent Windows and macOS GitHub Actions jobs that run the
+  boundary check and Rust compile independently of the web/worker CI jobs.
 
 ## Validation
 
 - `pnpm --filter @appsea/desktop build` passed locally.
 - `pnpm desktop:check` passed locally on Windows after the Tauri build hook
   and icon were added.
+- The macOS compile boundary is covered by the `desktop-macos` CI job; this is
+  a compile check, not a signed installer or notarization proof.
 - GitHub Actions run `30824653661` passed for commit `98ef62e`, including the
   Windows desktop boundary/Rust compile job, full verification, fresh
   PostgreSQL and Temporal checks, Compose validation, and both container image

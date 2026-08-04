@@ -134,3 +134,18 @@ jobs:
           node-version: 22
       - run: pnpm --filter @appsea/desktop build
       - run: pnpm desktop:check
+
+  desktop-macos:
+    runs-on: macos-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.11.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: pnpm --filter @appsea/desktop build
+      - run: pnpm desktop:check

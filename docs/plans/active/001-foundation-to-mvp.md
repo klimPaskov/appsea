@@ -674,6 +674,7 @@ Implemented:
 
 - Tauri build hook, committed Rust lockfile, deterministic Windows icon, and
   minimal capability file.
+- Independent Windows and macOS CI compile/boundary checks.
 - Restrictive local CSP with explicit development-origin allowance.
 - Windows CI job for the desktop contract and Rust compile.
 
