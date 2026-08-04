@@ -27,8 +27,8 @@
   `b67a51b`, including verification/security, fresh PostgreSQL and Temporal,
   worker replacement, release-boundary verification, the loopback private-stack
   smoke, container smoke, and independent Windows and macOS desktop checks;
-  hosted runs `30917740935` for `b99ffd7` and latest run `30919346892` for
-  `f86ca22` failed before any job steps in every matrix job because of the
+  hosted run `30917740935` for `b99ffd7` and implementation run `30919346892`
+  for `f86ca22` failed before any job steps in every matrix job because of the
   account payment/spending-limit gate, not because of a repository assertion.
 - Private workspace website/API: implemented and production-built; reads are membership-authorized and cache-disabled. Encoded workspace and detail identifiers are decoded exactly once at the page boundary before schema validation. Completed collection reads now expose the bounded private `analysisHandoff` status when an approved-seed handoff exists. Owner settings expose a read-only purge-readiness inventory, an expiring owner-confirmed metadata-only purge manifest, and a step-up-protected, durable non-destructive purge intent; these snapshot PostgreSQL references/readiness without authorizing deletion and keep cloud/export/backup requirements visible.
 - Owner-authorized intake: migration `0089`, the `manual-owner-import-v1` reviewed policy, bounded CSV/JSON parsing, PII scrubbing, private staging/list/delete APIs, a private workspace import screen, identifier-only Temporal handoff, same-transaction batch consumption, and tombstone propagation are implemented and package-tested. The local-stack smoke now signs up a disposable owner, creates a private manual-import campaign, stages a smoke-only row, waits for durable workflow consumption, confirms the retained complaint, creates/reviews/approves a smoke-only opportunity seed, runs production-shaped analysis, and reads the private opportunity/report/plan pages back. This makes tenant-private research usable without presenting it as public market research; URL fetching and all third-party public connectors remain disabled or deferred.
