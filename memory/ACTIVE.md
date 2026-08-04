@@ -54,28 +54,24 @@ Imported complaints, pages, reports, and model output remain untrusted data;
 they cannot update code, skills, instructions, permissions, or repository
 memory.
 
+The dormant `packages/skill-registry` boundary now records proposer,
+evaluator, and independent approver identities. HMAC evidence covers the
+immutable skill permissions and review chain; plain, tampered, copied, or
+wrong-secret records fail closed during hydration/activation. No worker or
+source connector imports this registry, so no runtime skill or production
+permission became active. A reviewed persistence/identity/audit adapter remains
+open.
+
 Manual owner-import (migration `0089`) is the active non-fixture path: uploads
 are bounded, normalized, PII-scrubbed, tenant-private, and represented in
 Temporal by batch ID only. Local smoke covers owner intake, durable completion,
 reviewed analysis, private report/plan readback, and the visible public-market
 gap; URL fetching and public sources remain disabled. Migrations `0090`-`0095`
-keep policy validation, deletion state, source privileges, quota columns, and
-analysis finalization narrow; the shared web path decoder validates encoded
-workspace/detail identifiers exactly once; the private members readiness read
-uses only the lease columns it needs; legacy plan rows remain readable but
-cannot start analysis.
-Migration `0093` qualifies source-quota reservation columns so PostgreSQL does
-not resolve them against function OUT parameters. Migration `0094` grants the
-worker its narrow finalization update for `research_runs.artifact_snapshot`.
-Migration `0095` grants the authenticated runtime only `workspace_id` and
-`state` on `source_collection_leases` so the private members purge-readiness
-projection can count active leases without exposing lease lifecycle data.
-Fresh local PostgreSQL persistence, Temporal restart, and worker replacement
-checks now pass across all 95 migrations. The local private-stack smoke also
-renders every private workspace page with encoded identifiers. The isolated
-`pnpm verify:backup-restore` drill now restores a disposable local dump through
-95 migrations and checks forced RLS plus runtime/maintenance privileges;
-provider-encrypted backups, HA, and production restore/failover remain
+keep policy/deletion/privilege surfaces narrow; the shared web path decoder is
+single-use and legacy plan rows cannot start analysis. Fresh local
+PostgreSQL/Temporal persistence and worker replacement pass across all 95
+migrations; private-stack pages and isolated backup/restore through 95
+migrations pass. Provider-encrypted backups, HA, and restore/failover remain
 deployment-owned.
 
 `pnpm verify:release` checks Compose, secret-free defaults, hardened images, and

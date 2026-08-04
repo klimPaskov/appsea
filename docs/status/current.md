@@ -61,6 +61,12 @@
 - Workspace cost-threshold inspection: `pnpm worker:workspace:cost:alert` performs a lease-owned, read-only bounded scan of exact ledger aggregates for one configured currency and separate actual/estimated thresholds; unsupported currencies and truncation keep a non-alerting scan incomplete, and bounded alert/incomplete/failure events can be signed-delivered; the command never blocks work or performs billing
 - Native Codex skills: 21 synchronized skills
 - Codex helper agents: 11 bounded agents
+- Runtime skill governance: the dormant registry now records proposer,
+  independent evaluation/approval identities, and HMAC evidence over the
+  immutable permission set; plain, tampered, copied, and wrong-secret records
+  fail closed during hydration/activation. It is not imported by the worker,
+  and authenticated persistence/audit/permission-specific activation remain
+  open.
 - Project memory: implemented and validated
 - Documentation system: implemented and linked
 - UI references: deterministic sparse desktop/mobile reference sources now include

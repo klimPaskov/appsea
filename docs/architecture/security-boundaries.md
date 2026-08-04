@@ -50,6 +50,14 @@ Blocked flows:
 
 Approval gates cover source activation, dependency installation, permissions, authentication, retention, migrations, deployment, and security-sensitive skill activation.
 
+The dormant runtime skill registry now enforces this gate in code. Registry
+transitions record a proposer, distinct evaluator identities, an independent
+approver, and HMAC evidence over the immutable requested-permission set and
+review chain. Persisted records must be hydrated through the registry before
+activation; plain objects, permission edits, copied evidence, and a different
+registry secret fail closed. The registry is not imported by the worker and
+does not activate sources or grant production permissions.
+
 ## Database enforcement
 
 Authentication is a separate boundary: `users.password_hash` contains only

@@ -5,3 +5,9 @@ Continuous operation means monitored jobs, durable workflows, bounded retries, s
 It does not mean unrestricted self-modification.
 
 The system can propose a skill, test it against fixtures, record evaluation results, and prepare an activation request. A reviewed approval is required before production activation. The same rule applies to new connectors, dependencies, migrations, permissions, retention changes, and deployments.
+
+The dormant `packages/skill-registry` implementation records the proposer,
+independent evaluation chain, approver, and signed permission-bound evidence.
+Persisted records must be hydrated through that registry before activation;
+the worker does not import it and no runtime permission is granted by this
+boundary alone. See ADR 0020 for the review-integrity contract.
