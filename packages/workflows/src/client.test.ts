@@ -172,7 +172,14 @@ const analysisArtifact = productionResearchArtifactSchema.parse({
         evidenceQuality: 0,
         contraryEvidencePenalty: 0
       },
-      planFiles: ['README.md']
+      planFiles: [
+        'README.md',
+        '01-product-brief.md',
+        '02-mvp-scope.md',
+        '03-architecture.md',
+        '04-task-graph.json',
+        '05-validation.md'
+      ]
     },
     seedVersion: 'seed-v1',
     contentHash: 'b'.repeat(64),
@@ -255,7 +262,14 @@ const analysisArtifact = productionResearchArtifactSchema.parse({
       }
     },
     contraryEvidence: [],
-    planFiles: ['README.md']
+    planFiles: [
+      'README.md',
+      '01-product-brief.md',
+      '02-mvp-scope.md',
+      '03-architecture.md',
+      '04-task-graph.json',
+      '05-validation.md'
+    ]
   },
   coverageGaps: [],
   warnings: []

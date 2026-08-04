@@ -15,8 +15,7 @@ cancellation, source reconciliation, analysis history, report/plan governance,
 cost and alert projections, object references, workspace archival/purge intent/
 manifest,
 field-level evidence redaction, agent access tokens, and global-auth TOTP MFA.
-MFA step-up, encrypted TOTP key rotation, recovery-code handling, OIDC, and
-read-only MCP access are implemented with external provider/deployment gates;
+MFA rotation, OIDC, and read-only MCP remain provider/deployment-gated;
 previous-key removal still requires operator review.
 
 The fixture workflow is the complete persisted path. Production collection and
@@ -24,10 +23,8 @@ analysis v2 are policy-gated/replay-safe; CFPB and Stack Exchange remain
 disabled pending independent approval. Reports/plans preserve provenance,
 coverage gaps, approval state, synthetic disclosure, and object references.
 
-New production-analysis v2 executions carry only the reviewed, non-sensitive
-history memo. `pnpm worker:workflow:analysis:history:check` inspects Temporal
-visibility metadata without fetching history and requires a reviewed manifest
-for visible legacy/unknown executions; it never performs archive or deletion.
+Production-analysis v2 carries only a reviewed history memo; the history-check
+command inspects visibility metadata and never archives or deletes history.
 
 The `pnpm verify:worker:recovery` drill proves local/CI process replacement: a
 separate fixture client observes a persisted checkpoint, the first worker is
@@ -71,8 +68,9 @@ function. `pnpm dev:local` runs the loopback stack and
 now passes authenticated owner intake, durable completion, complaint
 confirmation, reviewed/approved seed input, production-shaped analysis
 completion, private opportunity/report/plan readback, and the visible
-public-market coverage gap. The smoke uses six supported production plan paths
-and per-run development auth markers.
+public-market coverage gap. New production seed writes and analysis admission
+enforce the shared six-file package manifest; legacy rows remain readable but
+cannot start analysis.
 Migration `0091` preserves `consumed_at` when an already-consumed owner
 batch is later deleted, matching its deletion trigger.
 Migration `0092` makes the service-role read privileges for campaign source

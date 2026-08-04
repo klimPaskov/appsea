@@ -6,6 +6,7 @@ import {
   productionResearchArtifactSchema,
   workspaceOpportunitySeedApprovalInputSchema,
   workspaceOpportunitySeedCreateInputSchema,
+  workspaceOpportunitySeedReadModelSchema,
   type ProductionAnalysisInput
 } from './index'
 
@@ -204,6 +205,42 @@ function input(overrides: Partial<ProductionAnalysisInput> = {}): ProductionAnal
 }
 
 describe('production analysis contracts', () => {
+  it('requires the canonical six-file production coding package manifest', () => {
+    const seed = input().opportunitySeed.seed
+    expect(productionOpportunitySeedSchema.safeParse(seed).success).toBe(true)
+    expect(
+      productionOpportunitySeedSchema.safeParse({ ...seed, planFiles: ['README.md'] }).success
+    ).toBe(false)
+    expect(
+      productionOpportunitySeedSchema.safeParse({
+        ...seed,
+        planFiles: [...seed.planFiles, 'README.md']
+      }).success
+    ).toBe(false)
+    expect(
+      productionOpportunitySeedSchema.safeParse({
+        ...seed,
+        planFiles: [...seed.planFiles].reverse()
+      }).success
+    ).toBe(true)
+    expect(
+      workspaceOpportunitySeedReadModelSchema.safeParse({
+        seedReviewId: 'seed-review:legacy',
+        seedVersion: 'seed-v0',
+        seed: { ...seed, planFiles: ['README.md'] },
+        contentHash: 'd'.repeat(64),
+        reviewState: 'approved',
+        createdBy: 'user:legacy',
+        reviewedBy: 'user:legacy',
+        reviewedAt: now,
+        approvedBy: 'user:legacy',
+        approvedAt: now,
+        createdAt: now,
+        updatedAt: now
+      }).success
+    ).toBe(true)
+  })
+
   it('keeps source-backed competitor feature claims outside reviewed seed input', () => {
     const seed = input().opportunitySeed.seed
     expect(

@@ -8,6 +8,7 @@ import {
   fixtureResearchArtifactSchema,
   opportunityReportSchema,
   planPackageSchema,
+  productionPlanPackagePaths,
   productionResearchArtifactSchema,
   taskGraphSchema
 } from '@appsea/contracts'
@@ -460,15 +461,6 @@ Report files changed, migrations, tests, browser evidence, provider coverage, kn
   })
 }
 
-const productionPackagePaths = [
-  'README.md',
-  '01-product-brief.md',
-  '02-mvp-scope.md',
-  '03-architecture.md',
-  '04-task-graph.json',
-  '05-validation.md'
-]
-
 /**
  * Generate a deterministic, source-aware package for a reviewed production
  * analysis artifact. This is a composition template: the supplied seed owns
@@ -482,8 +474,8 @@ export function generateProductionPlanPackage(
 ): PlanPackage {
   const artifact = productionResearchArtifactSchema.parse(artifactInput)
   if (
-    artifact.opportunity.planFiles.length !== productionPackagePaths.length ||
-    !productionPackagePaths.every((path) => artifact.opportunity.planFiles.includes(path))
+    artifact.opportunity.planFiles.length !== productionPlanPackagePaths.length ||
+    !productionPlanPackagePaths.every((path) => artifact.opportunity.planFiles.includes(path))
   ) {
     throw new Error('Production analysis plan manifest must contain the supported package files')
   }
@@ -615,7 +607,7 @@ ${indentedJson({ id: opportunity.id, slug: opportunity.slug, name: opportunity.n
 
 ## Package files
 
-${markdownList(productionPackagePaths)}
+${markdownList([...productionPlanPackagePaths])}
 `
       },
       {

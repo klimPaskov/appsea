@@ -44,6 +44,11 @@
   carry the linked report and plan approval states from PostgreSQL governance
   projections instead of inferring draft defaults from object payloads
 - PostgreSQL persistence: ninety-four forward, checksummed migrations plus least-privilege repositories and the existing auth, RLS, provenance, workflow, source-policy, quota, retention, analysis, reporting, and maintenance boundaries. Migration `0093` qualifies source-quota reservation columns, and `0094` grants the worker its narrow `research_runs.artifact_snapshot` finalization update. Neither migration activates a third-party source.
+- Production coding-package manifest: the shared contracts define the six
+  deterministic package paths. New seed writes, user admission, worker handoff,
+  and production artifacts reject missing, duplicate, or unsupported paths;
+  legacy portable-path rows remain readable for inspection but cannot start
+  analysis until replaced.
 - Database verification: PostgreSQL 18 fresh-install and populated-upgrade lifecycle is covered by local/CI gates; fresh local persistence (49 integration tests), Temporal restart, and worker replacement now pass across all ninety-four migrations. Hosted full proof remains an appropriate rerun when the GitHub account payment gate is cleared.
 - Campaign admission repair: migration `0092_campaign_source_read_privileges.sql` explicitly grants the runtime service role the `sources`, source-policy snapshot, and policy-review reads required by private campaign validation after hosted smoke exposed a missing `sources` privilege.
 - Dependency security: Next.js `16.2.12` and patched transitive PostCSS, `fast-uri`, and sharp versions are locked; `pnpm security:audit` reports zero production vulnerabilities and runs in the GitHub verify job. GitHub Actions run `30819616149` passed the audit, full verification, fresh PostgreSQL persistence, and fresh Temporal workflow checks for commit `1cc781c`.

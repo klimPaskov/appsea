@@ -41,6 +41,12 @@ vi.mock('@appsea/db/production-collection', () => ({
 vi.mock('@appsea/db/opportunity-seed-review', () => ({
   PostgresOpportunitySeedReviewRepository: class {
     readApprovedForUser = mocks.readApprovedForUser
+  },
+  OpportunitySeedReviewLineageError: class extends Error {
+    constructor() {
+      super('seed lineage')
+      this.name = 'OpportunitySeedReviewLineageError'
+    }
   }
 }))
 vi.mock('@appsea/db/production-analysis-admission', () => ({
@@ -96,7 +102,14 @@ const seed = {
     evidenceQuality: 20,
     contraryEvidencePenalty: 10
   },
-  planFiles: ['README.md']
+  planFiles: [
+    'README.md',
+    '01-product-brief.md',
+    '02-mvp-scope.md',
+    '03-architecture.md',
+    '04-task-graph.json',
+    '05-validation.md'
+  ]
 }
 
 const seedReview = {

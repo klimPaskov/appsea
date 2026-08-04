@@ -1,5 +1,6 @@
 import {
   appseaIdentifierSchema,
+  productionOpportunitySeedSchema,
   workspaceOpportunitySeedApprovalInputSchema,
   workspaceOpportunitySeedCreateInputSchema,
   workspaceOpportunitySeedReadModelSchema,
@@ -96,6 +97,21 @@ function readModel(row: SeedReviewRow): WorkspaceOpportunitySeedReadModel {
     createdAt: asIso(row.created_at),
     updatedAt: asIso(row.updated_at)
   })
+}
+
+/**
+ * Analysis is a stricter boundary than ordinary workspace reads. Legacy seed
+ * rows remain inspectable, but they cannot be approved as new analysis input
+ * until they are replaced with the canonical package manifest.
+ */
+function readAnalysisModel(row: SeedReviewRow): WorkspaceOpportunitySeedReadModel {
+  const model = readModel(row)
+  try {
+    productionOpportunitySeedSchema.parse(model.seed)
+  } catch {
+    throw new OpportunitySeedReviewLineageError()
+  }
+  return model
 }
 
 async function actorRole(client: PoolClient, workspaceId: string, userId: string): Promise<string> {
@@ -249,7 +265,7 @@ export class PostgresOpportunitySeedReviewRepository {
           [parsedWorkspaceId, parsedSeedReviewId]
         )
         const row = result.rows[0]
-        return row ? readModel(row) : null
+        return row ? readAnalysisModel(row) : null
       },
       { readOnly: true }
     )
@@ -274,7 +290,7 @@ export class PostgresOpportunitySeedReviewRepository {
           [parsedWorkspaceId, parsedSeedReviewId]
         )
         const row = result.rows[0]
-        return row ? readModel(row) : null
+        return row ? readAnalysisModel(row) : null
       },
       { readOnly: true }
     )

@@ -33,7 +33,14 @@ const seed = productionOpportunitySeedSchema.parse({
     evidenceQuality: 80,
     contraryEvidencePenalty: 20
   },
-  planFiles: ['README.md']
+  planFiles: [
+    'README.md',
+    '01-product-brief.md',
+    '02-mvp-scope.md',
+    '03-architecture.md',
+    '04-task-graph.json',
+    '05-validation.md'
+  ]
 })
 
 describe('opportunity seed content hash compatibility', () => {

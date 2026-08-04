@@ -22,7 +22,10 @@ import {
   ProductionWorkflowConcurrencyLimitError,
   ProductionWorkflowRateLimitError
 } from '@appsea/db/production-workflow-admission'
-import { PostgresOpportunitySeedReviewRepository } from '@appsea/db/opportunity-seed-review'
+import {
+  OpportunitySeedReviewLineageError,
+  PostgresOpportunitySeedReviewRepository
+} from '@appsea/db/opportunity-seed-review'
 import {
   prepareProductionCollectionWorkflowStart,
   startProductionCollectionWorkflow
@@ -198,6 +201,15 @@ export async function POST(
         )
       }
     } catch (error) {
+      if (error instanceof OpportunitySeedReviewLineageError) {
+        return Response.json(
+          {
+            error:
+              'The approved opportunity seed uses an older coding-package manifest; replace it before automatic analysis.'
+          },
+          { status: 422, headers: privateResponseHeaders }
+        )
+      }
       console.error('AppSea campaign run seed verification failed', {
         name: error instanceof Error ? error.name : 'unknown'
       })

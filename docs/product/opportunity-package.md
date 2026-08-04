@@ -17,6 +17,14 @@ A generated coding-agent package contains:
 - dependency-aware task graph
 - validation and acceptance plan
 
+Production seed reviews must declare the canonical six-file manifest in the
+shared contract: `README.md`, `01-product-brief.md`, `02-mvp-scope.md`,
+`03-architecture.md`, `04-task-graph.json`, and `05-validation.md`. The
+boundary rejects missing, duplicate, or unsupported paths before an approved
+seed can start analysis, so a malformed plan cannot fail later inside a worker.
+Previously stored portable-path seed rows remain inspectable for migration
+planning, but they are rejected at analysis admission until replaced.
+
 Claims in the package must point back to evidence or state that they are inference. The fixture generator writes a complete sample under `artifacts/plans/`.
 
 Evidence observations include a versioned derived-analysis record with

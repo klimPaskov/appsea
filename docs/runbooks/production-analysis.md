@@ -34,7 +34,11 @@ explicit competitor, contrary-evidence, and score-factor values. The pipeline
 never infers willingness to pay, feasibility, competitive gap, or contrary
 evidence from complaint text. Seed creation and approval are available at
 `/workspace/:workspaceId/seed-reviews`; an editor marks a record reviewed and
-an owner approves it.
+an owner approves it. The seed contract requires the complete six-file plan
+manifest (`README.md`, `01-product-brief.md`, `02-mvp-scope.md`,
+`03-architecture.md`, `04-task-graph.json`, and `05-validation.md`) so
+deterministic package generation fails closed at review input rather than
+after a durable worker starts.
 
 ## Durable production path
 

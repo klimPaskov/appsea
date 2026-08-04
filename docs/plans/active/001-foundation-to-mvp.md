@@ -611,6 +611,9 @@ Reports are versioned in `report_versions` and linked to their plan package. Rea
 exclude inactive source rows and non-redacted non-fixture evidence.
 Approval transitions are role-checked in the private API and guarded by migration
 `0022_report_approval_governance.sql`; only approved reports can be exported.
+The shared production seed contract now requires the six-file coding-package
+manifest at new writes and analysis admission; legacy portable-path rows remain
+readable for inspection but are blocked from analysis until replaced.
 
 ### 6. Operations
 

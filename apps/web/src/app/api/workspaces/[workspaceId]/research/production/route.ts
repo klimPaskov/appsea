@@ -9,7 +9,10 @@ import {
   ProductionWorkflowRateLimitError
 } from '@appsea/db/production-workflow-admission'
 import { PostgresProductionCollectionRepository } from '@appsea/db'
-import { PostgresOpportunitySeedReviewRepository } from '@appsea/db/opportunity-seed-review'
+import {
+  OpportunitySeedReviewLineageError,
+  PostgresOpportunitySeedReviewRepository
+} from '@appsea/db/opportunity-seed-review'
 import {
   prepareProductionCollectionWorkflowStart,
   startProductionCollectionWorkflow
@@ -93,7 +96,16 @@ export async function POST(
         parsedWorkspaceId.data,
         strict.data.analysisSeedReviewId
       )
-    } catch {
+    } catch (error) {
+      if (error instanceof OpportunitySeedReviewLineageError) {
+        return Response.json(
+          {
+            error:
+              'The approved opportunity seed uses an older coding-package manifest; replace it before automatic analysis.'
+          },
+          { status: 422, headers: privateResponseHeaders }
+        )
+      }
       return Response.json(
         { error: 'Unable to verify the analysis seed review' },
         { status: 503, headers: privateResponseHeaders }

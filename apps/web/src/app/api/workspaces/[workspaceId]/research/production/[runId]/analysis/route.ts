@@ -13,7 +13,10 @@ import {
   ProductionAnalysisConcurrencyLimitError,
   ProductionAnalysisRateLimitError
 } from '@appsea/db/production-analysis-admission'
-import { PostgresOpportunitySeedReviewRepository } from '@appsea/db/opportunity-seed-review'
+import {
+  OpportunitySeedReviewLineageError,
+  PostgresOpportunitySeedReviewRepository
+} from '@appsea/db/opportunity-seed-review'
 import {
   prepareProductionAnalysisWorkflowStart,
   startProductionAnalysisWorkflow
@@ -144,6 +147,15 @@ export async function POST(
       { status: 202, headers: privateResponseHeaders }
     )
   } catch (error) {
+    if (error instanceof OpportunitySeedReviewLineageError) {
+      return Response.json(
+        {
+          error:
+            'The approved opportunity seed uses an older coding-package manifest; replace it before analysis can start.'
+        },
+        { status: 422, headers: privateResponseHeaders }
+      )
+    }
     if (error instanceof ProductionCollectionAnalysisUnavailableError) {
       return Response.json(
         {

@@ -48,6 +48,12 @@ vi.mock('@appsea/db/production-workflow-admission', () => ({
 vi.mock('@appsea/db/opportunity-seed-review', () => ({
   PostgresOpportunitySeedReviewRepository: class {
     readApprovedForUser = vi.fn().mockResolvedValue(null)
+  },
+  OpportunitySeedReviewLineageError: class extends Error {
+    constructor() {
+      super('seed lineage')
+      this.name = 'OpportunitySeedReviewLineageError'
+    }
   }
 }))
 

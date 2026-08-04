@@ -1022,13 +1022,28 @@ export const objectReferenceSchema = z
     }
   })
 
+/** Canonical files emitted by the deterministic production coding package. */
+export const productionPlanPackagePaths = [
+  'README.md',
+  '01-product-brief.md',
+  '02-mvp-scope.md',
+  '03-architecture.md',
+  '04-task-graph.json',
+  '05-validation.md'
+] as const
+
 /**
  * A production analysis seed is reviewed input, not a model output. The
  * analysis stage may calculate the deterministic score from these factors,
  * but it must not invent willingness-to-pay, feasibility, competitor, or
  * contrary-evidence values from complaint text.
+ *
+ * The storage schema intentionally remains portable-path compatible so that
+ * already-reviewed rows remain readable during a manifest rollout. New seed
+ * writes and analysis inputs use `productionOpportunitySeedSchema`, which
+ * adds the canonical six-file package manifest below.
  */
-export const productionOpportunitySeedSchema = z
+const productionOpportunitySeedStorageSchema = z
   .object({
     id: appseaIdentifierSchema,
     slug: opportunitySlugSchema,
@@ -1094,6 +1109,24 @@ export const productionOpportunitySeedSchema = z
       })
     }
   })
+
+/** New seed writes and production analysis inputs require the supported package manifest. */
+export const productionOpportunitySeedSchema = productionOpportunitySeedStorageSchema.superRefine(
+  (seed, context) => {
+    const uniquePlanFiles = new Set(seed.planFiles)
+    if (
+      seed.planFiles.length !== productionPlanPackagePaths.length ||
+      uniquePlanFiles.size !== productionPlanPackagePaths.length ||
+      !productionPlanPackagePaths.every((path) => uniquePlanFiles.has(path))
+    ) {
+      context.addIssue({
+        code: 'custom',
+        path: ['planFiles'],
+        message: 'Production seed planFiles must contain the supported six-file package manifest'
+      })
+    }
+  }
+)
 
 /**
  * Immutable policy provenance supplied by the source-registry read boundary.
@@ -1183,7 +1216,7 @@ export const workspaceOpportunitySeedReadModelSchema = z
   .object({
     seedReviewId: appseaIdentifierSchema,
     seedVersion: z.string().min(1).max(80),
-    seed: productionOpportunitySeedSchema,
+    seed: productionOpportunitySeedStorageSchema,
     contentHash: contentHashSchema,
     reviewState: workspaceOpportunitySeedReviewStateSchema,
     createdBy: appseaIdentifierSchema,
@@ -6072,7 +6105,8 @@ export type ResearchCampaignSourceReadModel = z.infer<typeof researchCampaignSou
 export type ResearchCampaignReadModel = z.infer<typeof researchCampaignReadModelSchema>
 export type ResearchArtifact = z.infer<typeof researchArtifactSchema>
 export type FixtureResearchArtifact = z.infer<typeof fixtureResearchArtifactSchema>
-export type ProductionOpportunitySeed = z.infer<typeof productionOpportunitySeedSchema>
+/** Portable-path representation retained for reading legacy seed reviews. */
+export type ProductionOpportunitySeed = z.infer<typeof productionOpportunitySeedStorageSchema>
 export type WorkspaceOpportunitySeedReviewState = z.infer<
   typeof workspaceOpportunitySeedReviewStateSchema
 >

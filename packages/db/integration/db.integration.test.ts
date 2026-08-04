@@ -1859,7 +1859,14 @@ describe.sequential('PostgreSQL fixture persistence lifecycle', () => {
         evidenceQuality: 50,
         contraryEvidencePenalty: 30
       },
-      planFiles: ['README.md']
+      planFiles: [
+        'README.md',
+        '01-product-brief.md',
+        '02-mvp-scope.md',
+        '03-architecture.md',
+        '04-task-graph.json',
+        '05-validation.md'
+      ]
     }
     try {
       const createdReview = await seedReviewRepository.create(
@@ -1891,6 +1898,43 @@ describe.sequential('PostgreSQL fixture persistence lifecycle', () => {
           createdReview.seedReviewId
         )
       ).resolves.toMatchObject({ reviewState: 'approved', contentHash: contentHash(seed) })
+
+      const legacySeed = { ...seed, planFiles: ['README.md'] }
+      const legacySeedReviewId = 'seed-review:legacy-integration'
+      await withOwnerClient(async (client) => {
+        await client.query(
+          `INSERT INTO appsea.opportunity_seed_reviews
+             (workspace_id, seed_review_id, seed_version, seed_payload, content_hash, review_state,
+              created_by, reviewed_by, reviewed_at, approved_by, approved_at, created_at, updated_at)
+           VALUES ($1, $2, 'seed-v0', $3::jsonb, $4, 'approved',
+                   $5, $5, $6, $5, $6, $6, $6)`,
+          [
+            workspace.workspaceId,
+            legacySeedReviewId,
+            JSON.stringify(legacySeed),
+            contentHash(legacySeed),
+            created.session.user.userId,
+            fixedAt
+          ]
+        )
+      })
+      await expect(
+        seedReviewRepository.readForUser(
+          created.session.user.userId,
+          workspace.workspaceId,
+          legacySeedReviewId
+        )
+      ).resolves.toMatchObject({ seed: { planFiles: ['README.md'] } })
+      await expect(
+        seedReviewRepository.readApprovedForUser(
+          created.session.user.userId,
+          workspace.workspaceId,
+          legacySeedReviewId
+        )
+      ).rejects.toThrow('Opportunity seed review was not an approved immutable workspace record')
+      await expect(
+        seedReviewRepository.readApprovedForWorker(workspace.workspaceId, legacySeedReviewId)
+      ).rejects.toThrow('Opportunity seed review was not an approved immutable workspace record')
 
       await expect(
         withWorkspaceTransaction(servicePool, workspace.workspaceId, async (client) => {
