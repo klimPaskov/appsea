@@ -11,6 +11,7 @@ import {
   invalidRequest,
   privateResponseHeaders,
   readSession,
+  requireRecentMutationStepUp,
   sameOriginRequest,
   unauthorizedResponse
 } from '../../../../../../server/auth-session'
@@ -73,6 +74,8 @@ export async function PATCH(
   if (!parsed.success) return invalidRequest('A valid report approval action is required')
 
   try {
+    const stepUpResponse = await requireRecentMutationStepUp()
+    if (stepUpResponse) return stepUpResponse
     const data = await authRepository({
       objectStore: getObjectStore()
     }).updateWorkspaceReportApproval(

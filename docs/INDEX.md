@@ -98,6 +98,7 @@
 - [`adrs/0021-versioned-opportunity-score-envelope.md`](adrs/0021-versioned-opportunity-score-envelope.md)
 - [`adrs/0022-mcp-agent-admission.md`](adrs/0022-mcp-agent-admission.md)
 - [`adrs/0023-private-audit-history.md`](adrs/0023-private-audit-history.md)
+- [`adrs/0024-step-up-for-research-governance-mutations.md`](adrs/0024-step-up-for-research-governance-mutations.md)
 
 ## Generated references
 
@@ -132,6 +133,7 @@
 - [`status/runtime-skill-governance-completion-report-2026-08-04.md`](status/runtime-skill-governance-completion-report-2026-08-04.md)
 - [`status/mcp-agent-admission-completion-report-2026-08-04.md`](status/mcp-agent-admission-completion-report-2026-08-04.md)
 - [`status/audit-history-completion-report-2026-08-04.md`](status/audit-history-completion-report-2026-08-04.md)
+- [`status/research-governance-step-up-completion-report-2026-08-04.md`](status/research-governance-step-up-completion-report-2026-08-04.md)
 - [`status/opportunity-scoring-v1-completion-report-2026-08-04.md`](status/opportunity-scoring-v1-completion-report-2026-08-04.md)
 - [`status/workspace-invitation-completion-report.md`](status/workspace-invitation-completion-report.md)
 - [`status/production-readiness-audit-2026-07-25.md`](status/production-readiness-audit-2026-07-25.md)

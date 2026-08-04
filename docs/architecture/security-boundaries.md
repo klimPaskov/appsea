@@ -22,7 +22,9 @@ recent MFA marker, established only by `POST /api/auth/mfa/step-up`. The same
 conditional marker now protects every mutation that already requires a recent
 password step-up: account closure, session revocation, owner membership and
 invitation changes, workspace archival, purge-intent request/cancel, and
-evidence redaction. The token
+evidence redaction. The shared web gate also protects evidence-derived
+research governance: report/plan approval, opportunity-seed review, production
+complaint review/correction, and competitor observation create/review. The token
 secret is returned once and only its SHA-256 hash is stored; forced RLS, owner
 checks, expiry, revocation, and active-user/workspace checks are enforced in
 PostgreSQL. The HTTP MCP

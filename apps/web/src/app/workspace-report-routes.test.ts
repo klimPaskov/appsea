@@ -13,6 +13,7 @@ const mocks = vi.hoisted(() => ({
     exportWorkspaceReport: vi.fn()
   },
   readSession: vi.fn(),
+  requireRecentMutationStepUp: vi.fn(),
   sameOriginRequest: vi.fn()
 }))
 
@@ -22,6 +23,7 @@ vi.mock('../server/auth-session', () => ({
   invalidRequest: (message: string) => Response.json({ error: message }, { status: 400 }),
   privateResponseHeaders: { 'cache-control': 'private, no-store' },
   readSession: mocks.readSession,
+  requireRecentMutationStepUp: mocks.requireRecentMutationStepUp,
   sameOriginRequest: mocks.sameOriginRequest,
   unauthorizedResponse: () => Response.json({ error: 'Authentication required' }, { status: 401 })
 }))
@@ -94,9 +96,40 @@ const report = {
 describe('workspace report routes', () => {
   beforeEach(() => {
     mocks.readSession.mockResolvedValue(session)
+    mocks.requireRecentMutationStepUp.mockResolvedValue(null)
     mocks.sameOriginRequest.mockReturnValue(true)
     mocks.repository.updateWorkspaceReportApproval.mockReset()
     mocks.repository.exportWorkspaceReport.mockReset()
+  })
+
+  it('blocks approval until the session has recent password and MFA proof', async () => {
+    mocks.requireRecentMutationStepUp.mockResolvedValue(
+      Response.json({ error: 'Recent reauthentication required' }, { status: 428 })
+    )
+    const stalePassword = await updateReport(
+      new Request('https://appsea.example', {
+        method: 'PATCH',
+        body: JSON.stringify({ action: 'approved' }),
+        headers: { 'content-type': 'application/json' }
+      }),
+      { params: Promise.resolve({ workspaceId: 'workspace:one', reportId: 'report:one' }) }
+    )
+    expect(stalePassword.status).toBe(428)
+    expect(mocks.repository.updateWorkspaceReportApproval).not.toHaveBeenCalled()
+
+    mocks.requireRecentMutationStepUp.mockResolvedValue(
+      Response.json({ error: 'Recent MFA verification required' }, { status: 428 })
+    )
+    const staleMfa = await updateReport(
+      new Request('https://appsea.example', {
+        method: 'PATCH',
+        body: JSON.stringify({ action: 'approved' }),
+        headers: { 'content-type': 'application/json' }
+      }),
+      { params: Promise.resolve({ workspaceId: 'workspace:one', reportId: 'report:one' }) }
+    )
+    expect(staleMfa.status).toBe(428)
+    expect(mocks.repository.updateWorkspaceReportApproval).not.toHaveBeenCalled()
   })
 
   it('validates same-origin approval actions and maps governance conflicts', async () => {

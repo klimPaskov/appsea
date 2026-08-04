@@ -93,10 +93,14 @@ also require a fresh MFA proof when MFA is enabled. This includes account
 closure, revoking another session, owner membership role/removal, invitation
 create/revoke, workspace archival, purge-intent request/cancel, evidence
 redaction, and issuing or revoking a workspace-scoped read-only MCP bearer at
-`/api/workspaces/:workspaceId/agent-tokens`. The server checks both markers
-before calling the mutation repository; UI state is never an authorization
-grant. Other mutation routes retain their separately reviewed role and policy
-boundaries until they receive an explicit step-up contract.
+`/api/workspaces/:workspaceId/agent-tokens`. The same gate now protects
+evidence-derived governance and curation decisions: report approval, plan
+approval, opportunity-seed review transitions, production complaint review or
+correction, and competitor observation creation or review. The server checks
+both markers immediately before calling each mutation repository; UI state is
+never an authorization grant. Other mutation routes retain their separately
+reviewed role and policy boundaries until they receive an explicit step-up
+contract.
 
 The fresh proof comes from `POST /api/auth/mfa/step-up`:
 

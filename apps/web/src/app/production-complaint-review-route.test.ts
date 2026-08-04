@@ -4,6 +4,7 @@ import { PATCH } from './api/workspaces/[workspaceId]/research/production/[runId
 const mocks = vi.hoisted(() => ({
   updateComplaintReview: vi.fn(),
   readSession: vi.fn(),
+  requireRecentMutationStepUp: vi.fn(),
   sameOriginRequest: vi.fn(),
   errors: {
     ProductionComplaintReviewConflictError: class extends Error {},
@@ -17,6 +18,7 @@ vi.mock('../server/auth-session', () => ({
   invalidRequest: (message: string) => Response.json({ error: message }, { status: 400 }),
   privateResponseHeaders: { 'cache-control': 'private, no-store' },
   readSession: mocks.readSession,
+  requireRecentMutationStepUp: mocks.requireRecentMutationStepUp,
   sameOriginRequest: mocks.sameOriginRequest,
   unauthorizedResponse: () => Response.json({ error: 'Authentication required' }, { status: 401 })
 }))
@@ -38,6 +40,7 @@ const session = {
 describe('production complaint review route', () => {
   beforeEach(() => {
     mocks.readSession.mockResolvedValue(session)
+    mocks.requireRecentMutationStepUp.mockResolvedValue(null)
     mocks.sameOriginRequest.mockReturnValue(true)
     mocks.updateComplaintReview.mockReset()
   })
@@ -211,5 +214,47 @@ describe('production complaint review route', () => {
         analysisCorrection: { severity: 5 }
       }
     )
+  })
+
+  it('blocks complaint review corrections until recent password and MFA proof are present', async () => {
+    mocks.requireRecentMutationStepUp.mockResolvedValue(
+      Response.json({ error: 'Recent reauthentication required' }, { status: 428 })
+    )
+    const stalePassword = await PATCH(
+      new Request('https://appsea.example', {
+        method: 'PATCH',
+        body: JSON.stringify({ action: 'confirmed' }),
+        headers: { 'content-type': 'application/json' }
+      }),
+      {
+        params: Promise.resolve({
+          workspaceId: 'workspace:one',
+          runId: 'run:one',
+          complaintId: 'complaint:one'
+        })
+      }
+    )
+    expect(stalePassword.status).toBe(428)
+    expect(mocks.updateComplaintReview).not.toHaveBeenCalled()
+
+    mocks.requireRecentMutationStepUp.mockResolvedValue(
+      Response.json({ error: 'Recent MFA verification required' }, { status: 428 })
+    )
+    const staleMfa = await PATCH(
+      new Request('https://appsea.example', {
+        method: 'PATCH',
+        body: JSON.stringify({ action: 'confirmed' }),
+        headers: { 'content-type': 'application/json' }
+      }),
+      {
+        params: Promise.resolve({
+          workspaceId: 'workspace:one',
+          runId: 'run:one',
+          complaintId: 'complaint:one'
+        })
+      }
+    )
+    expect(staleMfa.status).toBe(428)
+    expect(mocks.updateComplaintReview).not.toHaveBeenCalled()
   })
 })

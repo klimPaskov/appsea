@@ -32,8 +32,10 @@ The public AppSea leaderboard is a sparse, synthetic fixture surface. Private re
   mutations receive `428 Recent reauthentication required`.
 - When MFA is enabled, the same high-risk password-gated mutations—including
   account closure, session revocation, member/invitation changes, workspace
-  archival, purge-intent request/cancel, evidence redaction, and coding-agent
-  token issue/revoke—also require a fresh MFA step-up. The same-origin
+  archival, purge-intent request/cancel, evidence redaction, report/plan
+  approval, opportunity-seed review, production complaint review/correction,
+  competitor observation create/review, and coding-agent token issue/revoke—
+  also require a fresh MFA step-up. The same-origin
   `POST /api/auth/mfa/step-up` endpoint consumes one current TOTP or recovery
   code and writes only a fifteen-minute session marker; stale mutations
   receive `428 Recent MFA verification required`. Accounts without enabled MFA
@@ -195,8 +197,8 @@ Owner-safe account closure is implemented as a profile/authentication operation;
 object-store, backup, and export deletion remain separate retention work. Production
 identity-provider policy remains open. Recovery and invitation mechanics are implemented behind reviewed provider/identity kill switches; external
 OIDC provider approval, verified-email policy, provider-backed step-up
-integration, key rotation, and explicit contracts for high-impact mutations
-without a password-step-up boundary remain open. The
+integration, key rotation, and explicit contracts for unrelated high-impact
+mutations without a password-step-up boundary remain open. The
 current password step-up is an application boundary, not a substitute for a production identity
 provider. The current invitation simplification intentionally excludes new-account creation and
 email verification until that identity policy is approved.

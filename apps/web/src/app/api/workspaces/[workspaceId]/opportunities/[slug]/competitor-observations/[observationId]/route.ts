@@ -15,6 +15,7 @@ import {
   invalidRequest,
   privateResponseHeaders,
   readSession,
+  requireRecentMutationStepUp,
   sameOriginRequest,
   unauthorizedResponse
 } from '../../../../../../../../server/auth-session'
@@ -84,6 +85,8 @@ export async function PATCH(
   if (!parsed.success) return invalidRequest('A valid competitor observation review is required')
 
   try {
+    const stepUpResponse = await requireRecentMutationStepUp()
+    if (stepUpResponse) return stepUpResponse
     const data = await new PostgresCompetitiveResearchRepository(getDatabasePool()).updateReview(
       session.user.userId,
       workspaceId.data,

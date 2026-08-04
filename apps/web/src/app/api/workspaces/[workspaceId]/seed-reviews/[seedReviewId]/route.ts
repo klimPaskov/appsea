@@ -13,6 +13,7 @@ import {
   invalidRequest,
   privateResponseHeaders,
   readSession,
+  requireRecentMutationStepUp,
   sameOriginRequest,
   unauthorizedResponse
 } from '../../../../../../server/auth-session'
@@ -102,6 +103,8 @@ export async function PATCH(
   const parsed = workspaceOpportunitySeedApprovalInputSchema.safeParse(payload)
   if (!parsed.success) return invalidRequest('A valid opportunity seed review action is required')
   try {
+    const stepUpResponse = await requireRecentMutationStepUp()
+    if (stepUpResponse) return stepUpResponse
     const data = await new PostgresOpportunitySeedReviewRepository(
       getDatabasePool()
     ).updateApproval(session.user.userId, path.workspaceId, path.seedReviewId, parsed.data)

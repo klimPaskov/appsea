@@ -25,9 +25,13 @@ boundary plus a production DNS-resolution preflight for every provider request,
 but live provider approval and operations remain open. Versioned
 MFA keys, a previous-key window, opportunistic rewrap, a lease-owned bounded
 dormant-account rewrap command, and count-only rotation status are implemented,
-but production deployment review and live status approval remain open. Password-gated high-risk mutations now
-share the conditional MFA marker; mutations without a password-step-up
-boundary still need their own reviewed step-up contract.
+but production deployment review and live status approval remain open.
+Password-gated high-risk mutations and evidence-derived research governance
+decisions now share the conditional MFA marker through the server-side
+`requireRecentMutationStepUp` gate. Report/plan approval, seed review,
+complaint curation, competitor observation writes, and evidence redaction are
+covered; unrelated mutations without a password-step-up boundary still need
+their own reviewed step-up contract.
 
 Private campaign configuration is now persisted and source-policy readiness is
 visible. Owners/editors can start a bounded one-source run from the campaign
@@ -174,9 +178,10 @@ disabled by default and never auto-links by email; production requests reject
 private DNS answers, but a deployment-controlled DNS pinning/egress boundary
 and identity-provider control plane remain open. The TOTP implementation does not
 prove verified email ownership, provider delivery/DPA, provider identity
-retention/revocation handling, provider-backed
-step-up, or a step-up contract for unrelated mutations that lack a password
-boundary.
+retention/revocation handling, provider-backed step-up, or a step-up contract
+for unrelated mutations that lack a password boundary. The research-governance
+approval and curation routes now use the shared password/MFA gate; this does
+not authorize source-policy, deployment, or provider operations.
 
 The owner-only `GET /api/workspaces/:workspaceId/purge-readiness` projection and
 members-page inventory now expose bounded active-work and raw/analysis/report/

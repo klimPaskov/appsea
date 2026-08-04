@@ -609,16 +609,20 @@ Implemented:
   MFA is enabled; the marker is session-bound and expires with the existing
   fifteen-minute step-up window. This covers account closure, session
   revocation, membership/invitation changes, workspace archival, purge intent,
-  evidence redaction, and owner agent-token issue/revoke.
+  evidence redaction, owner agent-token issue/revoke, report and plan approval,
+  opportunity-seed review, production complaint review/correction, and
+  competitor observation create/review through the shared
+  `requireRecentMutationStepUp` server gate.
 - private campaign configuration page and list/create/read API with source
   policy readiness metadata and draft-only, non-activating writes
 - public leaderboard remains database-free and explicitly synthetic
 
 Remaining: verified account recovery/delivery policy, production
 secret/session-retention operations, live OIDC provider/verified-email policy,
-provider-backed step-up, approved deployment/status review for MFA key rotation, and explicit
-contracts for high-impact mutations that do not already require password
-step-up. The AppSea-owned TOTP boundary is implemented in migrations
+provider-backed step-up, approved deployment/status review for MFA key rotation,
+and explicit contracts for unrelated high-impact mutations that do not have a
+password-step-up boundary (for example, future source-policy or deployment
+operations). The AppSea-owned TOTP boundary is implemented in migrations
 `0080`/`0081`/`0086`/`0087` with encrypted enrollment secrets, hash-only recovery
 codes, expiring login challenges, a session-bound MFA step-up marker for
 password-gated high-risk mutations, and account-security routes; external

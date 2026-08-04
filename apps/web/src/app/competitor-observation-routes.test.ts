@@ -7,6 +7,7 @@ import { PATCH } from './api/workspaces/[workspaceId]/opportunities/[slug]/compe
 
 const mocks = vi.hoisted(() => ({
   readSession: vi.fn(),
+  requireRecentMutationStepUp: vi.fn(),
   readPrivateOpportunityContext: vi.fn(),
   sameOriginRequest: vi.fn(),
   canReadProductionWorkflow: vi.fn(),
@@ -20,6 +21,7 @@ vi.mock('../server/auth-session', () => ({
   invalidRequest: (message: string) => Response.json({ error: message }, { status: 400 }),
   privateResponseHeaders: { 'cache-control': 'private, no-store' },
   readSession: mocks.readSession,
+  requireRecentMutationStepUp: mocks.requireRecentMutationStepUp,
   sameOriginRequest: mocks.sameOriginRequest,
   unauthorizedResponse: () => Response.json({ error: 'Authentication required' }, { status: 401 })
 }))
@@ -73,6 +75,7 @@ const params = Promise.resolve({ workspaceId: 'workspace:one', slug: 'opportunit
 describe('private competitor observation routes', () => {
   beforeEach(() => {
     mocks.readSession.mockReset()
+    mocks.requireRecentMutationStepUp.mockReset()
     mocks.readPrivateOpportunityContext.mockReset()
     mocks.sameOriginRequest.mockReset()
     mocks.canReadProductionWorkflow.mockReset()
@@ -80,6 +83,7 @@ describe('private competitor observation routes', () => {
     mocks.create.mockReset()
     mocks.updateReview.mockReset()
     mocks.readSession.mockResolvedValue(session)
+    mocks.requireRecentMutationStepUp.mockResolvedValue(null)
     mocks.readPrivateOpportunityContext.mockResolvedValue({
       session,
       workspace: session.workspaces[0],
@@ -171,5 +175,48 @@ describe('private competitor observation routes', () => {
       'observation:one',
       { action: 'confirmed' }
     )
+  })
+
+  it('blocks observation creation and review until recent password and MFA proof are present', async () => {
+    mocks.requireRecentMutationStepUp.mockResolvedValue(
+      Response.json({ error: 'Recent reauthentication required' }, { status: 428 })
+    )
+    const stalePassword = await POST(
+      new Request('https://appsea.example', {
+        method: 'POST',
+        body: JSON.stringify({
+          observationId: 'observation:one',
+          competitorId: 'competitor:one',
+          sourceItemId: 'source-item:one',
+          evidenceId: 'evidence:one',
+          claimType: 'feature',
+          claim: 'The competitor lacks a reliable export workflow.',
+          observedAt: '2026-08-02T00:00:00.000Z',
+          confidence: 0.84
+        })
+      }),
+      { params }
+    )
+    expect(stalePassword.status).toBe(428)
+    expect(mocks.create).not.toHaveBeenCalled()
+
+    mocks.requireRecentMutationStepUp.mockResolvedValue(
+      Response.json({ error: 'Recent MFA verification required' }, { status: 428 })
+    )
+    const staleMfa = await PATCH(
+      new Request('https://appsea.example', {
+        method: 'PATCH',
+        body: JSON.stringify({ action: 'confirmed' })
+      }),
+      {
+        params: Promise.resolve({
+          workspaceId: 'workspace:one',
+          slug: 'opportunity-one',
+          observationId: 'observation:one'
+        })
+      }
+    )
+    expect(staleMfa.status).toBe(428)
+    expect(mocks.updateReview).not.toHaveBeenCalled()
   })
 })

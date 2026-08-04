@@ -7,6 +7,7 @@ const mocks = vi.hoisted(() => ({
   readSessionToken: vi.fn(),
   hasRecentReauthentication: vi.fn(),
   hasRecentMfaReauthentication: vi.fn(),
+  requireRecentMutationStepUp: vi.fn(),
   sameOriginRequest: vi.fn(),
   errors: {
     EvidenceRedactionConflictError: class extends Error {},
@@ -27,6 +28,17 @@ vi.mock('../server/auth-session', () => ({
     Response.json({ error: 'Recent MFA verification required' }, { status: 428 }),
   privateResponseHeaders: { 'cache-control': 'private, no-store' },
   readSession: mocks.readSession,
+  requireRecentMutationStepUp: async () => {
+    const token = await mocks.readSessionToken()
+    if (!token) return Response.json({ error: 'Authentication required' }, { status: 401 })
+    if (!(await mocks.hasRecentReauthentication(token))) {
+      return Response.json({ error: 'Recent reauthentication required' }, { status: 428 })
+    }
+    if (!(await mocks.hasRecentMfaReauthentication(token))) {
+      return Response.json({ error: 'Recent MFA verification required' }, { status: 428 })
+    }
+    return null
+  },
   readSessionToken: mocks.readSessionToken,
   reauthenticationRequiredResponse: () =>
     Response.json({ error: 'Recent reauthentication required' }, { status: 428 }),

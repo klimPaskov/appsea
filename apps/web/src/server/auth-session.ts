@@ -77,6 +77,24 @@ export function mfaReauthenticationRequiredResponse(): Response {
   )
 }
 
+/**
+ * Require the session-bound password step-up and the conditional MFA proof
+ * before a high-impact private mutation. Accounts without enabled MFA pass
+ * through the repository's existing compatibility result for the MFA marker.
+ */
+export async function requireRecentMutationStepUp(): Promise<Response | null> {
+  const token = await readSessionToken()
+  if (!token) return unauthorizedResponse()
+  const repository = authRepository()
+  if (!(await repository.hasRecentReauthentication(token))) {
+    return reauthenticationRequiredResponse()
+  }
+  if (!(await repository.hasRecentMfaReauthentication(token))) {
+    return mfaReauthenticationRequiredResponse()
+  }
+  return null
+}
+
 export function forbiddenResponse(): Response {
   return Response.json(
     { error: 'Workspace access denied' },

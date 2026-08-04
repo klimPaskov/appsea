@@ -17,7 +17,7 @@ manifest,
 field-level evidence redaction, agent access tokens, and global-auth TOTP MFA.
 MFA rotation, OIDC, and read-only MCP remain provider/deployment-gated.
 
-The fixture workflow is the complete persisted path. Production collection and
+Fixture is the persisted path. Production collection and
 analysis v2 are policy-gated/replay-safe; CFPB and Stack Exchange remain
 disabled pending independent approval. Reports/plans preserve provenance,
 coverage gaps, approval state, synthetic disclosure, and object references.
@@ -31,13 +31,13 @@ pause is bounded and production-rejected; hosted restore/failover and topology
 proof remain open.
 
 Authentication uses scrypt hashes, revocable sessions, membership-before-RLS,
-password step-up, TOTP/recovery codes, closure, archival, and scoped read-only
-agent tokens. The Agent access page issues/revokes least-privilege tokens;
-credentials remain one-time and later reads metadata-only. Members have a
-read-only Usage page for exact cost and quota
-cases; maintenance resolution stays outside the browser. OIDC remains disabled
-by default and provider identity, delivery/DPA, retention, egress, and
-deployment operations remain external.
+password/MFA step-up, research-governance approval gates, TOTP/recovery codes,
+closure, archival, and scoped read-only agent tokens. Agent access issues/
+revokes least-privilege tokens; credentials are one-time and later reads
+metadata-only. Members have a read-only Usage page for exact cost/quota cases;
+maintenance resolution stays outside the browser. OIDC remains disabled by
+default; provider identity, delivery/DPA, retention, egress, and deployment
+operations remain external.
 
 Workers have server-clock leases, fenced SQL mutations, bounded retries,
 reconciliation, deletion/source/object retention queues, campaign
@@ -107,8 +107,8 @@ namespace/task-queue authorization is still external evidence.
    graceful replacement/crash, retry/cancellation, legacy-history, and backup
    drills with a configured worker drain window.
 3. Approve OIDC/verified identity, delivery/DPA, provider-backed step-up, and
-   explicit contracts for high-impact mutations without a
-   password-step-up boundary.
+   explicit contracts for unrelated high-impact mutations without a password
+   boundary.
 4. Deploy encrypted object storage, lifecycle/versioning, export/workspace and
    backup purge, pricing/billing controls, alert endpoint rotation, and
    incident routing.
@@ -126,8 +126,8 @@ namespace/task-queue authorization is still external evidence.
   deployment validation remain. The repository outbox and drain are implemented
   but do not make the external provider transactional.
 - Recovery/invitations are provider-kill-switched; OIDC, verified identity,
-  delivery/DPA, provider-backed step-up, and high-impact action contracts
-  without a password boundary remain open. MFA key rotation is implemented in
+  delivery/DPA, provider-backed step-up, and unrelated high-impact action
+  contracts without a password boundary remain open. MFA key rotation is in
   code and migration, but production still needs an approved deployment/status
   review before removing the previous key.
 - Cloud/object/export/backup purge and automatic source re-collection remain

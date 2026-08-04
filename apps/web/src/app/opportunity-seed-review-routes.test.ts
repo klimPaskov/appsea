@@ -10,6 +10,7 @@ import {
 
 const mocks = vi.hoisted(() => ({
   readSession: vi.fn(),
+  requireRecentMutationStepUp: vi.fn(),
   sameOriginRequest: vi.fn(),
   canReadProductionWorkflow: vi.fn(),
   canStartProductionWorkflow: vi.fn(),
@@ -24,6 +25,7 @@ vi.mock('../server/auth-session', () => ({
   invalidRequest: (message: string) => Response.json({ error: message }, { status: 400 }),
   privateResponseHeaders: { 'cache-control': 'private, no-store' },
   readSession: mocks.readSession,
+  requireRecentMutationStepUp: mocks.requireRecentMutationStepUp,
   sameOriginRequest: mocks.sameOriginRequest,
   unauthorizedResponse: () => Response.json({ error: 'Authentication required' }, { status: 401 })
 }))
@@ -106,6 +108,7 @@ function request(body: unknown, method = 'POST'): Request {
 describe('opportunity seed review routes', () => {
   beforeEach(() => {
     mocks.readSession.mockReset()
+    mocks.requireRecentMutationStepUp.mockReset()
     mocks.sameOriginRequest.mockReset()
     mocks.canReadProductionWorkflow.mockReset()
     mocks.canStartProductionWorkflow.mockReset()
@@ -114,6 +117,7 @@ describe('opportunity seed review routes', () => {
     mocks.readForUser.mockReset()
     mocks.updateApproval.mockReset()
     mocks.readSession.mockResolvedValue(session)
+    mocks.requireRecentMutationStepUp.mockResolvedValue(null)
     mocks.sameOriginRequest.mockReturnValue(true)
     mocks.canReadProductionWorkflow.mockReturnValue(true)
     mocks.canStartProductionWorkflow.mockReturnValue(true)
@@ -175,5 +179,25 @@ describe('opportunity seed review routes', () => {
       'seed-review:one',
       { action: 'reviewed' }
     )
+  })
+
+  it('blocks review transitions until recent password and MFA proof are present', async () => {
+    mocks.requireRecentMutationStepUp.mockResolvedValue(
+      Response.json({ error: 'Recent reauthentication required' }, { status: 428 })
+    )
+    const stalePassword = await updateSeed(request({ action: 'reviewed' }, 'PATCH'), {
+      params: Promise.resolve({ workspaceId: 'workspace:one', seedReviewId: 'seed-review:one' })
+    })
+    expect(stalePassword.status).toBe(428)
+    expect(mocks.updateApproval).not.toHaveBeenCalled()
+
+    mocks.requireRecentMutationStepUp.mockResolvedValue(
+      Response.json({ error: 'Recent MFA verification required' }, { status: 428 })
+    )
+    const staleMfa = await updateSeed(request({ action: 'approved' }, 'PATCH'), {
+      params: Promise.resolve({ workspaceId: 'workspace:one', seedReviewId: 'seed-review:one' })
+    })
+    expect(staleMfa.status).toBe(428)
+    expect(mocks.updateApproval).not.toHaveBeenCalled()
   })
 })

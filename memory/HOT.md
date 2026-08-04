@@ -11,7 +11,7 @@
   research. `manual-owner-import-v1` is the only active non-fixture path and
   accepts owner-attested tenant-private CSV/JSON; it never fetches URLs or
   establishes public coverage.
-- Web auth uses scrypt/revocable sessions, membership/RLS, step-up, TOTP MFA, and disabled-by-default OIDC with closure/retention boundaries; provider approval/delivery, identity retention/revocation, DNS/egress, provider-backed step-up, deployment review, and non-password-gated mutations remain open.
+- Web auth uses scrypt/revocable sessions, membership/RLS, password/MFA step-up, and research-governance approval gates; provider approval/delivery, identity retention/revocation, DNS/egress, provider-backed step-up, deployment review, and unrelated non-password-gated mutations remain open.
 - Production collection persists policy-bound evidence, complaints, gaps, cost, and lineage; private reads use `/workspace/:workspaceId/research/:runId`; outputs use filesystem/S3.
 - Analysis v2 carries IDs/digests; the worker rebuilds artifacts in-activity. Legacy v1 drain, cloud/backup purge, role rotation, and scheduler ownership remain open. Collection writes lock leases; `0037` recovers stale dispatches.
 - Auth, quotas, retention, admissions, purge, tombstones, scheduler metrics, and

@@ -17,14 +17,11 @@ import {
   PostgresEvidenceRedactionRepository
 } from '@appsea/db/evidence-redaction'
 import {
-  authRepository,
   forbiddenResponse,
   invalidRequest,
-  mfaReauthenticationRequiredResponse,
   privateResponseHeaders,
   readSession,
-  readSessionToken,
-  reauthenticationRequiredResponse,
+  requireRecentMutationStepUp,
   sameOriginRequest,
   unauthorizedResponse
 } from '../../../../../../../../../server/auth-session'
@@ -77,6 +74,8 @@ export async function PATCH(
   if (!parsed.success) return invalidRequest('A valid complaint review action is required')
 
   try {
+    const stepUpResponse = await requireRecentMutationStepUp()
+    if (stepUpResponse) return stepUpResponse
     const data = await new PostgresProductionCollectionRepository(
       getDatabasePool()
     ).updateComplaintReview(
@@ -148,15 +147,8 @@ export async function POST(
   if (parsed.data.evidenceId.length < 3) return invalidRequest('Invalid evidence redaction target')
 
   try {
-    const token = await readSessionToken()
-    if (!token) return unauthorizedResponse()
-    if (!(await authRepository().hasRecentReauthentication(token))) {
-      return reauthenticationRequiredResponse()
-    }
-    if (!(await authRepository().hasRecentMfaReauthentication(token))) {
-      return mfaReauthenticationRequiredResponse()
-    }
-
+    const stepUpResponse = await requireRecentMutationStepUp()
+    if (stepUpResponse) return stepUpResponse
     const data = await new PostgresEvidenceRedactionRepository(getDatabasePool()).redact(
       session.user.userId,
       workspaceId.data,
