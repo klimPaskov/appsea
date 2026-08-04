@@ -18,9 +18,9 @@ benchmark and optional artifact/report quality snapshots.
 ## Proof
 
 `pnpm verify`, affected package tests/lint/typecheck, `pnpm security:audit`,
-`pnpm memory:check`, and `pnpm docs:check` pass. The latest hosted workflow is
-blocked before repository steps by the GitHub account payment/spending-limit
-gate, not a repository assertion.
+`pnpm memory:check`, and `pnpm docs:check` pass. Hosted runs `30941916282` and
+`30944735291` are blocked before repository steps by the GitHub account
+payment/spending-limit gate, not a repository assertion.
 
 ## Resume / remaining
 

@@ -33,7 +33,8 @@
   hosted runs `30917740935`, `30919346892`, `30923658050`, `30929883317`, and
   `30932224043`, `30939424669` for commit `3d864dd`, feature run `30941697155`
   for commit `a3ad40d`, follow-up docs run `30941804877` for commit
-  `24ed3d5`, and latest run `30941916282` for commit `1f20e39` all failed before repository job steps because of the account
+  `24ed3d5`, run `30941916282` for commit `1f20e39`, and latest run
+  `30944735291` for commit `337bb66` all failed before repository job steps because of the account
   payment/spending-limit gate, not because of a repository assertion.
 - Private workspace website/API: implemented and production-built; reads are membership-authorized and cache-disabled. Encoded workspace and detail identifiers are decoded exactly once at the page boundary before schema validation. Completed collection reads now expose the bounded private `analysisHandoff` status when an approved-seed handoff exists. Owner settings expose a read-only purge-readiness inventory, an expiring owner-confirmed metadata-only purge manifest, and a step-up-protected, durable non-destructive purge intent; these snapshot PostgreSQL references/readiness without authorizing deletion and keep cloud/export/backup requirements visible.
 - Private audit inspection: `GET /api/workspaces/:workspaceId/audit-events` exposes a membership-authorized, no-store, cursor-paginated projection of immutable audit receipts. It returns bounded identifiers and scalar metadata only; nested values, raw source payloads, and dependency errors remain hidden. This is an API/agent-visible inspection boundary, not an export or purge operation.

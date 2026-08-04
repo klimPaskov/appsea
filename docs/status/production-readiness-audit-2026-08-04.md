@@ -32,9 +32,10 @@ Passing locally for this tranche:
 
 The repository-wide local proof remains `pnpm verify`, `pnpm security:audit`,
 `pnpm verify:local-stack`, and `pnpm verify:backup-restore` as recorded in the
-previous audit. The latest hosted workflow, `30941916282` for commit `1f20e39`,
-failed before repository steps because the GitHub account payment/spending-limit
-gate is unresolved; this is not presented as a code assertion failure.
+previous audit. Hosted runs `30941916282` for commit `1f20e39` and latest
+`30944735291` for commit `337bb66` failed before repository steps because the
+GitHub account payment/spending-limit gate is unresolved; this is not presented
+as a code assertion failure.
 
 ## Deliberate simplifications
 
