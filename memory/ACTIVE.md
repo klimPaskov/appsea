@@ -85,9 +85,9 @@ namespace/task-queue authorization is still external evidence.
 
 - GitHub Actions run `30893053945` passed for `b67a51b`; release-boundary,
   fresh PostgreSQL/Temporal, local-stack, worker, container, and Windows/macOS
-  checks were green. Implementation run `30919346892` (`f86ca22`) failed
-  before any job steps in every matrix job because of the GitHub
-  payment/spending-limit gate, not a repository assertion.
+  checks were green. Runs `30919346892` (`f86ca22`) and latest `30923658050`
+  (`81004fd`) failed before any job steps in every matrix job because of the
+  GitHub payment/spending-limit gate, not a repository assertion.
 - `pnpm test:backup-restore` and `pnpm verify:backup-restore` pass locally;
   the drill is isolated to the loopback Compose database and is not production
   backup, HA, or provider restore evidence.

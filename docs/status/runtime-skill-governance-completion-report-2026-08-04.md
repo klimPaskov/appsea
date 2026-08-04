@@ -25,6 +25,10 @@ Status: implemented and locally validated; no runtime skill is active.
 The tests cover unapproved and forged activation, independent review, persisted
 tamper detection, and rejection of evidence signed by another registry.
 
+The latest hosted GitHub Actions run `30923658050` for commit `81004fd` was
+blocked before repository steps by the account payment/spending-limit gate.
+The local proof above is independent of that hosted billing state.
+
 ## Remaining gaps
 
 The future runtime still needs a reviewed persistence adapter, authenticated

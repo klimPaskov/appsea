@@ -182,10 +182,10 @@ PostgreSQL/Temporal checks; no additional local rerun claim is made.
 - No image asset was required for this server/page-boundary tranche. Existing
   UI assets remain unchanged; image generation is reserved for visual assets,
   not native route or database code.
-- Hosted GitHub Actions run `30917740935` for `b99ffd7` and implementation run
-  `30919346892` for `f86ca22` failed before any job steps in every matrix job
-  because of the account payment/spending-limit gate; local proof above is
-  therefore not being presented as hosted proof.
+- Hosted GitHub Actions runs `30917740935` for `b99ffd7`, `30919346892` for
+  `f86ca22`, and latest `30923658050` for `81004fd` failed before any job steps
+  in every matrix job because of the account payment/spending-limit gate; local
+  proof above is therefore not being presented as hosted proof.
 
 ## Exact next actions
 
