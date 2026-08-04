@@ -49,17 +49,17 @@ function run(command, args, options = {}) {
   })
 }
 
-function sanitize(value) {
+function sanitize(value, maxLines = 80) {
   return value
     .replace(/postgres:\/\/[^\s]+/gi, 'postgres://[redacted]')
     .replace(/(APPSEA_[A-Z0-9_]*(?:KEY|SECRET|TOKEN|PASSWORD|URL))=[^\s]+/gi, '$1=[redacted]')
     .split(/\r?\n/)
-    .slice(-80)
+    .slice(-maxLines)
     .join('\n')
 }
 
 function diagnosticOutput(value) {
-  const sanitizedValue = sanitize(value)
+  const sanitizedValue = sanitize(value, 100_000)
   const lines = sanitizedValue.split(/\r?\n/)
   const structured = lines.filter((line) =>
     /"event"\s*:|"failureCode"\s*:|"failureContext"\s*:|APPSEA_ACTIVITY_FAILED/.test(line)
