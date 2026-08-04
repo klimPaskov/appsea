@@ -672,7 +672,7 @@ Windows/macOS release remains open.
 
 Implemented:
 
-- Tauri build hook, committed Rust lockfile, deterministic Windows icon, and
+- Tauri build hook, committed Rust lockfile, deterministic PNG/ICO icons, and
   minimal capability file.
 - Independent Windows and macOS CI compile/boundary checks.
 - Restrictive local CSP with explicit development-origin allowance.

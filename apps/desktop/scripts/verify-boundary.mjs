@@ -7,7 +7,9 @@ const required = [
   'src-tauri/build.rs',
   'src-tauri/tauri.conf.json',
   'src-tauri/src/lib.rs',
-  'src-tauri/capabilities/default.json'
+  'src-tauri/capabilities/default.json',
+  'src-tauri/icons/icon.ico',
+  'src-tauri/icons/icon.png'
 ]
 for (const path of required) await access(resolve(root, path))
 
@@ -17,6 +19,13 @@ if (config.identifier !== 'com.appsea.desktop') {
 }
 if (config.bundle?.active !== false) {
   throw new Error('Desktop bundling must stay disabled until signed release evidence exists')
+}
+if (
+  !Array.isArray(config.bundle?.icon) ||
+  !config.bundle.icon.includes('icons/icon.ico') ||
+  !config.bundle.icon.includes('icons/icon.png')
+) {
+  throw new Error('Desktop bundle must declare both Windows ICO and cross-platform PNG icons')
 }
 if (
   typeof config.app?.security?.csp !== 'string' ||

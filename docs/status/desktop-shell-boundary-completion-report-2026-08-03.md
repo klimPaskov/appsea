@@ -7,8 +7,8 @@ claimed.
 
 - Added the Tauri build script and committed Rust dependency lockfile so the
   shell compiles with `cargo check`.
-- Added a deterministic AppSea window icon required by the Windows resource
-  build and declared it in the bundle configuration.
+- Added deterministic AppSea PNG and ICO icon assets and declared both in the
+  bundle configuration for cross-platform compilation.
 - Added a minimal `core:default` capability for the main window.
 - Replaced the permissive `null` CSP with a local same-origin policy that
   denies plugin content and keeps the development web origin explicit.
