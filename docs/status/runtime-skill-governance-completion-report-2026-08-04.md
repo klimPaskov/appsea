@@ -29,7 +29,7 @@ The tests cover unapproved and forged activation, independent review, persisted
 approval/active/retired tamper detection, canonical transition validation,
 malformed signatures, and rejection of evidence signed by another registry.
 
-The latest hosted GitHub Actions run `30930177455` for commit `e3d5f69` was
+The latest hosted GitHub Actions run `30932224043` for commit `eae7c2c` was
 blocked before repository steps by the account payment/spending-limit gate.
 The local proof above is independent of that hosted billing state.
 
