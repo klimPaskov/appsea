@@ -543,7 +543,7 @@ async function assertCollectionAndPolicyLineage(
         AND policy.commercial_use IN ('allowed', 'restricted')
         AND policy.reviewed_at IS NOT NULL
         AND (policy.expires_at IS NULL OR policy.expires_at > clock_timestamp())
-      FOR SHARE`,
+      `,
     [
       input.workspaceId,
       input.collectionRunId,

@@ -870,8 +870,7 @@ export class PostgresProductionCollectionRepository {
                      AND review.decision = 'approved'
                      AND review.content_hash = policy.content_hash
                      AND review.independence_attested
-                )
-              FOR SHARE`,
+                )`,
             [parsed.request.sourceId, parsed.request.policyVersion]
           )
           const storedPolicy = sourcePolicy.rows[0]

@@ -510,8 +510,7 @@ export class PostgresResearchCampaignOrchestrationRepository {
                ON policy.source_id = source.source_id
               AND policy.policy_version = source.current_policy_version
             WHERE source.source_id = ANY($1::text[])
-            ORDER BY source.source_id
-            FOR SHARE OF source`,
+            ORDER BY source.source_id`,
           [configuration.sourceIds]
         )
         const found = new Set(sources.rows.map((row) => row.source_id))
