@@ -87,7 +87,7 @@ batch is later deleted, matching the deletion trigger and tombstone flow.
 
 ## Validated commands
 
-- GitHub Actions run `30841762532` passed for `c703747`; the hosted worker
+- GitHub Actions run `30882513772` passed for `7a763ba`; the hosted worker
   replacement drill verified one job/run, seven checkpoints, one cost row,
   and two distinct outbox rows after process loss.
 - Dependency security hardening locks patched Next.js/PostCSS/`fast-uri`/sharp
