@@ -1389,6 +1389,63 @@ export class PostgresProductionAnalysisRepository {
             )
           }
 
+          // Cluster and competitor projections reference the researched
+          // opportunity. Create that canonical opportunity row before any
+          // dependent memberships so a first production analysis can commit
+          // atomically on a fresh workspace.
+          await client.query(
+            `INSERT INTO appsea.opportunities
+             (workspace_id, opportunity_id, slug, name, one_line, thesis, audience, first_wedge,
+              complaint_count, synthetic, tags, contrary_evidence, state, source_run_id,
+              created_at, updated_at)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, false, $10, $11,
+                   'researched', $12, $13, $13)
+            ON CONFLICT (workspace_id, opportunity_id) DO UPDATE
+              SET slug = EXCLUDED.slug, name = EXCLUDED.name, one_line = EXCLUDED.one_line,
+                  thesis = EXCLUDED.thesis, audience = EXCLUDED.audience,
+                  first_wedge = EXCLUDED.first_wedge, complaint_count = EXCLUDED.complaint_count,
+                  tags = EXCLUDED.tags, contrary_evidence = EXCLUDED.contrary_evidence,
+                  state = 'researched', source_run_id = EXCLUDED.source_run_id,
+                  availability_state = CASE
+                    WHEN appsea.opportunities.availability_state = 'invalidated'
+                      THEN 'invalidated'
+                    ELSE 'active'
+                  END,
+                  invalidated_at = CASE
+                    WHEN appsea.opportunities.availability_state = 'invalidated'
+                      THEN appsea.opportunities.invalidated_at
+                    ELSE NULL
+                  END,
+                  invalidation_reason = CASE
+                    WHEN appsea.opportunities.availability_state = 'invalidated'
+                      THEN appsea.opportunities.invalidation_reason
+                    ELSE NULL
+                  END,
+                  updated_at = EXCLUDED.updated_at`,
+            [
+              parsed.workspaceId,
+              opportunityId,
+              parsed.artifact.opportunity.slug,
+              parsed.artifact.opportunity.name,
+              parsed.artifact.opportunity.oneLine,
+              parsed.artifact.opportunity.thesis,
+              parsed.artifact.opportunity.audience,
+              parsed.artifact.opportunity.firstWedge,
+              parsed.artifact.opportunity.complaintCount,
+              parsed.artifact.opportunity.tags,
+              parsed.artifact.opportunity.contraryEvidence,
+              parsed.collectionRunId,
+              completedAt
+            ]
+          )
+          await client.query(
+            `INSERT INTO appsea.research_run_opportunities
+             (workspace_id, run_id, opportunity_id, linked_at)
+           VALUES ($1, $2, $3, $4)
+           ON CONFLICT DO NOTHING`,
+            [parsed.workspaceId, parsed.collectionRunId, opportunityId, completedAt]
+          )
+
           const clusterVersionIds: string[] = []
           for (const cluster of parsed.artifact.clusters) {
             const clusterVersionId = hashIdentifier('cluster', {
@@ -1461,59 +1518,6 @@ export class PostgresProductionAnalysisRepository {
               ]
             )
           }
-
-          await client.query(
-            `INSERT INTO appsea.opportunities
-             (workspace_id, opportunity_id, slug, name, one_line, thesis, audience, first_wedge,
-              complaint_count, synthetic, tags, contrary_evidence, state, source_run_id,
-              created_at, updated_at)
-           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, false, $10, $11,
-                   'researched', $12, $13, $13)
-            ON CONFLICT (workspace_id, opportunity_id) DO UPDATE
-              SET slug = EXCLUDED.slug, name = EXCLUDED.name, one_line = EXCLUDED.one_line,
-                  thesis = EXCLUDED.thesis, audience = EXCLUDED.audience,
-                  first_wedge = EXCLUDED.first_wedge, complaint_count = EXCLUDED.complaint_count,
-                  tags = EXCLUDED.tags, contrary_evidence = EXCLUDED.contrary_evidence,
-                  state = 'researched', source_run_id = EXCLUDED.source_run_id,
-                  availability_state = CASE
-                    WHEN appsea.opportunities.availability_state = 'invalidated'
-                      THEN 'invalidated'
-                    ELSE 'active'
-                  END,
-                  invalidated_at = CASE
-                    WHEN appsea.opportunities.availability_state = 'invalidated'
-                      THEN appsea.opportunities.invalidated_at
-                    ELSE NULL
-                  END,
-                  invalidation_reason = CASE
-                    WHEN appsea.opportunities.availability_state = 'invalidated'
-                      THEN appsea.opportunities.invalidation_reason
-                    ELSE NULL
-                  END,
-                  updated_at = EXCLUDED.updated_at`,
-            [
-              parsed.workspaceId,
-              opportunityId,
-              parsed.artifact.opportunity.slug,
-              parsed.artifact.opportunity.name,
-              parsed.artifact.opportunity.oneLine,
-              parsed.artifact.opportunity.thesis,
-              parsed.artifact.opportunity.audience,
-              parsed.artifact.opportunity.firstWedge,
-              parsed.artifact.opportunity.complaintCount,
-              parsed.artifact.opportunity.tags,
-              parsed.artifact.opportunity.contraryEvidence,
-              parsed.collectionRunId,
-              completedAt
-            ]
-          )
-          await client.query(
-            `INSERT INTO appsea.research_run_opportunities
-             (workspace_id, run_id, opportunity_id, linked_at)
-           VALUES ($1, $2, $3, $4)
-           ON CONFLICT DO NOTHING`,
-            [parsed.workspaceId, parsed.collectionRunId, opportunityId, completedAt]
-          )
 
           for (const competitor of parsed.artifact.opportunity.competitors) {
             const competitorId = hashIdentifier('competitor', {

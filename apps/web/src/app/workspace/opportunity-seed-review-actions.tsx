@@ -105,7 +105,14 @@ export function OpportunitySeedReviewCreateForm({ workspaceId }: { workspaceId: 
           evidenceQuality: 0,
           contraryEvidencePenalty: 0
         },
-        planFiles: ['README.md']
+        planFiles: [
+          'README.md',
+          '01-product-brief.md',
+          '02-mvp-scope.md',
+          '03-architecture.md',
+          '04-task-graph.json',
+          '05-validation.md'
+        ]
       },
       null,
       2

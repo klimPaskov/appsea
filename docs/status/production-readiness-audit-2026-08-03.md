@@ -24,6 +24,21 @@ Passing on 2026-08-03:
 
 Additional validation on 2026-08-04:
 
+- `pnpm verify:local-stack` passed the complete local private-workspace path:
+  owner signup, durable owner-import consumption, complaint confirmation,
+  reviewed/approved opportunity seed, production-analysis workflow completion,
+  private opportunity API, and private opportunity/report/plan page readback.
+  The smoke keeps the imported row and seed explicitly smoke-only and checks
+  the public-market coverage gap. The proof also fixed three integration
+  boundaries found by the run: persisted complaint-analysis snapshots now use
+  the canonical complaint identity, production opportunity and run links are
+  inserted before dependent cluster/competitor memberships, and encoded
+  workspace path parameters are decoded at the private opportunity boundary.
+- The affected database suite passed 150 tests and the worker suite passed 124
+  tests; the local-stack script tests passed. The seed form now defaults to the
+  six supported production plan paths required by deterministic package
+  generation. This remains a local/fixture-backed production-shaped proof, not
+  activation of a public source or evidence of real market demand.
 - The production Temporal preflight now requires the exact reviewed
   `APPSEA_TEMPORAL_TASK_QUEUE=appsea-research-v1` declaration. A release-boundary
   test rejects a missing or changed queue, and the worker preflight suite keeps

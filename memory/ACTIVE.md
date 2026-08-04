@@ -68,8 +68,11 @@ Integration coverage exercises staging/replay/consumption/deletion, RLS,
 tombstones; migration `0090` keeps policy validation in a narrow definer
 function. `pnpm dev:local` runs the loopback stack and
 `pnpm verify:local-stack` smoke-tests it locally and in CI. A fresh local run
-now passes authenticated owner intake, durable completion, private evidence
-readback, and the visible public-market coverage gap.
+now passes authenticated owner intake, durable completion, complaint
+confirmation, reviewed/approved seed input, production-shaped analysis
+completion, private opportunity/report/plan readback, and the visible
+public-market coverage gap. The smoke uses six supported production plan paths
+and per-run development auth markers.
 Migration `0091` preserves `consumed_at` when an already-consumed owner
 batch is later deleted, matching its deletion trigger.
 Migration `0092` makes the service-role read privileges for campaign source

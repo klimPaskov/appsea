@@ -1160,7 +1160,15 @@ export class PostgresProductionCollectionRepository {
               sourceItemId,
               extractionVersion: productionExtractionVersion
             })
-            const analysis = analyzeComplaint(complaint)
+            // The persisted complaint identity is derived from the source
+            // item, not trusted connector input. Keep the immutable analysis
+            // snapshot keyed to that same identity so the production
+            // analysis boundary can replay reviewed snapshots without
+            // silently losing the complaint-to-analysis mapping.
+            const analysis = complaintAnalysisSchema.parse({
+              ...analyzeComplaint(complaint),
+              complaintId
+            })
             const complaintHash = contentHash({
               evidenceHash,
               classification: analysis.classification,

@@ -114,7 +114,7 @@ async function terminate(child) {
 async function fetchResponse(route, init = {}) {
   return fetch(`${localWebUrl}${route}`, {
     ...init,
-    signal: init.signal ?? AbortSignal.timeout(5_000)
+    signal: init.signal ?? AbortSignal.timeout(15_000)
   })
 }
 
@@ -204,9 +204,23 @@ function assertPrivateWorkspaceResponses({
   batch,
   run,
   sources,
+  complaintReview,
+  seedCreate,
+  seedReviewed,
+  seedApproved,
+  analysisStart,
+  analysisStatus,
+  analysis,
+  opportunity,
+  opportunityPage,
+  reportPage,
+  planPage,
   campaignId,
   batchId,
-  runId
+  runId,
+  analysisRunId,
+  seedReviewId,
+  opportunitySlug
 }) {
   if (signup.status !== 201 || signup.hasSessionCookie !== true) {
     throw new Error('private signup did not establish a session')
@@ -266,6 +280,79 @@ function assertPrivateWorkspaceResponses({
   if (publicSource && publicSource.collectible === true) {
     throw new Error('disabled public source was incorrectly marked collectible')
   }
+  if (
+    complaintReview.status !== 200 ||
+    complaintReview.payload?.data?.reviewState !== 'confirmed'
+  ) {
+    throw new Error('owner complaint review did not confirm retained evidence')
+  }
+  if (
+    seedCreate.status !== 201 ||
+    seedCreate.payload?.data?.seedReviewId !== seedReviewId ||
+    seedCreate.payload?.data?.reviewState !== 'unreviewed'
+  ) {
+    throw new Error('reviewed opportunity seed was not registered as unreviewed')
+  }
+  if (
+    seedReviewed.status !== 200 ||
+    seedReviewed.payload?.data?.reviewState !== 'reviewed' ||
+    seedApproved.status !== 200 ||
+    seedApproved.payload?.data?.reviewState !== 'approved'
+  ) {
+    throw new Error('opportunity seed review did not reach owner-approved state')
+  }
+  const analysisWorkflowId = analysisStart.payload?.data?.workflowId
+  if (
+    analysisStart.status !== 202 ||
+    analysisStart.payload?.data?.analysisRunId !== analysisRunId ||
+    typeof analysisWorkflowId !== 'string'
+  ) {
+    throw new Error('approved production analysis was not admitted')
+  }
+  if (
+    analysisStatus.status !== 200 ||
+    analysisStatus.payload?.data?.state !== 'completed' ||
+    analysisStatus.payload?.data?.analysisRunId !== analysisRunId
+  ) {
+    throw new Error('production analysis workflow did not complete')
+  }
+  const analysisData = analysis.payload?.data
+  if (
+    analysis.status !== 200 ||
+    analysisData?.result?.state !== 'completed' ||
+    analysisData?.result?.analysisRunId !== analysisRunId ||
+    analysisData?.artifact?.mode !== 'production' ||
+    analysisData?.artifact?.opportunity?.slug !== opportunitySlug ||
+    analysisData?.artifact?.opportunity?.synthetic !== false ||
+    analysisData?.report?.synthetic !== false ||
+    analysisData?.planPackage?.files?.length < 1 ||
+    analysisData?.governance?.reportApprovalState !== 'draft' ||
+    analysisData?.governance?.planApprovalState !== 'unreviewed'
+  ) {
+    throw new Error('production analysis did not persist a private report and plan package')
+  }
+  const opportunityData = opportunity.payload?.data
+  if (
+    opportunity.status !== 200 ||
+    opportunityData?.opportunity?.slug !== opportunitySlug ||
+    opportunityData?.opportunity?.synthetic !== false ||
+    opportunityData?.report?.approvalState !== 'draft' ||
+    opportunityData?.plan?.approvalState !== 'unreviewed'
+  ) {
+    throw new Error('private opportunity package readback was not available')
+  }
+  if (
+    opportunityPage.status !== 200 ||
+    !opportunityPage.body.includes('Private research package') ||
+    reportPage.status !== 200 ||
+    !reportPage.body.includes('Evidence-backed report') ||
+    !reportPage.body.includes('Coverage limits') ||
+    planPage.status !== 200 ||
+    !planPage.body.includes('Coding-agent plan') ||
+    !planPage.body.includes('README.md')
+  ) {
+    throw new Error('private report and coding-plan pages were not renderable')
+  }
 }
 
 export function assertLocalStackResponses({
@@ -311,8 +398,17 @@ async function runPrivateWorkspaceSmoke() {
   const campaignId = `campaign:smoke-${nonce}`
   const batchId = `batch:smoke-${nonce}`
   const runId = `run:smoke-${nonce}`
+  const analysisRunId = `analysis:smoke-${nonce}`
+  const seedReviewId = `seed-review:smoke-${nonce}`
+  const opportunitySlug = `smoke-${nonce}`
   const email = `appsea-smoke-${nonce.replace(/[^a-z0-9]/gi, '')}@example.test`
-  const originHeaders = { origin: 'http://localhost:3000' }
+  const originHeaders = {
+    origin: 'http://localhost:3000',
+    // The development auth limiter accepts a bounded forwarded marker. A
+    // per-run marker keeps repeated local smoke runs isolated without
+    // changing production proxy trust rules.
+    'x-forwarded-for': `smoke-${nonce}`
+  }
   const signup = await requestJson('/api/auth/signup', {
     method: 'POST',
     headers: { ...originHeaders, 'content-type': 'application/json' },
@@ -323,6 +419,11 @@ async function runPrivateWorkspaceSmoke() {
       workspaceName: 'Local smoke workspace'
     })
   })
+  if (signup.response.status !== 201) {
+    throw new Error(
+      `private signup returned HTTP ${signup.response.status}: ${JSON.stringify(signup.payload)}`
+    )
+  }
   const sessionCookie = sessionCookieFrom(signup.response)
   const privateHeaders = { cookie: sessionCookie }
   const workspace = await requestJson('/api/workspaces', { headers: privateHeaders })
@@ -404,6 +505,125 @@ async function runPrivateWorkspaceSmoke() {
   const sources = await requestJson(`/api/workspaces/${workspaceId}/sources`, {
     headers: privateHeaders
   })
+  const evidence = run.payload?.data?.evidence
+  const complaintId = Array.isArray(evidence) ? evidence[0]?.complaintId : undefined
+  if (typeof complaintId !== 'string') {
+    throw new Error('private collection did not return a complaint for review')
+  }
+  const complaintReview = await requestJson(
+    `/api/workspaces/${workspaceId}/research/production/${runId}/complaints/${complaintId}`,
+    {
+      method: 'PATCH',
+      headers: { ...privateHeaders, ...originHeaders, 'content-type': 'application/json' },
+      body: JSON.stringify({ action: 'confirmed' })
+    }
+  )
+  const seed = {
+    id: `opportunity:smoke-${nonce}`,
+    slug: opportunitySlug,
+    name: 'Smoke-only reviewed opportunity',
+    oneLine: 'A smoke-only private opportunity package.',
+    thesis: 'This reviewed seed exists only to prove the private workflow boundary.',
+    audience: 'Local smoke owners',
+    firstWedge: 'Confirm one owner-authorized evidence row.',
+    tags: ['smoke-only'],
+    competitors: [],
+    contraryEvidence: ['This is not market research.'],
+    scoreFactors: {
+      complaintVolume: 10,
+      painSeverity: 20,
+      recurrence: 30,
+      willingnessToPay: 0,
+      competitiveGap: 10,
+      buildFeasibility: 30,
+      evidenceQuality: 20,
+      contraryEvidencePenalty: 10
+    },
+    planFiles: [
+      'README.md',
+      '01-product-brief.md',
+      '02-mvp-scope.md',
+      '03-architecture.md',
+      '04-task-graph.json',
+      '05-validation.md'
+    ]
+  }
+  const seedCreate = await requestJson(`/api/workspaces/${workspaceId}/seed-reviews`, {
+    method: 'POST',
+    headers: { ...privateHeaders, ...originHeaders, 'content-type': 'application/json' },
+    body: JSON.stringify({ seedReviewId, seedVersion: 'smoke-seed-v1', seed })
+  })
+  const seedReviewed = await requestJson(
+    `/api/workspaces/${workspaceId}/seed-reviews/${seedReviewId}`,
+    {
+      method: 'PATCH',
+      headers: { ...privateHeaders, ...originHeaders, 'content-type': 'application/json' },
+      body: JSON.stringify({ action: 'reviewed' })
+    }
+  )
+  const seedApproved = await requestJson(
+    `/api/workspaces/${workspaceId}/seed-reviews/${seedReviewId}`,
+    {
+      method: 'PATCH',
+      headers: { ...privateHeaders, ...originHeaders, 'content-type': 'application/json' },
+      body: JSON.stringify({ action: 'approved' })
+    }
+  )
+  const analysisStart = await requestJson(
+    `/api/workspaces/${workspaceId}/research/production/${runId}/analysis`,
+    {
+      method: 'POST',
+      headers: { ...privateHeaders, ...originHeaders, 'content-type': 'application/json' },
+      body: JSON.stringify({
+        analysisRunId,
+        idempotencyKey: `production-analysis-smoke-${nonce}`,
+        requestedAt: new Date().toISOString(),
+        seedReviewId
+      })
+    }
+  )
+  const analysisWorkflowId = analysisStart.payload?.data?.workflowId
+  if (typeof analysisWorkflowId !== 'string') {
+    throw new Error('production analysis did not return a workflow identifier')
+  }
+  const analysisStatus = await waitForJsonResponse(
+    `/api/workspaces/${workspaceId}/analysis/${analysisRunId}/status?workflowId=${encodeURIComponent(analysisWorkflowId)}`,
+    { headers: privateHeaders },
+    (_response, payload) =>
+      _response.status === 200 && ['completed', 'failed'].includes(payload?.data?.state)
+  )
+  if (analysisStatus.payload?.data?.state !== 'completed') {
+    throw new Error(
+      `production analysis workflow failed: ${JSON.stringify(analysisStatus.payload?.data ?? {})}`
+    )
+  }
+  const analysis = await waitForJsonResponse(
+    `/api/workspaces/${workspaceId}/analysis/${analysisRunId}`,
+    { headers: privateHeaders },
+    (_response, payload) => _response.status === 200 && payload?.data?.result?.state === 'completed'
+  )
+  const opportunity = await requestJson(
+    `/api/workspaces/${workspaceId}/opportunities/${encodeURIComponent(opportunitySlug)}`,
+    { headers: privateHeaders }
+  )
+  const opportunityPageResponse = await fetchResponse(
+    `/workspace/${workspaceId}/opportunities/${opportunitySlug}`,
+    { headers: privateHeaders }
+  )
+  const opportunityPage = {
+    status: opportunityPageResponse.status,
+    body: await opportunityPageResponse.text()
+  }
+  const reportPageResponse = await fetchResponse(
+    `/workspace/${workspaceId}/opportunities/${opportunitySlug}/report`,
+    { headers: privateHeaders }
+  )
+  const reportPage = { status: reportPageResponse.status, body: await reportPageResponse.text() }
+  const planPageResponse = await fetchResponse(
+    `/workspace/${workspaceId}/opportunities/${opportunitySlug}/plan`,
+    { headers: privateHeaders }
+  )
+  const planPage = { status: planPageResponse.status, body: await planPageResponse.text() }
 
   return {
     signup: { status: signup.response.status, hasSessionCookie: Boolean(sessionCookie) },
@@ -414,9 +634,23 @@ async function runPrivateWorkspaceSmoke() {
     batch: { status: batch.response.status, payload: batch.payload },
     run: { status: run.response.status, payload: run.payload },
     sources: { status: sources.response.status, payload: sources.payload },
+    complaintReview: { status: complaintReview.response.status, payload: complaintReview.payload },
+    seedCreate: { status: seedCreate.response.status, payload: seedCreate.payload },
+    seedReviewed: { status: seedReviewed.response.status, payload: seedReviewed.payload },
+    seedApproved: { status: seedApproved.response.status, payload: seedApproved.payload },
+    analysisStart: { status: analysisStart.response.status, payload: analysisStart.payload },
+    analysisStatus: { status: analysisStatus.response.status, payload: analysisStatus.payload },
+    analysis: { status: analysis.response.status, payload: analysis.payload },
+    opportunity: { status: opportunity.response.status, payload: opportunity.payload },
+    opportunityPage,
+    reportPage,
+    planPage,
     campaignId,
     batchId,
-    runId
+    runId,
+    analysisRunId,
+    seedReviewId,
+    opportunitySlug
   }
 }
 
@@ -448,7 +682,7 @@ async function main() {
       privateWorkspace: await runPrivateWorkspaceSmoke()
     })
     console.log(
-      'local private-workspace stack smoke passed for readiness, authenticated owner intake, and fixture disclosure'
+      'local private-workspace stack smoke passed for readiness, owner intake, reviewed production analysis, private report/plan readback, and fixture disclosure'
     )
   } catch (error) {
     const output = diagnosticOutput(localStack.output.join(''))

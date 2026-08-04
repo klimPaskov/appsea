@@ -45,7 +45,8 @@ const privateWorkspaceResponses = {
         result: {
           state: 'completed',
           runId: 'run:smoke',
-          manualImportBatchId: 'batch:smoke'
+          manualImportBatchId: 'batch:smoke',
+          coverageGaps: ['private import does not establish public market coverage']
         }
       }
     }
@@ -59,9 +60,55 @@ const privateWorkspaceResponses = {
       ]
     }
   },
+  complaintReview: { status: 200, payload: { data: { reviewState: 'confirmed' } } },
+  seedCreate: {
+    status: 201,
+    payload: { data: { seedReviewId: 'seed-review:smoke', reviewState: 'unreviewed' } }
+  },
+  seedReviewed: { status: 200, payload: { data: { reviewState: 'reviewed' } } },
+  seedApproved: { status: 200, payload: { data: { reviewState: 'approved' } } },
+  analysisStart: {
+    status: 202,
+    payload: { data: { analysisRunId: 'analysis:smoke', workflowId: 'workflow:analysis:smoke' } }
+  },
+  analysisStatus: {
+    status: 200,
+    payload: { data: { state: 'completed', analysisRunId: 'analysis:smoke' } }
+  },
+  analysis: {
+    status: 200,
+    payload: {
+      data: {
+        result: { state: 'completed', analysisRunId: 'analysis:smoke' },
+        artifact: {
+          mode: 'production',
+          opportunity: { slug: 'smoke-2026-01-01-aaaaaaaa', synthetic: false }
+        },
+        report: { synthetic: false },
+        planPackage: { files: ['README.md'] },
+        governance: { reportApprovalState: 'draft', planApprovalState: 'unreviewed' }
+      }
+    }
+  },
+  opportunity: {
+    status: 200,
+    payload: {
+      data: {
+        opportunity: { slug: 'smoke-2026-01-01-aaaaaaaa', synthetic: false },
+        report: { approvalState: 'draft' },
+        plan: { approvalState: 'unreviewed' }
+      }
+    }
+  },
+  opportunityPage: { status: 200, body: 'Private research package' },
+  reportPage: { status: 200, body: 'Evidence-backed report Coverage limits' },
+  planPage: { status: 200, body: 'Coding-agent plan README.md' },
   campaignId: 'campaign:smoke',
   batchId: 'batch:smoke',
-  runId: 'run:smoke'
+  runId: 'run:smoke',
+  analysisRunId: 'analysis:smoke',
+  seedReviewId: 'seed-review:smoke',
+  opportunitySlug: 'smoke-2026-01-01-aaaaaaaa'
 }
 
 test('local smoke accepts healthy loopback responses and sparse fixture disclosure', () => {
@@ -92,7 +139,7 @@ test('local smoke rejects an unapproved public source presented as collectible',
           }
         }
       }),
-    /coverage gap was not visible/
+    /disabled public source was incorrectly marked collectible/
   )
 })
 

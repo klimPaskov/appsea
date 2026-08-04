@@ -25,6 +25,40 @@ function errorName(error: unknown): string {
   return typeof error === 'object' && error !== null && 'name' in error ? String(error.name) : ''
 }
 
+function boundedErrorField(error: unknown, field: string): string | undefined {
+  if (typeof error !== 'object' || error === null || !(field in error)) return undefined
+  const value = String((error as Record<string, unknown>)[field])
+  return /^[a-zA-Z0-9_.:-]{1,80}$/.test(value) ? value : undefined
+}
+
+/** Keep analysis failures diagnosable without logging source text or payloads. */
+function analysisFailureContext(error: unknown): string | undefined {
+  const fields = [
+    boundedErrorField(error, 'name'),
+    boundedErrorField(error, 'code'),
+    boundedErrorField(error, 'table'),
+    boundedErrorField(error, 'column'),
+    boundedErrorField(error, 'constraint')
+  ].filter((value): value is string => Boolean(value))
+  if (errorName(error) === 'ZodError' && typeof error === 'object' && error !== null) {
+    const issues = (error as Record<string, unknown>).issues
+    if (Array.isArray(issues)) {
+      const paths = issues
+        .slice(0, 3)
+        .map((issue) => {
+          if (typeof issue !== 'object' || issue === null) return undefined
+          const path = (issue as Record<string, unknown>).path
+          if (!Array.isArray(path)) return undefined
+          const value = path.map(String).join('.') || 'root'
+          return /^[a-zA-Z0-9_.:-]{1,120}$/.test(value) ? value : undefined
+        })
+        .filter((value): value is string => Boolean(value))
+      if (paths.length > 0) fields.push(`zod:${paths.join(',')}`)
+    }
+  }
+  return fields.length > 0 ? fields.join(':') : undefined
+}
+
 function sanitizedFailure(error: unknown): ApplicationFailure {
   if (error instanceof ApplicationFailure) return error
   if (error instanceof ProductionAnalysisLineageError) {
@@ -142,6 +176,7 @@ export function createProductionAnalysisActivities(
         return result
       } catch (error) {
         const failure = sanitizedFailure(error)
+        const failureContext = analysisFailureContext(error)
         await repository.recordActivityAttemptFinished({
           ...activityIdentity,
           state: 'failed',
@@ -150,7 +185,8 @@ export function createProductionAnalysisActivities(
         emitWorkerEvent({
           event: 'production_analysis_activity_failed',
           taskQueue: fixtureResearchTaskQueue,
-          failureCode: failure.type ?? 'APPSEA_ACTIVITY_FAILED'
+          failureCode: failure.type ?? 'APPSEA_ACTIVITY_FAILED',
+          ...(failureContext ? { failureContext } : {})
         })
         throw failure
       }

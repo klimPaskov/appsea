@@ -25,6 +25,17 @@ export interface PrivateOpportunityContext {
   detail: WorkspaceOpportunityDetailReadModel
 }
 
+// App Router page params can retain percent-encoding for identifiers such as
+// `workspace:<hash>`. Decode once at this private read boundary before schema
+// validation and membership lookup; malformed encodings remain invalid.
+function decodePathParam(value: string): string {
+  try {
+    return decodeURIComponent(value)
+  } catch {
+    return value
+  }
+}
+
 /** Map a validated production analysis into the private opportunity read model. */
 export function mapProductionAnalysisToOpportunityDetail(
   model: ProductionAnalysisReadModel,
@@ -112,8 +123,8 @@ export async function readPrivateOpportunityDetailForUser(
   workspaceId: string,
   slug: string
 ): Promise<WorkspaceOpportunityDetailReadModel | null> {
-  const parsedWorkspaceId = appseaIdentifierSchema.safeParse(workspaceId)
-  const parsedSlug = opportunitySlugSchema.safeParse(slug)
+  const parsedWorkspaceId = appseaIdentifierSchema.safeParse(decodePathParam(workspaceId))
+  const parsedSlug = opportunitySlugSchema.safeParse(decodePathParam(slug))
   if (!parsedWorkspaceId.success || !parsedSlug.success) return null
   const repository = authRepository()
   const listed = (await repository.listWorkspaceOpportunities(userId, parsedWorkspaceId.data)).find(
@@ -163,8 +174,8 @@ export async function readPrivateOpportunityContext(
 ): Promise<PrivateOpportunityContext | null> {
   const session = await readSession()
   if (!session) return null
-  const parsedWorkspaceId = appseaIdentifierSchema.safeParse(workspaceId)
-  const parsedSlug = opportunitySlugSchema.safeParse(slug)
+  const parsedWorkspaceId = appseaIdentifierSchema.safeParse(decodePathParam(workspaceId))
+  const parsedSlug = opportunitySlugSchema.safeParse(decodePathParam(slug))
   if (!parsedWorkspaceId.success || !parsedSlug.success) return null
   const workspace = session.workspaces.find(
     (candidate) => candidate.workspaceId === parsedWorkspaceId.data

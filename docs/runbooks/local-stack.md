@@ -39,7 +39,9 @@ without contacting Docker or the database.
 
 To run the disposable end-to-end smoke (loopback services, migrations, worker,
 web readiness, authenticated private-workspace signup, owner-authorized manual
-intake through durable consumption, auth pages, fixture disclosure, and
+intake through durable consumption, complaint confirmation, reviewed and
+approved opportunity seed input, production-analysis completion, private
+opportunity/report/plan readback, auth pages, fixture disclosure, and
 dependency cleanup), use:
 
 ```bash
@@ -52,9 +54,10 @@ locally only when Docker Desktop is available.
 
 ## Boundaries
 
-The owner-intake row is a smoke-only test payload. It is never market evidence,
-is not shown on the public leaderboard, and proves only the tenant-private
-manual-import contract and workflow forwarding. This is a development
+The owner-intake row and reviewed opportunity seed are smoke-only test
+payloads. They are never market evidence, are not shown on the public
+leaderboard, and prove only the tenant-private manual-import, review, and
+production-shaped analysis/report/plan contracts. This is a development
 workflow, not a production deployment. It uses local credentials and an
 unauthenticated Temporal dev server, keeps the public leaderboard synthetic,
 and does not activate CFPB, Stack Exchange, or any other third-party source.

@@ -12,10 +12,12 @@
   development workflow and never activates a third-party source.
 - Local stack smoke: `pnpm verify:local-stack` now exercises loopback dependency
   readiness, migrations, worker/web startup, authenticated private-workspace
-  signup, owner-authorized manual intake through durable consumption, auth
-  pages, sparse fixture disclosure, private evidence readback, visible
-  public-market coverage gaps, and container cleanup; GitHub CI runs it on
-  every change. The intake row is smoke-only and never market evidence.
+  signup, owner-authorized manual intake through durable consumption, complaint
+  confirmation, reviewed/approved opportunity seed input, production-analysis
+  completion, private opportunity/report/plan readback, auth pages, sparse
+  fixture disclosure, visible public-market coverage gaps, and container
+  cleanup; GitHub CI runs it on every change. The intake row and seed are
+  smoke-only and never market evidence.
 - Release boundary: `pnpm verify:release` checks the provider-neutral Compose
   topology, non-root/read-only image defaults, secret-free production example,
   disabled identity/delivery defaults, and fail-closed production preflight;
@@ -27,7 +29,7 @@
   the latest hosted attempt is currently blocked by the account
   payment/spending-limit gate.
 - Private workspace website/API: implemented and production-built; reads are membership-authorized and cache-disabled. Completed collection reads now expose the bounded private `analysisHandoff` status when an approved-seed handoff exists. Owner settings expose a read-only purge-readiness inventory, an expiring owner-confirmed metadata-only purge manifest, and a step-up-protected, durable non-destructive purge intent; these snapshot PostgreSQL references/readiness without authorizing deletion and keep cloud/export/backup requirements visible.
-- Owner-authorized intake: migration `0089`, the `manual-owner-import-v1` reviewed policy, bounded CSV/JSON parsing, PII scrubbing, private staging/list/delete APIs, a private workspace import screen, identifier-only Temporal handoff, same-transaction batch consumption, and tombstone propagation are implemented and package-tested. The local-stack smoke now signs up a disposable owner, creates a private manual-import campaign, stages a smoke-only row, waits for durable workflow consumption, and verifies manual collectibility, private evidence readback, and the explicit public-market coverage gap. This makes tenant-private research usable without presenting it as public market research; URL fetching and all third-party public connectors remain disabled or deferred.
+- Owner-authorized intake: migration `0089`, the `manual-owner-import-v1` reviewed policy, bounded CSV/JSON parsing, PII scrubbing, private staging/list/delete APIs, a private workspace import screen, identifier-only Temporal handoff, same-transaction batch consumption, and tombstone propagation are implemented and package-tested. The local-stack smoke now signs up a disposable owner, creates a private manual-import campaign, stages a smoke-only row, waits for durable workflow consumption, confirms the retained complaint, creates/reviews/approves a smoke-only opportunity seed, runs production-shaped analysis, and reads the private opportunity/report/plan pages back. This makes tenant-private research usable without presenting it as public market research; URL fetching and all third-party public connectors remain disabled or deferred.
 - Read-only agent access: migrations `0069` and `0081`, owner token lifecycle APIs, `POST /api/auth/mfa/step-up`, and `POST /api/mcp` are implemented and tested. Tokens are hash-only, expiring, workspace-bound, and scope-filtered; issuing/revoking them requires recent password step-up plus a fresh MFA proof when MFA is enabled. The same conditional proof now protects password-gated account, session, membership, invitation, archival, purge-intent, and evidence-redaction mutations. Evidence policy, coverage gaps, synthetic disclosure, and report/plan approval gates remain visible. Token management is API-only; deployment secret/rate-limit controls, provider-backed identity operations, and high-impact mutations without a password-step-up boundary remain open.
 - Cancellation: migrations `0070`/`0071` provide owner/editor durable intent for multi-source and one-source production runs, private same-origin APIs/UI, Temporal best-effort cancellation, and lease-backed worker retry/reconciliation. Deployed Temporal/scheduler proof remains open.
 - Fixture worker: implemented and tested
