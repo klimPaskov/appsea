@@ -49,7 +49,8 @@ function productionFailureContext(error: unknown): string | undefined {
     boundedErrorField(error, 'code'),
     boundedErrorField(error, 'table'),
     boundedErrorField(error, 'column'),
-    boundedErrorField(error, 'constraint')
+    boundedErrorField(error, 'constraint'),
+    boundedErrorField(error, 'reason')
   ].filter((value): value is string => Boolean(value))
   return fields.length > 0 ? fields.join(':') : undefined
 }

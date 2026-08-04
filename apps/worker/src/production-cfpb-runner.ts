@@ -71,9 +71,12 @@ function createProductionConnector(
 }
 
 export class ProductionCollectionReconciliationError extends Error {
-  constructor(message: string, options?: ErrorOptions) {
+  readonly reason: string
+
+  constructor(message: string, options?: ErrorOptions, reason = 'unknown') {
     super(message, options)
     this.name = 'ProductionCollectionReconciliationError'
+    this.reason = reason
   }
 }
 
@@ -235,7 +238,8 @@ export async function runProductionCollection(
     if (error instanceof SourceCollectionLeaseTerminalError) {
       throw new ProductionCollectionReconciliationError(
         `Source collection lease is ${error.state} without a completed result; operator reconciliation is required`,
-        { cause: error }
+        { cause: error },
+        'lease_terminal'
       )
     }
     throw error
@@ -251,7 +255,9 @@ export async function runProductionCollection(
       if (!consumed) {
         if (!(await leaseRepository.release(effectiveRequest.workspaceId, leaseId, requestHash))) {
           throw new ProductionCollectionReconciliationError(
-            'Direct production admission expired and its source lease could not be released; operator reconciliation is required'
+            'Direct production admission expired and its source lease could not be released; operator reconciliation is required',
+            undefined,
+            'admission_release_failed'
           )
         }
         throw new ProductionWorkflowAdmissionRequiredError()
@@ -302,14 +308,17 @@ export async function runProductionCollection(
       if (error instanceof ProductionCollectionLeaseAssertionError) {
         throw new ProductionCollectionReconciliationError(
           'Source collection lease became inactive before persistence; operator reconciliation is required',
-          { cause: error }
+          { cause: error },
+          'persist_lease_inactive'
         )
       }
       throw error
     }
     if (!(await leaseRepository.release(effectiveRequest.workspaceId, leaseId, requestHash))) {
       throw new ProductionCollectionReconciliationError(
-        'Source collection result persisted but its lease could not be released; replay is required'
+        'Source collection result persisted but its lease could not be released; replay is required',
+        undefined,
+        'release_after_persist_failed'
       )
     }
     return persisted
@@ -322,7 +331,8 @@ export async function runProductionCollection(
       if (replayed) return { ...replayed.result, replayed: true }
       throw new ProductionCollectionReconciliationError(
         'Source quota was already settled but no completed collection result exists; operator reconciliation is required before retry',
-        { cause: error }
+        { cause: error },
+        'quota_settled_without_result'
       )
     }
     if (error instanceof SourceCollectionPreflightDeniedError) {
@@ -338,7 +348,8 @@ export async function runProductionCollection(
       } catch (releaseError) {
         throw new ProductionCollectionReconciliationError(
           'Source policy preflight was denied and its lease could not be released; operator reconciliation is required',
-          { cause: releaseError }
+          { cause: releaseError },
+          'preflight_release_failed'
         )
       }
       throw new ProductionCollectionPolicyDeniedError(
@@ -353,7 +364,8 @@ export async function runProductionCollection(
     } catch (releaseError) {
       throw new ProductionCollectionReconciliationError(
         'Source collection failed and its lease could not be released; operator reconciliation is required',
-        { cause: releaseError }
+        { cause: releaseError },
+        'release_after_error_failed'
       )
     }
     throw error
