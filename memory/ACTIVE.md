@@ -75,7 +75,9 @@ This tranche adds `packages/connectors/src/manual-import.ts`,
 `/api/workspaces/:workspaceId/imports` routes, and the manual source policy and
 runbook plus the private `/workspace/:workspaceId/imports` owner screen. Uploads
 are bounded at 2 MiB/5,000 rows, normalized and PII-scrubbed;
-Temporal receives only the batch ID. Batch consumption is committed with
+Temporal receives only the batch ID. Local smoke signs up an owner, stages a
+test row, and waits for consumption; public sources stay disabled. Batch
+consumption is committed with
 collection persistence; owner deletion clears staged payloads and emits
 tombstones. URL import is
 deferred to avoid SSRF and unreviewed third-party acquisition.

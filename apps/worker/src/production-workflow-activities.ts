@@ -1,6 +1,7 @@
 import type { Pool } from 'pg'
 import { ApplicationFailure, Context } from '@temporalio/activity'
 import {
+  type PersistProductionCollectionWorkflowActivityInput,
   persistProductionCollectionWorkflowActivityInputSchema,
   productionCollectionWorkflowCheckpointWriteSchema,
   productionCollectionWorkflowCompletionInputSchema,
@@ -109,6 +110,36 @@ async function runSanitized<T>(operation: () => Promise<T>): Promise<T> {
   }
 }
 
+/**
+ * Reconstruct the database-facing collection request from identifier-only
+ * Temporal input. The manual import batch identifier must survive this
+ * boundary so owner-authorized intake can be consumed by the connector.
+ */
+export function productionCollectionRequestFromActivityInput(
+  input: PersistProductionCollectionWorkflowActivityInput['input']
+) {
+  return {
+    workspaceId: input.workspaceId,
+    campaignId: input.campaignId,
+    runId: input.runId,
+    // The caller-owned key is intentionally not placed in Temporal history;
+    // the stable digest is the persistence idempotency key.
+    idempotencyKey: input.idempotencyDigest,
+    sourceId: input.sourceId,
+    policyVersion: input.policyVersion,
+    query: input.query,
+    limit: input.limit,
+    purpose: input.purpose,
+    requestedDisplayMode: input.requestedDisplayMode,
+    budget: input.budget,
+    requestedAt: input.requestedAt,
+    ...(input.manualImportBatchId ? { manualImportBatchId: input.manualImportBatchId } : {}),
+    ...(input.recollectionTombstoneId
+      ? { recollectionTombstoneId: input.recollectionTombstoneId }
+      : {})
+  }
+}
+
 export function createProductionCollectionActivities(pool: Pool): ProductionCollectionActivities {
   const workflowRepository = new PostgresProductionCollectionWorkflowRepository(pool)
   const collectionRepository = new PostgresProductionCollectionRepository(pool)
@@ -148,25 +179,7 @@ export function createProductionCollectionActivities(pool: Pool): ProductionColl
         })
         const persistence = await runProductionCollection(
           pool,
-          {
-            workspaceId: parsed.input.workspaceId,
-            campaignId: parsed.input.campaignId,
-            runId: parsed.input.runId,
-            // The caller-owned key is intentionally not placed in Temporal
-            // history; the stable digest is the persistence idempotency key.
-            idempotencyKey: parsed.input.idempotencyDigest,
-            sourceId: parsed.input.sourceId,
-            policyVersion: parsed.input.policyVersion,
-            query: parsed.input.query,
-            limit: parsed.input.limit,
-            purpose: parsed.input.purpose,
-            requestedDisplayMode: parsed.input.requestedDisplayMode,
-            budget: parsed.input.budget,
-            requestedAt: parsed.input.requestedAt,
-            ...(parsed.input.recollectionTombstoneId
-              ? { recollectionTombstoneId: parsed.input.recollectionTombstoneId }
-              : {})
-          },
+          productionCollectionRequestFromActivityInput(parsed.input),
           { observedAt: parsed.occurredAt }
         )
         const result = productionCollectionWorkflowPersistenceActivityResultSchema.parse({

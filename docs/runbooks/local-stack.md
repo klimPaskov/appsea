@@ -38,7 +38,9 @@ Use `pnpm dev:local --dry-run` to inspect the commands and loopback endpoints
 without contacting Docker or the database.
 
 To run the disposable end-to-end smoke (loopback services, migrations, worker,
-web readiness, auth pages, fixture disclosure, and dependency cleanup), use:
+web readiness, authenticated private-workspace signup, owner-authorized manual
+intake through durable consumption, auth pages, fixture disclosure, and
+dependency cleanup), use:
 
 ```bash
 pnpm verify:local-stack
@@ -50,9 +52,12 @@ locally only when Docker Desktop is available.
 
 ## Boundaries
 
-This is a development workflow, not a production deployment. It uses local
-credentials and an unauthenticated Temporal dev server, keeps the public
-leaderboard synthetic, and does not activate CFPB, Stack Exchange, or any
-other third-party source. Production still requires the reviewed external
+The owner-intake row is a smoke-only test payload. It is never market evidence,
+is not shown on the public leaderboard, and proves only the tenant-private
+manual-import contract and workflow forwarding. This is a development
+workflow, not a production deployment. It uses local credentials and an
+unauthenticated Temporal dev server, keeps the public leaderboard synthetic,
+and does not activate CFPB, Stack Exchange, or any other third-party source.
+Production still requires the reviewed external
 PostgreSQL, Temporal, object-storage, identity, scheduler, alert, and source
 policy controls described in the production deployment runbook.

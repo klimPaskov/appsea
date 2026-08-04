@@ -37,8 +37,10 @@ Implemented:
 - one-command loopback private-workspace stack with migration, worker, and web
   startup (`pnpm dev:local`)
 - end-to-end loopback stack smoke (`pnpm verify:local-stack`) covering
-  dependency readiness, migrations, worker/web startup, auth pages, fixture
-  disclosure, and Compose cleanup in CI
+  dependency readiness, migrations, worker/web startup, authenticated
+  private-workspace signup, owner-authorized manual intake through durable
+  consumption, auth pages, fixture disclosure, and Compose cleanup in CI; the
+  smoke row is not market evidence
 - PostgreSQL-backed source quota reservations shared across workspaces, with
   idempotent commit/release and bounded expiry
 - policy-derived, bounded retention tombstone enqueue reusing the deletion
@@ -165,6 +167,9 @@ leaving the public leaderboard unchanged.
 The PostgreSQL integration suite also exercises the staged/replayed/consumed/
 deleted lifecycle, forced-RLS owner boundary, payload clearing, and tombstone
 propagation; local execution remains Docker-blocked.
+The worker activity reconstruction preserves the staged batch identifier when
+Temporal invokes the identifier-only persistence boundary, with a regression
+test covering the owner-import path.
 Migration `0090_manual_import_policy_read_gate.sql` keeps the runtime policy
 check behind a narrow security-definer decision function instead of requiring
 row-lock privileges on global source tables.
