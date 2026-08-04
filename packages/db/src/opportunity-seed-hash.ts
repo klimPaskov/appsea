@@ -1,4 +1,4 @@
-import type { ProductionOpportunitySeed } from '@appsea/contracts'
+import type { ProductionOpportunitySeedRead } from '@appsea/contracts'
 import { contentHash } from './hash'
 
 /**
@@ -6,7 +6,7 @@ import { contentHash } from './hash'
  * Empty matrices preserve the legacy seed digest; populated matrices become
  * part of the immutable seed content identity.
  */
-export function opportunitySeedContentHash(seed: ProductionOpportunitySeed): string {
+export function opportunitySeedContentHash(seed: ProductionOpportunitySeedRead): string {
   return contentHash({
     ...seed,
     competitors: seed.competitors.map((competitor) => {

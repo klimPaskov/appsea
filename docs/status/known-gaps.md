@@ -418,9 +418,11 @@ redacted benchmark and optional immutable artifact/report snapshot. It measures
 the current deterministic classifier, entity resolver, deduplicator, clusterer,
 ranking, duplicate/source-ablation stability, and probability calibration
 against reviewed labels. These values are regression signals only: they do not
-calibrate live sources, estimate authors, derive coverage, or bind v1 score
-factors to retained evidence. Factor-level provenance and source-backed
-competitor/contrary research remain open.
+calibrate live sources, estimate authors, or derive coverage. Balanced v1 score
+factors now carry explicit `source-evidence` or `reviewed-seed` bindings, and
+production analysis rejects source IDs that are not retained in the run;
+reviewed-seed bindings remain assumptions rather than market evidence.
+Source-backed competitor/contrary research remains open.
 
 The Stack Exchange connector is now a second policy-drafted candidate for
 `competitor-research` and `contrary-evidence`. The production collection worker

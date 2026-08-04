@@ -6,6 +6,58 @@ import { composeFile, repositoryRoot } from './dev_local.mjs'
 const localHost = '127.0.0.1'
 const localWebUrl = `http://${localHost}:3000`
 
+const balancedScoreFactorKeys = [
+  'demand.complaintFrequency',
+  'demand.independentUserCount',
+  'demand.sourceDiversity',
+  'demand.recentVelocity',
+  'demand.timePersistence',
+  'demand.segmentDensity',
+  'pain.severity',
+  'pain.workflowCriticality',
+  'pain.workaroundCost',
+  'pain.switchingIntent',
+  'marketOpening.competitorDissatisfaction',
+  'marketOpening.unresolvedSolutionGap',
+  'marketOpening.substituteWeakness',
+  'marketOpening.timing',
+  'businessQuality.willingnessToPay',
+  'businessQuality.repeatUseRetention',
+  'businessQuality.audienceReachability',
+  'businessQuality.expansionPotential',
+  'executionQuality.mvpFeasibility',
+  'executionQuality.dataIntegrationFeasibility',
+  'executionQuality.trustComplianceFeasibility',
+  'executionQuality.platformIndependence',
+  'risk.sourceLegal',
+  'risk.platformConcentration',
+  'risk.commoditization',
+  'risk.regulatoryTrust',
+  'risk.manipulation',
+  'risk.eventDriven',
+  'confidence.sample',
+  'confidence.sourceDiversity',
+  'confidence.directness',
+  'confidence.entityConfidence',
+  'confidence.timeStability',
+  'confidence.manipulationSpam',
+  'confidence.methodAgreementHumanReview'
+]
+
+function reviewedSeedFactorEvidence(seedReviewId) {
+  return Object.fromEntries(
+    balancedScoreFactorKeys.map((key) => [
+      key,
+      {
+        basis: 'reviewed-seed',
+        evidenceIds: [
+          `reviewed-seed:${seedReviewId}:${key.replace(/[^a-z0-9]+/gi, '-').toLowerCase()}`
+        ]
+      }
+    ])
+  )
+}
+
 function pnpmInvocation(args) {
   if (process.platform === 'win32') {
     return [process.env.ComSpec ?? 'cmd.exe', ['/d', '/s', '/c', `pnpm ${args.join(' ')}`]]
@@ -621,6 +673,7 @@ async function runPrivateWorkspaceSmoke() {
         methodAgreementHumanReview: 0.7
       },
       evidenceSnapshotId: `evidence-snapshot:smoke-${nonce}`,
+      factorEvidence: reviewedSeedFactorEvidence(seedReviewId),
       coverageSummary: {
         sourceCount: 1,
         observationCount: 1,

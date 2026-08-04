@@ -23,6 +23,10 @@ Date: 2026-08-04
 - The loopback private-stack smoke now submits a reviewed v1 seed and asserts
   the v1 snapshot survives owner import, durable analysis, PostgreSQL-backed
   readback, and private pages.
+- Follow-up provenance hardening is recorded in
+  [`score-factor-provenance-completion-report-2026-08-04.md`](score-factor-provenance-completion-report-2026-08-04.md):
+  each v1 factor now carries a source-evidence or reviewed-seed binding, with
+  retained-evidence validation at production analysis boundaries.
 
 ## Proof
 

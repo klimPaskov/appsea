@@ -436,6 +436,88 @@ const scoreSnapshotLegacySchema = z
 const scoreSignalSchema = z.number().min(0).max(100)
 const confidenceSignalSchema = z.number().min(0).max(1)
 
+/** Every balanced v1 factor must carry an explicit provenance binding. */
+export const balancedScoreFactorKeys = [
+  'demand.complaintFrequency',
+  'demand.independentUserCount',
+  'demand.sourceDiversity',
+  'demand.recentVelocity',
+  'demand.timePersistence',
+  'demand.segmentDensity',
+  'pain.severity',
+  'pain.workflowCriticality',
+  'pain.workaroundCost',
+  'pain.switchingIntent',
+  'marketOpening.competitorDissatisfaction',
+  'marketOpening.unresolvedSolutionGap',
+  'marketOpening.substituteWeakness',
+  'marketOpening.timing',
+  'businessQuality.willingnessToPay',
+  'businessQuality.repeatUseRetention',
+  'businessQuality.audienceReachability',
+  'businessQuality.expansionPotential',
+  'executionQuality.mvpFeasibility',
+  'executionQuality.dataIntegrationFeasibility',
+  'executionQuality.trustComplianceFeasibility',
+  'executionQuality.platformIndependence',
+  'risk.sourceLegal',
+  'risk.platformConcentration',
+  'risk.commoditization',
+  'risk.regulatoryTrust',
+  'risk.manipulation',
+  'risk.eventDriven',
+  'confidence.sample',
+  'confidence.sourceDiversity',
+  'confidence.directness',
+  'confidence.entityConfidence',
+  'confidence.timeStability',
+  'confidence.manipulationSpam',
+  'confidence.methodAgreementHumanReview'
+] as const
+
+export const scoreEvidenceBasisSchema = z.enum(['source-evidence', 'reviewed-seed'])
+
+/** A factor-specific reference. Reviewed-seed references are not source evidence. */
+export const scoreFactorEvidenceSchema = z
+  .object({
+    basis: scoreEvidenceBasisSchema,
+    evidenceIds: z.array(appseaIdentifierSchema).min(1).max(100)
+  })
+  .strict()
+  .superRefine((binding, context) => {
+    if (new Set(binding.evidenceIds).size !== binding.evidenceIds.length) {
+      context.addIssue({
+        code: 'custom',
+        path: ['evidenceIds'],
+        message: 'Factor evidence identifiers must be unique'
+      })
+    }
+  })
+
+const scoreFactorEvidenceMapSchema = z
+  .record(z.string().min(1).max(120), scoreFactorEvidenceSchema)
+  .superRefine((bindings, context) => {
+    const expected = new Set<string>(balancedScoreFactorKeys)
+    for (const key of balancedScoreFactorKeys) {
+      if (!bindings[key]) {
+        context.addIssue({
+          code: 'custom',
+          path: [key],
+          message: 'Every balanced v1 factor must have an evidence binding'
+        })
+      }
+    }
+    for (const key of Object.keys(bindings)) {
+      if (!expected.has(key)) {
+        context.addIssue({
+          code: 'custom',
+          path: [key],
+          message: 'Unknown balanced v1 factor evidence key'
+        })
+      }
+    }
+  })
+
 /** Reviewed inputs for the balanced v1 opportunity score. Values are supplied
  * by a reviewed seed; the scorer never derives market claims from complaint
  * text. Each signal is normalized to 0..100 before its fixed spec weight is
@@ -507,6 +589,7 @@ export const balancedScoreInputSchema = z
       })
       .strict(),
     evidenceSnapshotId: appseaIdentifierSchema,
+    factorEvidence: scoreFactorEvidenceMapSchema,
     coverageSummary: z
       .object({
         sourceCount: z.number().int().nonnegative().max(10_000),
@@ -535,6 +618,7 @@ export const scoreComponentExplanationSchema = z
     weight: z.number().positive().max(100),
     contribution: z.number().min(-100).max(100),
     evidenceIds: z.array(appseaIdentifierSchema).max(100),
+    evidenceBasis: scoreEvidenceBasisSchema,
     transformation: z.string().min(1).max(240),
     confidence: confidenceSignalSchema,
     changeReason: z.string().min(1).max(500)
@@ -613,6 +697,7 @@ export const scoreSnapshotV1Schema = z
     scoringProfile: z.literal('balanced'),
     calculatedAt: z.string().datetime(),
     evidenceSnapshotId: appseaIdentifierSchema,
+    factorEvidence: scoreFactorEvidenceMapSchema,
     coverageSummary: balancedScoreInputSchema.shape.coverageSummary,
     freshnessSummary: balancedScoreInputSchema.shape.freshnessSummary,
     factors: scoreFactorsSchema,
@@ -634,6 +719,37 @@ export const scoreSnapshotV1Schema = z
   .strict()
 
 export const scoreSnapshotSchema = z.union([scoreSnapshotV1Schema, scoreSnapshotLegacySchema])
+
+function addBalancedScoreFactorProvenanceIssues(
+  balancedScoreInput: z.infer<typeof balancedScoreInputSchema>,
+  reviewId: string,
+  retainedEvidenceIds: ReadonlySet<string>,
+  pathPrefix: Array<string | number>,
+  addIssue: (path: Array<string | number>, message: string) => void
+): void {
+  const reviewedSeedPrefix = `reviewed-seed:${reviewId}:`
+  for (const [factorKey, binding] of Object.entries(balancedScoreInput.factorEvidence)) {
+    if (binding.basis === 'source-evidence') {
+      binding.evidenceIds.forEach((evidenceId, evidenceIndex) => {
+        if (!retainedEvidenceIds.has(evidenceId)) {
+          addIssue(
+            [...pathPrefix, factorKey, 'evidenceIds', evidenceIndex],
+            'Source-evidence score bindings must reference retained complaint evidence IDs'
+          )
+        }
+      })
+    } else {
+      binding.evidenceIds.forEach((evidenceId, evidenceIndex) => {
+        if (!evidenceId.startsWith(reviewedSeedPrefix)) {
+          addIssue(
+            [...pathPrefix, factorKey, 'evidenceIds', evidenceIndex],
+            'Reviewed-seed score bindings must reference the immutable seed review'
+          )
+        }
+      })
+    }
+  }
+}
 
 export const opportunitySchema = z.object({
   id: z.string().min(1),
@@ -1435,10 +1551,9 @@ export const productionPlanPackagePaths = [
  * but it must not invent willingness-to-pay, feasibility, competitor, or
  * contrary-evidence values from complaint text.
  *
- * The storage schema intentionally remains portable-path compatible so that
- * already-reviewed rows remain readable during a manifest rollout. New seed
- * writes and analysis inputs use `productionOpportunitySeedSchema`, which
- * adds the canonical six-file package manifest below.
+ * The write schema intentionally remains strict. A read-only compatibility
+ * schema below keeps already-reviewed rows readable during additive rollouts;
+ * new seed writes and analysis inputs use `productionOpportunitySeedSchema`.
  */
 const productionOpportunitySeedStorageSchema = z
   .object({
@@ -1507,6 +1622,20 @@ const productionOpportunitySeedStorageSchema = z
       })
     }
   })
+
+const legacyBalancedScoreInputStorageSchema = balancedScoreInputSchema.omit({
+  factorEvidence: true
+})
+
+/** Read-only compatibility for v1 rows created before factor provenance. */
+const productionOpportunitySeedReadStorageSchema = z
+  .object({
+    ...productionOpportunitySeedStorageSchema.shape,
+    balancedScoreInput: z
+      .union([balancedScoreInputSchema, legacyBalancedScoreInputStorageSchema])
+      .optional()
+  })
+  .strict()
 
 /** New seed writes and production analysis inputs require the supported package manifest. */
 export const productionOpportunitySeedSchema = productionOpportunitySeedStorageSchema.superRefine(
@@ -1614,7 +1743,7 @@ export const workspaceOpportunitySeedReadModelSchema = z
   .object({
     seedReviewId: appseaIdentifierSchema,
     seedVersion: z.string().min(1).max(80),
-    seed: productionOpportunitySeedStorageSchema,
+    seed: productionOpportunitySeedReadStorageSchema,
     contentHash: contentHashSchema,
     reviewState: workspaceOpportunitySeedReviewStateSchema,
     createdBy: appseaIdentifierSchema,
@@ -2564,6 +2693,16 @@ export const productionAnalysisInputSchema = z
         }
       })
     }
+    const balancedScoreInput = input.opportunitySeed.seed.balancedScoreInput
+    if (balancedScoreInput) {
+      addBalancedScoreFactorProvenanceIssues(
+        balancedScoreInput,
+        input.opportunitySeed.reviewId,
+        new Set(input.complaints.map((complaint) => complaint.evidenceId)),
+        ['opportunitySeed', 'seed', 'balancedScoreInput', 'factorEvidence'],
+        addIssue
+      )
+    }
     input.deletions.forEach((deletion, index) => {
       if (deletion.sourceId !== input.request.sourceId) {
         addIssue(['deletions', index, 'sourceId'], 'Deletion source must match the request')
@@ -2646,6 +2785,16 @@ export const productionResearchArtifactSchema = researchArtifactSchema
       addIssue(
         ['opportunitySeedReview', 'seed', 'id'],
         'Artifact opportunity must match the reviewed opportunity seed'
+      )
+    }
+    const balancedScoreInput = artifact.opportunitySeedReview.seed.balancedScoreInput
+    if (balancedScoreInput) {
+      addBalancedScoreFactorProvenanceIssues(
+        balancedScoreInput,
+        artifact.opportunitySeedReview.reviewId,
+        new Set(artifact.complaints.map((complaint) => complaint.evidenceId)),
+        ['opportunitySeedReview', 'seed', 'balancedScoreInput', 'factorEvidence'],
+        addIssue
       )
     }
     artifact.complaints.forEach((complaint, index) => {
@@ -6580,6 +6729,8 @@ export type CompetitorFeatureMatrixEvidenceBasis = z.infer<
 export type CompetitorFeatureMatrixEntry = z.infer<typeof competitorFeatureMatrixEntrySchema>
 export type Competitor = z.infer<typeof competitorSchema>
 export type ScoreFactors = z.infer<typeof scoreFactorsSchema>
+export type ScoreEvidenceBasis = z.infer<typeof scoreEvidenceBasisSchema>
+export type ScoreFactorEvidence = z.infer<typeof scoreFactorEvidenceSchema>
 export type BalancedScoreInput = z.infer<typeof balancedScoreInputSchema>
 export type ScoreComponentExplanation = z.infer<typeof scoreComponentExplanationSchema>
 export type ScoreWeightDimension = z.infer<typeof scoreWeightDimensionSchema>
@@ -6638,8 +6789,11 @@ export type ResearchCampaignSourceReadModel = z.infer<typeof researchCampaignSou
 export type ResearchCampaignReadModel = z.infer<typeof researchCampaignReadModelSchema>
 export type ResearchArtifact = z.infer<typeof researchArtifactSchema>
 export type FixtureResearchArtifact = z.infer<typeof fixtureResearchArtifactSchema>
-/** Portable-path representation retained for reading legacy seed reviews. */
+/** Canonical representation required for new seed writes and analysis. */
 export type ProductionOpportunitySeed = z.infer<typeof productionOpportunitySeedStorageSchema>
+export type ProductionOpportunitySeedRead = z.infer<
+  typeof productionOpportunitySeedReadStorageSchema
+>
 export type WorkspaceOpportunitySeedReviewState = z.infer<
   typeof workspaceOpportunitySeedReviewStateSchema
 >

@@ -21,9 +21,14 @@ changed to ranking semantics.
 
 Every v1 snapshot stores its profile/model version, evidence snapshot identifier,
 coverage/freshness summaries, reviewed positive/risk/confidence inputs, and
-component-level explanations. Complaint text and deterministic complaint
-classification cannot invent these reviewed market signals. Seeds without the
-v1 envelope continue through the legacy path and receive a visible coverage gap.
+component-level explanations. Each factor explanation now also carries an
+explicit `source-evidence` or `reviewed-seed` binding; source bindings must
+match retained complaint evidence at production analysis validation, while
+reviewed-seed bindings remain visibly non-market assumptions. Complaint text
+and deterministic complaint classification cannot invent these reviewed market
+signals. Seeds without the v1 envelope continue through the legacy path and
+receive a visible coverage gap. The binding details are defined in
+[`0027-score-factor-provenance.md`](0027-score-factor-provenance.md).
 
 PostgreSQL migration `0096` adds nullable queryable v1 columns and a ranking
 index. Legacy rows remain valid; v1 rows must provide the complete envelope.

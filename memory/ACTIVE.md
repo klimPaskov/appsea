@@ -67,7 +67,12 @@ ablation stability, ranking, and probability calibration behavior. Optional
 artifact/report snapshots keep the benchmark hash and explicit
 `reviewed-input-only`/`sourceCoverage: not-derived` provenance; it is regression
 evidence, not live calibration or market evidence. Smoke carries a reviewed v1 seed through owner
-intake, durable analysis, persistence, and private readback. Backup/restore
+intake, durable analysis, persistence, and private readback. Every v1 factor now
+has a `source-evidence` or `reviewed-seed` binding; production analysis checks
+source bindings against retained complaint evidence and seed bindings against
+the immutable review prefix. Read-only seed inspection accepts pre-provenance
+v1 rows, but strict new-write/analysis admission requires a replacement.
+Backup/restore
 through `0099` passes locally; provider proof remains open.
 
 `pnpm verify:release` checks Compose, secret-free defaults, hardened images, and

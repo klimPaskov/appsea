@@ -4,7 +4,7 @@ import {
   PostgresProductionCollectionRepository,
   ProductionCollectionAnalysisUnavailableError
 } from '@appsea/db'
-import type { ProductionResearchArtifact } from '@appsea/contracts'
+import { productionOpportunitySeedSchema, type ProductionResearchArtifact } from '@appsea/contracts'
 import { buildProductionResearchArtifact } from '@appsea/research'
 import type { Pool } from 'pg'
 
@@ -32,6 +32,8 @@ export async function reconstructProductionAnalysisArtifact(
   if (!source) throw new ProductionCollectionAnalysisUnavailableError()
   const seedReview = await seeds.readApprovedForWorker(input.workspaceId, input.seedReviewId)
   if (!seedReview) throw new OpportunitySeedReviewLineageError()
+  const seed = productionOpportunitySeedSchema.safeParse(seedReview.seed)
+  if (!seed.success) throw new OpportunitySeedReviewLineageError()
   return buildProductionResearchArtifact({
     collectionArtifactId: source.collectionArtifactId,
     runId: source.runId,
@@ -46,7 +48,7 @@ export async function reconstructProductionAnalysisArtifact(
     coverageGaps: source.coverageGaps,
     warnings: source.warnings,
     opportunitySeed: {
-      seed: seedReview.seed,
+      seed: seed.data,
       seedVersion: seedReview.seedVersion,
       contentHash: seedReview.contentHash,
       reviewId: seedReview.seedReviewId,

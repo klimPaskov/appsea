@@ -7,7 +7,13 @@ import {
   clusterComplaints,
   deduplicateComplaints
 } from './index'
-import { complaintAnalysisSchema, productionAnalysisInputSchema } from '@appsea/contracts'
+import {
+  balancedScoreFactorKeys,
+  complaintAnalysisSchema,
+  productionAnalysisInputSchema,
+  productionResearchArtifactSchema,
+  type BalancedScoreInput
+} from '@appsea/contracts'
 
 const complaint = {
   id: 'c1',
@@ -297,6 +303,17 @@ const reviewedBalancedInput = {
     methodAgreementHumanReview: 0.65
   },
   evidenceSnapshotId: 'evidence-snapshot-reviewed',
+  factorEvidence: Object.fromEntries(
+    balancedScoreFactorKeys.map((key) => [
+      key,
+      {
+        basis: 'reviewed-seed' as const,
+        evidenceIds: [
+          `reviewed-seed:review:research-test-seed:${key.replace(/[^a-z0-9]+/gi, '-').toLowerCase()}`
+        ]
+      }
+    ])
+  ) as BalancedScoreInput['factorEvidence'],
   coverageSummary: {
     sourceCount: 1,
     observationCount: 3,
@@ -401,5 +418,83 @@ describe('production analysis composition', () => {
       }))
     })
     expect(changedText.opportunity.scoreSnapshot).toEqual(artifact.opportunity.scoreSnapshot)
+  })
+
+  it('binds source-evidence factors to retained complaint evidence', () => {
+    const factorKey = 'demand.complaintFrequency'
+    const sourceBoundInput = {
+      ...productionInput,
+      opportunitySeed: {
+        ...productionInput.opportunitySeed,
+        seed: {
+          ...productionInput.opportunitySeed.seed,
+          balancedScoreInput: {
+            ...reviewedBalancedInput,
+            factorEvidence: {
+              ...reviewedBalancedInput.factorEvidence,
+              [factorKey]: {
+                basis: 'source-evidence' as const,
+                evidenceIds: ['evidence:research-1']
+              }
+            }
+          }
+        }
+      }
+    }
+    const artifact = buildProductionResearchArtifact(sourceBoundInput)
+    const snapshot = artifact.opportunity.scoreSnapshot
+    expect('componentExplanations' in snapshot).toBe(true)
+    if ('componentExplanations' in snapshot) {
+      expect(
+        snapshot.componentExplanations.find((explanation) => explanation.key === factorKey)
+      ).toMatchObject({
+        evidenceBasis: 'source-evidence',
+        evidenceIds: ['evidence:research-1']
+      })
+    }
+    expect(() =>
+      buildProductionResearchArtifact({
+        ...sourceBoundInput,
+        opportunitySeed: {
+          ...sourceBoundInput.opportunitySeed,
+          seed: {
+            ...sourceBoundInput.opportunitySeed.seed,
+            balancedScoreInput: {
+              ...sourceBoundInput.opportunitySeed.seed.balancedScoreInput!,
+              factorEvidence: {
+                ...sourceBoundInput.opportunitySeed.seed.balancedScoreInput!.factorEvidence,
+                [factorKey]: {
+                  basis: 'source-evidence' as const,
+                  evidenceIds: ['evidence:not-retained']
+                }
+              }
+            }
+          }
+        }
+      })
+    ).toThrow(/retained complaint evidence IDs/)
+
+    const tamperedArtifact = artifact.opportunitySeedReview.seed.balancedScoreInput
+      ? {
+          ...artifact,
+          opportunitySeedReview: {
+            ...artifact.opportunitySeedReview,
+            seed: {
+              ...artifact.opportunitySeedReview.seed,
+              balancedScoreInput: {
+                ...artifact.opportunitySeedReview.seed.balancedScoreInput,
+                factorEvidence: {
+                  ...artifact.opportunitySeedReview.seed.balancedScoreInput.factorEvidence,
+                  [factorKey]: {
+                    basis: 'source-evidence' as const,
+                    evidenceIds: ['evidence:not-retained']
+                  }
+                }
+              }
+            }
+          }
+        }
+      : artifact
+    expect(productionResearchArtifactSchema.safeParse(tamperedArtifact).success).toBe(false)
   })
 })

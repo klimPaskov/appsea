@@ -11,6 +11,7 @@ import {
   SCORE_VERSION,
   SCORE_V1_VERSION
 } from './index'
+import { balancedScoreFactorKeys, type BalancedScoreInput } from '@appsea/contracts'
 
 describe('quality metric helpers', () => {
   it('computes bounded deterministic calibration metrics', () => {
@@ -50,6 +51,19 @@ const base = {
   evidenceQuality: 72,
   contraryEvidencePenalty: 20
 }
+
+const reviewedFactorEvidence = (snapshotId: string): BalancedScoreInput['factorEvidence'] =>
+  Object.fromEntries(
+    balancedScoreFactorKeys.map((key) => [
+      key,
+      {
+        basis: 'reviewed-seed' as const,
+        evidenceIds: [
+          `reviewed-seed:${snapshotId}:${key.replace(/[^a-z0-9]+/gi, '-').toLowerCase()}`
+        ]
+      }
+    ])
+  ) as BalancedScoreInput['factorEvidence']
 
 const balancedInput = {
   profile: 'balanced' as const,
@@ -98,6 +112,7 @@ const balancedInput = {
     methodAgreementHumanReview: 0.75
   },
   evidenceSnapshotId: 'evidence-snapshot-v1',
+  factorEvidence: reviewedFactorEvidence('evidence-snapshot-v1'),
   coverageSummary: {
     sourceCount: 2,
     observationCount: 18,
@@ -174,5 +189,28 @@ describe('opportunity scoring', () => {
       InvalidScoreSnapshotError
     )
     expect(assertDeterministicScoreSnapshot(calculateOpportunityScore(base))).toBeTruthy()
+  })
+
+  it('requires complete factor-specific provenance bindings', () => {
+    const missing = Object.fromEntries(
+      Object.entries(balancedInput.factorEvidence).filter(
+        ([key]) => key !== 'demand.complaintFrequency'
+      )
+    )
+    expect(() =>
+      calculateOpportunityScoreV1({ ...balancedInput, factorEvidence: missing })
+    ).toThrow(/Every balanced v1 factor must have an evidence binding/)
+    expect(() =>
+      calculateOpportunityScoreV1({
+        ...balancedInput,
+        factorEvidence: {
+          ...balancedInput.factorEvidence,
+          'unknown.factor': {
+            basis: 'reviewed-seed',
+            evidenceIds: ['reviewed-seed:unknown-factor']
+          }
+        }
+      })
+    ).toThrow(/Unknown balanced v1 factor evidence key/)
   })
 })

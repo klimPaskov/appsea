@@ -665,8 +665,11 @@ reports continue to expose the v0.2 raw score. The ranking envelope is a
 reviewed-input checkpoint, not calibration or live market evidence. Optional
 artifact/report quality snapshots now record the versioned synthetic benchmark,
 deduplication/clustering/ranking stability, and bounded calibration metrics;
-they are regression evidence only and do not derive source coverage or factor
-provenance.
+they are regression evidence only and do not derive source coverage or market
+evidence. Every balanced v1 factor now carries an explicit `source-evidence` or
+`reviewed-seed` binding; production analysis checks source bindings against
+retained complaint evidence and keeps reviewed-seed assumptions separate from
+market evidence. See [`0027-score-factor-provenance.md`](../../adrs/0027-score-factor-provenance.md).
 Private opportunity reads now expose a separate competitive-research coverage
 record, per-claim provenance observations, and a competitors/contrary-signals
 route; it does not promote reviewed seed assumptions to source-backed market

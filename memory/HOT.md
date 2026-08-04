@@ -12,10 +12,15 @@
   establishes public coverage.
 - Web auth uses scrypt/revocable sessions, membership/RLS, password/MFA step-up, and governance gates; provider identity/delivery, retention, DNS/egress, deployment review, and unrelated mutations remain open.
 - Production collection persists policy-bound evidence, complaints, gaps, cost, and lineage; private reads use `/workspace/:workspaceId/research/:runId`; outputs use filesystem/S3.
-- The deterministic `research-quality-v1.0.0` benchmark is synthetic/redacted regression evidence only. Optional artifact/report snapshots expose classifier/entity, deduplication, clustering, stability, ranking, and calibration metrics with `reviewed-input-only` and `sourceCoverage: not-derived`; it does not calibrate live sources or derive score-factor provenance.
+- `research-quality-v1.0.0` is synthetic/redacted regression evidence only;
+  snapshots expose classifier/entity, dedup, clustering, stability, ranking, and
+  calibration metrics with `reviewed-input-only`/`sourceCoverage:not-derived`.
+- Balanced v1 factors carry `source-evidence` or `reviewed-seed` bindings;
+  source refs must match retained complaint evidence and reviewed refs the seed
+  review. Reviewed bindings remain non-market assumptions.
 - Analysis v2 carries IDs/digests; the worker rebuilds artifacts in-activity. Legacy v1 drain, cloud/backup purge, role rotation, and scheduler ownership remain open. Collection writes lock leases; `0037` recovers stale dispatches.
-- Auth, quotas, retention, admissions, tombstones, scheduler metrics, and
-  refresh are durable; owner purge remains `awaiting_external_controls`.
+- Auth, quotas, retention, admissions, tombstones, metrics, and refresh are
+  durable; owner purge remains `awaiting_external_controls`.
 - Web/worker share fail-closed Temporal config; production requires TLS/API-key/namespace/CA. Maintenance uses `0046`/`0052`; alerting, role rotation, recovery, and proof remain open.
 - Runtime skill registry is dormant: independent proposer/evaluator/approver,
   signed review/transition evidence, and migration `0099` operator-only

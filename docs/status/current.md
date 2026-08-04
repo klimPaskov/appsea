@@ -58,12 +58,17 @@
   snapshots remain replayable; reviewed production seeds may now carry the
   additive balanced `opportunity-score-v1.0.0` envelope with raw,
   risk-adjusted, ranking, confidence, uncertainty, coverage, freshness, and
-  component explanations. This is a reviewed-input/profile checkpoint, not
-  calibration evidence or a live market claim. The deterministic
+  component explanations. Every v1 factor now carries an explicit
+  `source-evidence` or `reviewed-seed` binding; source bindings are checked
+  against retained complaint evidence at analysis validation and reviewed-seed
+  bindings retain the immutable seed-review prefix. This is a reviewed-input/
+  profile checkpoint, not calibration evidence or a live market claim. The deterministic
   `research-quality-v1.0.0` benchmark now records synthetic classifier/entity,
   deduplication, clustering, stability, ranking, and calibration metrics in
   optional artifact/report snapshots; it is regression evidence only and never
-  derives source coverage or score-factor provenance.
+  derives source coverage or market evidence. Score-factor provenance is now
+  explicit in the v1 envelope, with retained-evidence checks for source-backed
+  bindings and seed-review checks for reviewed assumptions.
 - PostgreSQL persistence: ninety-nine forward, checksummed migrations plus least-privilege repositories and the existing auth, RLS, provenance, workflow, source-policy, quota, retention, analysis, reporting, and maintenance boundaries. Migration `0093` qualifies source-quota reservation columns, `0094` grants the worker its narrow `research_runs.artifact_snapshot` finalization update, `0095` grants the authenticated runtime only the lease columns required for the private members purge-readiness count, `0096` adds nullable queryable fields and a ranking index for the reviewed balanced v1 score envelope, `0097` binds MCP tokens to current membership with durable request-window and concurrency leases, `0098` adds the ordered index for the authenticated private audit-history projection, and `0099` adds operator-only runtime-skill persistence with immutable transition history. Neither migration activates a third-party source or grants the worker skill access.
 - Production coding-package manifest: the shared contracts define the six
   deterministic package paths. New seed writes, user admission, worker handoff,

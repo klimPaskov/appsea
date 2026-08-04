@@ -137,6 +137,14 @@ function v1EvidenceConfidence(input: BalancedScoreInput): number {
   return round(clamp(total, 0, 1), 3)
 }
 
+function factorProvenance(input: BalancedScoreInput, key: string) {
+  const provenance = input.factorEvidence[key]
+  if (!provenance) {
+    throw new Error(`Missing evidence binding for balanced v1 factor ${key}`)
+  }
+  return provenance
+}
+
 function buildV1Explanations(input: BalancedScoreInput, confidence: number) {
   const explanations: Array<{
     key: string
@@ -144,6 +152,7 @@ function buildV1Explanations(input: BalancedScoreInput, confidence: number) {
     weight: number
     contribution: number
     evidenceIds: string[]
+    evidenceBasis: 'source-evidence' | 'reviewed-seed'
     transformation: string
     confidence: number
     changeReason: string
@@ -152,12 +161,15 @@ function buildV1Explanations(input: BalancedScoreInput, confidence: number) {
     const values = input[dimension]
     const weights = v1Weights[dimension]
     for (const key of Object.keys(weights) as Array<keyof typeof weights>) {
+      const factorKey = `${dimension}.${String(key)}`
+      const provenance = factorProvenance(input, factorKey)
       explanations.push({
-        key: `${dimension}.${String(key)}`,
+        key: factorKey,
         value: values[key],
         weight: weights[key],
         contribution: round(values[key] * (weights[key] / 100)),
-        evidenceIds: [input.evidenceSnapshotId],
+        evidenceIds: [...provenance.evidenceIds],
+        evidenceBasis: provenance.basis,
         transformation: 'linear normalized signal (0..100) multiplied by fixed spec weight',
         confidence,
         changeReason: 'Reviewed seed input; no complaint text is used to derive this factor.'
@@ -165,24 +177,30 @@ function buildV1Explanations(input: BalancedScoreInput, confidence: number) {
     }
   }
   for (const key of Object.keys(v1RiskMaximums) as Array<keyof typeof v1RiskMaximums>) {
+    const factorKey = `risk.${String(key)}`
+    const provenance = factorProvenance(input, factorKey)
     explanations.push({
-      key: `risk.${String(key)}`,
+      key: factorKey,
       value: input.riskPenalties[key] * (100 / v1RiskMaximums[key]),
       weight: v1RiskMaximums[key],
       contribution: -input.riskPenalties[key],
-      evidenceIds: [input.evidenceSnapshotId],
+      evidenceIds: [...provenance.evidenceIds],
+      evidenceBasis: provenance.basis,
       transformation: 'bounded risk penalty subtracted after positive score',
       confidence,
       changeReason: 'Reviewed seed risk assessment; displayed as a visible penalty.'
     })
   }
   for (const key of Object.keys(v1ConfidenceWeights) as Array<keyof typeof v1ConfidenceWeights>) {
+    const factorKey = `confidence.${String(key)}`
+    const provenance = factorProvenance(input, factorKey)
     explanations.push({
-      key: `confidence.${String(key)}`,
+      key: factorKey,
       value: input.confidenceComponents[key] * 100,
       weight: v1ConfidenceWeights[key],
       contribution: round((input.confidenceComponents[key] * v1ConfidenceWeights[key]) / 100, 3),
-      evidenceIds: [input.evidenceSnapshotId],
+      evidenceIds: [...provenance.evidenceIds],
+      evidenceBasis: provenance.basis,
       transformation: 'weighted evidence-confidence component (0..1)',
       confidence: input.confidenceComponents[key],
       changeReason: 'Reviewed evidence-quality component retained for replay.'
@@ -233,6 +251,7 @@ export function calculateOpportunityScoreV1(
     scoringProfile: parsed.profile,
     calculatedAt,
     evidenceSnapshotId: parsed.evidenceSnapshotId,
+    factorEvidence: parsed.factorEvidence,
     coverageSummary: parsed.coverageSummary,
     freshnessSummary: parsed.freshnessSummary,
     factors,
@@ -267,6 +286,7 @@ export function assertDeterministicScoreSnapshotV1(snapshot: ScoreSnapshotV1): S
       riskPenalties: parsed.riskPenalties,
       confidenceComponents: parsed.confidenceComponents,
       evidenceSnapshotId: parsed.evidenceSnapshotId,
+      factorEvidence: parsed.factorEvidence,
       coverageSummary: parsed.coverageSummary,
       freshnessSummary: parsed.freshnessSummary
     },
