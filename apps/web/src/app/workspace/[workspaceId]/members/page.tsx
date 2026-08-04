@@ -11,6 +11,7 @@ import {
 import { WorkspaceAuthorizationError, WorkspaceMembershipManagementError } from '@appsea/db/auth'
 import { WorkspaceMembersPanel } from '../../../../components/workspace-members-panel'
 import { authRepository, readSession } from '../../../../server/auth-session'
+import { decodePathParam } from '../../../../server/path-params'
 
 export const dynamic = 'force-dynamic'
 
@@ -21,7 +22,8 @@ export default async function WorkspaceMembersPage({
 }) {
   const session = await readSession()
   if (!session) redirect('/login')
-  const { workspaceId } = await params
+  const { workspaceId: encodedWorkspaceId } = await params
+  const workspaceId = decodePathParam(encodedWorkspaceId)
   const parsedWorkspaceId = appseaIdentifierSchema.safeParse(workspaceId)
   if (!parsedWorkspaceId.success) notFound()
   const workspace = session.workspaces.find(

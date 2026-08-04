@@ -528,7 +528,8 @@ describe.sequential('PostgreSQL fixture persistence lifecycle', () => {
       '0091',
       '0092',
       '0093',
-      '0094'
+      '0094',
+      '0095'
     ])
     expect(secondMigrationResult.applied).toEqual([])
     expect(secondMigrationResult.alreadyApplied).toEqual([
@@ -625,7 +626,8 @@ describe.sequential('PostgreSQL fixture persistence lifecycle', () => {
       '0091',
       '0092',
       '0093',
-      '0094'
+      '0094',
+      '0095'
     ])
   })
 
@@ -1931,10 +1933,10 @@ describe.sequential('PostgreSQL fixture persistence lifecycle', () => {
           workspace.workspaceId,
           legacySeedReviewId
         )
-      ).rejects.toThrow('Opportunity seed review was not an approved immutable workspace record')
+      ).rejects.toThrow('Opportunity seed review is not an approved immutable workspace record')
       await expect(
         seedReviewRepository.readApprovedForWorker(workspace.workspaceId, legacySeedReviewId)
-      ).rejects.toThrow('Opportunity seed review was not an approved immutable workspace record')
+      ).rejects.toThrow('Opportunity seed review is not an approved immutable workspace record')
 
       await expect(
         withWorkspaceTransaction(servicePool, workspace.workspaceId, async (client) => {
@@ -4720,7 +4722,10 @@ describe.sequential('PostgreSQL fixture persistence lifecycle', () => {
     const outbox = new PostgresOperationalAlertOutboxRepository(maintenancePool)
     const leases = new PostgresMaintenanceSchedulerLeaseRepository(maintenancePool)
     const metrics = new PostgresMaintenanceSchedulerRunRepository(maintenancePool)
-    const availableAt = new Date().toISOString()
+    // Keep the first claim deterministic across a host and PostgreSQL clock
+    // boundary. Production enqueue callers may use their local clock, but an
+    // already-due fixture should not depend on sub-second clock skew.
+    const availableAt = new Date(Date.now() - 5_000).toISOString()
     const claimId = '00000000-0000-4000-8000-000000000002'
     const secondClaimId = '00000000-0000-4000-8000-000000000003'
 

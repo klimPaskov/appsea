@@ -4,6 +4,7 @@ import { appseaIdentifierSchema, workflowIdSchema } from '@appsea/contracts'
 import { PostgresProductionCollectionWorkflowRepository } from '@appsea/db/production-collection-workflow'
 import { readSession } from '../../../../../../server/auth-session'
 import { getDatabasePool } from '../../../../../../server/database'
+import { decodePathParam } from '../../../../../../server/path-params'
 import { ProductionWorkflowCancelAction } from '../../../../production-workflow-cancel-action'
 
 export const dynamic = 'force-dynamic'
@@ -15,7 +16,9 @@ export default async function ProductionWorkflowStatusPage({
 }) {
   const session = await readSession()
   if (!session) redirect('/login')
-  const { workspaceId, workflowId } = await params
+  const { workspaceId: encodedWorkspaceId, workflowId: encodedWorkflowId } = await params
+  const workspaceId = decodePathParam(encodedWorkspaceId)
+  const workflowId = decodePathParam(encodedWorkflowId)
   const parsedWorkspaceId = appseaIdentifierSchema.safeParse(workspaceId)
   const parsedWorkflowId = workflowIdSchema.safeParse(workflowId)
   if (!parsedWorkspaceId.success || !parsedWorkflowId.success) notFound()

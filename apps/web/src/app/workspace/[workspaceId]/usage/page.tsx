@@ -8,16 +8,9 @@ import {
 import { PostgresSourceQuotaRepository, PostgresWorkspaceCostRepository } from '@appsea/db'
 import { readSession } from '../../../../server/auth-session'
 import { getDatabasePool } from '../../../../server/database'
+import { decodePathParam } from '../../../../server/path-params'
 
 export const dynamic = 'force-dynamic'
-
-function decodePathParam(value: string): string {
-  try {
-    return decodeURIComponent(value)
-  } catch {
-    return value
-  }
-}
 
 function formatMicros(value: string | number | null, currency: string): string {
   if (value === null) return 'Not recorded'

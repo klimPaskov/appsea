@@ -104,6 +104,17 @@ const privateWorkspaceResponses = {
   reportPage: { status: 200, body: 'Evidence-backed report Coverage limits' },
   planPage: { status: 200, body: 'Coding-agent plan README.md' },
   usagePage: { status: 200, body: 'Cost summary Quota reconciliation' },
+  privatePages: {
+    sources: { status: 200, body: 'Source coverage' },
+    seedReviews: { status: 200, body: 'Seed reviews' },
+    campaigns: { status: 200, body: 'Research campaigns' },
+    imports: { status: 200, body: 'Owner imports' },
+    members: { status: 200, body: 'Members' },
+    collection: { status: 200, body: 'Source collection' },
+    analysis: { status: 200, body: 'Analysis status' },
+    workflow: { status: 200, body: 'Collection status' },
+    campaignRuns: { status: 200, body: 'run history' }
+  },
   campaignId: 'campaign:smoke',
   batchId: 'batch:smoke',
   runId: 'run:smoke',

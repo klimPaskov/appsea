@@ -10,6 +10,7 @@ import { PostgresManualImportRepository } from '@appsea/db'
 import { PostgresResearchCampaignRepository } from '@appsea/db/research-campaign'
 import { readSession } from '../../../../server/auth-session'
 import { getDatabasePool } from '../../../../server/database'
+import { decodePathParam } from '../../../../server/path-params'
 import { ManualImportActions } from '../../manual-import-actions'
 
 export const dynamic = 'force-dynamic'
@@ -53,7 +54,8 @@ export default async function ManualImportsPage({
 }) {
   const session = await readSession()
   if (!session) redirect('/login')
-  const { workspaceId } = await params
+  const { workspaceId: encodedWorkspaceId } = await params
+  const workspaceId = decodePathParam(encodedWorkspaceId)
   const parsedWorkspaceId = appseaIdentifierSchema.safeParse(workspaceId)
   if (!parsedWorkspaceId.success) notFound()
   const workspace = session.workspaces.find(

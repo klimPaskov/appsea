@@ -25,7 +25,7 @@ Status: production-shaped foundation implemented and validated locally; producti
 
 Implemented:
 
-- PostgreSQL 18 schema and ninety-four forward, checksummed migrations
+- PostgreSQL 18 schema and ninety-five forward, checksummed migrations
 - normalized source, evidence, complaint, cluster, competitor, opportunity, score, report, plan, audit, cost, deletion, outbox, and lineage tables
 - no-login owner, separate migrator, and least-privilege runtime role contract
 - forced workspace RLS and transaction-scoped workspace context
@@ -39,8 +39,9 @@ Implemented:
 - end-to-end loopback stack smoke (`pnpm verify:local-stack`) covering
   dependency readiness, migrations, worker/web startup, authenticated
   private-workspace signup, owner-authorized manual intake through durable
-  consumption, auth pages, fixture disclosure, and Compose cleanup in CI; the
-  smoke row is not market evidence
+  consumption, every private workspace page with encoded identifiers, auth
+  pages, fixture disclosure, and Compose cleanup in CI; the smoke row is not
+  market evidence
 - PostgreSQL-backed source quota reservations shared across workspaces, with
   idempotent commit/release and bounded expiry
 - policy-derived, bounded retention tombstone enqueue reusing the deletion
@@ -184,6 +185,10 @@ Migration `0093_source_quota_reservation_column_qualification.sql` qualifies
 quota reservation columns that collided with function OUT parameters.
 Migration `0094_production_run_snapshot_update_privilege.sql` grants the worker
 the narrow finalization update for `research_runs.artifact_snapshot`.
+Migration `0095_workspace_purge_readiness_lease_grant.sql` grants the
+authenticated runtime only the `workspace_id` and `state` lease columns needed
+for the private members purge-readiness count; lease lifecycle mutations and
+other lease columns remain maintenance-only.
 
 Remaining deployment work and the non-fixture object-store integration are
 tracked in `docs/status/known-gaps.md` and are not part of the completed

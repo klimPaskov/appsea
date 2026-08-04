@@ -9,7 +9,7 @@ sparse; no third-party public source is enabled. A reviewed internal
 `manual-owner-import` policy now supports tenant-private owner-authorized CSV/
 JSON intake without claiming public market coverage.
 
-Migrations `0027`-`0094` cover policy evidence, checkpoints,
+Migrations `0027`-`0095` cover policy evidence, checkpoints,
 deletion/recomputation repair, leases, admissions, campaign orchestration and
 cancellation, source reconciliation, analysis history, report/plan governance,
 cost and alert projections, object references, workspace archival/purge intent/
@@ -58,10 +58,12 @@ Manual owner-import (migration `0089`) is the active non-fixture path: uploads
 are bounded, normalized, PII-scrubbed, tenant-private, and represented in
 Temporal by batch ID only. Local smoke covers owner intake, durable completion,
 reviewed analysis, private report/plan readback, and the visible public-market
-gap; URL fetching and public sources remain disabled. Migrations `0090`-`0094`
+gap; URL fetching and public sources remain disabled. Migrations `0090`-`0095`
 keep policy validation, deletion state, source privileges, quota columns, and
-analysis finalization narrow; legacy plan rows remain readable but cannot start
-analysis.
+analysis finalization narrow; the shared web path decoder validates encoded
+workspace/detail identifiers exactly once; the private members readiness read
+uses only the lease columns it needs; legacy plan rows remain readable but
+cannot start analysis.
 Migration `0091` preserves `consumed_at` when an already-consumed owner
 batch is later deleted, matching its deletion trigger.
 Migration `0092` makes the service-role read privileges for campaign source
@@ -69,8 +71,12 @@ validation explicit for `sources` and its reviewed policy tables.
 Migration `0093` qualifies source-quota reservation columns so PostgreSQL does
 not resolve them against function OUT parameters. Migration `0094` grants the
 worker its narrow finalization update for `research_runs.artifact_snapshot`.
+Migration `0095` grants the authenticated runtime only `workspace_id` and
+`state` on `source_collection_leases` so the private members purge-readiness
+projection can count active leases without exposing lease lifecycle data.
 Fresh local PostgreSQL persistence, Temporal restart, and worker replacement
-checks now pass across all 94 migrations.
+checks now pass across all 95 migrations. The local private-stack smoke also
+renders every private workspace page with encoded identifiers.
 
 `pnpm verify:release` checks Compose, secret-free defaults, hardened images, and
 fail-closed preflight; CI runs Docker mode and `--static` supports no Docker.

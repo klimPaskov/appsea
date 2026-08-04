@@ -12,6 +12,7 @@ import { PostgresResearchCampaignOrchestrationRepository } from '@appsea/db/rese
 import { PostgresSourcePolicyRepository } from '@appsea/db/source-policy'
 import { readSession } from '../../../../server/auth-session'
 import { getDatabasePool } from '../../../../server/database'
+import { decodePathParam } from '../../../../server/path-params'
 import { ResearchCampaignCreateForm, ResearchCampaignEditForm } from '../../campaign-actions'
 import { ResearchCampaignRunAction } from '../../campaign-run-action'
 import { ResearchCampaignRunHistory } from '../../campaign-run-history'
@@ -54,7 +55,8 @@ export default async function ResearchCampaignsPage({
 }) {
   const session = await readSession()
   if (!session) redirect('/login')
-  const { workspaceId } = await params
+  const { workspaceId: encodedWorkspaceId } = await params
+  const workspaceId = decodePathParam(encodedWorkspaceId)
   const parsedWorkspaceId = appseaIdentifierSchema.safeParse(workspaceId)
   if (!parsedWorkspaceId.success) notFound()
   const workspace = session.workspaces.find(

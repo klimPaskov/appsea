@@ -4,6 +4,7 @@ import { appseaIdentifierSchema } from '@appsea/contracts'
 import { PostgresOpportunitySeedReviewRepository } from '@appsea/db/opportunity-seed-review'
 import { readSession } from '../../../../server/auth-session'
 import { getDatabasePool } from '../../../../server/database'
+import { decodePathParam } from '../../../../server/path-params'
 import {
   OpportunitySeedReviewActions,
   OpportunitySeedReviewCreateForm
@@ -18,7 +19,8 @@ export default async function OpportunitySeedReviewsPage({
 }) {
   const session = await readSession()
   if (!session) redirect('/login')
-  const { workspaceId } = await params
+  const { workspaceId: encodedWorkspaceId } = await params
+  const workspaceId = decodePathParam(encodedWorkspaceId)
   const parsedWorkspaceId = appseaIdentifierSchema.safeParse(workspaceId)
   if (!parsedWorkspaceId.success) notFound()
   const workspace = session.workspaces.find(

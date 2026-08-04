@@ -18,22 +18,12 @@ import { PostgresProductionAnalysisRepository } from '@appsea/db/production-anal
 import { authRepository, readSession } from './auth-session'
 import { getDatabasePool } from './database'
 import { getObjectStore } from './object-store'
+import { decodePathParam } from './path-params'
 
 export interface PrivateOpportunityContext {
   session: AuthSessionReadModel
   workspace: WorkspaceMembershipReadModel
   detail: WorkspaceOpportunityDetailReadModel
-}
-
-// App Router page params can retain percent-encoding for identifiers such as
-// `workspace:<hash>`. Decode once at this private read boundary before schema
-// validation and membership lookup; malformed encodings remain invalid.
-function decodePathParam(value: string): string {
-  try {
-    return decodeURIComponent(value)
-  } catch {
-    return value
-  }
 }
 
 /** Map a validated production analysis into the private opportunity read model. */

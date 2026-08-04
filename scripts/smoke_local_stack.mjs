@@ -216,6 +216,7 @@ function assertPrivateWorkspaceResponses({
   reportPage,
   planPage,
   usagePage,
+  privatePages,
   campaignId,
   batchId,
   runId,
@@ -356,6 +357,23 @@ function assertPrivateWorkspaceResponses({
     !usagePage.body.includes('Quota reconciliation')
   ) {
     throw new Error('private report, coding-plan, and usage pages were not renderable')
+  }
+  const expectedPrivatePages = [
+    ['source coverage', privatePages?.sources, 'Source coverage'],
+    ['seed reviews', privatePages?.seedReviews, 'Seed reviews'],
+    ['campaigns', privatePages?.campaigns, 'Research campaigns'],
+    ['owner imports', privatePages?.imports, 'Owner imports'],
+    ['members', privatePages?.members, 'Members'],
+    ['collection detail', privatePages?.collection, 'Source collection'],
+    ['analysis detail', privatePages?.analysis, 'Analysis status'],
+    ['workflow detail', privatePages?.workflow, 'Collection status'],
+    ['campaign history', privatePages?.campaignRuns, 'run history']
+  ]
+  const missingPrivatePage = expectedPrivatePages.find(
+    ([, page, marker]) => page?.status !== 200 || !page.body.includes(marker)
+  )
+  if (missingPrivatePage) {
+    throw new Error(`private ${missingPrivatePage[0]} page was not renderable`)
   }
 }
 
@@ -610,8 +628,9 @@ async function runPrivateWorkspaceSmoke() {
     `/api/workspaces/${workspaceId}/opportunities/${encodeURIComponent(opportunitySlug)}`,
     { headers: privateHeaders }
   )
+  const encodedWorkspaceId = encodeURIComponent(workspaceId)
   const opportunityPageResponse = await fetchResponse(
-    `/workspace/${workspaceId}/opportunities/${opportunitySlug}`,
+    `/workspace/${encodedWorkspaceId}/opportunities/${encodeURIComponent(opportunitySlug)}`,
     { headers: privateHeaders }
   )
   const opportunityPage = {
@@ -619,19 +638,38 @@ async function runPrivateWorkspaceSmoke() {
     body: await opportunityPageResponse.text()
   }
   const reportPageResponse = await fetchResponse(
-    `/workspace/${workspaceId}/opportunities/${opportunitySlug}/report`,
+    `/workspace/${encodedWorkspaceId}/opportunities/${encodeURIComponent(opportunitySlug)}/report`,
     { headers: privateHeaders }
   )
   const reportPage = { status: reportPageResponse.status, body: await reportPageResponse.text() }
   const planPageResponse = await fetchResponse(
-    `/workspace/${workspaceId}/opportunities/${opportunitySlug}/plan`,
+    `/workspace/${encodedWorkspaceId}/opportunities/${encodeURIComponent(opportunitySlug)}/plan`,
     { headers: privateHeaders }
   )
   const planPage = { status: planPageResponse.status, body: await planPageResponse.text() }
-  const usagePageResponse = await fetchResponse(`/workspace/${workspaceId}/usage`, {
+  const usagePageResponse = await fetchResponse(`/workspace/${encodedWorkspaceId}/usage`, {
     headers: privateHeaders
   })
   const usagePage = { status: usagePageResponse.status, body: await usagePageResponse.text() }
+  const privatePageResponse = async (route) => {
+    const response = await fetchResponse(`/workspace/${encodedWorkspaceId}${route}`, {
+      headers: privateHeaders
+    })
+    return { status: response.status, body: await response.text() }
+  }
+  const privatePages = {
+    sources: await privatePageResponse('/sources'),
+    seedReviews: await privatePageResponse('/seed-reviews'),
+    campaigns: await privatePageResponse('/campaigns'),
+    imports: await privatePageResponse('/imports'),
+    members: await privatePageResponse('/members'),
+    collection: await privatePageResponse(`/research/${encodeURIComponent(runId)}`),
+    analysis: await privatePageResponse(
+      `/research/analysis/${encodeURIComponent(analysisRunId)}?workflowId=${encodeURIComponent(analysisWorkflowId)}`
+    ),
+    workflow: await privatePageResponse(`/research/workflows/${encodeURIComponent(workflowId)}`),
+    campaignRuns: await privatePageResponse(`/campaigns/${encodeURIComponent(campaignId)}/runs`)
+  }
 
   return {
     signup: { status: signup.response.status, hasSessionCookie: Boolean(sessionCookie) },
@@ -654,6 +692,7 @@ async function runPrivateWorkspaceSmoke() {
     reportPage,
     planPage,
     usagePage,
+    privatePages,
     campaignId,
     batchId,
     runId,

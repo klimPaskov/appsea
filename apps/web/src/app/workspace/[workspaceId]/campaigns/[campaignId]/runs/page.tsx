@@ -6,6 +6,7 @@ import { PostgresResearchCampaignOrchestrationRepository } from '@appsea/db/rese
 import { PostgresResearchCampaignRepository } from '@appsea/db/research-campaign'
 import { readSession } from '../../../../../../server/auth-session'
 import { getDatabasePool } from '../../../../../../server/database'
+import { decodePathParam } from '../../../../../../server/path-params'
 import {
   canReadProductionWorkflow,
   productionWorkspaceFromSession
@@ -42,7 +43,9 @@ export default async function CampaignRunsPage({
 }) {
   const session = await readSession()
   if (!session) redirect('/login')
-  const { workspaceId, campaignId } = await params
+  const { workspaceId: encodedWorkspaceId, campaignId: encodedCampaignId } = await params
+  const workspaceId = decodePathParam(encodedWorkspaceId)
+  const campaignId = decodePathParam(encodedCampaignId)
   const parsedWorkspaceId = appseaIdentifierSchema.safeParse(workspaceId)
   const parsedCampaignId = appseaIdentifierSchema.safeParse(campaignId)
   if (!parsedWorkspaceId.success || !parsedCampaignId.success) notFound()

@@ -5,6 +5,7 @@ import { PostgresProductionAnalysisRepository } from '@appsea/db/production-anal
 import { readSession } from '../../../../../../server/auth-session'
 import { getDatabasePool } from '../../../../../../server/database'
 import { getObjectStore } from '../../../../../../server/object-store'
+import { decodePathParam } from '../../../../../../server/path-params'
 import {
   ProductionAnalysisStatusMismatchError,
   readPrivateProductionAnalysisStatus
@@ -22,7 +23,9 @@ export default async function ProductionAnalysisStatusPage({
 }) {
   const session = await readSession()
   if (!session) redirect('/login')
-  const { workspaceId, analysisRunId } = await params
+  const { workspaceId: encodedWorkspaceId, analysisRunId: encodedAnalysisRunId } = await params
+  const workspaceId = decodePathParam(encodedWorkspaceId)
+  const analysisRunId = decodePathParam(encodedAnalysisRunId)
   const query = await searchParams
   const parsedWorkspaceId = appseaIdentifierSchema.safeParse(workspaceId)
   const parsedAnalysisRunId = appseaIdentifierSchema.safeParse(analysisRunId)

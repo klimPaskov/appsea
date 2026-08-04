@@ -340,9 +340,15 @@ export class PostgresOpportunitySeedReviewRepository {
             `UPDATE appsea.opportunity_seed_reviews
                 SET review_state = $3,
                     reviewed_by = CASE WHEN $3 = 'reviewed' THEN $4 ELSE reviewed_by END,
-                    reviewed_at = CASE WHEN $3 = 'reviewed' THEN clock_timestamp() ELSE reviewed_at END,
+                    reviewed_at = CASE
+                      WHEN $3 = 'reviewed' THEN GREATEST(clock_timestamp(), created_at)
+                      ELSE reviewed_at
+                    END,
                     approved_by = CASE WHEN $3 = 'approved' THEN $4 ELSE approved_by END,
-                    approved_at = CASE WHEN $3 = 'approved' THEN clock_timestamp() ELSE approved_at END,
+                    approved_at = CASE
+                      WHEN $3 = 'approved' THEN GREATEST(clock_timestamp(), created_at)
+                      ELSE approved_at
+                    END,
                     updated_at = clock_timestamp()
               WHERE workspace_id = $1 AND seed_review_id = $2
             RETURNING workspace_id, seed_review_id, seed_version, seed_payload, content_hash,

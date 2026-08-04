@@ -1451,10 +1451,16 @@ describe('PostgresAuthRepository', () => {
   })
 
   it('revokes another active session only after resolving the current user', async () => {
-    const repository = new PostgresAuthRepository(sessionLifecyclePool().pool)
+    const lifecycle = sessionLifecyclePool()
+    const repository = new PostgresAuthRepository(lifecycle.pool)
     await expect(
       repository.revokeSessionById('d'.repeat(48), 'session:other')
     ).resolves.toBeUndefined()
+    expect(
+      lifecycle.statements.some((entry) =>
+        entry.text.includes('GREATEST(clock_timestamp(), created_at)')
+      )
+    ).toBe(true)
 
     const conflictRepository = new PostgresAuthRepository(sessionLifecyclePool().pool)
     await expect(

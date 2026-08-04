@@ -5,6 +5,7 @@ import { PostgresOpportunitySeedReviewRepository } from '@appsea/db/opportunity-
 import { PostgresProductionCollectionRepository } from '@appsea/db/production-collection'
 import { getDatabasePool } from '../../../../../server/database'
 import { readSession } from '../../../../../server/auth-session'
+import { decodePathParam } from '../../../../../server/path-params'
 import { ProductionComplaintReviewActions } from '../../../production-complaint-review-actions'
 import { ProductionAnalysisStartAction } from '../../../production-analysis-start-action'
 
@@ -17,7 +18,9 @@ export default async function ProductionCollectionPage({
 }) {
   const session = await readSession()
   if (!session) redirect('/login')
-  const { workspaceId, runId } = await params
+  const { workspaceId: encodedWorkspaceId, runId: encodedRunId } = await params
+  const workspaceId = decodePathParam(encodedWorkspaceId)
+  const runId = decodePathParam(encodedRunId)
   const parsedWorkspaceId = appseaIdentifierSchema.safeParse(workspaceId)
   const parsedRunId = appseaIdentifierSchema.safeParse(runId)
   if (!parsedWorkspaceId.success || !parsedRunId.success) notFound()

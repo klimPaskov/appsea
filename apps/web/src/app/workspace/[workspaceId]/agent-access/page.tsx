@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { notFound, redirect } from 'next/navigation'
 import { appseaIdentifierSchema } from '@appsea/contracts'
 import { readSession } from '../../../../server/auth-session'
+import { decodePathParam } from '../../../../server/path-params'
 import { AgentAccessActions } from '../../agent-access-actions'
 
 export const dynamic = 'force-dynamic'
@@ -13,7 +14,8 @@ export default async function AgentAccessPage({
 }) {
   const session = await readSession()
   if (!session) redirect('/login')
-  const { workspaceId } = await params
+  const { workspaceId: encodedWorkspaceId } = await params
+  const workspaceId = decodePathParam(encodedWorkspaceId)
   const parsedWorkspaceId = appseaIdentifierSchema.safeParse(workspaceId)
   if (!parsedWorkspaceId.success) notFound()
   const workspace = session.workspaces.find(

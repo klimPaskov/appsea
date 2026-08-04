@@ -107,7 +107,8 @@ describe('database foundation', () => {
       '0091',
       '0092',
       '0093',
-      '0094'
+      '0094',
+      '0095'
     ])
     expect(migrations[0]?.checksum).toMatch(/^[a-f0-9]{64}$/)
     expect(migrations[0]?.sql).toContain('CREATE TABLE appsea.evidence_records')
@@ -273,6 +274,15 @@ describe('database foundation', () => {
     )
     expect(productionRunSnapshotPrivilegeMigration?.sql).toContain(
       'GRANT UPDATE (artifact_snapshot) ON appsea.research_runs'
+    )
+    const workspacePurgeReadinessLeaseGrantMigration = migrations.find(
+      (migration) => migration.version === '0095'
+    )
+    expect(workspacePurgeReadinessLeaseGrantMigration?.sql).toContain(
+      'GRANT SELECT (workspace_id, state)'
+    )
+    expect(workspacePurgeReadinessLeaseGrantMigration?.sql).toContain(
+      'ON appsea.source_collection_leases TO appsea_service'
     )
     const authMigration = migrations.find((migration) => migration.version === '0008')
     const privacyMigration = migrations.find((migration) => migration.version === '0009')

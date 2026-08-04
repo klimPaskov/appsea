@@ -2974,7 +2974,7 @@ export class PostgresAuthRepository {
     await withDatabaseTransaction(this.pool, async (client) => {
       await client.query(
         `UPDATE appsea.auth_sessions
-            SET revoked_at = COALESCE(revoked_at, clock_timestamp())
+            SET revoked_at = COALESCE(revoked_at, GREATEST(clock_timestamp(), created_at))
           WHERE token_hash = $1`,
         [sha256(parsedToken.data)]
       )
@@ -3044,7 +3044,7 @@ export class PostgresAuthRepository {
 
       const updated = await client.query<{ session_id: string }>(
         `UPDATE appsea.auth_sessions
-            SET revoked_at = COALESCE(revoked_at, clock_timestamp())
+            SET revoked_at = COALESCE(revoked_at, GREATEST(clock_timestamp(), created_at))
           WHERE session_id = $1
             AND user_id = $2
             AND revoked_at IS NULL
