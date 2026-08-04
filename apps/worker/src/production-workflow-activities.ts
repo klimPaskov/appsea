@@ -200,6 +200,12 @@ export function createProductionCollectionActivities(pool: Pool): ProductionColl
           consumedCostMicros: 0,
           occurredAt: parsed.occurredAt
         })
+        emitWorkerEvent({
+          event: 'production_collection_activity_started',
+          taskQueue: fixtureResearchTaskQueue,
+          workflowId: parsed.execution.workflowId,
+          attempt: activityAttempt
+        })
         const persistence = await runProductionCollection(
           pool,
           productionCollectionRequestFromActivityInput(parsed.input),
@@ -222,6 +228,14 @@ export function createProductionCollectionActivities(pool: Pool): ProductionColl
           consumedSourceItems: result.sourceItemsProcessed,
           consumedCostMicros: result.costMicros,
           occurredAt: parsed.occurredAt
+        })
+        emitWorkerEvent({
+          event: 'production_collection_activity_finished',
+          taskQueue: fixtureResearchTaskQueue,
+          workflowId: parsed.execution.workflowId,
+          attempt: activityAttempt,
+          sourceItems: result.sourceItemsProcessed,
+          costMicros: result.costMicros
         })
         return result
       }),
