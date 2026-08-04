@@ -38,8 +38,9 @@ gate. Accounts without enabled MFA retain the reviewed password-only path.
 - `pnpm --filter @appsea/web typecheck` — passed.
 - Prettier formatting and `git diff --check` — passed for the tranche.
 
-Repository-wide verification remains required before integration. The hosted
-GitHub Actions gate is currently unavailable because the repository account's
+Repository-wide verification remains required before integration. Local
+`pnpm verify` passed. Hosted GitHub Actions run `30939424669` for commit
+`3d864dd` failed before any job step because the repository account's
 payments/spending-limit check prevents jobs from starting; this is an external
 CI blocker, not a test failure.
 
