@@ -20,12 +20,13 @@ claimed.
 - `pnpm --filter @appsea/desktop build` passed locally.
 - `pnpm desktop:check` passed locally on Windows after the Tauri build hook
   and icon were added.
-- The macOS compile boundary is covered by the `desktop-macos` CI job; this is
-  a compile check, not a signed installer or notarization proof.
-- GitHub Actions run `30824653661` passed for commit `98ef62e`, including the
-  Windows desktop boundary/Rust compile job, full verification, fresh
-  PostgreSQL and Temporal checks, Compose validation, and both container image
-  builds. It does not build or sign an installer.
+- The macOS compile boundary is covered by the independent `desktop-macos` CI
+  job; this is a compile check, not a signed installer or notarization proof.
+- GitHub Actions run `30887742764` passed for commit `b833a69`, including both
+  independent Windows/macOS desktop boundary jobs, full verification, fresh
+  PostgreSQL and Temporal checks, the loopback private-stack smoke, Compose
+  validation, and both container image builds. It does not build or sign an
+  installer.
 
 ## Explicit limits
 

@@ -13,10 +13,10 @@
 - Local stack smoke: `pnpm verify:local-stack` now exercises loopback dependency
   readiness, migrations, worker/web startup, auth pages, sparse fixture
   disclosure, and container cleanup; GitHub CI runs it on every change.
-- Hosted validation: GitHub Actions run `30886534728` passed for commit
-  `3a060e8`, including verification/security, fresh PostgreSQL and Temporal,
+- Hosted validation: GitHub Actions run `30887742764` passed for commit
+  `b833a69`, including verification/security, fresh PostgreSQL and Temporal,
   worker replacement, the loopback private-stack smoke, container smoke, and
-  the Windows desktop boundary.
+  independent Windows and macOS desktop boundary checks.
 - Private workspace website/API: implemented and production-built; reads are membership-authorized and cache-disabled. Completed collection reads now expose the bounded private `analysisHandoff` status when an approved-seed handoff exists. Owner settings expose a read-only purge-readiness inventory, an expiring owner-confirmed metadata-only purge manifest, and a step-up-protected, durable non-destructive purge intent; these snapshot PostgreSQL references/readiness without authorizing deletion and keep cloud/export/backup requirements visible.
 - Owner-authorized intake: migration `0089`, the `manual-owner-import-v1` reviewed policy, bounded CSV/JSON parsing, PII scrubbing, private staging/list/delete APIs, a private workspace import screen, identifier-only Temporal handoff, same-transaction batch consumption, and tombstone propagation are implemented and package-tested. The PostgreSQL integration suite now covers owner staging/replay, worker consumption, deletion payload clearing, RLS, and tombstone propagation; that Docker-backed suite remains unrun locally because the Docker Desktop Linux engine is unavailable. This makes tenant-private research usable without presenting it as public market research; URL fetching and all third-party public connectors remain disabled or deferred.
 - Read-only agent access: migrations `0069` and `0081`, owner token lifecycle APIs, `POST /api/auth/mfa/step-up`, and `POST /api/mcp` are implemented and tested. Tokens are hash-only, expiring, workspace-bound, and scope-filtered; issuing/revoking them requires recent password step-up plus a fresh MFA proof when MFA is enabled. The same conditional proof now protects password-gated account, session, membership, invitation, archival, purge-intent, and evidence-redaction mutations. Evidence policy, coverage gaps, synthetic disclosure, and report/plan approval gates remain visible. Token management is API-only; deployment secret/rate-limit controls, provider-backed identity operations, and high-impact mutations without a password-step-up boundary remain open.
