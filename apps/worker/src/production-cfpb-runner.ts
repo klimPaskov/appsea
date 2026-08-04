@@ -114,7 +114,12 @@ export interface ProductionCollectionOptions {
   }
   /** Test/hosting override for the narrow staged manual-import capability. */
   manualImportBatchReader?: ManualImportBatchReader
+  /** Secret-free phase telemetry used by the durable activity boundary. */
+  onPhase?: (phase: ProductionCollectionPhase) => void
 }
+
+export type ProductionCollectionPhase =
+  'lease_acquired' | 'collecting' | 'collected' | 'persisting' | 'persisted' | 'lease_released'
 
 /** Backwards-compatible name for the explicit CFPB command wrapper. */
 export type ProductionCfpbCollectionOptions = ProductionCollectionOptions
@@ -246,6 +251,7 @@ export async function runProductionCollection(
   }
   const stableObservedAt = lease.observedAt
   try {
+    options.onPhase?.('lease_acquired')
     if (options.serviceAdmission) {
       const consumed = await serviceAdmissionRepository!.consumeForService(
         effectiveRequest.workspaceId,
@@ -274,6 +280,7 @@ export async function runProductionCollection(
           : {})
     }
     const connector = createProductionConnector(connectorOptions)
+    options.onPhase?.('collecting')
     const collected = await connector.collect({
       query: parsedRequest.query,
       limit: effectiveRequest.limit,
@@ -290,8 +297,10 @@ export async function runProductionCollection(
         leaseRepository.assertActive(effectiveRequest.workspaceId, leaseId, requestHash),
       ...(recollectionTarget ? { sourceRecordId: recollectionTarget.sourceRecordId } : {})
     })
+    options.onPhase?.('collected')
     let persisted: ProductionCollectionResult
     try {
+      options.onPhase?.('persisting')
       persisted = await repository.persistWithLease(
         {
           request: effectiveRequest,
@@ -304,6 +313,7 @@ export async function runProductionCollection(
         },
         { leaseId, inputHash: requestHash }
       )
+      options.onPhase?.('persisted')
     } catch (error) {
       if (error instanceof ProductionCollectionLeaseAssertionError) {
         throw new ProductionCollectionReconciliationError(
@@ -321,6 +331,7 @@ export async function runProductionCollection(
         'release_after_persist_failed'
       )
     }
+    options.onPhase?.('lease_released')
     return persisted
   } catch (error) {
     if (error instanceof SourceQuotaReservationReplayError) {

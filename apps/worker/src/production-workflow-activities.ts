@@ -209,7 +209,17 @@ export function createProductionCollectionActivities(pool: Pool): ProductionColl
         const persistence = await runProductionCollection(
           pool,
           productionCollectionRequestFromActivityInput(parsed.input),
-          { observedAt: parsed.occurredAt }
+          {
+            observedAt: parsed.occurredAt,
+            onPhase: (phase) =>
+              emitWorkerEvent({
+                event: 'production_collection_phase',
+                taskQueue: fixtureResearchTaskQueue,
+                workflowId: parsed.execution.workflowId,
+                state: phase,
+                attempt: activityAttempt
+              })
+          }
         )
         const result = productionCollectionWorkflowPersistenceActivityResultSchema.parse({
           persistence,
