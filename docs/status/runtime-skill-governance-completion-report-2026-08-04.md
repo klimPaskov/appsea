@@ -9,8 +9,11 @@ Status: implemented and locally validated; no runtime skill is active.
 - Records carry proposer, evaluator, and approver identities plus immutable
   evaluation and approval evidence.
 - Approval evidence signs the requested permission set and complete review
-  chain with an operator-held HMAC secret. Permission edits, forged status,
-  copied evidence, wrong-registry secrets, and plain objects fail closed.
+  chain with an operator-held HMAC secret. Active and retired transitions also
+  sign their target state, canonical actor/timestamp, transition identifier,
+  and complete review chain. Permission edits, forged status/timestamps/actors,
+  unknown states, copied evidence, wrong-registry secrets, and plain objects
+  fail closed.
 - Privileged permissions require an evaluator and an independent approver;
   proposers cannot evaluate or approve their own skill.
 - The package remains a dormant contract foundation. It is not imported by the
@@ -20,12 +23,13 @@ Status: implemented and locally validated; no runtime skill is active.
 
 - `pnpm --filter @appsea/skill-registry lint`
 - `pnpm --filter @appsea/skill-registry typecheck`
-- `pnpm --filter @appsea/skill-registry test` (4 tests)
+- `pnpm --filter @appsea/skill-registry test` (6 tests)
 
 The tests cover unapproved and forged activation, independent review, persisted
-tamper detection, and rejection of evidence signed by another registry.
+approval/active/retired tamper detection, canonical transition validation,
+malformed signatures, and rejection of evidence signed by another registry.
 
-The latest hosted GitHub Actions run `30923658050` for commit `81004fd` was
+The latest hosted GitHub Actions run `30930177455` for commit `e3d5f69` was
 blocked before repository steps by the account payment/spending-limit gate.
 The local proof above is independent of that hosted billing state.
 

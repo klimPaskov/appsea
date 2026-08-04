@@ -54,13 +54,13 @@ Imported complaints, pages, reports, and model output remain untrusted data;
 they cannot update code, skills, instructions, permissions, or repository
 memory.
 
-The dormant `packages/skill-registry` boundary now records proposer,
-evaluator, and independent approver identities. HMAC evidence covers the
-immutable skill permissions and review chain; plain, tampered, copied, or
-wrong-secret records fail closed during hydration/activation. No worker or
-source connector imports this registry, so no runtime skill or production
-permission became active. A reviewed persistence/identity/audit adapter remains
-open.
+The dormant `packages/skill-registry` boundary now records proposer, evaluator,
+and independent approver identities. HMAC evidence covers the immutable skill
+permissions/review chain and active/retired transition actor, timestamp, state,
+and ID; plain, tampered, copied, unknown-state, or wrong-secret records fail
+closed during hydration/activation. No worker or source connector imports this
+registry, so no runtime skill or production permission became active. A
+reviewed persistence/identity/audit adapter remains open.
 
 Manual owner-import (migration `0089`) is the active non-fixture path: bounded,
 normalized, PII-scrubbed, tenant-private, and represented in Temporal by batch

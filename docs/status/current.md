@@ -73,11 +73,12 @@
 - Native Codex skills: 21 synchronized skills
 - Codex helper agents: 11 bounded agents
 - Runtime skill governance: the dormant registry now records proposer,
-  independent evaluation/approval identities, and HMAC evidence over the
-  immutable permission set; plain, tampered, copied, and wrong-secret records
-  fail closed during hydration/activation. It is not imported by the worker,
-  and authenticated persistence/audit/permission-specific activation remain
-  open.
+  independent evaluation/approval identities, HMAC evidence over the immutable
+  permission set and review chain, and separately signed active/retired
+  transition evidence. Plain, tampered, copied, unknown-state, altered
+  timestamp/actor, and wrong-secret records fail closed during hydration/
+  activation. It is not imported by the worker, and authenticated
+  persistence/audit/permission-specific activation remain open.
 - Project memory: implemented and validated
 - Documentation system: implemented and linked
 - UI references: deterministic sparse desktop/mobile reference sources now include

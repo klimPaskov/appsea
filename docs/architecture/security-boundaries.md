@@ -53,10 +53,13 @@ Approval gates cover source activation, dependency installation, permissions, au
 The dormant runtime skill registry now enforces this gate in code. Registry
 transitions record a proposer, distinct evaluator identities, an independent
 approver, and HMAC evidence over the immutable requested-permission set and
-review chain. Persisted records must be hydrated through the registry before
-activation; plain objects, permission edits, copied evidence, and a different
-registry secret fail closed. The registry is not imported by the worker and
-does not activate sources or grant production permissions.
+review chain. Active and retired transitions additionally sign their state,
+canonical actor/timestamp, transition identifier, and complete review chain.
+Persisted records must be hydrated through the registry before activation;
+plain objects, permission edits, copied evidence, unknown states, altered
+timestamps/actors, and a different registry secret fail closed. The registry is
+not imported by the worker and does not activate sources or grant production
+permissions.
 
 ## Database enforcement
 

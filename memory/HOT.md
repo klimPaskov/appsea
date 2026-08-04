@@ -21,4 +21,6 @@
 - Purge manifests/re-collection never authorize deletion or automatic refetch.
 - Web/worker share fail-closed Temporal config; production requires TLS/API-key/namespace/CA. Maintenance uses `0046` leases/`0052` fencing; direct source commands use `0051`; deployment alerting, role rotation, recovery, and proof remain open.
 - Packaging/desktop boundaries pass CI; provider provisioning, signing, and deployment drills remain open.
-- Runtime skill registry is dormant but now requires independent proposer/evaluator/approver identities and HMAC-bound permission evidence; no worker imports or activates it, and persistence/audit/activation operations remain open.
+- Runtime skill registry is dormant: independent proposer/evaluator/approver,
+  signed review/transition evidence; no worker import/activation, and
+  persistence/audit/policy-specific activation remain open.

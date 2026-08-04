@@ -18,6 +18,26 @@ export interface SkillApprovalEvidence {
   readonly signature: string
 }
 
+export interface SkillActivationInput {
+  readonly transitionId: string
+  readonly activatedBy: string
+  readonly activatedAt: string
+}
+
+export interface SkillActivationEvidence extends SkillActivationInput {
+  readonly signature: string
+}
+
+export interface SkillRetirementInput {
+  readonly transitionId: string
+  readonly retiredBy: string
+  readonly retiredAt: string
+}
+
+export interface SkillRetirementEvidence extends SkillRetirementInput {
+  readonly signature: string
+}
+
 export interface RuntimeSkillRecord {
   readonly id: string
   readonly name: string
@@ -31,6 +51,11 @@ export interface RuntimeSkillRecord {
   readonly approvedBy: string | null
   readonly approval: SkillApprovalEvidence | null
   readonly activatedAt: string | null
+  readonly activatedBy: string | null
+  readonly activation: SkillActivationEvidence | null
+  readonly retiredAt: string | null
+  readonly retiredBy: string | null
+  readonly retirement: SkillRetirementEvidence | null
 }
 
 export interface SkillProposalInput {
@@ -76,6 +101,21 @@ type BrandedRuntimeSkillRecord = RuntimeSkillRecord & {
 
 const actorPattern = /^[a-z0-9][a-z0-9._:/-]{0,127}$/
 const identifierPattern = /^[a-z0-9][a-z0-9._:/-]{0,191}$/
+const signaturePattern = /^[A-Za-z0-9_-]{43}$/
+const skillStatuses = new Set<SkillStatus>([
+  'proposed',
+  'evaluated',
+  'approved',
+  'active',
+  'retired'
+])
+
+function requireStatus(value: unknown): SkillStatus {
+  if (typeof value !== 'string' || !skillStatuses.has(value as SkillStatus)) {
+    throw new SkillGovernanceError('Skill status is invalid')
+  }
+  return value as SkillStatus
+}
 
 function requireIdentifier(value: string, label: string): string {
   if (typeof value !== 'string' || !identifierPattern.test(value)) {
@@ -136,10 +176,26 @@ function sign(secret: Uint8Array, material: unknown): string {
   return createHmac('sha256', secret).update(JSON.stringify(material)).digest('base64url')
 }
 
-function equalSignature(left: string, right: string): boolean {
+function equalSignature(left: unknown, right: unknown): boolean {
+  if (
+    typeof left !== 'string' ||
+    typeof right !== 'string' ||
+    !signaturePattern.test(left) ||
+    !signaturePattern.test(right)
+  ) {
+    return false
+  }
   const leftBytes = Buffer.from(left, 'base64url')
   const rightBytes = Buffer.from(right, 'base64url')
-  return leftBytes.length === rightBytes.length && timingSafeEqual(leftBytes, rightBytes)
+  if (
+    leftBytes.length !== 32 ||
+    rightBytes.length !== 32 ||
+    leftBytes.toString('base64url') !== left ||
+    rightBytes.toString('base64url') !== right
+  ) {
+    return false
+  }
+  return timingSafeEqual(leftBytes, rightBytes)
 }
 
 function staticMaterial(record: RuntimeSkillRecord): Record<string, unknown> {
@@ -182,6 +238,52 @@ function approvalMaterial(record: RuntimeSkillRecord, approval: SkillApprovalEvi
   }
 }
 
+function activationMaterial(
+  record: RuntimeSkillRecord,
+  activation: SkillActivationEvidence
+): Record<string, unknown> {
+  return {
+    kind: 'appsea.skill.activation.v1',
+    state: 'active',
+    ...staticMaterial(record),
+    evaluationIds: record.evaluationIds,
+    evaluatorIds: record.evaluatorIds,
+    evaluationSignatures: record.evaluations.map((evaluation) => evaluation.signature),
+    reviewId: record.approval?.reviewId,
+    approvedBy: record.approval?.approvedBy,
+    approvedAt: record.approval?.approvedAt,
+    approvalSignature: record.approval?.signature,
+    transitionId: activation.transitionId,
+    activatedBy: activation.activatedBy,
+    activatedAt: activation.activatedAt
+  }
+}
+
+function retirementMaterial(
+  record: RuntimeSkillRecord,
+  retirement: SkillRetirementEvidence
+): Record<string, unknown> {
+  return {
+    kind: 'appsea.skill.retirement.v1',
+    state: 'retired',
+    ...staticMaterial(record),
+    evaluationIds: record.evaluationIds,
+    evaluatorIds: record.evaluatorIds,
+    evaluationSignatures: record.evaluations.map((evaluation) => evaluation.signature),
+    reviewId: record.approval?.reviewId,
+    approvedBy: record.approval?.approvedBy,
+    approvedAt: record.approval?.approvedAt,
+    approvalSignature: record.approval?.signature,
+    activationTransitionId: record.activation?.transitionId,
+    activationActor: record.activation?.activatedBy,
+    activationTimestamp: record.activation?.activatedAt,
+    activationSignature: record.activation?.signature,
+    transitionId: retirement.transitionId,
+    retiredBy: retirement.retiredBy,
+    retiredAt: retirement.retiredAt
+  }
+}
+
 function freezeRecord(record: RuntimeSkillRecord): RuntimeSkillRecord {
   const candidate = {
     ...record,
@@ -191,7 +293,9 @@ function freezeRecord(record: RuntimeSkillRecord): RuntimeSkillRecord {
     evaluations: Object.freeze(
       record.evaluations.map((evaluation) => Object.freeze({ ...evaluation }))
     ),
-    approval: record.approval ? Object.freeze({ ...record.approval }) : null
+    approval: record.approval ? Object.freeze({ ...record.approval }) : null,
+    activation: record.activation ? Object.freeze({ ...record.activation }) : null,
+    retirement: record.retirement ? Object.freeze({ ...record.retirement }) : null
   } as RuntimeSkillRecord & { [recordBrand]?: true }
   Object.defineProperty(candidate, recordBrand, {
     configurable: false,
@@ -204,6 +308,8 @@ function freezeRecord(record: RuntimeSkillRecord): RuntimeSkillRecord {
 
 function isBrandedRecord(record: RuntimeSkillRecord): record is BrandedRuntimeSkillRecord {
   return (
+    !!record &&
+    typeof record === 'object' &&
     Object.isFrozen(record) &&
     (record as RuntimeSkillRecord & { [recordBrand]?: true })[recordBrand] === true
   )
@@ -276,11 +382,52 @@ function verifyApproval(record: RuntimeSkillRecord, secret: Uint8Array): boolean
   return equalSignature(approval.signature, sign(secret, approvalMaterial(record, approval)))
 }
 
+function verifyActivation(record: RuntimeSkillRecord, secret: Uint8Array): boolean {
+  const activation = record.activation
+  if (
+    !activation ||
+    record.activatedAt !== activation.activatedAt ||
+    record.activatedBy !== activation.activatedBy
+  ) {
+    return false
+  }
+  try {
+    requireIdentifier(activation.transitionId, 'Activation transition id')
+    requireActor(activation.activatedBy, 'Activation actor')
+    requireTimestamp(activation.activatedAt, 'Activation timestamp')
+  } catch {
+    return false
+  }
+  if (!record.approval || !verifyApproval(record, secret)) return false
+  return equalSignature(activation.signature, sign(secret, activationMaterial(record, activation)))
+}
+
+function verifyRetirement(record: RuntimeSkillRecord, secret: Uint8Array): boolean {
+  const retirement = record.retirement
+  if (
+    !retirement ||
+    record.retiredAt !== retirement.retiredAt ||
+    record.retiredBy !== retirement.retiredBy
+  ) {
+    return false
+  }
+  try {
+    requireIdentifier(retirement.transitionId, 'Retirement transition id')
+    requireActor(retirement.retiredBy, 'Retirement actor')
+    requireTimestamp(retirement.retiredAt, 'Retirement timestamp')
+  } catch {
+    return false
+  }
+  if (!verifyActivation(record, secret)) return false
+  return equalSignature(retirement.signature, sign(secret, retirementMaterial(record, retirement)))
+}
+
 function validateHydratedRecord(record: RuntimeSkillRecord, secret: Uint8Array): void {
   requireIdentifier(record.id, 'Skill id')
   requireIdentifier(record.name, 'Skill name')
   requireVersion(record.version)
   requireActor(record.proposedBy, 'Skill proposer')
+  const status = requireStatus(record.status)
   normalizePermissions(record.requestedPermissions)
   if (record.evaluationIds.length !== record.evaluatorIds.length) {
     throw new SkillGovernanceError('Skill evaluation evidence is inconsistent')
@@ -288,26 +435,57 @@ function validateHydratedRecord(record: RuntimeSkillRecord, secret: Uint8Array):
   if (!verifyEvaluationChain(record, secret)) {
     throw new SkillGovernanceError('Skill evaluation evidence is invalid')
   }
-  if (record.status === 'proposed' && record.evaluationIds.length !== 0) {
+  if (status === 'proposed' && record.evaluationIds.length !== 0) {
     throw new SkillGovernanceError('Proposed skills cannot contain evaluation evidence')
   }
-  if (record.status === 'evaluated' && record.evaluationIds.length === 0) {
+  if (status === 'evaluated' && record.evaluationIds.length === 0) {
     throw new SkillGovernanceError('Evaluated skills require evaluation evidence')
   }
-  if (record.status === 'proposed' || record.status === 'evaluated') {
-    if (record.approvedBy !== null || record.approval !== null || record.activatedAt !== null) {
+  if (status === 'proposed' || status === 'evaluated') {
+    if (
+      record.approvedBy !== null ||
+      record.approval !== null ||
+      record.activatedAt !== null ||
+      record.activatedBy !== null ||
+      record.activation !== null ||
+      record.retiredAt !== null ||
+      record.retiredBy !== null ||
+      record.retirement !== null
+    ) {
       throw new SkillGovernanceError('Unapproved skills cannot contain approval evidence')
+    }
+    return
+  }
+  if (status === 'approved') {
+    if (!record.approval || !record.approvedBy || !verifyApproval(record, secret)) {
+      throw new SkillGovernanceError('Skill approval evidence is invalid')
+    }
+    if (
+      record.activatedAt !== null ||
+      record.activatedBy !== null ||
+      record.activation !== null ||
+      record.retiredAt !== null ||
+      record.retiredBy !== null ||
+      record.retirement !== null
+    ) {
+      throw new SkillGovernanceError('Approved skills cannot have activation evidence')
     }
     return
   }
   if (!record.approval || !record.approvedBy || !verifyApproval(record, secret)) {
     throw new SkillGovernanceError('Skill approval evidence is invalid')
   }
-  if ((record.status === 'active' || record.status === 'retired') && !record.activatedAt) {
-    throw new SkillGovernanceError('Active skills require an activation timestamp')
+  if (!record.activatedAt || !record.activatedBy || !verifyActivation(record, secret)) {
+    throw new SkillGovernanceError('Active skills require valid activation evidence')
   }
-  if (record.status === 'approved' && record.activatedAt !== null) {
-    throw new SkillGovernanceError('Approved skills cannot have an activation timestamp')
+  if (status === 'active') {
+    if (record.retiredAt !== null || record.retiredBy !== null || record.retirement !== null) {
+      throw new SkillGovernanceError('Active skills cannot have retirement evidence')
+    }
+    return
+  }
+  if (!record.retiredAt || !record.retiredBy || !verifyRetirement(record, secret)) {
+    throw new SkillGovernanceError('Retired skills require valid retirement evidence')
   }
 }
 
@@ -334,15 +512,79 @@ export function canActivateSkill(
 
 export function activateSkill(
   record: RuntimeSkillRecord,
-  activatedAt: string,
+  input: SkillActivationInput,
   signingSecret?: SkillRegistrySecret
 ): RuntimeSkillRecord {
   if (signingSecret === undefined || !canActivateSkill(record, signingSecret)) {
     throw new SkillGovernanceError('Skill is not approved with valid review evidence')
   }
-  requireTimestamp(activatedAt, 'Activation timestamp')
+  if (!input || typeof input !== 'object') {
+    throw new SkillGovernanceError('Activation input is invalid')
+  }
+  const secret = secretBytes(signingSecret)
+  const transitionId = requireIdentifier(input.transitionId, 'Activation transition id')
+  const activatedBy = requireActor(input.activatedBy, 'Activation actor')
+  const activatedAt = requireTimestamp(input.activatedAt, 'Activation timestamp')
   assertRecord(record)
-  return freezeRecord({ ...record, status: 'active', activatedAt })
+  const activation: SkillActivationEvidence = {
+    transitionId,
+    activatedBy,
+    activatedAt,
+    signature: sign(
+      secret,
+      activationMaterial(
+        { ...record, status: 'active', activatedAt, activatedBy },
+        { transitionId, activatedBy, activatedAt, signature: '' }
+      )
+    )
+  }
+  return freezeRecord({
+    ...record,
+    status: 'active',
+    activatedAt,
+    activatedBy,
+    activation,
+    retiredAt: null,
+    retiredBy: null,
+    retirement: null
+  })
+}
+
+export function retireSkill(
+  record: RuntimeSkillRecord,
+  input: SkillRetirementInput,
+  signingSecret?: SkillRegistrySecret
+): RuntimeSkillRecord {
+  if (signingSecret === undefined) {
+    throw new SkillGovernanceError('Skill registry signing secret is required')
+  }
+  if (!input || typeof input !== 'object') {
+    throw new SkillGovernanceError('Retirement input is invalid')
+  }
+  assertRecord(record)
+  if (record.status !== 'active') {
+    throw new SkillGovernanceError('Only active skills can be retired')
+  }
+  const secret = secretBytes(signingSecret)
+  if (!verifyActivation(record, secret)) {
+    throw new SkillGovernanceError('Skill is not active with valid activation evidence')
+  }
+  const transitionId = requireIdentifier(input.transitionId, 'Retirement transition id')
+  const retiredBy = requireActor(input.retiredBy, 'Retirement actor')
+  const retiredAt = requireTimestamp(input.retiredAt, 'Retirement timestamp')
+  const retirement: SkillRetirementEvidence = {
+    transitionId,
+    retiredBy,
+    retiredAt,
+    signature: sign(
+      secret,
+      retirementMaterial(
+        { ...record, status: 'retired', retiredAt, retiredBy },
+        { transitionId, retiredBy, retiredAt, signature: '' }
+      )
+    )
+  }
+  return freezeRecord({ ...record, status: 'retired', retiredAt, retiredBy, retirement })
 }
 
 /**
@@ -375,7 +617,12 @@ export class SkillRegistry {
       evaluations: [],
       approvedBy: null,
       approval: null,
-      activatedAt: null
+      activatedAt: null,
+      activatedBy: null,
+      activation: null,
+      retiredAt: null,
+      retiredBy: null,
+      retirement: null
     })
   }
 
@@ -449,9 +696,14 @@ export class SkillRegistry {
     })
   }
 
-  activate(record: RuntimeSkillRecord, activatedAt: string): RuntimeSkillRecord {
+  activate(record: RuntimeSkillRecord, input: SkillActivationInput): RuntimeSkillRecord {
     const current = this.hydrate(record)
-    return activateSkill(current, activatedAt, this.signingSecret)
+    return activateSkill(current, input, this.signingSecret)
+  }
+
+  retire(record: RuntimeSkillRecord, input: SkillRetirementInput): RuntimeSkillRecord {
+    const current = this.hydrate(record)
+    return retireSkill(current, input, this.signingSecret)
   }
 
   hydrate(record: RuntimeSkillRecord): RuntimeSkillRecord {
@@ -471,7 +723,13 @@ export class SkillRegistry {
       evaluationIds: [...record.evaluationIds],
       evaluatorIds: [...record.evaluatorIds],
       evaluations: record.evaluations.map((evaluation) => ({ ...evaluation })),
-      approval: record.approval ? { ...record.approval } : null
+      approval: record.approval ? { ...record.approval } : null,
+      activatedAt: record.activatedAt ?? null,
+      activatedBy: record.activatedBy ?? null,
+      activation: record.activation ? { ...record.activation } : null,
+      retiredAt: record.retiredAt ?? null,
+      retiredBy: record.retiredBy ?? null,
+      retirement: record.retirement ? { ...record.retirement } : null
     }
     validateHydratedRecord(candidate, this.signingSecret)
     return freezeRecord(candidate)

@@ -485,10 +485,11 @@ and platform release tests remain open.
 
 The runtime skill registry and agent memory remain contract foundations and do
 not run an autonomous production coding loop. The registry now requires
-independent proposer/evaluator/approver identities and signed immutable review
-evidence before a record can be hydrated or activated. A reviewed persistence
-adapter, authenticated operator identity, audit storage, and permission-specific
-activation operation are still required before any runtime skill can be active.
+independent proposer/evaluator/approver identities plus signed immutable review
+and active/retired transition evidence; altered status, actor, timestamp, or
+unknown-state records fail closed. A reviewed persistence/identity/audit
+adapter, permission-specific activation policy, and explicit operator operation
+remain open before any runtime skill can be active.
 
 ## Durable workflow proof
 

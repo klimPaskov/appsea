@@ -14,9 +14,12 @@ Runtime skills move through registry-owned transitions:
 The registry records a canonical proposer, distinct evaluator identities, and
 an independent approver. Evaluation and approval records carry HMAC evidence
 over the immutable skill identity, requested permissions, and the preceding
-review chain. Persisted records must be hydrated through the registry before
-activation; plain or tampered objects fail closed. Permission changes require
-a new proposal and new review chain.
+review chain. Activation and retirement are also registry-owned transitions:
+their actor, canonical timestamp, transition identifier, target state, and the
+complete review chain are signed as immutable evidence. Persisted records must
+be hydrated through the registry before activation; plain or tampered objects,
+unknown states, and unsigned or altered transitions fail closed. Permission
+changes require a new proposal and new review chain.
 
 The registry signing secret is an operator-owned secret. It is not stored in a
 skill record, workflow history, imported content, or generated report.
@@ -33,6 +36,8 @@ hydrated and activated under the wrong registry secret.
 ## Consequences
 
 - Runtime agents still cannot autonomously approve or activate skills.
+- Active and retired records carry signed transition evidence; changing only
+  `status`, timestamps, or actor fields cannot create a valid persisted state.
 - An approval service must provide the signing secret and retain review
   identity/audit records outside the skill payload.
 - A future database adapter must persist the immutable evidence fields and
