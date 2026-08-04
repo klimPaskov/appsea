@@ -67,7 +67,7 @@ normalized, PII-scrubbed, tenant-private, and represented in Temporal by batch
 ID only. Local smoke covers intake, durable completion, reviewed analysis,
 private report/plan readback, and the visible public-market gap; URL fetching and
 public sources remain disabled. Migrations `0090`-`0096` keep policy/deletion/
-privilege surfaces narrow; local PostgreSQL/Temporal, worker replacement,
+privilege surfaces narrow; local PostgreSQL/Temporal/MinIO S3, worker replacement,
 private-stack pages, and backup/restore through 96 pass. Provider-encrypted
 backups, HA, and restore/failover remain deployment-owned.
 

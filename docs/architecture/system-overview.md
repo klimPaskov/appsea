@@ -39,6 +39,9 @@ approval/export governance separate; migration `0032` adds an
 editor/owner complaint-review boundary before downstream analysis. Complaint
 IDs are never used as evidence IDs. Provider encryption, versioning, backup
 deletion, and deployment credentials remain separate operational approval gates.
+The loopback private stack now exercises the signed adapter against a disposable
+MinIO bucket; this is local compatibility proof, not evidence of provider
+encryption, versioning, backup, or deletion controls.
 Migration `0033` adds an immutable workspace seed-review registry with
 editor/owner approval transitions; analysis start and persistence both resolve
 and verify approved seed content by ID, version, and hash.

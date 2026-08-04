@@ -12,13 +12,15 @@ const localMigrationDatabaseUrl =
   'postgres://appsea_migrator:appsea-migrator-local-only@127.0.0.1:5433/appsea'
 
 const cloudObjectStoreKeys = [
+  'APPSEA_OBJECT_STORE_ROOT',
   'APPSEA_OBJECT_STORE_ENDPOINT',
   'APPSEA_OBJECT_STORE_BUCKET',
   'APPSEA_OBJECT_STORE_REGION',
   'APPSEA_OBJECT_STORE_ACCESS_KEY_ID',
   'APPSEA_OBJECT_STORE_SECRET_ACCESS_KEY',
   'APPSEA_OBJECT_STORE_SESSION_TOKEN',
-  'APPSEA_OBJECT_STORE_FORCE_PATH_STYLE'
+  'APPSEA_OBJECT_STORE_FORCE_PATH_STYLE',
+  'APPSEA_OBJECT_STORE_ALLOW_INSECURE_LOCALHOST'
 ]
 
 const remoteBoundaryKeys = [
@@ -63,7 +65,13 @@ export function localEnvironment(parent = process.env) {
     APPSEA_DATABASE_APPLICATION_NAME: 'appsea-local',
     APPSEA_TEMPORAL_ADDRESS: '127.0.0.1:7233',
     APPSEA_TEMPORAL_NAMESPACE: 'default',
-    APPSEA_OBJECT_STORE_ROOT: path.join(repositoryRoot, '.appsea-object-store'),
+    APPSEA_OBJECT_STORE_ENDPOINT: 'http://127.0.0.1:9000',
+    APPSEA_OBJECT_STORE_BUCKET: 'appsea-local',
+    APPSEA_OBJECT_STORE_REGION: 'us-east-1',
+    APPSEA_OBJECT_STORE_ACCESS_KEY_ID: 'appsea-local-access',
+    APPSEA_OBJECT_STORE_SECRET_ACCESS_KEY: 'appsea-local-secret',
+    APPSEA_OBJECT_STORE_FORCE_PATH_STYLE: 'true',
+    APPSEA_OBJECT_STORE_ALLOW_INSECURE_LOCALHOST: 'true',
     APPSEA_PUBLIC_ORIGIN: 'http://localhost:3000',
     APPSEA_AUTH_RECOVERY_ENABLED: 'false',
     APPSEA_AUTH_INVITATIONS_ENABLED: 'false',
@@ -193,9 +201,10 @@ async function runMigration(environment) {
 export function printHelp() {
   console.log(`AppSea local private-workspace stack
 
-Starts the existing loopback PostgreSQL and Temporal services, applies forward
-migrations with the dedicated local migrator role, then runs the web app and
-durable worker in development mode.
+Starts the existing loopback PostgreSQL, Temporal, and MinIO services, creates
+the local S3-compatible bucket, applies forward migrations with the dedicated
+local migrator role, then runs the web app and durable worker in development
+mode.
 
 Usage: pnpm dev:local [--dry-run]
 
@@ -217,16 +226,21 @@ async function main() {
       JSON.stringify(
         {
           composeFile,
-          services: ['postgres', 'temporal'],
+          services: ['postgres', 'temporal', 'minio', 'minio-init'],
           commands: [
-            'docker compose up -d postgres temporal',
+            'docker compose up -d postgres temporal minio',
+            'docker compose run --rm --no-deps minio-init',
             'pnpm db:migrate',
             'pnpm --filter @appsea/worker workflow:worker',
             'pnpm dev:web'
           ],
-          endpoints: { web: 'http://localhost:3000', temporal: '127.0.0.1:7233' },
+          endpoints: {
+            web: 'http://localhost:3000',
+            temporal: '127.0.0.1:7233',
+            objectStore: 'http://127.0.0.1:9000'
+          },
           databaseHost: '127.0.0.1:5433',
-          objectStore: 'loopback filesystem',
+          objectStore: 'loopback signed S3 (MinIO)',
           nodeEnvironment: environment.NODE_ENV
         },
         null,
@@ -236,17 +250,21 @@ async function main() {
     return
   }
 
-  await run('docker', ['compose', '-f', composeFile, 'up', '-d', 'postgres', 'temporal'])
-  await waitForService(
-    'postgres',
-    ['pg_isready', '-U', 'appsea_migrator', '-d', 'appsea'],
-    'PostgreSQL'
-  )
-  await waitForService(
-    'temporal',
-    ['temporal', 'operator', 'cluster', 'health', '--address', '127.0.0.1:7233'],
-    'Temporal'
-  )
+  await run('docker', ['compose', '-f', composeFile, 'up', '-d', 'postgres', 'temporal', 'minio'])
+  await Promise.all([
+    waitForService(
+      'postgres',
+      ['pg_isready', '-U', 'appsea_migrator', '-d', 'appsea'],
+      'PostgreSQL'
+    ),
+    waitForService(
+      'temporal',
+      ['temporal', 'operator', 'cluster', 'health', '--address', '127.0.0.1:7233'],
+      'Temporal'
+    ),
+    waitForService('minio', ['curl', '-fsS', 'http://127.0.0.1:9000/minio/health/ready'], 'MinIO')
+  ])
+  await run('docker', ['compose', '-f', composeFile, 'run', '--rm', '--no-deps', 'minio-init'])
   await runMigration(environment)
 
   const children = [

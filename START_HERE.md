@@ -20,8 +20,9 @@ Open `http://localhost:3000` after the web server starts.
 
 The command above runs the public fixture website. To exercise the private
 workspace path locally, run `pnpm dev:local`; it starts the existing loopback
-PostgreSQL/Temporal services, applies migrations, and starts the durable worker
-and web process. See [`docs/runbooks/local-stack.md`](docs/runbooks/local-stack.md).
+PostgreSQL/Temporal/MinIO services, initializes the local S3-compatible bucket,
+applies migrations, and starts the durable worker and web process. See
+[`docs/runbooks/local-stack.md`](docs/runbooks/local-stack.md).
 The disposable integration smoke is `pnpm verify:local-stack`.
 
 ## What works
@@ -31,7 +32,8 @@ The disposable integration smoke is `pnpm verify:local-stack`.
 - a sparse leaderboard website
 - separate opportunity, complaint, competitor, and plan pages
 - coding-agent plan package generation
-- content-addressed object-reference storage seam with deterministic local/test adapters
+- content-addressed object-reference storage seam with deterministic local/test
+  adapters, including signed S3-compatible MinIO coverage in the private local stack
 - PostgreSQL migrations, normalized fixture persistence, RLS, lineage, and replay verification
 - editor/owner field-level evidence redaction with immutable receipts, provenance-preserving masks, and private report/analysis read projections
 - durable fixture workflow with PostgreSQL checkpoints, bounded retries, budgets, cancellation, and Temporal restart/replay proof

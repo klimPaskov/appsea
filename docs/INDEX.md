@@ -197,3 +197,4 @@
 - [`status/workspace-purge-readiness-completion-report-2026-08-02.md`](status/workspace-purge-readiness-completion-report-2026-08-02.md)
 - [`status/workspace-purge-intent-completion-report-2026-08-03.md`](status/workspace-purge-intent-completion-report-2026-08-03.md)
 - [`status/operational-alert-routing-completion-report-2026-08-03.md`](status/operational-alert-routing-completion-report-2026-08-03.md)
+- [`status/local-s3-object-store-completion-report-2026-08-04.md`](status/local-s3-object-store-completion-report-2026-08-04.md)

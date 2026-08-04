@@ -39,7 +39,8 @@ Implemented:
   forced workspace RLS plus runtime/maintenance privileges without accepting a
   remote URL
 - one-command loopback private-workspace stack with migration, worker, and web
-  startup (`pnpm dev:local`)
+  startup (`pnpm dev:local`), including disposable MinIO bucket initialization
+  and signed S3-compatible object-store configuration
 - end-to-end loopback stack smoke (`pnpm verify:local-stack`) covering
   dependency readiness, migrations, worker/web startup, authenticated
   private-workspace signup, owner-authorized manual intake through durable

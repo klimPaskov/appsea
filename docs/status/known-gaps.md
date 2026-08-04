@@ -110,6 +110,11 @@ policy review.
 
 The PostgreSQL schema, repository, migrations, RLS, local role bootstrap, and CI integration suite exist. `pnpm production:preflight` now rejects missing or role-confused production URLs, insecure endpoints, incomplete Temporal/object-store settings, unsafe delivery switches, and missing operational alert routing before startup. The local-only `pnpm verify:backup-restore` drill verifies a disposable dump through the checked-in schema and role boundary, but production role provisioning, secrets, verified TLS trust, encrypted/versioned backups, high availability, deployment, live dependency proof, and migration approval automation do not.
 
+The disposable local stack now exercises the signed S3-compatible adapter against
+MinIO and proves bucket initialization plus private artifact readback. This is
+not provider encryption, high-availability, backup, lifecycle, or deletion
+evidence; those controls remain deployment-owned.
+
 The fixture and production-collection workflow boundaries are durable locally
 and in CI. Web and worker clients now fail closed and support a non-loopback
 Temporal endpoint with namespace, API-key, and pinned-CA settings. A local

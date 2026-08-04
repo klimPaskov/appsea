@@ -39,6 +39,51 @@ services:
     volumes:
       - appsea-temporal-data:/home/temporal
 
+  minio:
+    image: minio/minio:RELEASE.2025-04-08T15-41-24Z
+    command:
+      - server
+      - /data
+      - --console-address
+      - ':9001'
+    environment:
+      MINIO_ROOT_USER: appsea-local-access
+      MINIO_ROOT_PASSWORD: appsea-local-secret
+    ports:
+      - '127.0.0.1:9000:9000'
+      - '127.0.0.1:9001:9001'
+    healthcheck:
+      test: ['CMD-SHELL', 'curl -fsS http://127.0.0.1:9000/minio/health/ready || exit 1']
+      interval: 2s
+      timeout: 3s
+      retries: 30
+      start_period: 2s
+    volumes:
+      - appsea-minio-data:/data
+
+  minio-init:
+    image: minio/mc:RELEASE.2025-04-08T15-39-49Z
+    environment:
+      MINIO_ROOT_USER: appsea-local-access
+      MINIO_ROOT_PASSWORD: appsea-local-secret
+    depends_on:
+      minio:
+        condition: service_healthy
+    entrypoint: ['/bin/sh', '-ec']
+    command:
+      - |
+        for attempt in $(seq 1 30); do
+          if mc alias set appsea http://minio:9000 "$$MINIO_ROOT_USER" "$$MINIO_ROOT_PASSWORD" --api S3v4 \
+            && mc mb --ignore-existing appsea/appsea-local; then
+            exit 0
+          fi
+          sleep 1
+        done
+        echo 'MinIO bucket initialization did not complete within 30 attempts.' >&2
+        exit 1
+    restart: 'no'
+
 volumes:
   appsea-postgres-data:
   appsea-temporal-data:
+  appsea-minio-data:
