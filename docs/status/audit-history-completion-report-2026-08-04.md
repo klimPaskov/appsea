@@ -27,6 +27,9 @@ remain open.
   migrations.
 - `pnpm verify:backup-restore`: 98 migrations restored through `0098`; runtime
   privilege and forced-RLS checks passed.
+- Hosted GitHub Actions run `30937547208` was not started because the account
+  payment/spending-limit gate is unresolved; local verification is the
+  available implementation proof until that external gate is cleared.
 
 ## Boundaries and simplifications
 
