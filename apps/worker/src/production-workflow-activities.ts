@@ -43,6 +43,32 @@ function boundedErrorField(error: unknown, field: string): string | undefined {
   return /^[a-zA-Z0-9_.:-]{1,80}$/.test(value) ? value : undefined
 }
 
+/**
+ * PostgreSQL trigger and permission errors may carry identifiers in their
+ * message. Keep diagnostics useful without emitting source, workspace, or
+ * record identifiers into worker events.
+ */
+function boundedErrorMessageClass(error: unknown): string | undefined {
+  if (typeof error !== 'object' || error === null || !('message' in error)) return undefined
+  const message = String((error as Record<string, unknown>).message).toLowerCase()
+  const classes: Array<[string, string]> = [
+    ['source policy is not collectible', 'source_policy_not_collectible'],
+    ['evidence representation is not allowed', 'evidence_representation_not_allowed'],
+    ['evidence representation or redaction state is not allowed', 'evidence_redaction_not_allowed'],
+    ['manual import consumption transition is invalid', 'manual_import_transition_invalid'],
+    ['manual import batch is unavailable', 'manual_import_batch_unavailable'],
+    ['manual import source policy or attestation is invalid', 'manual_import_attestation_invalid'],
+    ['manual batch lineage does not match', 'manual_import_lineage_mismatch'],
+    ['source quota workspace context is not authorized', 'source_quota_workspace_unauthorized'],
+    ['source policy does not permit quota reservation', 'source_quota_policy_denied'],
+    ['source policy quota metadata is incomplete', 'source_quota_metadata_incomplete'],
+    ['permission denied for table', 'postgres_table_permission_denied'],
+    ['permission denied for relation', 'postgres_relation_permission_denied'],
+    ['row-level security policy', 'postgres_row_security_denied']
+  ]
+  return classes.find(([needle]) => message.includes(needle))?.[1]
+}
+
 function productionFailureContext(error: unknown): string | undefined {
   const fields = [
     boundedErrorField(error, 'name'),
@@ -50,7 +76,8 @@ function productionFailureContext(error: unknown): string | undefined {
     boundedErrorField(error, 'table'),
     boundedErrorField(error, 'column'),
     boundedErrorField(error, 'constraint'),
-    boundedErrorField(error, 'reason')
+    boundedErrorField(error, 'reason'),
+    boundedErrorMessageClass(error)
   ].filter((value): value is string => Boolean(value))
   return fields.length > 0 ? fields.join(':') : undefined
 }

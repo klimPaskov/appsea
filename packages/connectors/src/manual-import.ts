@@ -488,7 +488,10 @@ export class ManualImportConnector implements SourceConnector {
       sourceId: this.sourceId,
       policyVersion: request.policyVersion,
       runId: request.runId,
-      idempotencyKey: `quota-key:${digest}`,
+      // The database quota boundary accepts only the canonical 64-hex
+      // digest; the source identity and request material are already part of
+      // this domain-separated digest.
+      idempotencyKey: digest,
       reservationId: `quota:${this.sourceId}:${digest.slice(0, 48)}`,
       requestedRecords: request.limit,
       requestedCostMicros: this.policy.quota.costPerRequestMicros,
@@ -534,7 +537,9 @@ export class ManualImportConnector implements SourceConnector {
   }
 
   async collect(request: CollectionRequest): Promise<ConnectorResult> {
+    request.onPhase?.('policy_checking')
     assertPolicyAllowsCollection(this.policy, request)
+    request.onPhase?.('policy_allowed')
     if (!request.manualImportBatchId) {
       throw new Error('Manual import collection requires a staged batch identifier')
     }
@@ -542,10 +547,12 @@ export class ManualImportConnector implements SourceConnector {
       throw new Error('Manual import collection requires workspace, run, and policy identifiers')
     }
     const reservation = await this.reserveQuota(request)
+    request.onPhase?.('quota_reserved')
     try {
       if (request.beforeRequest && !(await request.beforeRequest())) {
         throw new SourceCollectionPreflightDeniedError()
       }
+      request.onPhase?.('preflight_passed')
       const loaded = await this.batchReader.readForCollection({
         workspaceId: request.workspaceId,
         batchId: request.manualImportBatchId,
@@ -553,6 +560,7 @@ export class ManualImportConnector implements SourceConnector {
         runId: request.runId,
         limit: request.limit
       })
+      request.onPhase?.('batch_read')
       const records = loaded.records.slice(0, request.limit)
       const warnings = [...manualImportWarnings, ...loaded.warnings]
       if (loaded.records.length > records.length) {
@@ -573,7 +581,9 @@ export class ManualImportConnector implements SourceConnector {
       if (malformedCount > 0) {
         warnings.push(`${malformedCount} staged records were skipped after contract validation.`)
       }
+      request.onPhase?.('normalized')
       const costMicros = await this.settleQuota(request, reservation, complaints.length)
+      request.onPhase?.('quota_committed')
       return {
         policy: this.policy,
         complaints,

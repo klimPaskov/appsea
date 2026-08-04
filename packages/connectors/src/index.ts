@@ -70,7 +70,18 @@ export interface CollectionRequest {
    * request or settling the reserved quota.
    */
   beforeRequest?: () => Promise<boolean>
+  /** Secret-free connector phase telemetry for the durable worker boundary. */
+  onPhase?: (phase: CollectionPhase) => void
 }
+
+export type CollectionPhase =
+  | 'policy_checking'
+  | 'policy_allowed'
+  | 'quota_reserved'
+  | 'preflight_passed'
+  | 'batch_read'
+  | 'normalized'
+  | 'quota_committed'
 
 export interface SourceQuotaReservationInput {
   workspaceId: string
@@ -724,7 +735,10 @@ export class StackExchangeConnector implements SourceConnector {
       sourceId: this.sourceId,
       policyVersion: request.policyVersion,
       runId: request.runId,
-      idempotencyKey: `quota-key:${digest}`,
+      // The database quota boundary accepts only the canonical 64-hex
+      // digest; the source identity and request material are already part of
+      // this domain-separated digest.
+      idempotencyKey: digest,
       reservationId: `quota:${this.sourceId}:${digest.slice(0, 48)}`,
       requestedRecords: request.limit,
       requestedCostMicros: this.policy.quota.costPerRequestMicros,
@@ -1163,7 +1177,10 @@ export class CfpbConnector implements SourceConnector {
       sourceId: this.sourceId,
       policyVersion: request.policyVersion,
       runId: request.runId,
-      idempotencyKey: `quota-key:${digest}`,
+      // The database quota boundary accepts only the canonical 64-hex
+      // digest; the source identity and request material are already part of
+      // this domain-separated digest.
+      idempotencyKey: digest,
       reservationId: `quota:${this.sourceId}:${digest.slice(0, 48)}`,
       requestedRecords: request.limit,
       requestedCostMicros: this.policy.quota.costPerRequestMicros,

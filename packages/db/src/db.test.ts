@@ -105,7 +105,9 @@ describe('database foundation', () => {
       '0089',
       '0090',
       '0091',
-      '0092'
+      '0092',
+      '0093',
+      '0094'
     ])
     expect(migrations[0]?.checksum).toMatch(/^[a-f0-9]{64}$/)
     expect(migrations[0]?.sql).toContain('CREATE TABLE appsea.evidence_records')
@@ -257,6 +259,21 @@ describe('database foundation', () => {
     )
     expect(campaignSourcePrivilegeMigration?.sql).toContain('GRANT SELECT ON appsea.sources')
     expect(campaignSourcePrivilegeMigration?.sql).toContain('appsea.source_policy_versions')
+    const sourceQuotaReservationQualificationMigration = migrations.find(
+      (migration) => migration.version === '0093'
+    )
+    expect(sourceQuotaReservationQualificationMigration?.sql).toContain(
+      'sum(reservation.requested_records)'
+    )
+    expect(sourceQuotaReservationQualificationMigration?.sql).toContain(
+      "reservation.status IN ('reserved', 'committed')"
+    )
+    const productionRunSnapshotPrivilegeMigration = migrations.find(
+      (migration) => migration.version === '0094'
+    )
+    expect(productionRunSnapshotPrivilegeMigration?.sql).toContain(
+      'GRANT UPDATE (artifact_snapshot) ON appsea.research_runs'
+    )
     const authMigration = migrations.find((migration) => migration.version === '0008')
     const privacyMigration = migrations.find((migration) => migration.version === '0009')
     const retentionMigration = migrations.find((migration) => migration.version === '0010')

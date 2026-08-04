@@ -25,7 +25,7 @@ Status: production-shaped foundation implemented and validated locally; producti
 
 Implemented:
 
-- PostgreSQL 18 schema and ninety-one forward, checksummed migrations
+- PostgreSQL 18 schema and ninety-four forward, checksummed migrations
 - normalized source, evidence, complaint, cluster, competitor, opportunity, score, report, plan, audit, cost, deletion, outbox, and lineage tables
 - no-login owner, separate migrator, and least-privilege runtime role contract
 - forced workspace RLS and transaction-scoped workspace context
@@ -166,7 +166,7 @@ metadata-only batch history, collection follow-up, and deletion action while
 leaving the public leaderboard unchanged.
 The PostgreSQL integration suite also exercises the staged/replayed/consumed/
 deleted lifecycle, forced-RLS owner boundary, payload clearing, and tombstone
-propagation; local execution remains Docker-blocked.
+propagation; the fresh local Docker stack now runs this smoke path successfully.
 The worker activity reconstruction preserves the staged batch identifier when
 Temporal invokes the identifier-only persistence boundary, with a regression
 test covering the owner-import path.
@@ -178,6 +178,10 @@ an already-consumed owner batch is later deleted.
 Migration `0092_campaign_source_read_privileges.sql` explicitly grants the
 runtime service role the source and reviewed-policy reads required by private
 campaign admission.
+Migration `0093_source_quota_reservation_column_qualification.sql` qualifies
+quota reservation columns that collided with function OUT parameters.
+Migration `0094_production_run_snapshot_update_privilege.sql` grants the worker
+the narrow finalization update for `research_runs.artifact_snapshot`.
 
 Remaining deployment work and the non-fixture object-store integration are
 tracked in `docs/status/known-gaps.md` and are not part of the completed

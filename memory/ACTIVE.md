@@ -9,24 +9,15 @@ sparse; no third-party public source is enabled. A reviewed internal
 `manual-owner-import` policy now supports tenant-private owner-authorized CSV/
 JSON intake without claiming public market coverage.
 
-Migrations `0027`-`0092` cover policy evidence, checkpoints,
+Migrations `0027`-`0094` cover policy evidence, checkpoints,
 deletion/recomputation repair, leases, admissions, campaign orchestration and
 cancellation, source reconciliation, analysis history, report/plan governance,
 cost and alert projections, object references, workspace archival/purge intent/
 manifest,
 field-level evidence redaction, agent access tokens, and global-auth TOTP MFA.
-Migration `0081` adds a session-bound MFA step-up marker. Password-gated
-high-risk mutations require recent password step-up plus a fresh MFA proof when
-MFA is enabled; this covers account/session, membership/invitation, archival,
-purge-intent, evidence-redaction, and agent-token issue/revoke. The MCP surface
-remains read-only. Migration `0086` versions encrypted TOTP ciphertext with a
-current/previous-key deployment window; successful TOTP verification and
-pending-enrollment confirmation rewrap to the current key, while
-`pnpm worker:auth:mfa:rotation:status` reports count-only current/previous/
-unknown rows. `pnpm worker:auth:mfa:rotation:rewrap` now performs one
-lease-owned, bounded dormant-account batch with fail-closed unknown-version
-handling and identifier-only audit events. Previous-key removal still requires
-operator review and live deployment evidence.
+MFA step-up, encrypted TOTP key rotation, recovery-code handling, OIDC, and
+read-only MCP access are implemented with external provider/deployment gates;
+previous-key removal still requires operator review.
 
 The fixture workflow is the complete persisted path. Production collection and
 analysis v2 are policy-gated/replay-safe; CFPB and Stack Exchange remain
@@ -46,18 +37,10 @@ sanitized history. Its
 pause is bounded and production-rejected; hosted restore/failover and topology
 proof remain open.
 
-Authentication uses scrypt password hashes, revocable opaque sessions,
-membership-before-RLS, password reauthentication, TOTP enrollment/login,
-hash-only recovery codes, MFA step-up, recovery/invitation outboxes, owner-safe
-account closure, archival, and scoped read-only agent tokens. Migration `0088`
-adds disabled-by-default OIDC identities: explicit step-up-protected
-issuer/subject link/unlink, strict state/nonce/PKCE plus RS256/verified-email
-checks, linked-only sign-in, and local-MFA challenge handoff. Production OIDC
-requests now resolve provider
-addresses and fail closed on private answers. Provider approval, verified email,
-delivery/DPA, account-lifetime retention/revocation, DNS pinning/egress, provider-backed
-step-up, and deployed identity operations remain external gates. MFA key
-rotation is a reviewed deployment procedure rather than an automatic operation.
+Authentication uses scrypt hashes, revocable sessions, membership-before-RLS,
+password step-up, TOTP/recovery codes, owner-safe closure, archival, and scoped
+read-only agent tokens. OIDC remains disabled by default and provider identity,
+delivery/DPA, retention, egress, and deployment operations remain external.
 
 Workers have server-clock leases, fenced SQL mutations, bounded retries,
 reconciliation, deletion/source/object retention queues, campaign
@@ -83,12 +66,19 @@ tombstones. URL import is
 deferred to avoid SSRF and unreviewed third-party acquisition.
 Integration coverage exercises staging/replay/consumption/deletion, RLS,
 tombstones; migration `0090` keeps policy validation in a narrow definer
-function. Docker is unavailable locally; `pnpm dev:local` runs the loopback
-stack and `pnpm verify:local-stack` smoke-tests it in CI.
+function. `pnpm dev:local` runs the loopback stack and
+`pnpm verify:local-stack` smoke-tests it locally and in CI. A fresh local run
+now passes authenticated owner intake, durable completion, private evidence
+readback, and the visible public-market coverage gap.
 Migration `0091` preserves `consumed_at` when an already-consumed owner
 batch is later deleted, matching its deletion trigger.
 Migration `0092` makes the service-role read privileges for campaign source
 validation explicit for `sources` and its reviewed policy tables.
+Migration `0093` qualifies source-quota reservation columns so PostgreSQL does
+not resolve them against function OUT parameters. Migration `0094` grants the
+worker its narrow finalization update for `research_runs.artifact_snapshot`.
+Fresh local PostgreSQL persistence, Temporal restart, and worker replacement
+checks now pass across all 94 migrations.
 
 `pnpm verify:release` checks Compose, secret-free defaults, hardened images, and
 fail-closed preflight; CI runs Docker mode and `--static` supports no Docker.
@@ -97,7 +87,8 @@ fail-closed preflight; CI runs Docker mode and `--static` supports no Docker.
 
 - GitHub Actions run `30893053945` passed for `b67a51b`; release-boundary,
   fresh PostgreSQL/Temporal, local-stack, worker, container, and Windows/macOS
-  checks are green.
+  checks were green. The latest hosted attempt is currently blocked by the
+  GitHub account payment/spending-limit gate, not by a repository assertion.
 - Production runtime packaging and the staged Tauri shell pass their hosted
   build/boundary checks; provider provisioning, image signing, hosted-origin,
   updater, notarization, installation, and deployment evidence remain open.

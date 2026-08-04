@@ -119,7 +119,19 @@ export interface ProductionCollectionOptions {
 }
 
 export type ProductionCollectionPhase =
-  'lease_acquired' | 'collecting' | 'collected' | 'persisting' | 'persisted' | 'lease_released'
+  | 'lease_acquired'
+  | 'collecting'
+  | 'policy_checking'
+  | 'policy_allowed'
+  | 'quota_reserved'
+  | 'preflight_passed'
+  | 'batch_read'
+  | 'normalized'
+  | 'quota_committed'
+  | 'collected'
+  | 'persisting'
+  | 'persisted'
+  | 'lease_released'
 
 /** Backwards-compatible name for the explicit CFPB command wrapper. */
 export type ProductionCfpbCollectionOptions = ProductionCollectionOptions
@@ -295,6 +307,7 @@ export async function runProductionCollection(
         : {}),
       beforeRequest: () =>
         leaseRepository.assertActive(effectiveRequest.workspaceId, leaseId, requestHash),
+      ...(options.onPhase ? { onPhase: options.onPhase } : {}),
       ...(recollectionTarget ? { sourceRecordId: recollectionTarget.sourceRecordId } : {})
     })
     options.onPhase?.('collected')

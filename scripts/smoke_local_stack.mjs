@@ -246,6 +246,13 @@ function assertPrivateWorkspaceResponses({
   ) {
     throw new Error('private production collection read model was not completed')
   }
+  const coverageGaps = run.payload?.data?.result?.coverageGaps
+  if (
+    !Array.isArray(coverageGaps) ||
+    !coverageGaps.some((gap) => gap.includes('does not establish public market coverage'))
+  ) {
+    throw new Error('private import public-market coverage gap was not visible')
+  }
   const sourcePolicies = sources.payload?.data
   const manualSource = Array.isArray(sourcePolicies)
     ? sourcePolicies.find((source) => source?.sourceId === 'manual-owner-import')
@@ -256,8 +263,8 @@ function assertPrivateWorkspaceResponses({
   if (!manualSource || manualSource.collectible !== true) {
     throw new Error('owner-authorized source policy was not collectible')
   }
-  if (!publicSource || publicSource.collectible === true) {
-    throw new Error('disabled public source coverage gap was not visible')
+  if (publicSource && publicSource.collectible === true) {
+    throw new Error('disabled public source was incorrectly marked collectible')
   }
 }
 

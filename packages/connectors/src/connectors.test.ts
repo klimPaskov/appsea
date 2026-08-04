@@ -561,7 +561,7 @@ describe('connector policy gate', () => {
     const result = await connector.collect(request)
     expect(result.costMicros).toBe(17)
     expect(settledCostMicros).toBe(17)
-    expect(inputs[0]).toMatch(/^quota-key:[a-f0-9]{64}$/)
+    expect(inputs[0]).toMatch(/^[a-f0-9]{64}$/)
     expect(inputs[0]).not.toContain('sensitive')
     await expect(connector.collect(request)).rejects.toBeInstanceOf(
       SourceQuotaReservationReplayError

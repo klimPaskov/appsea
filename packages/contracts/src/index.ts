@@ -2530,6 +2530,7 @@ export const productionCollectionEvidenceReadModelSchema = z
     reviewState: complaintReviewStateSchema,
     sourceItemId: appseaIdentifierSchema,
     sourceRecordId: z.string().min(1).max(240),
+    canonicalLocator: canonicalLocatorSchema.nullable(),
     text: z.string().max(20_000).nullable(),
     language: z.string().min(2).max(16),
     product: z.string().min(1),
