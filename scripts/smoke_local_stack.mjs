@@ -342,6 +342,9 @@ async function runPrivateWorkspaceSmoke() {
       budget: { currency: 'USD', maxSourceItems: 10, maxCostMicros: 0, maxActivityAttempts: 3 }
     })
   })
+  if (campaign.response.status !== 201 || typeof campaign.payload?.data?.campaignId !== 'string') {
+    throw new Error(`private campaign create returned HTTP ${campaign.response.status}`)
+  }
   const importStart = await requestJson(`/api/workspaces/${workspaceId}/imports`, {
     method: 'POST',
     headers: { ...privateHeaders, ...originHeaders, 'content-type': 'application/json' },
