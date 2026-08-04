@@ -184,6 +184,7 @@
 - [`status/research-campaign-history-pagination-completion-report-2026-08-03.md`](status/research-campaign-history-pagination-completion-report-2026-08-03.md)
 - [`status/mcp-readonly-agent-access-completion-report-2026-08-03.md`](status/mcp-readonly-agent-access-completion-report-2026-08-03.md)
 - [`status/mcp-agent-access-ui-completion-report-2026-08-04.md`](status/mcp-agent-access-ui-completion-report-2026-08-04.md)
+- [`status/workspace-usage-page-completion-report-2026-08-04.md`](status/workspace-usage-page-completion-report-2026-08-04.md)
 - [`status/competitor-feature-matrix-completion-report-2026-08-02.md`](status/competitor-feature-matrix-completion-report-2026-08-02.md)
 - [`status/workspace-archival-completion-report-2026-08-02.md`](status/workspace-archival-completion-report-2026-08-02.md)
 - [`status/workspace-purge-readiness-completion-report-2026-08-02.md`](status/workspace-purge-readiness-completion-report-2026-08-02.md)

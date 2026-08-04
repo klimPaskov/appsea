@@ -367,6 +367,11 @@ for least-privilege token creation and revocation; the raw token is shown only
 in the immediate create response and later reads remain metadata-only. See
 [`mcp-agent-access.md`](../../runbooks/mcp-agent-access.md).
 
+Private workspace members can inspect exact cost-ledger totals and settled
+source-quota reconciliation cases at `/workspace/:workspaceId/usage`. The page
+is read-only; maintenance-role resolution, quota refunds, and source re-fetches
+remain outside the browser boundary.
+
 Migration `0070_research_campaign_orchestration_cancellation.sql` adds an
 immutable owner/editor cancellation intent to multi-source orchestration. The
 private cancellation route commits the intent before a best-effort Temporal

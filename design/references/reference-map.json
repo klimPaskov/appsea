@@ -71,6 +71,13 @@
       "mobile": "source/agent-access-mobile.svg"
     },
     {
+      "id": "workspace-usage",
+      "route": "/workspace/:workspaceId/usage",
+      "purpose": "Private exact cost and quota-reconciliation inspection",
+      "desktop": "source/workspace-usage.svg",
+      "mobile": "source/workspace-usage-mobile.svg"
+    },
+    {
       "id": "seed-reviews",
       "route": "/workspace/:workspaceId/seed-reviews",
       "purpose": "Private reviewed opportunity-seed registry",

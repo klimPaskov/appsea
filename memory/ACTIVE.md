@@ -36,11 +36,12 @@ proof remain open.
 
 Authentication uses scrypt hashes, revocable sessions, membership-before-RLS,
 password step-up, TOTP/recovery codes, owner-safe closure, archival, and scoped
-read-only agent tokens. The private owner workspace now has an Agent access
-page for least-privilege token issue/revocation; raw credentials remain
-one-time and later reads metadata-only. OIDC remains disabled by default and
-provider identity, delivery/DPA, retention, egress, and deployment operations
-remain external.
+read-only agent tokens. The private owner Agent access page issues/revokes
+least-privilege tokens; raw credentials remain one-time and later reads
+metadata-only. Members have a read-only Usage page for exact cost and quota
+cases; maintenance resolution stays outside the browser. OIDC remains disabled
+by default and provider identity, delivery/DPA, retention, egress, and
+deployment operations remain external.
 
 Workers have server-clock leases, fenced SQL mutations, bounded retries,
 reconciliation, deletion/source/object retention queues, campaign
@@ -53,27 +54,14 @@ Imported complaints, pages, reports, and model output remain untrusted data;
 they cannot update code, skills, instructions, permissions, or repository
 memory.
 
-This tranche adds `packages/connectors/src/manual-import.ts`,
-`packages/db/src/manual-import-repository.ts`, migration `0089`, private
-`/api/workspaces/:workspaceId/imports` routes, and the manual source policy and
-runbook plus the private `/workspace/:workspaceId/imports` owner screen. Uploads
-are bounded at 2 MiB/5,000 rows, normalized and PII-scrubbed;
-Temporal receives only the batch ID. Local smoke signs up an owner, stages a
-test row, and waits for consumption; public sources stay disabled. Batch
-consumption is committed with
-collection persistence; owner deletion clears staged payloads and emits
-tombstones. URL import is
-deferred to avoid SSRF and unreviewed third-party acquisition.
-Integration coverage exercises staging/replay/consumption/deletion, RLS,
-tombstones; migration `0090` keeps policy validation in a narrow definer
-function. `pnpm dev:local` runs the loopback stack and
-`pnpm verify:local-stack` smoke-tests it locally and in CI. A fresh local run
-now passes authenticated owner intake, durable completion, complaint
-confirmation, reviewed/approved seed input, production-shaped analysis
-completion, private opportunity/report/plan readback, and the visible
-public-market coverage gap. New production seed writes and analysis admission
-enforce the shared six-file package manifest; legacy rows remain readable but
-cannot start analysis.
+Manual owner-import (migration `0089`) is the active non-fixture path: uploads
+are bounded, normalized, PII-scrubbed, tenant-private, and represented in
+Temporal by batch ID only. Local smoke covers owner intake, durable completion,
+reviewed analysis, private report/plan readback, and the visible public-market
+gap; URL fetching and public sources remain disabled. Migrations `0090`-`0094`
+keep policy validation, deletion state, source privileges, quota columns, and
+analysis finalization narrow; legacy plan rows remain readable but cannot start
+analysis.
 Migration `0091` preserves `consumed_at` when an already-consumed owner
 batch is later deleted, matching its deletion trigger.
 Migration `0092` makes the service-role read privileges for campaign source

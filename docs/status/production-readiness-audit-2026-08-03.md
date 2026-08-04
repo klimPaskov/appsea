@@ -24,6 +24,10 @@ Passing on 2026-08-03:
 
 Additional validation on 2026-08-04:
 
+- The private **Usage** page now exposes exact, currency-separated cost ledger
+  totals and bounded source-quota reconciliation cases to workspace members.
+  It does not resolve cases, refund quota, or re-fetch sources; page tests cover
+  private membership, read-model rendering, and sanitized dependency failures.
 - The private owner **Agent access** page now manages the existing scoped
   read-only MCP tokens without expanding the write boundary. It offers
   least-privilege scopes, shows the raw credential only in the immediate

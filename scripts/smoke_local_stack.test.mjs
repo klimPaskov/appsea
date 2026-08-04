@@ -103,6 +103,7 @@ const privateWorkspaceResponses = {
   opportunityPage: { status: 200, body: 'Private research package' },
   reportPage: { status: 200, body: 'Evidence-backed report Coverage limits' },
   planPage: { status: 200, body: 'Coding-agent plan README.md' },
+  usagePage: { status: 200, body: 'Cost summary Quota reconciliation' },
   campaignId: 'campaign:smoke',
   batchId: 'batch:smoke',
   runId: 'run:smoke',

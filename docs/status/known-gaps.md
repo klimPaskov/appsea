@@ -9,9 +9,10 @@ source-coverage, report, and plan reads for owner-issued workspace-scoped
 tokens. It preserves policy representation, redaction, synthetic disclosure,
 and coverage gaps, but it is not a general REST/MCP write API. Token issue and
 revoke now require the existing password step-up plus a fresh MFA proof when
-MFA is enabled; accounts without MFA retain the password-only path. Token
-management is API-only, and HTTPS termination, external secret storage, rate
-limiting, and deployment monitoring remain open. Optional OIDC/provider identity
+MFA is enabled; accounts without MFA retain the password-only path. The private
+Agent access page provides the owner convenience UI; HTTPS termination,
+external secret storage, rate limiting, and deployment monitoring remain open.
+Optional OIDC/provider identity
 linking and sign-in now have a disabled-by-default, explicit issuer/subject
 boundary plus a production DNS-resolution preflight for every provider request,
 but live provider approval and operations remain open. Versioned

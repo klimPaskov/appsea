@@ -215,6 +215,7 @@ function assertPrivateWorkspaceResponses({
   opportunityPage,
   reportPage,
   planPage,
+  usagePage,
   campaignId,
   batchId,
   runId,
@@ -349,9 +350,12 @@ function assertPrivateWorkspaceResponses({
     !reportPage.body.includes('Coverage limits') ||
     planPage.status !== 200 ||
     !planPage.body.includes('Coding-agent plan') ||
-    !planPage.body.includes('README.md')
+    !planPage.body.includes('README.md') ||
+    usagePage.status !== 200 ||
+    !usagePage.body.includes('Cost summary') ||
+    !usagePage.body.includes('Quota reconciliation')
   ) {
-    throw new Error('private report and coding-plan pages were not renderable')
+    throw new Error('private report, coding-plan, and usage pages were not renderable')
   }
 }
 
@@ -624,6 +628,10 @@ async function runPrivateWorkspaceSmoke() {
     { headers: privateHeaders }
   )
   const planPage = { status: planPageResponse.status, body: await planPageResponse.text() }
+  const usagePageResponse = await fetchResponse(`/workspace/${workspaceId}/usage`, {
+    headers: privateHeaders
+  })
+  const usagePage = { status: usagePageResponse.status, body: await usagePageResponse.text() }
 
   return {
     signup: { status: signup.response.status, hasSessionCookie: Boolean(sessionCookie) },
@@ -645,6 +653,7 @@ async function runPrivateWorkspaceSmoke() {
     opportunityPage,
     reportPage,
     planPage,
+    usagePage,
     campaignId,
     batchId,
     runId,

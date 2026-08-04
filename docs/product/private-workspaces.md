@@ -92,6 +92,11 @@ The public AppSea leaderboard is a sparse, synthetic fixture surface. Private re
   workspace-owner, hash-only persistence, and expiry controls as the API. The
   endpoint remains read-only and cannot activate sources, start workflows,
   mutate research, or change policy.
+- Private workspace members can inspect exact recorded cost totals and settled
+  source-quota reconciliation cases at `/workspace/:workspaceId/usage`. The
+  page keeps currencies separate, shows estimated versus actual ledger totals,
+  and never resolves, refunds, or re-fetches a quota case; maintenance-role
+  operations remain outside the browser boundary.
 
 ## Research detail
 

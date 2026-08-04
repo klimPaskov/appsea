@@ -175,6 +175,11 @@ Private workspace members can inspect bounded cross-run cost accounting at:
 GET /api/workspaces/:workspaceId/costs
 ```
 
+The same read-only totals and settled quota-reconciliation cases are available
+to private workspace members on `/workspace/:workspaceId/usage`. The page is a
+review surface only: it cannot resolve a case, refund quota, re-fetch a source,
+or change a ledger entry.
+
 The endpoint reads the immutable `cost_ledger_entries` table through an
 authenticated read-only transaction and returns exact micro-unit totals by
 currency and cost type. Optional `from` and `to` ISO timestamps are limited to

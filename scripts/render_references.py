@@ -687,7 +687,8 @@ SCREENS = {
 # makes `pnpm ui:references` validate and rasterize them when cairosvg is
 # available without using Python to draw their shapes.
 STATIC_SOURCES = {
-    'agent-access': ('agent-access.svg', 'agent-access-mobile.svg')
+    'agent-access': ('agent-access.svg', 'agent-access-mobile.svg'),
+    'workspace-usage': ('workspace-usage.svg', 'workspace-usage-mobile.svg')
 }
 
 
