@@ -58,6 +58,16 @@ function sanitize(value) {
     .join('\n')
 }
 
+function diagnosticOutput(value) {
+  const sanitizedValue = sanitize(value)
+  const lines = sanitizedValue.split(/\r?\n/)
+  const structured = lines.filter((line) =>
+    /"event"\s*:|"failureCode"\s*:|"failureContext"\s*:|APPSEA_ACTIVITY_FAILED/.test(line)
+  )
+  const tail = lines.slice(-80)
+  return [...new Set([...structured.slice(-200), ...tail])].join('\n')
+}
+
 function startLocalStack() {
   const [command, args] = pnpmInvocation(['dev:local'])
   const output = []
@@ -434,7 +444,7 @@ async function main() {
       'local private-workspace stack smoke passed for readiness, authenticated owner intake, and fixture disclosure'
     )
   } catch (error) {
-    const output = sanitize(localStack.output.join(''))
+    const output = diagnosticOutput(localStack.output.join(''))
     if (output) console.error(output)
     throw error
   } finally {
