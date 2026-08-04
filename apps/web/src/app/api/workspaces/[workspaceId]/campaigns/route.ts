@@ -124,7 +124,23 @@ export async function POST(
       )
     }
     console.error('AppSea campaign create failed', {
-      name: error instanceof Error ? error.name : 'unknown'
+      name: error instanceof Error ? error.name : 'unknown',
+      code:
+        typeof error === 'object' && error !== null && 'code' in error
+          ? String(error.code)
+          : undefined,
+      constraint:
+        typeof error === 'object' && error !== null && 'constraint' in error
+          ? String(error.constraint)
+          : undefined,
+      table:
+        typeof error === 'object' && error !== null && 'table' in error
+          ? String(error.table)
+          : undefined,
+      column:
+        typeof error === 'object' && error !== null && 'column' in error
+          ? String(error.column)
+          : undefined
     })
     return Response.json(
       { error: 'Unable to create research campaign' },
