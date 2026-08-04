@@ -90,9 +90,9 @@ namespace/task-queue authorization is still external evidence.
 
 ## Validated commands
 
-- CI run `30893053945` passed; latest `30932224043` and prior
-  `30929883317`/`30919346892`/`30923658050` failed before steps from the
-  GitHub payment/spending-limit gate, not a repository assertion.
+- CI run `30893053945` passed; latest `30941697155` for commit `a3ad40d` and
+  prior `30939424669`/`30932224043` failed before steps from the GitHub
+  payment/spending-limit gate, not a repository assertion.
 - `pnpm test:backup-restore` and `pnpm verify:backup-restore` pass locally;
   the drill is isolated to the loopback Compose database and is not production
   backup, HA, or provider restore evidence.

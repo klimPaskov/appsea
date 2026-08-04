@@ -27,6 +27,10 @@ autonomous coding loop.
 - `pnpm verify:persistence:fresh` — passed (fresh PostgreSQL 18 lifecycle,
   52 integration tests, through migration `0099`).
 - `pnpm verify:persistence` — passed (populated-upgrade lifecycle).
+- GitHub Actions run `30941697155` for commit `a3ad40d` was created by the push
+  but all jobs were blocked before repository steps by the account
+  payment/spending-limit gate; this is external proof still pending, not a
+  local assertion failure.
 
 ## Explicit simplifications and blockers
 
