@@ -5,6 +5,7 @@ import {
   buildFixtureResearchArtifact,
   buildProductionResearchArtifact,
   clusterComplaints,
+  deduplicateComplaintSet,
   deduplicateComplaints
 } from './index'
 import {
@@ -71,6 +72,73 @@ describe('fixture research', () => {
     expect(deduplicateComplaints([complaint, complaint])).toEqual([
       { ...complaint, text: 'repeated spaces' }
     ])
+  })
+
+  it('keeps dropped source-record lineage in the decision trail', () => {
+    const first = { ...complaint, id: 'c-native-a' }
+    const second = { ...complaint, id: 'c-native-b', text: 'A changed source representation.' }
+    const result = deduplicateComplaintSet([second, first])
+    expect(result.complaints.map((entry) => entry.id)).toEqual(['c-native-a'])
+    expect(result.decisions).toContainEqual(
+      expect.objectContaining({
+        complaintId: 'c-native-b',
+        canonicalComplaintId: 'c-native-a',
+        relation: 'source-record-duplicate',
+        decision: 'deduplicated',
+        sourceId: 'fixture',
+        sourceRecordId: 'record-1'
+      })
+    )
+  })
+
+  it('retains near-duplicate observations with a deterministic review decision', () => {
+    const first = {
+      ...complaint,
+      id: 'c-near-a',
+      sourceRecordId: 'record-near-a',
+      product: 'Relay Inbox',
+      category: 'handoff loss',
+      text: 'Handoff history disappears when ownership changes.'
+    }
+    const second = {
+      ...first,
+      id: 'c-near-b',
+      sourceRecordId: 'record-near-b',
+      text: 'Handoff history disappears when ownership changes!'
+    }
+    const result = deduplicateComplaintSet([second, first])
+    expect(result.complaints.map((entry) => entry.id)).toEqual(['c-near-a', 'c-near-b'])
+    expect(result.decisions).toEqual([
+      expect.objectContaining({
+        complaintId: 'c-near-a',
+        canonicalComplaintId: 'c-near-a',
+        relation: 'canonical',
+        decision: 'retained',
+        reviewRequired: false
+      }),
+      expect.objectContaining({
+        complaintId: 'c-near-b',
+        canonicalComplaintId: 'c-near-a',
+        relation: 'near-duplicate-candidate',
+        decision: 'review-required',
+        similarity: 1,
+        reviewRequired: true
+      })
+    ])
+    expect(deduplicateComplaintSet([first, second])).toEqual(result)
+  })
+
+  it('does not compare observations across product contexts', () => {
+    const first = { ...complaint, id: 'c-context-a', sourceRecordId: 'record-context-a' }
+    const second = {
+      ...first,
+      id: 'c-context-b',
+      sourceRecordId: 'record-context-b',
+      product: 'Different product'
+    }
+    const result = deduplicateComplaintSet([first, second])
+    expect(result.complaints).toHaveLength(2)
+    expect(result.decisions.every((decision) => decision.decision === 'retained')).toBe(true)
   })
 
   it('builds a complete labeled artifact', async () => {
@@ -350,6 +418,36 @@ describe('production analysis composition', () => {
     )
     expect(first.coverageGaps).toContain(
       'No permitted competitor or contrary-signal source evidence is attached; reviewed seed values are not market research.'
+    )
+  })
+
+  it('retains high-similarity production observations and records the coverage gap', () => {
+    const nearDuplicate = {
+      ...productionInput.complaints[0]!,
+      id: 'complaint:research-4',
+      evidenceId: 'evidence:research-4',
+      sourceItemId: 'source-item:research-4',
+      sourceRecordId: '4',
+      evidenceHash: '4'.repeat(64),
+      text: 'Handoff history disappears when ownership changes!'
+    }
+    const artifact = buildProductionResearchArtifact({
+      ...productionInput,
+      complaints: [...productionInput.complaints, nearDuplicate]
+    })
+    expect(artifact.complaints).toHaveLength(4)
+    expect(artifact.deduplication).toHaveLength(4)
+    expect(artifact.deduplication).toContainEqual(
+      expect.objectContaining({
+        complaintId: 'complaint:research-4',
+        relation: 'near-duplicate-candidate',
+        decision: 'review-required',
+        evidenceId: 'evidence:research-4',
+        sourceItemId: 'source-item:research-4'
+      })
+    )
+    expect(artifact.coverageGaps).toContain(
+      'Near-duplicate candidates are retained pending human review; retained observations are not unique-author counts.'
     )
   })
 

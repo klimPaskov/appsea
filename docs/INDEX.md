@@ -102,6 +102,7 @@
 - [`adrs/0025-runtime-skill-persistence-and-audit.md`](adrs/0025-runtime-skill-persistence-and-audit.md)
 - [`adrs/0026-research-quality-benchmark.md`](adrs/0026-research-quality-benchmark.md)
 - [`adrs/0027-score-factor-provenance.md`](adrs/0027-score-factor-provenance.md)
+- [`adrs/0028-complaint-deduplication-provenance.md`](adrs/0028-complaint-deduplication-provenance.md)
 
 ## Generated references
 
@@ -127,6 +128,7 @@
 - [`status/production-runtime-packaging-completion-report-2026-08-03.md`](status/production-runtime-packaging-completion-report-2026-08-03.md)
 - [`status/desktop-shell-boundary-completion-report-2026-08-03.md`](status/desktop-shell-boundary-completion-report-2026-08-03.md)
 - [`status/website-brand-mark-completion-report-2026-08-04.md`](status/website-brand-mark-completion-report-2026-08-04.md)
+- [`status/complaint-deduplication-provenance-completion-report-2026-08-04.md`](status/complaint-deduplication-provenance-completion-report-2026-08-04.md)
 - [`status/mfa-agent-token-step-up-completion-report-2026-08-03.md`](status/mfa-agent-token-step-up-completion-report-2026-08-03.md)
 - [`status/conditional-mfa-password-gated-mutations-completion-report-2026-08-03.md`](status/conditional-mfa-password-gated-mutations-completion-report-2026-08-03.md)
 - [`status/temporal-legacy-history-drain-completion-report-2026-08-03.md`](status/temporal-legacy-history-drain-completion-report-2026-08-03.md)

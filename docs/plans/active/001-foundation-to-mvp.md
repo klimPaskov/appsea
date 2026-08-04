@@ -670,6 +670,11 @@ evidence. Every balanced v1 factor now carries an explicit `source-evidence` or
 `reviewed-seed` binding; production analysis checks source bindings against
 retained complaint evidence and keeps reviewed-seed assumptions separate from
 market evidence. See [`0027-score-factor-provenance.md`](../../adrs/0027-score-factor-provenance.md).
+Complaint artifacts and reports now also carry an additive, versioned
+provenance-linked `deduplication` array. Safe source-native duplicates are
+collapsed, while high-similarity distinct records remain retained with a
+human-review flag and visible coverage gap; legacy JSON artifacts default to
+an empty array, so this slice requires no relational migration.
 Private opportunity reads now expose a separate competitive-research coverage
 record, per-claim provenance observations, and a competitors/contrary-signals
 route; it does not promote reviewed seed assumptions to source-backed market

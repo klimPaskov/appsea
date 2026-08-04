@@ -305,6 +305,7 @@ const validFixturePersistenceInput: FixturePersistenceInput = {
       contraryEvidence: ['Synthetic evidence cannot prove demand.'],
       planFiles: ['README.md']
     },
+    deduplication: [],
     coverageGaps: ['No live source is enabled.'],
     warnings: ['Synthetic fixture only.']
   },

@@ -212,6 +212,7 @@ describe('opportunity report generation', () => {
     expect(report.synthetic).toBe(true)
     expect(report.artifactId).toBe(artifact.id)
     expect(report.evidence.observations).toHaveLength(artifact.complaints.length)
+    expect(report.evidence.deduplication).toEqual(artifact.deduplication)
     expect(report.evidence.observations[0]?.analysis?.complaintId).toBe(artifact.complaints[0]?.id)
     expect(report.evidence.clusters).toHaveLength(artifact.clusters.length)
     expect(report.inference.scoreSnapshot).toEqual(artifact.opportunity.scoreSnapshot)

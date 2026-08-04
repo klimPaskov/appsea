@@ -72,6 +72,12 @@ export default async function PrivateEvidencePage({
             ))}
           </ul>
         ) : null}
+        {detail.evidence.some((evidence) => evidence.deduplication?.reviewRequired) ? (
+          <p className="fixture-note">
+            Near-duplicate candidates are retained for human review. They are not counted as unique
+            authors or silently merged.
+          </p>
+        ) : null}
       </section>
       <section className="workspace-section" aria-labelledby="evidence-heading">
         <div className="section-intro">
@@ -87,6 +93,9 @@ export default async function PrivateEvidencePage({
                 <span>{evidence.synthetic ? 'Synthetic fixture' : evidence.sourceItemId}</span>
                 <span>{evidence.analysis.complaintType.replace('_', ' ')}</span>
                 <span>Severity {evidence.analysis.severity}/5</span>
+                {evidence.deduplication?.reviewRequired ? (
+                  <span>Near-duplicate review required</span>
+                ) : null}
               </div>
               <p>{evidence.text}</p>
               {evidence.canonicalLocator ? (

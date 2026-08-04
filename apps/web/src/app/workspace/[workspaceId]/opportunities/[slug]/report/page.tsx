@@ -61,6 +61,14 @@ export default async function PrivateReportPage({
                 across {detail.report.structuredReport.evidence.clusterCount} clusters.
               </p>
             </div>
+            {detail.report.structuredReport.evidence.deduplication.some(
+              (decision) => decision.reviewRequired
+            ) ? (
+              <p className="fixture-note">
+                Near-duplicate candidates are retained pending human review; no unique-author count
+                is inferred.
+              </p>
+            ) : null}
             <ul className="complaint-list">
               {detail.report.structuredReport.evidence.observations.map((observation) => (
                 <li key={observation.evidenceId}>

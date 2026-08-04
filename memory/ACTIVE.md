@@ -82,17 +82,21 @@ Production preflight now also requires the exact reviewed
 deployment review compare the worker image with a narrow provider ACL; remote
 namespace/task-queue authorization is still external evidence.
 
-The 2026-08-04 website brand-mark slice replaces the placeholder header `A`
-with a generated, non-text raster mark at
-`apps/web/public/appsea-mark-generated.png`. It is intentionally website-only;
-the Tauri PNG/ICO pair remains unchanged until a reviewed aligned desktop asset
-and release evidence exist. Web tests, lint, and typecheck pass.
+The 2026-08-04 website slice replaces the header placeholder with the generated
+non-text mark `apps/web/public/appsea-mark-generated.png`; it is website-only,
+and web tests/lint/typecheck pass. The Tauri icon pair remains staged.
+
+The 2026-08-04 complaint slice adds versioned, provenance-linked
+`deduplication` decisions to artifacts/reports. Safe native duplicates collapse;
+high-similarity records remain for human review with a coverage gap. Legacy
+JSON defaults to an empty list; no unique authors, semantic matches, live
+calibration, or public market coverage are inferred.
 
 ## Validated commands
 
 - CI run `30893053945` passed; feature/docs runs `30941697155`, `30941804877`,
   `30941916282`, `30944735291`, `30944900421`, `30947627304`, `30947761415`,
-  and latest `30949355268` failed before steps from the GitHub
+  and latest `30949355268` plus follow-up `30949551146` failed before steps from the GitHub
   payment/spending-limit gate, not a repository assertion.
 - `pnpm test:backup-restore` and `pnpm verify:backup-restore` pass locally;
   the drill is isolated to the loopback Compose database and is not production
@@ -122,15 +126,12 @@ and release evidence exist. Web tests, lint, and typecheck pass.
 
 - No third-party public source is active; fixture rankings and owner-import
   evidence are not public market research.
-- Production DB/Temporal, role separation, HA, backups, scheduler ownership,
-  endpoint operation, provider recovery/incident routing, alerting, billing, and
-  deployment validation remain. The repository outbox and drain are implemented
-  but do not make the external provider transactional.
-- Recovery/invitations are provider-kill-switched; OIDC, verified identity,
-  delivery/DPA, provider-backed step-up, and unrelated high-impact action
-  contracts without a password boundary remain open. MFA key rotation is in
-  code and migration, but production still needs an approved deployment/status
-  review before removing the previous key.
+- Production DB/Temporal, role separation, HA, backups, scheduler/endpoint
+  operations, provider recovery, alerting, billing, and deployment validation
+  remain; the repository outbox/drain is not an external transaction.
+- Recovery/invitations are kill-switched; OIDC, verified identity, delivery/DPA,
+  provider-backed step-up, and unrelated high-impact action contracts remain
+  open. MFA rotation still needs approved deployment/status review.
 - Cloud/object/export/backup purge and automatic source re-collection remain
   separate reviewed operations; workspace archival, purge intent, and the
   metadata-only manifest do not delete research.

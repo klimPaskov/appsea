@@ -1769,6 +1769,187 @@ export const productionAnalysisComplaintSchema = complaintSchema
   })
   .strict()
 
+/**
+ * A replayable relationship emitted by complaint deduplication. The
+ * relationship is intentionally separate from the retained complaint row so
+ * a dropped source-record duplicate and a retained near-duplicate candidate
+ * remain inspectable without inferring unique authors.
+ */
+export const complaintDeduplicationRelationSchema = z.enum([
+  'canonical',
+  'source-record-duplicate',
+  'normalized-exact-duplicate',
+  'near-duplicate-candidate'
+])
+
+export const complaintDeduplicationDecisionSchema = z
+  .object({
+    version: z.literal('complaint-deduplication-v1.0.0'),
+    complaintId: z.string().min(1),
+    canonicalComplaintId: z.string().min(1),
+    sourceId: z.string().min(1),
+    sourceRecordId: z.string().min(1).max(240),
+    evidenceId: appseaIdentifierSchema.nullable().default(null),
+    sourceItemId: appseaIdentifierSchema.nullable().default(null),
+    relation: complaintDeduplicationRelationSchema,
+    decision: z.enum(['retained', 'deduplicated', 'review-required']),
+    similarity: z.number().min(0).max(1),
+    reviewRequired: z.boolean(),
+    reason: z.string().min(1).max(240)
+  })
+  .strict()
+  .superRefine((decision, context) => {
+    if (decision.relation === 'canonical') {
+      if (decision.complaintId !== decision.canonicalComplaintId) {
+        context.addIssue({
+          code: 'custom',
+          path: ['canonicalComplaintId'],
+          message: 'Canonical decisions must point to themselves'
+        })
+      }
+      if (decision.decision !== 'retained' || decision.reviewRequired) {
+        context.addIssue({
+          code: 'custom',
+          path: ['decision'],
+          message: 'Canonical decisions must be retained without review'
+        })
+      }
+    }
+    if (
+      decision.relation === 'source-record-duplicate' ||
+      decision.relation === 'normalized-exact-duplicate'
+    ) {
+      if (decision.complaintId === decision.canonicalComplaintId) {
+        context.addIssue({
+          code: 'custom',
+          path: ['canonicalComplaintId'],
+          message: 'Duplicate decisions must point to a different canonical complaint'
+        })
+      }
+      if (decision.decision !== 'deduplicated' || decision.reviewRequired) {
+        context.addIssue({
+          code: 'custom',
+          path: ['decision'],
+          message: 'Safe duplicate decisions must be deduplicated without review'
+        })
+      }
+    }
+    if (decision.relation === 'near-duplicate-candidate') {
+      if (decision.complaintId === decision.canonicalComplaintId) {
+        context.addIssue({
+          code: 'custom',
+          path: ['canonicalComplaintId'],
+          message: 'Near-duplicate candidates must point to a different canonical complaint'
+        })
+      }
+      if (decision.decision !== 'review-required' || !decision.reviewRequired) {
+        context.addIssue({
+          code: 'custom',
+          path: ['decision'],
+          message: 'Near-duplicate candidates must remain retained for review'
+        })
+      }
+    }
+  })
+
+type ComplaintDeduplicationDecisionValue = z.infer<typeof complaintDeduplicationDecisionSchema>
+
+interface DeduplicationComplaintReference {
+  id: string
+  sourceId: string
+  sourceRecordId: string
+  evidenceId?: string
+  sourceItemId?: string
+}
+
+function validateDeduplicationDecisions(
+  decisions: ComplaintDeduplicationDecisionValue[],
+  complaints: DeduplicationComplaintReference[],
+  mode: 'fixture' | 'production',
+  addIssue: (path: Array<string | number>, message: string) => void
+): void {
+  // Legacy artifacts predate this additive field and are intentionally
+  // accepted without a decision trail. New artifacts emit one decision per
+  // retained complaint (plus any dropped source-record decisions).
+  if (decisions.length === 0) return
+  const complaintIds = complaints.map((complaint) => complaint.id)
+  const complaintIdSet = new Set(complaintIds)
+  const decisionIds = decisions.map((decision) => decision.complaintId)
+  if (new Set(decisionIds).size !== decisionIds.length) {
+    addIssue(['deduplication'], 'Deduplication decision complaint IDs must be unique')
+  }
+  const retainedDecisionIds = decisions
+    .filter((decision) => decision.decision !== 'deduplicated')
+    .map((decision) => decision.complaintId)
+  if (
+    retainedDecisionIds.length !== complaintIdSet.size ||
+    new Set(retainedDecisionIds).size !== retainedDecisionIds.length ||
+    !retainedDecisionIds.every((complaintId) => complaintIdSet.has(complaintId))
+  ) {
+    addIssue(
+      ['deduplication'],
+      'Deduplication decisions must cover every retained complaint exactly once'
+    )
+  }
+  const complaintsById = new Map(complaints.map((complaint) => [complaint.id, complaint]))
+  decisions.forEach((decision, index) => {
+    const retainedComplaint = complaintsById.get(decision.complaintId)
+    if (!complaintIdSet.has(decision.canonicalComplaintId)) {
+      addIssue(
+        ['deduplication', index, 'canonicalComplaintId'],
+        'Deduplication canonical complaint must be retained in the artifact'
+      )
+    }
+    if (mode === 'production' && (decision.evidenceId === null || decision.sourceItemId === null)) {
+      addIssue(
+        ['deduplication', index],
+        'Production deduplication decisions require evidence and source-item references'
+      )
+    }
+    if (decision.decision === 'deduplicated' && retainedComplaint) {
+      addIssue(
+        ['deduplication', index, 'complaintId'],
+        'Deduplicated complaints must not remain in the retained artifact'
+      )
+    }
+    if (retainedComplaint) {
+      if (
+        decision.sourceId !== retainedComplaint.sourceId ||
+        decision.sourceRecordId !== retainedComplaint.sourceRecordId
+      ) {
+        addIssue(
+          ['deduplication', index],
+          'Retained complaint provenance must match its deduplication decision'
+        )
+      }
+      if (mode === 'production') {
+        if (
+          decision.evidenceId !== retainedComplaint.evidenceId ||
+          decision.sourceItemId !== retainedComplaint.sourceItemId
+        ) {
+          addIssue(
+            ['deduplication', index],
+            'Production deduplication evidence references must match the retained complaint'
+          )
+        }
+      } else if (decision.evidenceId !== null || decision.sourceItemId !== null) {
+        addIssue(
+          ['deduplication', index],
+          'Fixture deduplication decisions cannot carry production evidence references'
+        )
+      }
+    } else if (
+      mode === 'fixture' &&
+      (decision.evidenceId !== null || decision.sourceItemId !== null)
+    ) {
+      addIssue(
+        ['deduplication', index],
+        'Fixture deduplication decisions cannot carry production evidence references'
+      )
+    }
+  })
+}
+
 export const researchArtifactSchema = z.object({
   id: z.string().min(1),
   mode: z.enum(['fixture', 'production']),
@@ -1778,6 +1959,8 @@ export const researchArtifactSchema = z.object({
   analyses: z.array(complaintAnalysisSchema).min(1).max(5_000),
   clusters: z.array(complaintClusterSchema).min(1).max(2_000),
   opportunity: opportunitySchema,
+  /** Additive, provenance-linked deduplication decisions; legacy artifacts default to none. */
+  deduplication: z.array(complaintDeduplicationDecisionSchema).max(10_000).default([]),
   coverageGaps: z.array(z.string()).max(500),
   warnings: z.array(z.string()).max(500),
   /** Optional offline benchmark evidence; absent in legacy artifacts. */
@@ -1916,6 +2099,7 @@ export const fixtureResearchArtifactSchema = researchArtifactSchema
     if (!artifact.opportunity.synthetic) {
       addIssue(['opportunity', 'synthetic'], 'Fixture opportunities must be synthetic')
     }
+    validateDeduplicationDecisions(artifact.deduplication, artifact.complaints, 'fixture', addIssue)
   })
 
 export const planPackageFileSchema = z.object({
@@ -2021,6 +2205,7 @@ export const opportunityReportSchema = z
       .object({
         complaintCount: z.number().int().nonnegative(),
         clusterCount: z.number().int().nonnegative(),
+        deduplication: z.array(complaintDeduplicationDecisionSchema).max(10_000).default([]),
         observations: z.array(opportunityReportObservationSchema).max(5_000),
         clusters: z.array(
           z
@@ -2728,6 +2913,12 @@ export const productionResearchArtifactSchema = researchArtifactSchema
       context.addIssue({ code: 'custom', path, message })
     }
     const complaintIds = new Set(artifact.complaints.map((complaint) => complaint.id))
+    validateDeduplicationDecisions(
+      artifact.deduplication,
+      artifact.complaints,
+      'production',
+      addIssue
+    )
     const analysisIds = artifact.analyses.map((analysis) => analysis.complaintId)
     if (
       analysisIds.length !== complaintIds.size ||
@@ -6301,6 +6492,7 @@ export const workspaceEvidenceReadModelSchema = z
     feature: z.string().min(1),
     category: z.string().min(1),
     analysis: complaintAnalysisSchema,
+    deduplication: complaintDeduplicationDecisionSchema.nullable().default(null),
     synthetic: z.boolean(),
     redacted: z.boolean(),
     redactedFields: z.array(evidenceRedactionFieldSchema).max(6).optional(),
@@ -6789,6 +6981,8 @@ export type ResearchCampaignSourceReadModel = z.infer<typeof researchCampaignSou
 export type ResearchCampaignReadModel = z.infer<typeof researchCampaignReadModelSchema>
 export type ResearchArtifact = z.infer<typeof researchArtifactSchema>
 export type FixtureResearchArtifact = z.infer<typeof fixtureResearchArtifactSchema>
+export type ComplaintDeduplicationRelation = z.infer<typeof complaintDeduplicationRelationSchema>
+export type ComplaintDeduplicationDecision = ComplaintDeduplicationDecisionValue
 /** Canonical representation required for new seed writes and analysis. */
 export type ProductionOpportunitySeed = z.infer<typeof productionOpportunitySeedStorageSchema>
 export type ProductionOpportunitySeedRead = z.infer<

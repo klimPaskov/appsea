@@ -5,6 +5,7 @@ import { calculateOpportunityScore, calculateOpportunityScoreV1 } from '@appsea/
 import type {
   Complaint,
   ComplaintAnalysis,
+  ComplaintDeduplicationDecision,
   ComplaintEntityReference,
   ComplaintType,
   ComplaintCluster,
@@ -24,6 +25,10 @@ import {
 import { buildResearchQualitySnapshot } from './quality-benchmark'
 
 export const COMPLAINT_ANALYSIS_VERSION = 'complaint-analysis-v0.1.0'
+export const COMPLAINT_DEDUPLICATION_VERSION = 'complaint-deduplication-v1.0.0'
+
+const NEAR_DUPLICATE_THRESHOLD = 0.9
+const MAX_NEAR_DUPLICATE_CANDIDATES = 64
 
 const genericEntityLabels = new Set(['app', 'application', 'software', 'tool', 'teams', 'pages'])
 
@@ -190,22 +195,242 @@ export function normalizeComplaintText(text: string): string {
   return text.replace(/\s+/g, ' ').trim()
 }
 
-export function deduplicateComplaints<T extends Complaint>(complaints: T[]): T[] {
-  const seen = new Set<string>()
-  const unique: T[] = []
+/** Stable text representation used only for deterministic similarity checks. */
+export function complaintTextFingerprint(text: string): string {
+  return normalizeComplaintText(text)
+    .normalize('NFKC')
+    .toLocaleLowerCase('en-US')
+    .replace(/[^\p{L}\p{N}]+/gu, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+}
 
-  for (const complaint of complaints) {
-    const key = [
-      complaint.sourceId,
-      complaint.sourceRecordId,
-      normalizeComplaintText(complaint.text).toLowerCase()
-    ].join('|')
-    if (seen.has(key)) continue
-    seen.add(key)
-    unique.push({ ...complaint, text: normalizeComplaintText(complaint.text) })
+export function tokenJaccardSimilarity(left: string, right: string): number {
+  const leftTokens = new Set(complaintTextFingerprint(left).split(' ').filter(Boolean))
+  const rightTokens = new Set(complaintTextFingerprint(right).split(' ').filter(Boolean))
+  if (leftTokens.size === 0 && rightTokens.size === 0) return 1
+  if (leftTokens.size === 0 || rightTokens.size === 0) return 0
+  let intersection = 0
+  for (const token of leftTokens) if (rightTokens.has(token)) intersection += 1
+  return intersection / new Set([...leftTokens, ...rightTokens]).size
+}
+
+interface FingerprintedComplaint<T extends Complaint> {
+  complaint: T
+  normalizedText: string
+  fingerprint: string
+  tokens: string[]
+}
+
+export interface DeduplicatedComplaintSet<T extends Complaint> {
+  complaints: T[]
+  decisions: ComplaintDeduplicationDecision[]
+}
+
+function comparisonKey<T extends Complaint>(complaint: T): string {
+  return [
+    complaint.sourceId,
+    complaint.sourceRecordId,
+    complaint.id,
+    'evidenceId' in complaint ? String(complaint.evidenceId) : '',
+    'sourceItemId' in complaint ? String(complaint.sourceItemId) : ''
+  ].join('\0')
+}
+
+function contextKey<T extends Complaint>(complaint: T): string {
+  return [lower(complaint.sourceId), lower(complaint.product), lower(complaint.category)].join('\0')
+}
+
+function decisionReferences<T extends Complaint>(
+  complaint: T
+): {
+  evidenceId: string | null
+  sourceItemId: string | null
+} {
+  const withEvidence = complaint as T & {
+    evidenceId?: string
+    sourceItemId?: string
+  }
+  return {
+    evidenceId: withEvidence.evidenceId ?? null,
+    sourceItemId: withEvidence.sourceItemId ?? null
+  }
+}
+
+function roundSimilarity(value: number): number {
+  return Number(value.toFixed(4))
+}
+
+function decisionSort(left: ComplaintDeduplicationDecision, right: ComplaintDeduplicationDecision) {
+  return `${left.complaintId}\0${left.canonicalComplaintId}\0${left.relation}`.localeCompare(
+    `${right.complaintId}\0${right.canonicalComplaintId}\0${right.relation}`
+  )
+}
+
+/**
+ * Deduplicate only identities that are safe to collapse automatically. A
+ * source-native duplicate (or exact text plus the same canonical locator) is
+ * dropped with a provenance-linked decision. Similar text from a distinct
+ * source record is retained and marked for review instead of being treated as
+ * a unique-user count or silently merged.
+ */
+export function deduplicateComplaintSet<T extends Complaint>(
+  complaints: T[]
+): DeduplicatedComplaintSet<T> {
+  const ordered = [...complaints]
+    .sort((left, right) => comparisonKey(left).localeCompare(comparisonKey(right)))
+    .map((complaint) => ({
+      ...complaint,
+      text: normalizeComplaintText(complaint.text)
+    }))
+  const retained: FingerprintedComplaint<T>[] = []
+  const decisions: ComplaintDeduplicationDecision[] = []
+  const byNativeRecord = new Map<string, FingerprintedComplaint<T>>()
+  const byContextToken = new Map<string, Map<string, FingerprintedComplaint<T>[]>>()
+
+  const addDecision = (
+    complaint: T,
+    canonical: T,
+    values: Pick<
+      ComplaintDeduplicationDecision,
+      'relation' | 'decision' | 'similarity' | 'reviewRequired' | 'reason'
+    >
+  ): void => {
+    const references = decisionReferences(complaint)
+    decisions.push({
+      version: COMPLAINT_DEDUPLICATION_VERSION,
+      complaintId: complaint.id,
+      canonicalComplaintId: canonical.id,
+      sourceId: complaint.sourceId,
+      sourceRecordId: complaint.sourceRecordId,
+      evidenceId: references.evidenceId,
+      sourceItemId: references.sourceItemId,
+      ...values,
+      similarity: roundSimilarity(values.similarity)
+    })
   }
 
-  return unique
+  const register = (entry: FingerprintedComplaint<T>): void => {
+    const context = contextKey(entry.complaint)
+    const bucket = byContextToken.get(context) ?? new Map<string, FingerprintedComplaint<T>[]>()
+    const tokens = entry.tokens.length > 0 ? entry.tokens.slice(0, 6) : ['__empty__']
+    for (const token of tokens) {
+      const entries = bucket.get(token) ?? []
+      entries.push(entry)
+      bucket.set(token, entries)
+    }
+    byContextToken.set(context, bucket)
+  }
+
+  for (const complaint of ordered) {
+    const fingerprinted: FingerprintedComplaint<T> = {
+      complaint,
+      normalizedText: complaint.text,
+      fingerprint: complaintTextFingerprint(complaint.text),
+      tokens: [...new Set(complaintTextFingerprint(complaint.text).split(' ').filter(Boolean))]
+    }
+    const nativeKey = `${lower(complaint.sourceId)}\0${complaint.sourceRecordId}`
+    const nativeCanonical = byNativeRecord.get(nativeKey)
+    if (nativeCanonical) {
+      addDecision(complaint, nativeCanonical.complaint, {
+        relation: 'source-record-duplicate',
+        decision: 'deduplicated',
+        similarity: 1,
+        reviewRequired: false,
+        reason:
+          'The source-native record identifier repeats; the first deterministic representative is retained.'
+      })
+      continue
+    }
+
+    const context = contextKey(complaint)
+    const bucket = byContextToken.get(context)
+    const candidateSet = new Map<string, FingerprintedComplaint<T>>()
+    if (bucket) {
+      for (const token of fingerprinted.tokens.slice(0, 6)) {
+        for (const candidate of bucket.get(token) ?? [])
+          candidateSet.set(candidate.complaint.id, candidate)
+      }
+    }
+    const candidates = [...candidateSet.values()]
+      .sort((left, right) => left.complaint.id.localeCompare(right.complaint.id))
+      .slice(0, MAX_NEAR_DUPLICATE_CANDIDATES)
+    let bestCandidate: { entry: FingerprintedComplaint<T>; similarity: number } | undefined
+    for (const candidate of candidates) {
+      const similarity = tokenJaccardSimilarity(
+        fingerprinted.normalizedText,
+        candidate.normalizedText
+      )
+      if (
+        similarity >= NEAR_DUPLICATE_THRESHOLD &&
+        (!bestCandidate ||
+          similarity > bestCandidate.similarity ||
+          (similarity === bestCandidate.similarity &&
+            candidate.complaint.id.localeCompare(bestCandidate.entry.complaint.id) < 0))
+      ) {
+        bestCandidate = { entry: candidate, similarity }
+      }
+    }
+
+    if (
+      bestCandidate &&
+      complaint.canonicalLocator &&
+      bestCandidate.entry.complaint.canonicalLocator === complaint.canonicalLocator &&
+      fingerprinted.fingerprint === bestCandidate.entry.fingerprint
+    ) {
+      addDecision(complaint, bestCandidate.entry.complaint, {
+        relation: 'normalized-exact-duplicate',
+        decision: 'deduplicated',
+        similarity: bestCandidate.similarity,
+        reviewRequired: false,
+        reason: 'Normalized text and canonical locator match within the same source context.'
+      })
+      continue
+    }
+
+    const canonical = bestCandidate?.entry.complaint ?? complaint
+    addDecision(
+      complaint,
+      canonical,
+      bestCandidate
+        ? {
+            relation: 'near-duplicate-candidate',
+            decision: 'review-required',
+            similarity: bestCandidate.similarity,
+            reviewRequired: true,
+            reason:
+              'High text similarity is retained as a separate observation until human review confirms repost identity.'
+          }
+        : {
+            relation: 'canonical',
+            decision: 'retained',
+            similarity: 1,
+            reviewRequired: false,
+            reason: 'No safe duplicate relationship was identified; retain the source observation.'
+          }
+    )
+    retained.push(fingerprinted)
+    byNativeRecord.set(nativeKey, fingerprinted)
+    register(fingerprinted)
+  }
+
+  return {
+    complaints: retained.map((entry) => entry.complaint),
+    decisions: decisions.sort(decisionSort)
+  }
+}
+
+export function deduplicateComplaints<T extends Complaint>(complaints: T[]): T[] {
+  const retainedById = new Map(
+    deduplicateComplaintSet(complaints).complaints.map((complaint) => [complaint.id, complaint])
+  )
+  const seen = new Set<string>()
+  return complaints.flatMap((complaint) => {
+    const retained = retainedById.get(complaint.id)
+    if (!retained || seen.has(complaint.id)) return []
+    seen.add(complaint.id)
+    return [retained]
+  })
 }
 
 export interface ClusterOptions {
@@ -267,11 +492,11 @@ export function buildProductionResearchArtifact(
   input: ProductionAnalysisInput
 ): ProductionResearchArtifact {
   const parsed = productionAnalysisInputSchema.parse(input)
-  const complaints = deduplicateComplaints<ProductionAnalysisComplaint>(parsed.complaints).sort(
-    (left, right) =>
-      `${left.sourceId}\0${left.sourceRecordId}\0${left.id}`.localeCompare(
-        `${right.sourceId}\0${right.sourceRecordId}\0${right.id}`
-      )
+  const deduplicated = deduplicateComplaintSet<ProductionAnalysisComplaint>(parsed.complaints)
+  const complaints = deduplicated.complaints.sort((left, right) =>
+    `${left.sourceId}\0${left.sourceRecordId}\0${left.id}`.localeCompare(
+      `${right.sourceId}\0${right.sourceRecordId}\0${right.id}`
+    )
   )
   if (complaints.length === 0) {
     throw new Error('Production analysis requires at least one retained complaint')
@@ -326,6 +551,11 @@ export function buildProductionResearchArtifact(
       'This production-shaped artifact uses the legacy v0.2 score because no reviewed balanced v1 input envelope was supplied.'
     )
   }
+  if (deduplicated.decisions.some((decision) => decision.decision === 'review-required')) {
+    coverageGaps.add(
+      'Near-duplicate candidates are retained pending human review; retained observations are not unique-author counts.'
+    )
+  }
   const artifactId = `analysis:${stableHash({
     collectionArtifactId: parsed.collectionArtifactId,
     runId: parsed.runId,
@@ -333,6 +563,7 @@ export function buildProductionResearchArtifact(
     analysisAt: parsed.analysisAt,
     complaintIds,
     analyses,
+    deduplication: deduplicated.decisions,
     opportunityId: opportunity.id,
     scoreFactors: seed.scoreFactors,
     ...(seed.balancedScoreInput ? { balancedScoreInput: seed.balancedScoreInput } : {}),
@@ -355,6 +586,7 @@ export function buildProductionResearchArtifact(
     analyses,
     clusters,
     opportunity,
+    deduplication: deduplicated.decisions,
     coverageGaps: [...coverageGaps],
     warnings: parsed.warnings,
     policySnapshot: parsed.policySnapshot,
@@ -377,9 +609,10 @@ export async function buildFixtureResearchArtifact(
     requestedDisplayMode: 'fixture'
   })
   const selectedIds = new Set(opportunity.complaintIds)
-  const complaints = deduplicateComplaints(
+  const deduplicated = deduplicateComplaintSet(
     result.complaints.filter((entry) => selectedIds.has(entry.id))
   )
+  const complaints = deduplicated.complaints
   const analyses = analyzeComplaints(complaints)
   const clusters = clusterComplaints(complaints)
 
@@ -392,10 +625,16 @@ export async function buildFixtureResearchArtifact(
     analyses,
     clusters,
     opportunity,
+    deduplication: deduplicated.decisions,
     coverageGaps: [
       'No live social source is enabled.',
       'Fixture counts cannot establish current complaint momentum.',
-      'Competitor records are synthetic examples, not verified market research.'
+      'Competitor records are synthetic examples, not verified market research.',
+      ...(deduplicated.decisions.some((decision) => decision.decision === 'review-required')
+        ? [
+            'Near-duplicate candidates are retained pending human review; retained observations are not unique-author counts.'
+          ]
+        : [])
     ],
     warnings: result.warnings,
     qualitySnapshot: buildResearchQualitySnapshot(undefined, createdAt)

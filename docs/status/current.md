@@ -39,9 +39,14 @@
   `24ed3d5`, run `30941916282` for commit `1f20e39`, and latest run
   `30944735291` for commit `337bb66`, `30944900421` for commit `34c4a4c`, and
   latest `30947627304` for commit `e3f28d7`, `30947761415` for commit
-  `c6ffa66`, and `30949355268` for the website brand-mark commit `e276876`
+  `c6ffa66`, `30949355268` for the website brand-mark commit `e276876`, and
+  `30949551146` for the follow-up docs commit `13d3913`
   all failed before repository job steps because of the account
   payment/spending-limit gate, not because of a repository assertion.
+- Complaint analysis: the versioned `deduplication` artifact/report field now
+  preserves source-native duplicate decisions and retains high-similarity
+  cross-record candidates for human review. Private evidence/report routes
+  show the state; this does not infer unique authors or add live market data.
 - Private workspace website/API: implemented and production-built; reads are membership-authorized and cache-disabled. Encoded workspace and detail identifiers are decoded exactly once at the page boundary before schema validation. Completed collection reads now expose the bounded private `analysisHandoff` status when an approved-seed handoff exists. Owner settings expose a read-only purge-readiness inventory, an expiring owner-confirmed metadata-only purge manifest, and a step-up-protected, durable non-destructive purge intent; these snapshot PostgreSQL references/readiness without authorizing deletion and keep cloud/export/backup requirements visible.
 - Private audit inspection: `GET /api/workspaces/:workspaceId/audit-events` exposes a membership-authorized, no-store, cursor-paginated projection of immutable audit receipts. It returns bounded identifiers and scalar metadata only; nested values, raw source payloads, and dependency errors remain hidden. This is an API/agent-visible inspection boundary, not an export or purge operation.
 - Owner-authorized intake: migration `0089`, the `manual-owner-import-v1` reviewed policy, bounded CSV/JSON parsing, PII scrubbing, private staging/list/delete APIs, a private workspace import screen, identifier-only Temporal handoff, same-transaction batch consumption, and tombstone propagation are implemented and package-tested. The local-stack smoke now signs up a disposable owner, creates a private manual-import campaign, stages a smoke-only row, waits for durable workflow consumption, confirms the retained complaint, creates/reviews/approves a smoke-only opportunity seed, runs production-shaped analysis, and reads the private opportunity/report/plan pages back. This makes tenant-private research usable without presenting it as public market research; URL fetching and all third-party public connectors remain disabled or deferred.

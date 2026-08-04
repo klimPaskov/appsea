@@ -132,6 +132,11 @@ Migration `0053` adds a JSONB complaint-analysis snapshot with a validated
 deterministic classification/entity-resolution contract. Historical run
 snapshots are upgraded from already persisted complaint observations; missing
 competitor and substitute evidence remains an explicit unresolved gap.
+The complaint-analysis artifact now also carries an additive, versioned
+provenance-linked deduplication decision array. It records safe source-native
+duplicate lineage and retained near-duplicate review candidates inside the
+existing validated JSONB snapshot; legacy artifacts default to an empty array,
+so no relational migration or silent backfill is required.
 Migration `0054` hardens source-policy activation by requiring a canonical
 reviewer identity, an independent review role, and an explicit independence
 attestation. Historical approvals remain audit evidence but are returned to

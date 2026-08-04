@@ -116,6 +116,7 @@ export function generateOpportunityReport(
     evidence: {
       complaintCount: artifact.complaints.length,
       clusterCount: artifact.clusters.length,
+      deduplication: artifact.deduplication,
       observations,
       clusters: artifact.clusters.map((cluster) => ({
         id: cluster.id,
@@ -132,6 +133,11 @@ export function generateOpportunityReport(
       rationale: [
         `${artifact.complaints.length} retained observations form ${artifact.clusters.length} complaint clusters.`,
         scoreRationale,
+        ...(artifact.deduplication.some((decision) => decision.decision === 'review-required')
+          ? [
+              `${artifact.deduplication.filter((decision) => decision.decision === 'review-required').length} near-duplicate candidate(s) remain retained pending human review; no unique-author count is inferred.`
+            ]
+          : []),
         artifact.opportunity.contraryEvidence.length > 0
           ? `${artifact.opportunity.contraryEvidence.length} contrary signal${artifact.opportunity.contraryEvidence.length === 1 ? '' : 's'} remain visible.`
           : 'No contrary evidence was recorded in this artifact.'

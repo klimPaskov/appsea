@@ -424,6 +424,14 @@ production analysis rejects source IDs that are not retained in the run;
 reviewed-seed bindings remain assumptions rather than market evidence.
 Source-backed competitor/contrary research remains open.
 
+Complaint deduplication now has an additive, versioned provenance trail in
+artifact/report JSON. Repeated source-native records are safely collapsed and
+near-duplicate text from distinct records remains retained with a bounded
+human-review candidate flag and a visible coverage gap. The token heuristic is
+not semantic author resolution, does not estimate unique people, and has no
+live calibration; any future automatic merge requires a new reviewed algorithm
+version.
+
 The Stack Exchange connector is now a second policy-drafted candidate for
 `competitor-research` and `contrary-evidence`. The production collection worker
 and scheduled refresh dispatcher select it only from the approved source-policy

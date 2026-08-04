@@ -71,6 +71,8 @@ export function mapProductionAnalysisToOpportunityDetail(
         (() => {
           throw new Error(`Missing complaint analysis for ${complaint.id}`)
         })(),
+      deduplication:
+        artifact.deduplication.find((decision) => decision.complaintId === complaint.id) ?? null,
       synthetic: false,
       redacted: complaint.redacted,
       allowedRepresentation: complaint.allowedRepresentation,

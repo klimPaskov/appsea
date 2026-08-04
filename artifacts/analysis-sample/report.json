@@ -4,7 +4,7 @@
   "synthetic": false,
   "testOnly": true,
   "transport": "offline-sample",
-  "artifactId": "analysis:a5ceb2ce9e98e9ae22435ff837d19013",
+  "artifactId": "analysis:dfaa2202cb0e62367075db473f8f66ee",
   "generatedAt": "2026-07-26T00:00:00.000Z",
   "opportunity": {
     "id": "opportunity:cfpb-offline-sample",
@@ -17,6 +17,50 @@
   "evidence": {
     "complaintCount": 3,
     "clusterCount": 3,
+    "deduplication": [
+      {
+        "version": "complaint-deduplication-v1.0.0",
+        "complaintId": "cfpb-sample-complaint-1001",
+        "canonicalComplaintId": "cfpb-sample-complaint-1001",
+        "sourceId": "cfpb-consumer-complaints",
+        "sourceRecordId": "1001",
+        "evidenceId": "evidence:cfpb-sample-1001",
+        "sourceItemId": "source-item:cfpb-sample-1001",
+        "relation": "canonical",
+        "decision": "retained",
+        "similarity": 1,
+        "reviewRequired": false,
+        "reason": "No safe duplicate relationship was identified; retain the source observation."
+      },
+      {
+        "version": "complaint-deduplication-v1.0.0",
+        "complaintId": "cfpb-sample-complaint-1002",
+        "canonicalComplaintId": "cfpb-sample-complaint-1002",
+        "sourceId": "cfpb-consumer-complaints",
+        "sourceRecordId": "1002",
+        "evidenceId": "evidence:cfpb-sample-1002",
+        "sourceItemId": "source-item:cfpb-sample-1002",
+        "relation": "canonical",
+        "decision": "retained",
+        "similarity": 1,
+        "reviewRequired": false,
+        "reason": "No safe duplicate relationship was identified; retain the source observation."
+      },
+      {
+        "version": "complaint-deduplication-v1.0.0",
+        "complaintId": "cfpb-sample-complaint-1003",
+        "canonicalComplaintId": "cfpb-sample-complaint-1003",
+        "sourceId": "cfpb-consumer-complaints",
+        "sourceRecordId": "1003",
+        "evidenceId": "evidence:cfpb-sample-1003",
+        "sourceItemId": "source-item:cfpb-sample-1003",
+        "relation": "canonical",
+        "decision": "retained",
+        "similarity": 1,
+        "reviewRequired": false,
+        "reason": "No safe duplicate relationship was identified; retain the source observation."
+      }
+    ],
     "observations": [
       {
         "evidenceId": "evidence:cfpb-sample-1001",
