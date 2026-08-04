@@ -77,7 +77,13 @@ def main() -> int:
         try:
             wait_for_server(process)
             routes = {
-                '/': ['Leaderboard', 'Inbox Relay', 'Complaints', 'Score'],
+                '/': [
+                    'Leaderboard',
+                    'Inbox Relay',
+                    'Complaints',
+                    'Score',
+                    'appsea-mark-generated.png'
+                ],
                 '/opportunities/inbox-relay': ['Inbox Relay', 'Thesis', 'First wedge'],
                 '/opportunities/inbox-relay/complaints': ['Curated complaints', 'TeamMail'],
                 '/opportunities/inbox-relay/competitors': [

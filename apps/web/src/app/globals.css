@@ -67,15 +67,11 @@ a:focus-visible {
 }
 
 .brand-mark {
-  width: 28px;
-  height: 28px;
-  display: grid;
-  place-items: center;
+  width: 32px;
+  height: 32px;
+  display: block;
   border-radius: 8px;
-  background: var(--ink);
-  color: white;
-  font-size: 13px;
-  letter-spacing: 0;
+  object-fit: cover;
 }
 
 .nav-link {

@@ -1,13 +1,20 @@
 import Link from 'next/link'
+import Image from 'next/image'
 
 export function SiteHeader() {
   return (
     <header className="site-header">
       <div className="header-inner">
         <Link className="brand" href="/" aria-label="AppSea leaderboard">
-          <span className="brand-mark" aria-hidden="true">
-            A
-          </span>
+          <Image
+            className="brand-mark"
+            src="/appsea-mark-generated.png"
+            width={32}
+            height={32}
+            alt=""
+            aria-hidden="true"
+            priority
+          />
           <span>AppSea</span>
         </Link>
         <nav aria-label="Primary navigation">

@@ -5,7 +5,10 @@
 - Production-readiness: not complete; see the current [`production-readiness-audit-2026-08-04.md`](production-readiness-audit-2026-08-04.md) and the historical [`production-readiness-audit-2026-08-03.md`](production-readiness-audit-2026-08-03.md)
 - Website: implemented and freshly production-built; `pnpm verify` completed
   the current build, with deployment-only production gates remaining open;
-  fresh local Docker reruns are now available and passing
+  fresh local Docker reruns are now available and passing. The header now uses
+  the generated, non-text `appsea-mark-generated.png` asset; this is a
+  website-only brand touch and does not alter the sparse leaderboard or the
+  staged Tauri icon pair.
 - Local private-workspace stack: `pnpm dev:local` starts loopback PostgreSQL,
   Temporal, and disposable MinIO, initializes the `appsea-local` bucket, applies
   migrations with the dedicated local migrator, and runs the durable worker plus

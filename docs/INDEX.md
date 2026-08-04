@@ -126,6 +126,7 @@
 - [`status/dependency-security-hardening-completion-report-2026-08-03.md`](status/dependency-security-hardening-completion-report-2026-08-03.md)
 - [`status/production-runtime-packaging-completion-report-2026-08-03.md`](status/production-runtime-packaging-completion-report-2026-08-03.md)
 - [`status/desktop-shell-boundary-completion-report-2026-08-03.md`](status/desktop-shell-boundary-completion-report-2026-08-03.md)
+- [`status/website-brand-mark-completion-report-2026-08-04.md`](status/website-brand-mark-completion-report-2026-08-04.md)
 - [`status/mfa-agent-token-step-up-completion-report-2026-08-03.md`](status/mfa-agent-token-step-up-completion-report-2026-08-03.md)
 - [`status/conditional-mfa-password-gated-mutations-completion-report-2026-08-03.md`](status/conditional-mfa-password-gated-mutations-completion-report-2026-08-03.md)
 - [`status/temporal-legacy-history-drain-completion-report-2026-08-03.md`](status/temporal-legacy-history-drain-completion-report-2026-08-03.md)

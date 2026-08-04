@@ -82,6 +82,12 @@ Production preflight now also requires the exact reviewed
 deployment review compare the worker image with a narrow provider ACL; remote
 namespace/task-queue authorization is still external evidence.
 
+The 2026-08-04 website brand-mark slice replaces the placeholder header `A`
+with a generated, non-text raster mark at
+`apps/web/public/appsea-mark-generated.png`. It is intentionally website-only;
+the Tauri PNG/ICO pair remains unchanged until a reviewed aligned desktop asset
+and release evidence exist. Web tests, lint, and typecheck pass.
+
 ## Validated commands
 
 - CI run `30893053945` passed; feature/docs runs `30941697155`, `30941804877`,
