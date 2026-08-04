@@ -47,7 +47,8 @@ in force.
 - `node --test scripts/smoke_local_stack.test.mjs`
 - `git diff --check`
 
-The hosted GitHub workflow remains blocked by the account payment/spending-limit
+Hosted GitHub Actions run `30917740935` for commit `b99ffd7` failed before any
+job steps in every matrix job because of the account payment/spending-limit
 gate; this tranche does not claim hosted green status.
 
 ## Scope limits and blockers

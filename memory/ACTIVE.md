@@ -89,8 +89,9 @@ namespace/task-queue authorization is still external evidence.
 
 - GitHub Actions run `30893053945` passed for `b67a51b`; release-boundary,
   fresh PostgreSQL/Temporal, local-stack, worker, container, and Windows/macOS
-  checks were green. The latest hosted attempt is currently blocked by the
-  GitHub account payment/spending-limit gate, not by a repository assertion.
+  checks were green. Hosted run `30917740935` for `b99ffd7` failed before any
+  job steps in every matrix job because of the GitHub account
+  payment/spending-limit gate, not because of a repository assertion.
 - Production runtime packaging and the staged Tauri shell pass their hosted
   build/boundary checks; provider provisioning, image signing, hosted-origin,
   updater, notarization, installation, and deployment evidence remain open.
