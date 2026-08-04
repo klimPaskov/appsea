@@ -76,8 +76,9 @@ balanced `opportunity-score-v1.0.0`: raw/risk-adjusted/ranking scores, bounded
 risk, confidence, uncertainty, coverage/freshness, and explanations. Migration
 `0096` stores queryable v1 fields and private ordering uses ranking. Seeds
 without v1 retain a visible gap; no live source or calibration evidence is
-implied. Backup/restore through `0096` passes locally; provider proof remains
-open.
+implied. Smoke carries a reviewed v1 seed through owner
+intake, durable analysis, persistence, and private readback. Backup/restore
+through `0096` passes locally; provider proof remains open.
 
 `pnpm verify:release` checks Compose, secret-free defaults, hardened images, and
 fail-closed preflight; CI runs Docker mode and `--static` supports no Docker.

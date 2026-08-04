@@ -82,7 +82,16 @@ const privateWorkspaceResponses = {
         result: { state: 'completed', analysisRunId: 'analysis:smoke' },
         artifact: {
           mode: 'production',
-          opportunity: { slug: 'smoke-2026-01-01-aaaaaaaa', synthetic: false }
+          opportunity: {
+            slug: 'smoke-2026-01-01-aaaaaaaa',
+            synthetic: false,
+            scoreSnapshot: {
+              version: 'opportunity-score-v1.0.0',
+              rankingScore: 30,
+              riskAdjustedScore: 35,
+              evidenceConfidence: 0.7
+            }
+          }
         },
         report: { synthetic: false },
         planPackage: { files: ['README.md'] },

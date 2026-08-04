@@ -16,9 +16,11 @@
   confirmation, reviewed/approved opportunity seed input, production-analysis
   completion, private opportunity/report/plan readback, every private
   workspace page with encoded identifiers, auth pages, sparse fixture
-  disclosure, visible public-market coverage gaps, and container cleanup;
-  GitHub CI runs it on every change. The intake row and seed are smoke-only
-  and never market evidence.
+  disclosure, visible public-market coverage gaps, and container cleanup; it
+  now submits a reviewed balanced v1 score envelope and asserts raw,
+  risk-adjusted, ranking, and confidence fields survive durable analysis and
+  private readback. GitHub CI runs it on every change. The intake row and seed
+  are smoke-only and never market evidence.
 - Release boundary: `pnpm verify:release` checks the provider-neutral Compose
   topology, non-root/read-only image defaults, secret-free production example,
   disabled identity/delivery defaults, and fail-closed production preflight;

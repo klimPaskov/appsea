@@ -326,6 +326,10 @@ function assertPrivateWorkspaceResponses({
     analysisData?.artifact?.mode !== 'production' ||
     analysisData?.artifact?.opportunity?.slug !== opportunitySlug ||
     analysisData?.artifact?.opportunity?.synthetic !== false ||
+    analysisData?.artifact?.opportunity?.scoreSnapshot?.version !== 'opportunity-score-v1.0.0' ||
+    typeof analysisData?.artifact?.opportunity?.scoreSnapshot?.rankingScore !== 'number' ||
+    typeof analysisData?.artifact?.opportunity?.scoreSnapshot?.riskAdjustedScore !== 'number' ||
+    typeof analysisData?.artifact?.opportunity?.scoreSnapshot?.evidenceConfidence !== 'number' ||
     analysisData?.report?.synthetic !== false ||
     analysisData?.planPackage?.files?.length < 1 ||
     analysisData?.governance?.reportApprovalState !== 'draft' ||
@@ -540,6 +544,7 @@ async function runPrivateWorkspaceSmoke() {
       body: JSON.stringify({ action: 'confirmed' })
     }
   )
+  const scoreAt = new Date().toISOString()
   const seed = {
     id: `opportunity:smoke-${nonce}`,
     slug: opportunitySlug,
@@ -560,6 +565,73 @@ async function runPrivateWorkspaceSmoke() {
       buildFeasibility: 30,
       evidenceQuality: 20,
       contraryEvidencePenalty: 10
+    },
+    balancedScoreInput: {
+      profile: 'balanced',
+      demand: {
+        complaintFrequency: 60,
+        independentUserCount: 45,
+        sourceDiversity: 35,
+        recentVelocity: 40,
+        timePersistence: 55,
+        segmentDensity: 30
+      },
+      pain: {
+        severity: 70,
+        workflowCriticality: 65,
+        workaroundCost: 55,
+        switchingIntent: 35
+      },
+      marketOpening: {
+        competitorDissatisfaction: 35,
+        unresolvedSolutionGap: 50,
+        substituteWeakness: 45,
+        timing: 30
+      },
+      businessQuality: {
+        willingnessToPay: 25,
+        repeatUseRetention: 35,
+        audienceReachability: 45,
+        expansionPotential: 25
+      },
+      executionQuality: {
+        mvpFeasibility: 80,
+        dataIntegrationFeasibility: 70,
+        trustComplianceFeasibility: 75,
+        platformIndependence: 65
+      },
+      riskPenalties: {
+        sourceLegal: 0,
+        platformConcentration: 1,
+        commoditization: 1,
+        regulatoryTrust: 0,
+        manipulation: 0,
+        eventDriven: 0
+      },
+      confidenceComponents: {
+        sample: 0.65,
+        sourceDiversity: 0.55,
+        directness: 0.75,
+        entityConfidence: 0.8,
+        timeStability: 0.7,
+        manipulationSpam: 0.95,
+        methodAgreementHumanReview: 0.7
+      },
+      evidenceSnapshotId: `evidence-snapshot:smoke-${nonce}`,
+      coverageSummary: {
+        sourceCount: 1,
+        observationCount: 1,
+        independentUserCount: 1,
+        gapCount: 1,
+        summary: 'Tenant-private owner import with public coverage unavailable.'
+      },
+      freshnessSummary: {
+        oldestObservationAt: scoreAt,
+        newestObservationAt: scoreAt,
+        asOf: scoreAt,
+        ageDays: 0,
+        summary: 'Owner-import smoke evidence is captured at run time.'
+      }
     },
     planFiles: [
       'README.md',

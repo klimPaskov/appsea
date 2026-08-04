@@ -20,6 +20,9 @@ Date: 2026-08-04
   the full v1 envelope in the immutable explanation JSON as well.
 - Private opportunity summaries hydrate v1 metrics and order by ranking when
   present. The public leaderboard remains its sparse synthetic fixture route.
+- The loopback private-stack smoke now submits a reviewed v1 seed and asserts
+  the v1 snapshot survives owner import, durable analysis, PostgreSQL-backed
+  readback, and private pages.
 
 ## Proof
 
@@ -31,6 +34,7 @@ Date: 2026-08-04
 - `pnpm test`
 - `pnpm verify`
 - `pnpm repo:check --docs-only`
+- `pnpm verify:local-stack`
 
 All completed successfully locally, including the fresh PostgreSQL backup/
 restore drill through migration `0096`. Hosted persistence and provider backup/
