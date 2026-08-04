@@ -37,9 +37,10 @@ Passing locally for this tranche:
 The repository-wide local proof remains `pnpm verify`, `pnpm security:audit`,
 `pnpm verify:local-stack`, and `pnpm verify:backup-restore` as recorded in the
 previous audit. Hosted runs `30941916282` for commit `1f20e39`, `30944900421`
-for commit `34c4a4c`, and latest `30947627304` for commit `e3f28d7` failed
-before repository steps because the GitHub account payment/spending-limit gate
-is unresolved; this is not presented as a code assertion failure.
+for commit `34c4a4c`, `30947627304` for commit `e3f28d7`, `30947761415` for
+commit `c6ffa66`, and latest `30949355268` for commit `e276876` failed before
+repository steps because the GitHub account payment/spending-limit gate is
+unresolved; this is not presented as a code assertion failure.
 
 ## Deliberate simplifications
 
