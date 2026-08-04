@@ -145,8 +145,7 @@ export async function POST(
       // payload in their message. Keep this bounded diagnostic so hosted
       // smoke failures identify the failing database boundary without
       // logging request contents.
-      message:
-        error instanceof Error && error.message.length <= 240 ? error.message : undefined
+      message: error instanceof Error && error.message.length <= 240 ? error.message : undefined
     })
     return Response.json(
       { error: 'Unable to create research campaign' },

@@ -9,7 +9,7 @@ sparse; no third-party public source is enabled. A reviewed internal
 `manual-owner-import` policy now supports tenant-private owner-authorized CSV/
 JSON intake without claiming public market coverage.
 
-Migrations `0027`-`0091` cover policy evidence, checkpoints,
+Migrations `0027`-`0092` cover policy evidence, checkpoints,
 deletion/recomputation repair, leases, admissions, campaign orchestration and
 cancellation, source reconciliation, analysis history, report/plan governance,
 cost and alert projections, object references, workspace archival/purge intent/
@@ -87,6 +87,8 @@ function. Docker is unavailable locally; `pnpm dev:local` runs the loopback
 stack and `pnpm verify:local-stack` smoke-tests it in CI.
 Migration `0091` preserves `consumed_at` when an already-consumed owner
 batch is later deleted, matching its deletion trigger.
+Migration `0092` makes the service-role read privileges for campaign source
+validation explicit for `sources` and its reviewed policy tables.
 
 `pnpm verify:release` checks Compose, secret-free defaults, hardened images, and
 fail-closed preflight; CI runs Docker mode and `--static` supports no Docker.

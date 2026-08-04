@@ -104,7 +104,8 @@ describe('database foundation', () => {
       '0088',
       '0089',
       '0090',
-      '0091'
+      '0091',
+      '0092'
     ])
     expect(migrations[0]?.checksum).toMatch(/^[a-f0-9]{64}$/)
     expect(migrations[0]?.sql).toContain('CREATE TABLE appsea.evidence_records')
@@ -250,6 +251,15 @@ describe('database foundation', () => {
     )
     expect(manualImportDeleteStateMigration?.sql).toContain(
       'manual_import_batches_consumed_at_check'
+    )
+    const campaignSourcePrivilegeMigration = migrations.find(
+      (migration) => migration.version === '0092'
+    )
+    expect(campaignSourcePrivilegeMigration?.sql).toContain(
+      'GRANT SELECT ON appsea.sources'
+    )
+    expect(campaignSourcePrivilegeMigration?.sql).toContain(
+      'appsea.source_policy_versions'
     )
     const authMigration = migrations.find((migration) => migration.version === '0008')
     const privacyMigration = migrations.find((migration) => migration.version === '0009')

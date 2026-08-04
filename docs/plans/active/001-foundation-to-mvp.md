@@ -175,6 +175,9 @@ check behind a narrow security-definer decision function instead of requiring
 row-lock privileges on global source tables.
 Migration `0091_manual_import_delete_state.sql` preserves `consumed_at` when
 an already-consumed owner batch is later deleted.
+Migration `0092_campaign_source_read_privileges.sql` explicitly grants the
+runtime service role the source and reviewed-policy reads required by private
+campaign admission.
 
 Remaining deployment work and the non-fixture object-store integration are
 tracked in `docs/status/known-gaps.md` and are not part of the completed
