@@ -42,9 +42,9 @@ recovery time, or failover.
 
 The repository-wide verification suite and the preceding PostgreSQL/Temporal
 and worker-replacement proofs remain the supporting baseline. Hosted GitHub
-Actions remains externally blocked by the account payment/spending-limit gate;
-that failure occurs before repository steps and is not represented as a code
-failure.
+Actions run `30919346892` for this commit remains externally blocked by the
+account payment/spending-limit gate; every job failed before repository steps,
+so it is not represented as a code failure.
 
 ## Security and policy review
 
