@@ -413,6 +413,15 @@ additional scoring profiles, independently verified market inputs, or a live
 source. Seeds without the v1 envelope intentionally retain a visible legacy
 scoring coverage gap.
 
+The repository now carries a versioned `research-quality-v1.0.0` synthetic,
+redacted benchmark and optional immutable artifact/report snapshot. It measures
+the current deterministic classifier, entity resolver, deduplicator, clusterer,
+ranking, duplicate/source-ablation stability, and probability calibration
+against reviewed labels. These values are regression signals only: they do not
+calibrate live sources, estimate authors, derive coverage, or bind v1 score
+factors to retained evidence. Factor-level provenance and source-backed
+competitor/contrary research remain open.
+
 The Stack Exchange connector is now a second policy-drafted candidate for
 `competitor-research` and `contrary-evidence`. The production collection worker
 and scheduled refresh dispatcher select it only from the approved source-policy

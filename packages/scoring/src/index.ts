@@ -324,3 +324,113 @@ export function scoreConfidence(snapshot: ScoreSnapshot): number {
     ? snapshot.evidenceConfidence
     : snapshot.factors.evidenceQuality / 100
 }
+
+export interface CalibrationObservation {
+  probability: number
+  outcome: boolean
+}
+
+export interface TopKRankingItem {
+  id: string
+  score: number
+  relevant: boolean
+}
+
+export interface TopKRankingMetrics {
+  topKPrecision: number
+  topKRecall: number
+  rankCorrelation: number
+  sampleSize: number
+}
+
+function roundMetric(value: number, digits = 4): number {
+  const factor = 10 ** digits
+  return Math.round(value * factor) / factor
+}
+
+/** Deterministic expected calibration error for bounded probabilities. */
+export function calculateExpectedCalibrationError(
+  observations: CalibrationObservation[],
+  binCount = 5
+): number {
+  if (!Number.isInteger(binCount) || binCount < 1 || binCount > 20) {
+    throw new Error('Calibration bin count must be an integer between 1 and 20')
+  }
+  if (observations.length === 0) return 0
+  const bins = Array.from({ length: binCount }, () => ({ probability: 0, outcome: 0, count: 0 }))
+  for (const observation of observations) {
+    const probability = clamp(observation.probability, 0, 1)
+    const index = Math.min(binCount - 1, Math.floor(probability * binCount))
+    const bin = bins[index]!
+    bin.probability += probability
+    bin.outcome += observation.outcome ? 1 : 0
+    bin.count += 1
+  }
+  const error = bins.reduce((total, bin) => {
+    if (bin.count === 0) return total
+    return (
+      total +
+      (bin.count / observations.length) *
+        Math.abs(bin.probability / bin.count - bin.outcome / bin.count)
+    )
+  }, 0)
+  return roundMetric(clamp(error, 0, 1))
+}
+
+/** Deterministic Brier score for bounded probabilities. */
+export function calculateBrierScore(observations: CalibrationObservation[]): number {
+  if (observations.length === 0) return 0
+  const score =
+    observations.reduce((total, observation) => {
+      const probability = clamp(observation.probability, 0, 1)
+      const outcome = observation.outcome ? 1 : 0
+      return total + (probability - outcome) ** 2
+    }, 0) / observations.length
+  return roundMetric(clamp(score, 0, 1))
+}
+
+/** Evaluate ranking labels supplied as reviewed inputs; no market claims are inferred. */
+export function evaluateTopKRanking(items: TopKRankingItem[], requestedK = 3): TopKRankingMetrics {
+  if (!Number.isInteger(requestedK) || requestedK < 1 || requestedK > 100) {
+    throw new Error('Top-k must be an integer between 1 and 100')
+  }
+  const ranked = [...items].sort((left, right) => {
+    const scoreDelta = right.score - left.score
+    return scoreDelta !== 0 ? scoreDelta : left.id.localeCompare(right.id)
+  })
+  const topK = ranked.slice(0, requestedK)
+  const relevantCount = ranked.filter((item) => item.relevant).length
+  const relevantInTopK = topK.filter((item) => item.relevant).length
+  const topKPrecision = topK.length === 0 ? 0 : relevantInTopK / topK.length
+  const topKRecall = relevantCount === 0 ? 0 : relevantInTopK / relevantCount
+  const rankCorrelation = spearmanCorrelation(ranked)
+  return {
+    topKPrecision: roundMetric(clamp(topKPrecision, 0, 1)),
+    topKRecall: roundMetric(clamp(topKRecall, 0, 1)),
+    rankCorrelation,
+    sampleSize: items.length
+  }
+}
+
+function spearmanCorrelation(items: TopKRankingItem[]): number {
+  if (items.length < 2) return items.length === 1 ? 1 : 0
+  const scoreRanks = new Map(
+    [...items]
+      .sort((left, right) => right.score - left.score || left.id.localeCompare(right.id))
+      .map((item, index) => [item.id, index + 1])
+  )
+  const relevanceRanks = new Map(
+    [...items]
+      .sort(
+        (left, right) =>
+          Number(right.relevant) - Number(left.relevant) || left.id.localeCompare(right.id)
+      )
+      .map((item, index) => [item.id, index + 1])
+  )
+  const n = items.length
+  const squaredDistance = items.reduce((total, item) => {
+    const delta = (scoreRanks.get(item.id) ?? 0) - (relevanceRanks.get(item.id) ?? 0)
+    return total + delta * delta
+  }, 0)
+  return roundMetric(clamp(1 - (6 * squaredDistance) / (n * (n * n - 1)), -1, 1))
+}

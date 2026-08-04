@@ -215,6 +215,8 @@ describe('opportunity report generation', () => {
     expect(report.evidence.observations[0]?.analysis?.complaintId).toBe(artifact.complaints[0]?.id)
     expect(report.evidence.clusters).toHaveLength(artifact.clusters.length)
     expect(report.inference.scoreSnapshot).toEqual(artifact.opportunity.scoreSnapshot)
+    expect(report.qualitySnapshot?.schemaVersion).toBe('research-quality-v1.0.0')
+    expect(report.inference.qualitySnapshot?.provenance.sourceCoverage).toBe('not-derived')
     expect(report.coverage.gaps).toEqual(artifact.coverageGaps)
     expect(report.recommendation.nextSteps.length).toBeGreaterThan(0)
   })
@@ -229,6 +231,7 @@ describe('opportunity report generation', () => {
     expect(report.coverage.gaps).toContain(
       'This analysis was composed from a test-only offline transport and cannot support market conclusions.'
     )
+    expect(report.qualitySnapshot?.reviewedInputOnly).toBe(true)
   })
 
   it('generates a deterministic generic production plan package', () => {

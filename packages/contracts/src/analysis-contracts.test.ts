@@ -4,6 +4,8 @@ import {
   productionAnalysisInputSchema,
   productionOpportunitySeedSchema,
   productionResearchArtifactSchema,
+  researchQualityBenchmarkSchema,
+  researchQualitySnapshotSchema,
   workspaceOpportunitySeedApprovalInputSchema,
   workspaceOpportunitySeedCreateInputSchema,
   workspaceOpportunitySeedReadModelSchema,
@@ -11,6 +13,124 @@ import {
 } from './index'
 
 const now = '2026-07-26T00:00:00.000Z'
+
+describe('research quality contracts', () => {
+  it('accepts the synthetic benchmark and preserves explicit provenance', () => {
+    const complaint = {
+      id: 'quality-case-contract',
+      sourceId: 'quality-benchmark',
+      sourceRecordId: 'record-contract',
+      canonicalLocator: null,
+      capturedAt: now,
+      publishedAt: now,
+      query: 'synthetic quality benchmark',
+      product: 'RelayBox',
+      company: 'Relay Labs',
+      feature: 'export',
+      category: 'integration',
+      text: 'Synthetic label: export fails.',
+      language: 'en',
+      synthetic: true,
+      redacted: true,
+      allowedRepresentation: 'fixture'
+    }
+    const benchmark = researchQualityBenchmarkSchema.parse({
+      version: 'research-quality-benchmark-v1.0.0',
+      cases: [
+        {
+          id: complaint.id,
+          complaint,
+          expected: {
+            classification: 'complaint',
+            complaintType: 'integration',
+            entities: { product: 'RelayBox', company: 'Relay Labs', feature: 'export' },
+            duplicateGroupId: 'quality-group-contract',
+            clusterGroupId: 'quality-cluster-contract',
+            actionable: true
+          }
+        }
+      ],
+      rankingCases: [],
+      evidenceSnapshotId: null,
+      notes: []
+    })
+    expect(benchmark.reviewedInputOnly).toBe(true)
+    expect(() =>
+      researchQualityBenchmarkSchema.parse({
+        ...benchmark,
+        cases: [{ ...benchmark.cases[0], complaint: { ...complaint, synthetic: false } }]
+      })
+    ).toThrow(/synthetic/)
+  })
+
+  it('accepts a bounded quality snapshot and rejects source-derived provenance', () => {
+    const snapshot = {
+      schemaVersion: 'research-quality-v1.0.0',
+      benchmarkVersion: 'research-quality-benchmark-v1.0.0',
+      evaluatorVersion: 'research-quality-evaluator-v1.0.0',
+      generatedAt: now,
+      benchmarkHash: 'a'.repeat(64),
+      contentHash: 'b'.repeat(64),
+      synthetic: true,
+      reviewedInputOnly: true,
+      evidenceSnapshotId: null,
+      factorProvenance: 'reviewed-input-only',
+      metrics: {
+        classifier: {
+          accuracy: { sampleSize: 1, value: 1 },
+          complaintTypeAccuracy: { sampleSize: 1, value: 1 },
+          macroF1: { sampleSize: 1, value: 1 },
+          actionabilityPrecision: { sampleSize: 1, value: 1 },
+          calibrationError: { sampleSize: 1, value: 0 }
+        },
+        entity: {
+          top1Accuracy: { sampleSize: 1, value: 1 },
+          topKRecall: { sampleSize: 1, value: 1 },
+          abstentionRate: { sampleSize: 1, value: 0 },
+          highImpactWrongLinkRate: { sampleSize: 1, value: 0 }
+        },
+        deduplication: {
+          pairPrecision: { sampleSize: 1, value: 1 },
+          pairRecall: { sampleSize: 1, value: 1 },
+          f1: { sampleSize: 1, value: 1 }
+        },
+        clustering: {
+          pairPrecision: { sampleSize: 1, value: 1 },
+          pairRecall: { sampleSize: 1, value: 1 },
+          f1: { sampleSize: 1, value: 1 },
+          purity: { sampleSize: 1, value: 1 }
+        },
+        stability: {
+          duplicateInjection: { sampleSize: 1, value: 1 },
+          sourceAblation: { sampleSize: 1, value: 1 }
+        },
+        ranking: {
+          topKPrecision: { sampleSize: 1, value: 1 },
+          topKRecall: { sampleSize: 1, value: 1 },
+          rankCorrelation: { sampleSize: 1, value: 1 }
+        },
+        calibration: {
+          expectedCalibrationError: { sampleSize: 1, value: 0 },
+          brierScore: { sampleSize: 1, value: 0 }
+        }
+      },
+      warnings: ['Synthetic only.'],
+      provenance: {
+        mode: 'synthetic-redacted-benchmark',
+        sourceCoverage: 'not-derived',
+        factorInputs: 'reviewed-input-only',
+        note: 'No source coverage is derived.'
+      }
+    }
+    expect(researchQualitySnapshotSchema.parse(snapshot)).toEqual(snapshot)
+    expect(() =>
+      researchQualitySnapshotSchema.parse({
+        ...snapshot,
+        provenance: { ...snapshot.provenance, sourceCoverage: 'derived' }
+      })
+    ).toThrow()
+  })
+})
 
 const analysisFor = (complaintId: string) =>
   complaintAnalysisSchema.parse({

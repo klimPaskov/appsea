@@ -22,29 +22,19 @@ analysis v2 are policy-gated/replay-safe; CFPB and Stack Exchange remain
 disabled pending independent approval. Reports/plans preserve provenance,
 coverage gaps, approval state, synthetic disclosure, and object references.
 
-`pnpm verify:worker:recovery` proves local/CI process replacement: a
-separate fixture client observes a persisted checkpoint, the first worker is
-stopped during persistence, and a replacement resumes the same execution with
-one job/run/output/checkpoint/cost effect, distinct outbox rows, and
-sanitized history. Its
-pause is bounded and production-rejected; hosted restore/failover and topology
+`pnpm verify:worker:recovery` proves local/CI worker replacement with one-time
+durable effects and sanitized history; hosted restore/failover and topology
 proof remain open.
 
-Authentication uses scrypt hashes, revocable sessions, membership-before-RLS,
-password/MFA step-up, research-governance approval gates, TOTP/recovery codes,
-closure, archival, and scoped read-only agent tokens. Agent access issues/
-revokes least-privilege tokens; credentials are one-time and later reads
-metadata-only. Members have a read-only Usage page for exact cost/quota cases;
-maintenance resolution stays outside the browser. OIDC remains disabled by
-default; provider identity, delivery/DPA, retention, egress, and deployment
-operations remain external.
+Authentication uses scrypt sessions, membership/RLS, password/MFA and
+governance step-up, closure/archival, and scoped read-only agent tokens. OIDC,
+provider identity/delivery, retention, egress, and deployment operations remain
+external.
 
-Workers have server-clock leases, fenced SQL mutations, bounded retries,
-reconciliation, deletion/source/object retention queues, campaign
-refresh/orchestration, cancellation recovery, maintenance metrics, and signed
-alert delivery. Migration `0082` adds the scalar operational-alert outbox and
-durable drain. Deployment scheduler ownership, incident routing, provider
-billing, cloud/backup purge, and production topology remain open.
+Workers have server-clock leases, fenced mutations, retries/reconciliation,
+retention queues, campaign/cancellation recovery, metrics, and signed alerts;
+deployment scheduler ownership, billing, cloud/backup purge, and topology
+remain open.
 
 Imported complaints, pages, reports, and model output remain untrusted data;
 they cannot update code, skills, instructions, permissions, or repository
@@ -58,26 +48,25 @@ immutable event adapter with expected-hash concurrency; no worker imports or
 activates it, and no runtime permission became active.
 
 Manual owner-import (migration `0089`) is the active non-fixture path: bounded,
-normalized, PII-scrubbed, tenant-private, and represented in Temporal by batch
-ID only. Local smoke covers intake, durable completion, reviewed analysis,
-private report/plan readback, and the visible public-market gap; URL fetching and
+normalized, PII-scrubbed, tenant-private, and Temporal-linked by batch ID only.
+Local smoke covers intake through private report/plan readback; URL fetching and
 public sources remain disabled. Migrations `0090`-`0099` keep policy/deletion/
-privilege surfaces narrow; `0097` binds MCP tokens to current membership and
-enforces a 60-per-60-second window, four in-flight leases, and
-30-second stale recovery; `0098` adds the ordered private audit-history index;
-`0099` adds dormant runtime-skill persistence/audit. The authenticated
-`/api/workspaces/:workspaceId/audit-events` route exposes
-bounded identifier/scalar audit receipts with an opaque cursor and no raw source
-payloads. Local PostgreSQL/Temporal/MinIO S3, worker replacement,
-private-stack pages, and backup/restore through 99 pass. Provider-encrypted
-backups, HA, and restore/failover remain deployment-owned.
+privilege surfaces narrow, including bounded MCP admission, audit history, and
+dormant runtime-skill persistence. Local PostgreSQL/Temporal/MinIO, worker
+replacement, private pages, and backup/restore through 99 pass; provider
+backups, HA, and failover remain deployment-owned.
 
 Scoring preserves `opportunity-score-v0.2.0` and adds reviewed-input
 balanced `opportunity-score-v1.0.0`: raw/risk-adjusted/ranking scores, bounded
 risk, confidence, uncertainty, coverage/freshness, and explanations. Migration
 `0096` stores v1 fields and private ordering uses ranking. Seeds
 without v1 retain a visible gap; no live source or calibration evidence is
-implied. Smoke carries a reviewed v1 seed through owner
+implied. A synthetic/redacted `research-quality-v1.0.0` benchmark now measures
+deterministic classifier/entity, deduplication, clustering, duplicate/source
+ablation stability, ranking, and probability calibration behavior. Optional
+artifact/report snapshots keep the benchmark hash and explicit
+`reviewed-input-only`/`sourceCoverage: not-derived` provenance; it is regression
+evidence, not live calibration or market evidence. Smoke carries a reviewed v1 seed through owner
 intake, durable analysis, persistence, and private readback. Backup/restore
 through `0099` passes locally; provider proof remains open.
 

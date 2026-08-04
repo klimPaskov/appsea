@@ -2,26 +2,23 @@
 
 - Start broad work with instructions, memory, and `docs/INDEX.md`.
 - Fixture is the complete persisted path; approved collection is separate/non-synthetic. Leaderboard only.
-- Fixture/collection tested; fresh PostgreSQL/Temporal CI-proven. Local/CI
-  worker replacement covers persistence loss, one-time row, and sanitized
-  history; backup/restore covers schema/roles, while hosted
-  restore/crash drill and cloud/backup purge remain pending.
+- Fixture/collection tested; fresh PostgreSQL/Temporal CI-proven. Worker
+  replacement and schema/role backup-restore pass locally; hosted restore,
+  crash drill, and cloud purge remain pending.
 - `CfpbConnector` is disabled pending legal/privacy/security approval;
   `StackExchangeConnector` is a disabled candidate for competitor/contrary
   research. `manual-owner-import-v1` is the only active non-fixture path and
   accepts owner-attested tenant-private CSV/JSON; it never fetches URLs or
   establishes public coverage.
-- Web auth uses scrypt/revocable sessions, membership/RLS, password/MFA step-up, and research-governance approval gates; provider approval/delivery, identity retention/revocation, DNS/egress, provider-backed step-up, deployment review, and unrelated non-password-gated mutations remain open.
+- Web auth uses scrypt/revocable sessions, membership/RLS, password/MFA step-up, and governance gates; provider identity/delivery, retention, DNS/egress, deployment review, and unrelated mutations remain open.
 - Production collection persists policy-bound evidence, complaints, gaps, cost, and lineage; private reads use `/workspace/:workspaceId/research/:runId`; outputs use filesystem/S3.
+- The deterministic `research-quality-v1.0.0` benchmark is synthetic/redacted regression evidence only. Optional artifact/report snapshots expose classifier/entity, deduplication, clustering, stability, ranking, and calibration metrics with `reviewed-input-only` and `sourceCoverage: not-derived`; it does not calibrate live sources or derive score-factor provenance.
 - Analysis v2 carries IDs/digests; the worker rebuilds artifacts in-activity. Legacy v1 drain, cloud/backup purge, role rotation, and scheduler ownership remain open. Collection writes lock leases; `0037` recovers stale dispatches.
-- Auth, quotas, retention, admissions, purge, tombstones, scheduler metrics, and
-  campaign refresh are durable; `maintenance:loop` is signal-safe. Owner purge
-  remains `awaiting_external_controls`; no destructive operation is wired.
-- Web/worker share fail-closed Temporal config; production requires TLS/API-key/namespace/CA. Maintenance uses `0046`/`0052`; source commands use `0051`; alerting, role rotation, recovery, and proof remain open.
+- Auth, quotas, retention, admissions, tombstones, scheduler metrics, and
+  refresh are durable; owner purge remains `awaiting_external_controls`.
+- Web/worker share fail-closed Temporal config; production requires TLS/API-key/namespace/CA. Maintenance uses `0046`/`0052`; alerting, role rotation, recovery, and proof remain open.
 - Runtime skill registry is dormant: independent proposer/evaluator/approver,
   signed review/transition evidence, and migration `0099` operator-only
   persistence/audit with expected-hash concurrency; no worker import/activation.
-- Read-only MCP tokens recheck workspace membership and use PostgreSQL
-  60-per-60-second windows, four in-flight leases, and 30-second stale recovery;
-  edge limits, secret storage, and hosted monitoring remain open. `0098` adds
-  the audit index; `0099` adds dormant skill persistence; reads stay bounded.
+- Read-only MCP tokens recheck membership and use bounded PostgreSQL windows and
+  leases; edge limits, secret storage, and hosted monitoring remain open.

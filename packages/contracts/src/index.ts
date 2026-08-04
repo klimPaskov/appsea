@@ -880,6 +880,199 @@ const contentHashSchema = z
   .length(64)
   .regex(/^[a-f0-9]{64}$/)
 
+const qualityVersionSchema = z
+  .string()
+  .min(1)
+  .max(80)
+  .regex(/^[a-z0-9][a-z0-9._:-]*$/)
+
+const qualityMetricSampleSchema = z
+  .object({
+    sampleSize: z.number().int().nonnegative().max(1_000_000),
+    value: z.number().min(0).max(1)
+  })
+  .strict()
+
+const researchQualityExpectedEntitySchema = z
+  .object({
+    product: z.string().min(1).max(240).nullable(),
+    company: z.string().min(1).max(240).nullable(),
+    feature: z.string().min(1).max(240).nullable()
+  })
+  .strict()
+
+/** A reviewed label for one synthetic, redacted observation. The text is
+ * deliberately fixture-only and cannot be interpreted as source evidence. */
+export const researchQualityBenchmarkCaseSchema = z
+  .object({
+    id: appseaIdentifierSchema,
+    complaint: complaintSchema,
+    expected: z
+      .object({
+        classification: complaintClassificationSchema,
+        complaintType: complaintTypeSchema,
+        entities: researchQualityExpectedEntitySchema,
+        duplicateGroupId: appseaIdentifierSchema,
+        clusterGroupId: appseaIdentifierSchema,
+        actionable: z.boolean()
+      })
+      .strict()
+  })
+  .strict()
+  .superRefine((entry, context) => {
+    if (!entry.complaint.synthetic) {
+      context.addIssue({
+        code: 'custom',
+        path: ['complaint', 'synthetic'],
+        message: 'Quality benchmark complaints must be synthetic'
+      })
+    }
+    if (!entry.complaint.redacted) {
+      context.addIssue({
+        code: 'custom',
+        path: ['complaint', 'redacted'],
+        message: 'Quality benchmark complaints must be redacted'
+      })
+    }
+    if (entry.complaint.allowedRepresentation !== 'fixture') {
+      context.addIssue({
+        code: 'custom',
+        path: ['complaint', 'allowedRepresentation'],
+        message: 'Quality benchmark complaints must use fixture representation'
+      })
+    }
+    if (entry.complaint.id !== entry.id) {
+      context.addIssue({
+        code: 'custom',
+        path: ['complaint', 'id'],
+        message: 'Benchmark case and complaint identifiers must match'
+      })
+    }
+  })
+
+export const researchQualityRankingCaseSchema = z
+  .object({
+    candidateId: appseaIdentifierSchema,
+    reviewedScore: z.number().min(0).max(100),
+    accepted: z.boolean()
+  })
+  .strict()
+
+export const researchQualityBenchmarkSchema = z
+  .object({
+    version: qualityVersionSchema,
+    cases: z.array(researchQualityBenchmarkCaseSchema).min(1).max(1_000),
+    rankingCases: z.array(researchQualityRankingCaseSchema).max(1_000).default([]),
+    evidenceSnapshotId: appseaIdentifierSchema.nullable().default(null),
+    reviewedInputOnly: z.literal(true).default(true),
+    notes: z.array(z.string().min(1).max(500)).max(50).default([])
+  })
+  .strict()
+  .superRefine((benchmark, context) => {
+    const caseIds = benchmark.cases.map((entry) => entry.id)
+    if (new Set(caseIds).size !== caseIds.length) {
+      context.addIssue({
+        code: 'custom',
+        path: ['cases'],
+        message: 'Quality benchmark case identifiers must be unique'
+      })
+    }
+    const rankingIds = benchmark.rankingCases.map((entry) => entry.candidateId)
+    if (new Set(rankingIds).size !== rankingIds.length) {
+      context.addIssue({
+        code: 'custom',
+        path: ['rankingCases'],
+        message: 'Quality ranking candidate identifiers must be unique'
+      })
+    }
+    if (benchmark.evidenceSnapshotId !== null) {
+      context.addIssue({
+        code: 'custom',
+        path: ['evidenceSnapshotId'],
+        message: 'The synthetic quality benchmark cannot bind to source evidence'
+      })
+    }
+  })
+
+export const researchQualitySnapshotSchema = z
+  .object({
+    schemaVersion: z.literal('research-quality-v1.0.0'),
+    benchmarkVersion: qualityVersionSchema,
+    evaluatorVersion: qualityVersionSchema,
+    generatedAt: z.string().datetime(),
+    benchmarkHash: contentHashSchema,
+    contentHash: contentHashSchema,
+    synthetic: z.literal(true),
+    reviewedInputOnly: z.literal(true),
+    evidenceSnapshotId: appseaIdentifierSchema.nullable(),
+    factorProvenance: z.literal('reviewed-input-only'),
+    metrics: z
+      .object({
+        classifier: z
+          .object({
+            accuracy: qualityMetricSampleSchema,
+            complaintTypeAccuracy: qualityMetricSampleSchema,
+            macroF1: qualityMetricSampleSchema,
+            actionabilityPrecision: qualityMetricSampleSchema,
+            calibrationError: qualityMetricSampleSchema
+          })
+          .strict(),
+        entity: z
+          .object({
+            top1Accuracy: qualityMetricSampleSchema,
+            topKRecall: qualityMetricSampleSchema,
+            abstentionRate: qualityMetricSampleSchema,
+            highImpactWrongLinkRate: qualityMetricSampleSchema
+          })
+          .strict(),
+        deduplication: z
+          .object({
+            pairPrecision: qualityMetricSampleSchema,
+            pairRecall: qualityMetricSampleSchema,
+            f1: qualityMetricSampleSchema
+          })
+          .strict(),
+        clustering: z
+          .object({
+            pairPrecision: qualityMetricSampleSchema,
+            pairRecall: qualityMetricSampleSchema,
+            f1: qualityMetricSampleSchema,
+            purity: qualityMetricSampleSchema
+          })
+          .strict(),
+        stability: z
+          .object({
+            duplicateInjection: qualityMetricSampleSchema,
+            sourceAblation: qualityMetricSampleSchema
+          })
+          .strict(),
+        ranking: z
+          .object({
+            topKPrecision: qualityMetricSampleSchema,
+            topKRecall: qualityMetricSampleSchema,
+            rankCorrelation: qualityMetricSampleSchema
+          })
+          .strict(),
+        calibration: z
+          .object({
+            expectedCalibrationError: qualityMetricSampleSchema,
+            brierScore: qualityMetricSampleSchema
+          })
+          .strict()
+      })
+      .strict(),
+    warnings: z.array(z.string().min(1).max(1_000)).max(100),
+    provenance: z
+      .object({
+        mode: z.literal('synthetic-redacted-benchmark'),
+        sourceCoverage: z.literal('not-derived'),
+        factorInputs: z.literal('reviewed-input-only'),
+        note: z.string().min(1).max(1_000)
+      })
+      .strict()
+  })
+  .strict()
+
 export const competitiveResearchStatusSchema = z.enum([
   'unresolved',
   'reviewed-seed-only',
@@ -1457,7 +1650,9 @@ export const researchArtifactSchema = z.object({
   clusters: z.array(complaintClusterSchema).min(1).max(2_000),
   opportunity: opportunitySchema,
   coverageGaps: z.array(z.string()).max(500),
-  warnings: z.array(z.string()).max(500)
+  warnings: z.array(z.string()).max(500),
+  /** Optional offline benchmark evidence; absent in legacy artifacts. */
+  qualitySnapshot: researchQualitySnapshotSchema.optional()
 })
 
 export const fixtureResearchArtifactSchema = researchArtifactSchema
@@ -1716,7 +1911,8 @@ export const opportunityReportSchema = z
         scoreSnapshot: scoreSnapshotSchema,
         contraryEvidence: z.array(z.string()),
         confidence: z.enum(['low', 'medium', 'high']),
-        rationale: z.array(z.string().min(1))
+        rationale: z.array(z.string().min(1)),
+        qualitySnapshot: researchQualitySnapshotSchema.optional()
       })
       .strict(),
     recommendation: z
@@ -1732,6 +1928,8 @@ export const opportunityReportSchema = z
         sources: z.array(reportSourceCoverageSchema)
       })
       .strict(),
+    /** Optional offline quality evidence; older reports omit this field. */
+    qualitySnapshot: researchQualitySnapshotSchema.optional(),
     warnings: z.array(z.string())
   })
   .strict()
@@ -6371,6 +6569,10 @@ export type ComplaintEntityResolution = z.infer<typeof complaintEntityResolution
 export type ComplaintAnalysis = z.infer<typeof complaintAnalysisSchema>
 export type ComplaintAnalysisCorrection = z.infer<typeof complaintAnalysisCorrectionSchema>
 export type ComplaintCluster = z.infer<typeof complaintClusterSchema>
+export type ResearchQualityBenchmarkCase = z.infer<typeof researchQualityBenchmarkCaseSchema>
+export type ResearchQualityRankingCase = z.infer<typeof researchQualityRankingCaseSchema>
+export type ResearchQualityBenchmark = z.infer<typeof researchQualityBenchmarkSchema>
+export type ResearchQualitySnapshot = z.infer<typeof researchQualitySnapshotSchema>
 export type CompetitorFeatureMatrixStatus = z.infer<typeof competitorFeatureMatrixStatusSchema>
 export type CompetitorFeatureMatrixEvidenceBasis = z.infer<
   typeof competitorFeatureMatrixEvidenceBasisSchema

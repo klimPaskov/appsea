@@ -329,7 +329,138 @@
       "3 retained observations form 3 complaint clusters.",
       "The deterministic opportunity-score-v0.2.0 score is 7.8 out of 100.",
       "1 contrary signal remain visible."
-    ]
+    ],
+    "qualitySnapshot": {
+      "schemaVersion": "research-quality-v1.0.0",
+      "benchmarkVersion": "research-quality-benchmark-v1.0.0",
+      "evaluatorVersion": "research-quality-evaluator-v1.0.0",
+      "generatedAt": "2026-07-26T00:00:00.000Z",
+      "benchmarkHash": "2303e94290fcf805ad16e344ba224fd14c2159a1c92e8b3f7704d7b1ddd5e3ce",
+      "contentHash": "530e44bd479ff38423231ff489abaf3060e7f0bbd22b1fee41bf6d2505656d03",
+      "synthetic": true,
+      "reviewedInputOnly": true,
+      "evidenceSnapshotId": null,
+      "factorProvenance": "reviewed-input-only",
+      "metrics": {
+        "classifier": {
+          "accuracy": {
+            "sampleSize": 8,
+            "value": 1
+          },
+          "complaintTypeAccuracy": {
+            "sampleSize": 8,
+            "value": 0.875
+          },
+          "macroF1": {
+            "sampleSize": 4,
+            "value": 1
+          },
+          "actionabilityPrecision": {
+            "sampleSize": 5,
+            "value": 1
+          },
+          "calibrationError": {
+            "sampleSize": 8,
+            "value": 0.2937
+          }
+        },
+        "entity": {
+          "top1Accuracy": {
+            "sampleSize": 24,
+            "value": 1
+          },
+          "topKRecall": {
+            "sampleSize": 23,
+            "value": 1
+          },
+          "abstentionRate": {
+            "sampleSize": 24,
+            "value": 0.0417
+          },
+          "highImpactWrongLinkRate": {
+            "sampleSize": 24,
+            "value": 0
+          }
+        },
+        "deduplication": {
+          "pairPrecision": {
+            "sampleSize": 28,
+            "value": 1
+          },
+          "pairRecall": {
+            "sampleSize": 28,
+            "value": 1
+          },
+          "f1": {
+            "sampleSize": 28,
+            "value": 1
+          }
+        },
+        "clustering": {
+          "pairPrecision": {
+            "sampleSize": 28,
+            "value": 1
+          },
+          "pairRecall": {
+            "sampleSize": 28,
+            "value": 1
+          },
+          "f1": {
+            "sampleSize": 28,
+            "value": 1
+          },
+          "purity": {
+            "sampleSize": 8,
+            "value": 1
+          }
+        },
+        "stability": {
+          "duplicateInjection": {
+            "sampleSize": 7,
+            "value": 1
+          },
+          "sourceAblation": {
+            "sampleSize": 6,
+            "value": 1
+          }
+        },
+        "ranking": {
+          "topKPrecision": {
+            "sampleSize": 5,
+            "value": 0.6667
+          },
+          "topKRecall": {
+            "sampleSize": 5,
+            "value": 0.6667
+          },
+          "rankCorrelation": {
+            "sampleSize": 5,
+            "value": 0.85
+          }
+        },
+        "calibration": {
+          "expectedCalibrationError": {
+            "sampleSize": 8,
+            "value": 0.2937
+          },
+          "brierScore": {
+            "sampleSize": 8,
+            "value": 0.1009
+          }
+        }
+      },
+      "warnings": [
+        "This quality snapshot is computed from a synthetic, redacted benchmark and is not market evidence.",
+        "Classifier, entity, deduplication, clustering, and ranking metrics are regression signals, not live calibration.",
+        "Coverage and score factor provenance remain reviewed-input-only; no source coverage is derived."
+      ],
+      "provenance": {
+        "mode": "synthetic-redacted-benchmark",
+        "sourceCoverage": "not-derived",
+        "factorInputs": "reviewed-input-only",
+        "note": "The benchmark is checked into the repository to detect deterministic pipeline drift before source activation."
+      }
+    }
   },
   "recommendation": {
     "decision": "defer",
@@ -371,6 +502,137 @@
         "synthetic": false
       }
     ]
+  },
+  "qualitySnapshot": {
+    "schemaVersion": "research-quality-v1.0.0",
+    "benchmarkVersion": "research-quality-benchmark-v1.0.0",
+    "evaluatorVersion": "research-quality-evaluator-v1.0.0",
+    "generatedAt": "2026-07-26T00:00:00.000Z",
+    "benchmarkHash": "2303e94290fcf805ad16e344ba224fd14c2159a1c92e8b3f7704d7b1ddd5e3ce",
+    "contentHash": "530e44bd479ff38423231ff489abaf3060e7f0bbd22b1fee41bf6d2505656d03",
+    "synthetic": true,
+    "reviewedInputOnly": true,
+    "evidenceSnapshotId": null,
+    "factorProvenance": "reviewed-input-only",
+    "metrics": {
+      "classifier": {
+        "accuracy": {
+          "sampleSize": 8,
+          "value": 1
+        },
+        "complaintTypeAccuracy": {
+          "sampleSize": 8,
+          "value": 0.875
+        },
+        "macroF1": {
+          "sampleSize": 4,
+          "value": 1
+        },
+        "actionabilityPrecision": {
+          "sampleSize": 5,
+          "value": 1
+        },
+        "calibrationError": {
+          "sampleSize": 8,
+          "value": 0.2937
+        }
+      },
+      "entity": {
+        "top1Accuracy": {
+          "sampleSize": 24,
+          "value": 1
+        },
+        "topKRecall": {
+          "sampleSize": 23,
+          "value": 1
+        },
+        "abstentionRate": {
+          "sampleSize": 24,
+          "value": 0.0417
+        },
+        "highImpactWrongLinkRate": {
+          "sampleSize": 24,
+          "value": 0
+        }
+      },
+      "deduplication": {
+        "pairPrecision": {
+          "sampleSize": 28,
+          "value": 1
+        },
+        "pairRecall": {
+          "sampleSize": 28,
+          "value": 1
+        },
+        "f1": {
+          "sampleSize": 28,
+          "value": 1
+        }
+      },
+      "clustering": {
+        "pairPrecision": {
+          "sampleSize": 28,
+          "value": 1
+        },
+        "pairRecall": {
+          "sampleSize": 28,
+          "value": 1
+        },
+        "f1": {
+          "sampleSize": 28,
+          "value": 1
+        },
+        "purity": {
+          "sampleSize": 8,
+          "value": 1
+        }
+      },
+      "stability": {
+        "duplicateInjection": {
+          "sampleSize": 7,
+          "value": 1
+        },
+        "sourceAblation": {
+          "sampleSize": 6,
+          "value": 1
+        }
+      },
+      "ranking": {
+        "topKPrecision": {
+          "sampleSize": 5,
+          "value": 0.6667
+        },
+        "topKRecall": {
+          "sampleSize": 5,
+          "value": 0.6667
+        },
+        "rankCorrelation": {
+          "sampleSize": 5,
+          "value": 0.85
+        }
+      },
+      "calibration": {
+        "expectedCalibrationError": {
+          "sampleSize": 8,
+          "value": 0.2937
+        },
+        "brierScore": {
+          "sampleSize": 8,
+          "value": 0.1009
+        }
+      }
+    },
+    "warnings": [
+      "This quality snapshot is computed from a synthetic, redacted benchmark and is not market evidence.",
+      "Classifier, entity, deduplication, clustering, and ranking metrics are regression signals, not live calibration.",
+      "Coverage and score factor provenance remain reviewed-input-only; no source coverage is derived."
+    ],
+    "provenance": {
+      "mode": "synthetic-redacted-benchmark",
+      "sourceCoverage": "not-derived",
+      "factorInputs": "reviewed-input-only",
+      "note": "The benchmark is checked into the repository to detect deterministic pipeline drift before source activation."
+    }
   },
   "warnings": [
     "Test-only production-shaped transport; do not present this artifact as market research."

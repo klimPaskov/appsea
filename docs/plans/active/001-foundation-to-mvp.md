@@ -3,7 +3,7 @@
 - Status: active
 - Owner: main coding agent
 - Started: 2026-07-10
-- Current audit: [`production-readiness-audit-2026-08-03.md`](../../status/production-readiness-audit-2026-08-03.md)
+- Current audit: [`production-readiness-audit-2026-08-04.md`](../../status/production-readiness-audit-2026-08-04.md)
 
 ## Completed foundation
 
@@ -662,7 +662,11 @@ contrary evidence, recommendation, source coverage, and coverage gaps separate.
 Balanced v1 reports preserve raw, risk-adjusted, ranking, uncertainty, and
 evidence-confidence semantics from the reviewed score snapshot; legacy fixture
 reports continue to expose the v0.2 raw score. The ranking envelope is a
-reviewed-input checkpoint, not calibration or live market evidence.
+reviewed-input checkpoint, not calibration or live market evidence. Optional
+artifact/report quality snapshots now record the versioned synthetic benchmark,
+deduplication/clustering/ranking stability, and bounded calibration metrics;
+they are regression evidence only and do not derive source coverage or factor
+provenance.
 Private opportunity reads now expose a separate competitive-research coverage
 record, per-claim provenance observations, and a competitors/contrary-signals
 route; it does not promote reviewed seed assumptions to source-backed market

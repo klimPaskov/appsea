@@ -92,6 +92,7 @@ export function generateOpportunityReport(
     evidenceConfidence >= 0.7 ? 'high' : evidenceConfidence >= 0.4 ? 'medium' : 'low'
   const rankingScore = scoreForRanking(artifact.opportunity.scoreSnapshot)
   const decision = rankingScore >= 75 ? 'explore' : rankingScore >= 50 ? 'validate' : 'defer'
+  const qualitySnapshot = artifact.qualitySnapshot
   const scoreRationale =
     'rankingScore' in artifact.opportunity.scoreSnapshot
       ? `The deterministic ${artifact.opportunity.scoreSnapshot.version} score has raw ${artifact.opportunity.scoreSnapshot.rawScore.toFixed(1)}, risk-adjusted ${artifact.opportunity.scoreSnapshot.riskAdjustedScore.toFixed(1)}, ranking ${rankingScore.toFixed(1)}, and evidence confidence ${(evidenceConfidence * 100).toFixed(0)}%.`
@@ -134,7 +135,8 @@ export function generateOpportunityReport(
         artifact.opportunity.contraryEvidence.length > 0
           ? `${artifact.opportunity.contraryEvidence.length} contrary signal${artifact.opportunity.contraryEvidence.length === 1 ? '' : 's'} remain visible.`
           : 'No contrary evidence was recorded in this artifact.'
-      ]
+      ],
+      ...(qualitySnapshot ? { qualitySnapshot } : {})
     },
     recommendation: {
       decision,
@@ -157,6 +159,7 @@ export function generateOpportunityReport(
       gaps: artifact.coverageGaps,
       sources
     },
+    ...(qualitySnapshot ? { qualitySnapshot } : {}),
     warnings: artifact.warnings
   })
 }

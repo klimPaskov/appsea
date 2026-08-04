@@ -4,10 +4,41 @@ import {
   assertDeterministicScoreSnapshotV1,
   calculateOpportunityScore,
   calculateOpportunityScoreV1,
+  calculateBrierScore,
+  calculateExpectedCalibrationError,
+  evaluateTopKRanking,
   InvalidScoreSnapshotError,
   SCORE_VERSION,
   SCORE_V1_VERSION
 } from './index'
+
+describe('quality metric helpers', () => {
+  it('computes bounded deterministic calibration metrics', () => {
+    const observations = [
+      { probability: 0.9, outcome: true },
+      { probability: 0.1, outcome: false }
+    ]
+    expect(calculateExpectedCalibrationError(observations)).toBe(0.1)
+    expect(calculateBrierScore(observations)).toBe(0.01)
+    expect(calculateExpectedCalibrationError(observations)).toBe(
+      calculateExpectedCalibrationError([...observations].reverse())
+    )
+  })
+
+  it('evaluates reviewed-input ranking labels with deterministic tie breaks', () => {
+    const items = [
+      { id: 'candidate-b', score: 90, relevant: false },
+      { id: 'candidate-a', score: 90, relevant: true },
+      { id: 'candidate-c', score: 80, relevant: true }
+    ]
+    expect(evaluateTopKRanking(items, 2)).toMatchObject({
+      topKPrecision: 0.5,
+      topKRecall: 0.5,
+      sampleSize: 3
+    })
+    expect(evaluateTopKRanking(items, 2)).toEqual(evaluateTopKRanking(items, 2))
+  })
+})
 
 const base = {
   complaintVolume: 80,

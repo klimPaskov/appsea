@@ -21,6 +21,7 @@ import {
   productionAnalysisInputSchema,
   productionResearchArtifactSchema
 } from '@appsea/contracts'
+import { buildResearchQualitySnapshot } from './quality-benchmark'
 
 export const COMPLAINT_ANALYSIS_VERSION = 'complaint-analysis-v0.1.0'
 
@@ -357,7 +358,8 @@ export function buildProductionResearchArtifact(
     coverageGaps: [...coverageGaps],
     warnings: parsed.warnings,
     policySnapshot: parsed.policySnapshot,
-    opportunitySeedReview: parsed.opportunitySeed
+    opportunitySeedReview: parsed.opportunitySeed,
+    qualitySnapshot: buildResearchQualitySnapshot(undefined, parsed.analysisAt)
   })
 }
 
@@ -395,6 +397,15 @@ export async function buildFixtureResearchArtifact(
       'Fixture counts cannot establish current complaint momentum.',
       'Competitor records are synthetic examples, not verified market research.'
     ],
-    warnings: result.warnings
+    warnings: result.warnings,
+    qualitySnapshot: buildResearchQualitySnapshot(undefined, createdAt)
   })
 }
+
+export {
+  RESEARCH_QUALITY_BENCHMARK,
+  RESEARCH_QUALITY_BENCHMARK_VERSION,
+  RESEARCH_QUALITY_EVALUATOR_VERSION,
+  buildResearchQualitySnapshot,
+  evaluateResearchQuality
+} from './quality-benchmark'

@@ -2,7 +2,7 @@
 
 - Version: `0.3.0`
 - Stage: validated fixture product with production-shaped PostgreSQL persistence and a local/CI-proven durable workflow and worker-replacement slice
-- Production-readiness: not complete; see the current [`production-readiness-audit-2026-08-03.md`](production-readiness-audit-2026-08-03.md) and the historical [`production-readiness-audit-2026-08-02.md`](production-readiness-audit-2026-08-02.md)
+- Production-readiness: not complete; see the current [`production-readiness-audit-2026-08-04.md`](production-readiness-audit-2026-08-04.md) and the historical [`production-readiness-audit-2026-08-03.md`](production-readiness-audit-2026-08-03.md)
 - Website: implemented and freshly production-built; `pnpm verify` completed
   the current build, with deployment-only production gates remaining open;
   fresh local Docker reruns are now available and passing
@@ -32,8 +32,8 @@
   smoke, container smoke, and independent Windows and macOS desktop checks;
   hosted runs `30917740935`, `30919346892`, `30923658050`, `30929883317`, and
   `30932224043`, `30939424669` for commit `3d864dd`, feature run `30941697155`
-  for commit `a3ad40d`, and follow-up docs run `30941804877` for commit
-  `24ed3d5` all failed before repository job steps because of the account
+  for commit `a3ad40d`, follow-up docs run `30941804877` for commit
+  `24ed3d5`, and latest run `30941916282` for commit `1f20e39` all failed before repository job steps because of the account
   payment/spending-limit gate, not because of a repository assertion.
 - Private workspace website/API: implemented and production-built; reads are membership-authorized and cache-disabled. Encoded workspace and detail identifiers are decoded exactly once at the page boundary before schema validation. Completed collection reads now expose the bounded private `analysisHandoff` status when an approved-seed handoff exists. Owner settings expose a read-only purge-readiness inventory, an expiring owner-confirmed metadata-only purge manifest, and a step-up-protected, durable non-destructive purge intent; these snapshot PostgreSQL references/readiness without authorizing deletion and keep cloud/export/backup requirements visible.
 - Private audit inspection: `GET /api/workspaces/:workspaceId/audit-events` exposes a membership-authorized, no-store, cursor-paginated projection of immutable audit receipts. It returns bounded identifiers and scalar metadata only; nested values, raw source payloads, and dependency errors remain hidden. This is an API/agent-visible inspection boundary, not an export or purge operation.
@@ -58,7 +58,11 @@
   additive balanced `opportunity-score-v1.0.0` envelope with raw,
   risk-adjusted, ranking, confidence, uncertainty, coverage, freshness, and
   component explanations. This is a reviewed-input/profile checkpoint, not
-  calibration evidence or a live market claim.
+  calibration evidence or a live market claim. The deterministic
+  `research-quality-v1.0.0` benchmark now records synthetic classifier/entity,
+  deduplication, clustering, stability, ranking, and calibration metrics in
+  optional artifact/report snapshots; it is regression evidence only and never
+  derives source coverage or score-factor provenance.
 - PostgreSQL persistence: ninety-nine forward, checksummed migrations plus least-privilege repositories and the existing auth, RLS, provenance, workflow, source-policy, quota, retention, analysis, reporting, and maintenance boundaries. Migration `0093` qualifies source-quota reservation columns, `0094` grants the worker its narrow `research_runs.artifact_snapshot` finalization update, `0095` grants the authenticated runtime only the lease columns required for the private members purge-readiness count, `0096` adds nullable queryable fields and a ranking index for the reviewed balanced v1 score envelope, `0097` binds MCP tokens to current membership with durable request-window and concurrency leases, `0098` adds the ordered index for the authenticated private audit-history projection, and `0099` adds operator-only runtime-skill persistence with immutable transition history. Neither migration activates a third-party source or grants the worker skill access.
 - Production coding-package manifest: the shared contracts define the six
   deterministic package paths. New seed writes, user admission, worker handoff,
