@@ -460,9 +460,10 @@ not change the separate approval or approved-only export gates.
 
 ## Desktop
 
-The Tauri boundary now compiles and is covered by a Windows CI check with a
-restrictive CSP and minimal capability set. Signing, update infrastructure,
-hosted-origin review, and platform release tests remain open.
+The Tauri boundary now compiles and is covered by independent Windows and
+macOS CI checks with deterministic PNG/ICO assets, a restrictive CSP, and a
+minimal capability set. Signing, update infrastructure, hosted-origin review,
+and platform release tests remain open.
 
 ## Autonomy
 
