@@ -107,8 +107,11 @@ function sanitizedProductionActivityFailure(error: unknown): ApplicationFailure 
       'APPSEA_INPUT_INVALID'
     )
   }
+  const context = productionFailureContext(error)
   return ApplicationFailure.create({
-    message: 'The production collection activity failed.',
+    message: context
+      ? `The production collection activity failed (${context}).`
+      : 'The production collection activity failed.',
     type: 'APPSEA_ACTIVITY_FAILED',
     nonRetryable: false
   })
