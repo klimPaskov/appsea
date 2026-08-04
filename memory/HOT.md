@@ -19,9 +19,9 @@
   remains `awaiting_external_controls`; no destructive operation is wired.
 - Web/worker share fail-closed Temporal config; production requires TLS/API-key/namespace/CA. Maintenance uses `0046`/`0052`; source commands use `0051`; alerting, role rotation, recovery, and proof remain open.
 - Runtime skill registry is dormant: independent proposer/evaluator/approver,
-  signed review/transition evidence; no worker import/activation, and
-  persistence/audit/policy-specific activation remain open.
+  signed review/transition evidence, and migration `0099` operator-only
+  persistence/audit with expected-hash concurrency; no worker import/activation.
 - Read-only MCP tokens recheck workspace membership and use PostgreSQL
   60-per-60-second windows, four in-flight leases, and 30-second stale recovery;
   edge limits, secret storage, and hosted monitoring remain open. `0098` adds
-  the audit index; its cursor read is RLS-bound and scalar-only.
+  the audit index; `0099` adds dormant skill persistence; reads stay bounded.

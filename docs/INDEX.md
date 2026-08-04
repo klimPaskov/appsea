@@ -99,6 +99,7 @@
 - [`adrs/0022-mcp-agent-admission.md`](adrs/0022-mcp-agent-admission.md)
 - [`adrs/0023-private-audit-history.md`](adrs/0023-private-audit-history.md)
 - [`adrs/0024-step-up-for-research-governance-mutations.md`](adrs/0024-step-up-for-research-governance-mutations.md)
+- [`adrs/0025-runtime-skill-persistence-and-audit.md`](adrs/0025-runtime-skill-persistence-and-audit.md)
 
 ## Generated references
 
@@ -133,6 +134,7 @@
 - [`status/runtime-skill-governance-completion-report-2026-08-04.md`](status/runtime-skill-governance-completion-report-2026-08-04.md)
 - [`status/mcp-agent-admission-completion-report-2026-08-04.md`](status/mcp-agent-admission-completion-report-2026-08-04.md)
 - [`status/audit-history-completion-report-2026-08-04.md`](status/audit-history-completion-report-2026-08-04.md)
+- [`status/runtime-skill-persistence-completion-report-2026-08-04.md`](status/runtime-skill-persistence-completion-report-2026-08-04.md)
 - [`status/research-governance-step-up-completion-report-2026-08-04.md`](status/research-governance-step-up-completion-report-2026-08-04.md)
 - [`status/opportunity-scoring-v1-completion-report-2026-08-04.md`](status/opportunity-scoring-v1-completion-report-2026-08-04.md)
 - [`status/workspace-invitation-completion-report.md`](status/workspace-invitation-completion-report.md)

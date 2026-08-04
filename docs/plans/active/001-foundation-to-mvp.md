@@ -25,7 +25,7 @@ Status: production-shaped foundation implemented and validated locally; producti
 
 Implemented:
 
-- PostgreSQL 18 schema and ninety-eight forward, checksummed migrations
+- PostgreSQL 18 schema and ninety-nine forward, checksummed migrations
 - normalized source, evidence, complaint, cluster, competitor, opportunity, score, report, plan, audit, cost, deletion, outbox, and lineage tables
 - no-login owner, separate migrator, and least-privilege runtime role contract
 - forced workspace RLS and transaction-scoped workspace context
@@ -35,7 +35,7 @@ Implemented:
 - populated upgrade, fresh install, privilege, RLS, provenance, policy, cross-wire, and replay tests
 - local runbook and CI persistence gate
 - isolated local PostgreSQL backup/restore runbook and CI gate; the drill
-  restores a disposable dump through all ninety-eight migrations and verifies
+  restores a disposable dump through all ninety-nine migrations and verifies
   forced workspace RLS plus runtime/maintenance privileges without accepting a
   remote URL
 - one-command loopback private-workspace stack with migration, worker, and web
@@ -216,6 +216,14 @@ index for the private audit-history projection. The authenticated
 RLS transaction and an opaque time/id cursor; its strict read model keeps only
 bounded identifiers and scalar metadata, filtering nested values and never
 exposing raw source payloads or exception text.
+
+Migration `0099_runtime_skill_governance.sql` adds global runtime-skill records
+and immutable transition events behind forced RLS. The operator-only repository
+hydrates every record through the HMAC registry, persists with expected-hash
+concurrency, replays event IDs safely, and requires an `operator:` actor for
+privileged activation. Service, maintenance, and worker paths have no table or
+function access; this remains a dormant reviewed adapter rather than an
+autonomous skill activation loop.
 
 Remaining deployment work and the non-fixture object-store integration are
 tracked in `docs/status/known-gaps.md` and are not part of the completed

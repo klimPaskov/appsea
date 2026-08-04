@@ -14,6 +14,7 @@ import {
 import { generatePlanPackage } from '@appsea/reports'
 import { buildFixtureResearchArtifact } from '@appsea/research'
 import { InvalidScoreSnapshotError } from '@appsea/scoring'
+import { SkillRegistry } from '@appsea/skill-registry'
 import { totpCodeAt } from '../src/auth-mfa'
 import { sha256 } from '../src/hash'
 import {
@@ -47,6 +48,7 @@ import {
   PostgresAuditEventRepository,
   PostgresCompetitiveResearchRepository,
   PostgresEvidenceRedactionRepository,
+  PostgresRuntimeSkillRepository,
   PostgresSourceCollectionLeaseRepository,
   PostgresSourceQuotaRepository,
   PostgresSourceSnapshotReconciliationRepository,
@@ -138,6 +140,10 @@ const authRepository = new PostgresAuthRepository(servicePool)
 const deletionRepository = new PostgresDeletionPropagationRepository(servicePool)
 const seedReviewRepository = new PostgresOpportunitySeedReviewRepository(servicePool)
 const evidenceRedactionRepository = new PostgresEvidenceRedactionRepository(servicePool)
+const runtimeSkillRepository = new PostgresRuntimeSkillRepository(
+  migrationPool,
+  new SkillRegistry(Buffer.alloc(32, 7))
+)
 
 async function withOwnerClient<T>(operation: (client: PoolClient) => Promise<T>): Promise<T> {
   const client = await migrationPool.connect()
@@ -533,7 +539,8 @@ describe.sequential('PostgreSQL fixture persistence lifecycle', () => {
       '0095',
       '0096',
       '0097',
-      '0098'
+      '0098',
+      '0099'
     ])
     expect(secondMigrationResult.applied).toEqual([])
     expect(secondMigrationResult.alreadyApplied).toEqual([
@@ -634,7 +641,8 @@ describe.sequential('PostgreSQL fixture persistence lifecycle', () => {
       '0095',
       '0096',
       '0097',
-      '0098'
+      '0098',
+      '0099'
     ])
   })
 
@@ -5336,6 +5344,144 @@ describe.sequential('PostgreSQL fixture persistence lifecycle', () => {
         }
       })
     }
+  })
+
+  it('persists reviewed runtime skill transitions through the operator boundary', async () => {
+    const skillId = 'skill:integration'
+    const proposal = await runtimeSkillRepository.propose(
+      {
+        id: skillId,
+        name: 'source-review',
+        version: '1.0.0',
+        requestedPermissions: ['read-evidence'],
+        proposedBy: 'agent:proposal'
+      },
+      {
+        eventId: 'skill-event:proposal',
+        eventType: 'proposal',
+        actorId: 'agent:proposal',
+        occurredAt: fixedAt
+      }
+    )
+    expect(proposal).toMatchObject({ record: { status: 'proposed' }, replayed: false })
+    await expect(
+      runtimeSkillRepository.propose(
+        {
+          id: skillId,
+          name: 'source-review',
+          version: '1.0.0',
+          requestedPermissions: ['read-evidence'],
+          proposedBy: 'agent:proposal'
+        },
+        {
+          eventId: 'skill-event:proposal',
+          eventType: 'proposal',
+          actorId: 'agent:proposal',
+          occurredAt: fixedAt
+        }
+      )
+    ).resolves.toMatchObject({ replayed: true, record: { status: 'proposed' } })
+
+    const evaluated = await runtimeSkillRepository.evaluate(
+      skillId,
+      {
+        evaluationId: 'skill-evaluation:one',
+        evaluatorId: 'agent:evaluator',
+        evaluatedAt: laterAt
+      },
+      {
+        eventId: 'skill-event:evaluation',
+        eventType: 'evaluation',
+        actorId: 'agent:evaluator',
+        occurredAt: laterAt
+      }
+    )
+    expect(evaluated.record.status).toBe('evaluated')
+
+    const approved = await runtimeSkillRepository.approve(
+      skillId,
+      {
+        reviewId: 'skill-review:operator',
+        approverId: 'operator:approver',
+        approvedAt: latestAt
+      },
+      {
+        eventId: 'skill-event:approval',
+        eventType: 'approval',
+        actorId: 'operator:approver',
+        occurredAt: latestAt
+      }
+    )
+    expect(approved.record.status).toBe('approved')
+
+    const active = await runtimeSkillRepository.activate(
+      skillId,
+      {
+        transitionId: 'skill-transition:activate',
+        activatedBy: 'operator:activator',
+        activatedAt: '2026-07-13T00:00:00.000Z'
+      },
+      {
+        eventId: 'skill-event:activation',
+        eventType: 'activation',
+        actorId: 'operator:activator',
+        occurredAt: '2026-07-13T00:00:00.000Z'
+      }
+    )
+    expect(active.record.status).toBe('active')
+
+    const retired = await runtimeSkillRepository.retire(
+      skillId,
+      {
+        transitionId: 'skill-transition:retire',
+        retiredBy: 'operator:retirer',
+        retiredAt: '2026-07-14T00:00:00.000Z'
+      },
+      {
+        eventId: 'skill-event:retirement',
+        eventType: 'retirement',
+        actorId: 'operator:retirer',
+        occurredAt: '2026-07-14T00:00:00.000Z'
+      }
+    )
+    expect(retired.record.status).toBe('retired')
+
+    const stored = await runtimeSkillRepository.read(skillId)
+    expect(stored).toMatchObject({
+      record: { id: skillId, status: 'retired' },
+      recordHash: retired.recordHash,
+      lastEventId: 'skill-event:retirement'
+    })
+    await expect(runtimeSkillRepository.listEvents(skillId)).resolves.toMatchObject([
+      { eventId: 'skill-event:retirement', eventType: 'retirement' },
+      { eventId: 'skill-event:activation', eventType: 'activation' },
+      { eventId: 'skill-event:approval', eventType: 'approval' },
+      { eventId: 'skill-event:evaluation', eventType: 'evaluation' },
+      { eventId: 'skill-event:proposal', eventType: 'proposal' }
+    ])
+    await withOwnerClient(async (client) => {
+      await expect(
+        client.query(
+          "UPDATE appsea.runtime_skill_events SET actor_id = 'operator:forged' WHERE event_id = $1",
+          ['skill-event:proposal']
+        )
+      ).rejects.toMatchObject({ code: '42501' })
+      await expect(
+        client.query('DELETE FROM appsea.runtime_skill_events WHERE event_id = $1', [
+          'skill-event:proposal'
+        ])
+      ).rejects.toMatchObject({ code: '42501' })
+    })
+
+    await expect(servicePool.query('SELECT * FROM appsea.runtime_skills')).rejects.toMatchObject({
+      code: '42501'
+    })
+    await expect(
+      servicePool.query('SELECT * FROM appsea.read_runtime_skill_record($1)', [skillId])
+    ).rejects.toMatchObject({ code: '42501' })
+    await expect(
+      maintenancePool.query('SELECT * FROM appsea.list_runtime_skill_records($1)', [10])
+    ).rejects.toMatchObject({ code: '42501' })
   })
 
   it('rejects unknown applied migration history', async () => {

@@ -35,8 +35,10 @@ The local proof above is independent of that hosted billing state.
 
 ## Remaining gaps
 
-The future runtime still needs a reviewed persistence adapter, authenticated
-operator identity, audit/event storage, permission-specific policy review, and
-an explicit activation operation. Imported evidence remains untrusted and
-cannot update the registry, code, skills, instructions, permissions, or
+The follow-on persistence/audit tranche is recorded in
+[`runtime-skill-persistence-completion-report-2026-08-04.md`](runtime-skill-persistence-completion-report-2026-08-04.md).
+The future runtime still needs authenticated operator identity provisioning,
+review evidence, and an explicit activation operation; no worker imports the
+registry and no runtime skill is active. Imported evidence remains untrusted
+and cannot update the registry, code, skills, instructions, permissions, or
 memory.

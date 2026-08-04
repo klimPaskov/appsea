@@ -111,7 +111,8 @@ describe('database foundation', () => {
       '0095',
       '0096',
       '0097',
-      '0098'
+      '0098',
+      '0099'
     ])
     expect(migrations[0]?.checksum).toMatch(/^[a-f0-9]{64}$/)
     expect(migrations[0]?.sql).toContain('CREATE TABLE appsea.evidence_records')
@@ -160,6 +161,12 @@ describe('database foundation', () => {
     expect(mcpAdmissionMigration?.sql).toContain('rate_window_request_count')
     const auditHistoryMigration = migrations.find((migration) => migration.version === '0098')
     expect(auditHistoryMigration?.sql).toContain('audit_events_workspace_history_idx')
+    const runtimeSkillMigration = migrations.find((migration) => migration.version === '0099')
+    expect(runtimeSkillMigration?.sql).toContain('CREATE TABLE appsea.runtime_skills')
+    expect(runtimeSkillMigration?.sql).toContain('CREATE TABLE appsea.runtime_skill_events')
+    expect(runtimeSkillMigration?.sql).toContain('persist_runtime_skill_record')
+    expect(runtimeSkillMigration?.sql).toContain('runtime skill events are immutable')
+    expect(runtimeSkillMigration?.sql).toContain('GRANT EXECUTE ON FUNCTION')
     const migrationOwnerCompatibilityMigration = migrations.find(
       (migration) => migration.version === '0074'
     )

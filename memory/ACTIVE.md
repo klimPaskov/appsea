@@ -9,10 +9,10 @@ sparse; no third-party public source is enabled. A reviewed internal
 `manual-owner-import` policy now supports tenant-private owner-authorized CSV/
 JSON intake without claiming public market coverage.
 
-Migrations `0027`-`0098` cover policy evidence, checkpoints,
-deletion/recomputation repair, leases, admissions, campaign orchestration and
+Migrations `0027`-`0099` cover policy evidence, checkpoints, deletion repair,
+leases, admissions, campaign orchestration and
 cancellation, source reconciliation, analysis history, report/plan governance,
-cost and alert projections, object references, workspace archival/purge intent/
+cost/alert projections, object references, workspace archival/purge intent/
 manifest,
 field-level evidence redaction, agent access tokens, and global-auth TOTP MFA.
 MFA rotation, OIDC, and read-only MCP remain provider/deployment-gated.
@@ -50,26 +50,26 @@ Imported complaints, pages, reports, and model output remain untrusted data;
 they cannot update code, skills, instructions, permissions, or repository
 memory.
 
-The dormant `packages/skill-registry` boundary now records proposer, evaluator,
-and independent approver identities. HMAC evidence covers the immutable skill
-permissions/review chain and active/retired transition actor, timestamp, state,
-and ID; plain, tampered, copied, unknown-state, or wrong-secret records fail
-closed during hydration/activation. No worker or source connector imports this
-registry, so no runtime skill or production permission became active. A
-reviewed persistence/identity/audit adapter remains open.
+The dormant `packages/skill-registry` boundary records proposer, evaluator, and
+independent approver identities with HMAC evidence over permissions, review,
+and active/retired transitions. Plain, tampered, copied, unknown-state, or
+wrong-secret records fail closed. Migration `0099` adds an operator-only,
+immutable event adapter with expected-hash concurrency; no worker imports or
+activates it, and no runtime permission became active.
 
 Manual owner-import (migration `0089`) is the active non-fixture path: bounded,
 normalized, PII-scrubbed, tenant-private, and represented in Temporal by batch
 ID only. Local smoke covers intake, durable completion, reviewed analysis,
 private report/plan readback, and the visible public-market gap; URL fetching and
-public sources remain disabled. Migrations `0090`-`0098` keep policy/deletion/
+public sources remain disabled. Migrations `0090`-`0099` keep policy/deletion/
 privilege surfaces narrow; `0097` binds MCP tokens to current membership and
 enforces a 60-per-60-second window, four in-flight leases, and
-30-second stale recovery; `0098` adds the ordered private audit-history index.
-The authenticated `/api/workspaces/:workspaceId/audit-events` route exposes
+30-second stale recovery; `0098` adds the ordered private audit-history index;
+`0099` adds dormant runtime-skill persistence/audit. The authenticated
+`/api/workspaces/:workspaceId/audit-events` route exposes
 bounded identifier/scalar audit receipts with an opaque cursor and no raw source
 payloads. Local PostgreSQL/Temporal/MinIO S3, worker replacement,
-private-stack pages, and backup/restore through 98 pass. Provider-encrypted
+private-stack pages, and backup/restore through 99 pass. Provider-encrypted
 backups, HA, and restore/failover remain deployment-owned.
 
 Scoring preserves `opportunity-score-v0.2.0` and adds reviewed-input
@@ -79,7 +79,7 @@ risk, confidence, uncertainty, coverage/freshness, and explanations. Migration
 without v1 retain a visible gap; no live source or calibration evidence is
 implied. Smoke carries a reviewed v1 seed through owner
 intake, durable analysis, persistence, and private readback. Backup/restore
-through `0098` passes locally; provider proof remains open.
+through `0099` passes locally; provider proof remains open.
 
 `pnpm verify:release` checks Compose, secret-free defaults, hardened images, and
 fail-closed preflight; CI runs Docker mode and `--static` supports no Docker.

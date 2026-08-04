@@ -37,6 +37,7 @@
     "@appsea/research": "workspace:*",
     "@appsea/reports": "workspace:*",
     "@appsea/scoring": "workspace:*",
+    "@appsea/skill-registry": "workspace:*",
     "pg": "8.22.0"
   },
   "devDependencies": {

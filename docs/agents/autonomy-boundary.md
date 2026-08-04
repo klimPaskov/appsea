@@ -10,4 +10,7 @@ The dormant `packages/skill-registry` implementation records the proposer,
 independent evaluation chain, approver, and signed permission-bound evidence.
 Persisted records must be hydrated through that registry before activation;
 the worker does not import it and no runtime permission is granted by this
-boundary alone. See ADR 0020 for the review-integrity contract.
+boundary alone. Migration `0099` adds an operator-only immutable persistence
+and audit adapter with expected-hash concurrency; it does not change the
+requirement for explicit operator activation. See ADR 0020 and ADR 0025 for
+the review-integrity and persistence contracts.

@@ -28,3 +28,9 @@ Source-policy approvals must retain canonical reviewer identity, independent
 role, and explicit attestation. Preserve legacy review rows for audit, but do
 not treat them as collectible until an integrity-attested review re-approves
 the policy.
+
+Runtime skill governance is global and dormant. Persist only records hydrated
+through `@appsea/skill-registry`; use the migration-operator security-definer
+functions and immutable transition events from migration `0099`. Never grant
+the service, maintenance, or worker roles direct runtime-skill table/function
+access, and do not treat persistence as activation.

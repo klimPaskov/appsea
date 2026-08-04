@@ -499,9 +499,11 @@ The runtime skill registry and agent memory remain contract foundations and do
 not run an autonomous production coding loop. The registry now requires
 independent proposer/evaluator/approver identities plus signed immutable review
 and active/retired transition evidence; altered status, actor, timestamp, or
-unknown-state records fail closed. A reviewed persistence/identity/audit
-adapter, permission-specific activation policy, and explicit operator operation
-remain open before any runtime skill can be active.
+unknown-state records fail closed. Migration `0099` adds an operator-only,
+forced-RLS persistence/audit adapter with expected-hash concurrency and an
+`operator:` requirement for privileged activation. Explicit operator operation,
+identity provisioning, review evidence, and any worker import/activation remain
+open; no runtime skill is active by default.
 
 ## Durable workflow proof
 

@@ -54,7 +54,15 @@ with an opaque workspace-bound cursor. The response contains only bounded
 identifiers, fixed actor/action fields, and scalar metadata; nested metadata,
 raw source payloads, and dependency errors are hidden or rejected. Migration
 `0098_audit_event_history_index.sql` adds only the ordered workspace index and
-does not grant new write access or authorize destructive retention.
+does not grant new write access or authorize destructive retention. Migration
+`0099_runtime_skill_governance.sql` adds global runtime-skill records and an
+immutable event history behind forced RLS. Only the migration operator can call
+the security-definer persistence/read functions; service and maintenance roles
+have neither table nor function access. The repository hydrates every record
+through the HMAC registry before persistence/readback, uses an expected hash for
+concurrent transitions, and requires an `operator:` actor when a privileged
+skill becomes active. This is an operator-operated audit adapter, not worker
+activation: the worker still does not import the registry or grant permissions.
 
 Blocked flows:
 
@@ -77,7 +85,8 @@ Persisted records must be hydrated through the registry before activation;
 plain objects, permission edits, copied evidence, unknown states, altered
 timestamps/actors, and a different registry secret fail closed. The registry is
 not imported by the worker and does not activate sources or grant production
-permissions.
+permissions. PostgreSQL persistence is intentionally dormant until an explicit
+operator operation supplies reviewed evidence.
 
 ## Database enforcement
 

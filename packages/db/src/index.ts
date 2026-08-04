@@ -169,6 +169,15 @@ export {
 } from './agent-access-token-repository'
 export { PostgresAuditEventRepository } from './audit-event-repository'
 export {
+  PostgresRuntimeSkillRepository,
+  RuntimeSkillPersistenceConflictError,
+  type RuntimeSkillEventReadModel,
+  type RuntimeSkillPersistenceEvent,
+  type RuntimeSkillPersistenceEventType,
+  type RuntimeSkillPersistenceResult,
+  type RuntimeSkillRecordSnapshot
+} from './runtime-skill-repository'
+export {
   decodeAuditEventHistoryCursor,
   encodeAuditEventHistoryCursor,
   AuditEventHistoryCursorError
