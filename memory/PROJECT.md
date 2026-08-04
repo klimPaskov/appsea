@@ -14,6 +14,7 @@ AppSea is an opportunity intelligence system for software products. It turns per
 - A future Tauri shell will reuse the website contract.
 - `packages/db` owns PostgreSQL 18 migrations, transaction-scoped workspace RLS, and persistence repositories.
 - Local and CI PostgreSQL use a no-login owner, separate migrator, and non-owner runtime role. Production provisioning remains external and unimplemented.
+- `scripts/run_db_backup_restore.mjs` provides a local-only disposable dump/restore drill that verifies the 95-migration schema prefix, forced workspace RLS, and least-privilege runtime/maintenance checks; it does not stand in for provider backup, HA, or production restore evidence.
 - `packages/workflows` owns deterministic Temporal orchestration and client hashing; `apps/worker` owns activity adapters and local worker startup; `packages/db` owns RLS-protected fixture and production-collection job projections and checkpoints. Production workflow security, HA, object-store/backups purge, deployment, and Docker-backed integration proof remain external.
 - Campaign cancellation is a durable control boundary: migrations `0070`/`0071` store owner/editor intent before Temporal for multi-source and one-source runs; the worker retries external cancellation, while each workflow owns safe reconciliation.
 - Private campaign history uses strict bounded cursor pages ordered by request timestamp plus stable identifier; only the validated boundary crosses private APIs. The public leaderboard is unaffected.

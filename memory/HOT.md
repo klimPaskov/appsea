@@ -3,8 +3,9 @@
 - Start broad work with instructions, memory, and `docs/INDEX.md`.
 - Fixture is the complete persisted path; approved collection is separate/non-synthetic. Leaderboard only.
 - Fixture/collection tested; fresh PostgreSQL/Temporal CI-proven. Local/CI
-  worker replacement covers persistence loss, one-time rows, and sanitized
-  history; hosted restore/crash drills and cloud/backup purge remain pending.
+  worker replacement covers persistence loss, one-time row, and sanitized
+  history; backup/restore covers schema/roles, while hosted
+  restore/crash drill and cloud/backup purge remain pending.
   `0043`/`0044` queue/retry output tombstones.
 - `CfpbConnector` is disabled pending legal/privacy/security approval;
   `StackExchangeConnector` is a disabled candidate for competitor/contrary

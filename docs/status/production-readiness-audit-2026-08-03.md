@@ -173,6 +173,12 @@ PostgreSQL/Temporal checks; no additional local rerun claim is made.
   application/database clock skew without violating timestamp checks; the
   operational-alert fixture uses an explicitly due timestamp for deterministic
   claim/retry proof.
+- The isolated `pnpm verify:backup-restore` drill now creates a temporary
+  loopback dump, restores it into `appsea_backup_restore_check`, and verifies
+  the complete 95-migration prefix, forced workspace RLS, runtime outbox
+  denial, and maintenance alert-claim privilege. It rejects production and
+  caller-selected database URLs, cleans up the restored database/dump, and is
+  not provider backup, HA, or production restore evidence.
 - No image asset was required for this server/page-boundary tranche. Existing
   UI assets remain unchanged; image generation is reserved for visual assets,
   not native route or database code.

@@ -108,13 +108,14 @@ policy review.
 
 ## Infrastructure
 
-The PostgreSQL schema, repository, migrations, RLS, local role bootstrap, and CI integration suite exist. `pnpm production:preflight` now rejects missing or role-confused production URLs, insecure endpoints, incomplete Temporal/object-store settings, unsafe delivery switches, and missing operational alert routing before startup. Production role provisioning, secrets, verified TLS trust, backups, high availability, deployment, live dependency proof, and migration approval automation do not.
+The PostgreSQL schema, repository, migrations, RLS, local role bootstrap, and CI integration suite exist. `pnpm production:preflight` now rejects missing or role-confused production URLs, insecure endpoints, incomplete Temporal/object-store settings, unsafe delivery switches, and missing operational alert routing before startup. The local-only `pnpm verify:backup-restore` drill verifies a disposable dump through the checked-in schema and role boundary, but production role provisioning, secrets, verified TLS trust, encrypted/versioned backups, high availability, deployment, live dependency proof, and migration approval automation do not.
 
 The fixture and production-collection workflow boundaries are durable locally
 and in CI. Web and worker clients now fail closed and support a non-loopback
-Temporal endpoint with namespace, API-key, and pinned-CA settings, but there is
-no production Temporal topology, namespace/task-queue authorization, HA,
-backup/restore policy, worker deployment, or operated alert endpoint. The
+Temporal endpoint with namespace, API-key, and pinned-CA settings. A local
+backup/restore drill exists for the repository database shape, but there is no
+production Temporal topology, namespace/task-queue authorization, HA,
+provider backup/restore policy, worker deployment, or operated alert endpoint. The
 long-lived repository worker now has an idempotent SIGINT/SIGTERM path that
 stops new dispatch scans, requests Temporal shutdown, drains heartbeat/scan
 work, and closes its connections; the deployed supervisor drain window and

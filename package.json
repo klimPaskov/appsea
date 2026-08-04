@@ -33,6 +33,8 @@
     "db:test:integration": "pnpm --filter @appsea/db test:integration",
     "verify:persistence": "node scripts/run_db_integration.mjs",
     "verify:persistence:fresh": "node scripts/run_db_integration.mjs --fresh",
+    "test:backup-restore": "vitest run scripts/run_db_backup_restore.test.mjs",
+    "verify:backup-restore": "node scripts/run_db_backup_restore.mjs",
     "verify:workflows": "node scripts/run_workflow_integration.mjs",
     "verify:workflows:fresh": "node scripts/run_workflow_integration.mjs --fresh",
     "verify:worker:recovery": "node scripts/run_worker_recovery.mjs",

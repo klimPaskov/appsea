@@ -34,6 +34,10 @@ Implemented:
 - replay-safe fixture repository with concurrent idempotency conflict handling
 - populated upgrade, fresh install, privilege, RLS, provenance, policy, cross-wire, and replay tests
 - local runbook and CI persistence gate
+- isolated local PostgreSQL backup/restore runbook and CI gate; the drill
+  restores a disposable dump through all ninety-five migrations and verifies
+  forced workspace RLS plus runtime/maintenance privileges without accepting a
+  remote URL
 - one-command loopback private-workspace stack with migration, worker, and web
   startup (`pnpm dev:local`)
 - end-to-end loopback stack smoke (`pnpm verify:local-stack`) covering
@@ -192,7 +196,9 @@ other lease columns remain maintenance-only.
 
 Remaining deployment work and the non-fixture object-store integration are
 tracked in `docs/status/known-gaps.md` and are not part of the completed
-repository persistence foundation.
+repository persistence foundation. The local backup/restore drill is repository
+evidence only; encrypted provider backups, HA, retention/deletion, and
+production restore/failover remain deployment work.
 
 Migration `0049_source_quota_reconciliation.sql` adds a forced-RLS case
 projection for committed source reservations that lack a completed production

@@ -64,10 +64,6 @@ analysis finalization narrow; the shared web path decoder validates encoded
 workspace/detail identifiers exactly once; the private members readiness read
 uses only the lease columns it needs; legacy plan rows remain readable but
 cannot start analysis.
-Migration `0091` preserves `consumed_at` when an already-consumed owner
-batch is later deleted, matching its deletion trigger.
-Migration `0092` makes the service-role read privileges for campaign source
-validation explicit for `sources` and its reviewed policy tables.
 Migration `0093` qualifies source-quota reservation columns so PostgreSQL does
 not resolve them against function OUT parameters. Migration `0094` grants the
 worker its narrow finalization update for `research_runs.artifact_snapshot`.
@@ -76,7 +72,11 @@ Migration `0095` grants the authenticated runtime only `workspace_id` and
 projection can count active leases without exposing lease lifecycle data.
 Fresh local PostgreSQL persistence, Temporal restart, and worker replacement
 checks now pass across all 95 migrations. The local private-stack smoke also
-renders every private workspace page with encoded identifiers.
+renders every private workspace page with encoded identifiers. The isolated
+`pnpm verify:backup-restore` drill now restores a disposable local dump through
+95 migrations and checks forced RLS plus runtime/maintenance privileges;
+provider-encrypted backups, HA, and production restore/failover remain
+deployment-owned.
 
 `pnpm verify:release` checks Compose, secret-free defaults, hardened images, and
 fail-closed preflight; CI runs Docker mode and `--static` supports no Docker.
@@ -92,6 +92,9 @@ namespace/task-queue authorization is still external evidence.
   checks were green. Hosted run `30917740935` for `b99ffd7` failed before any
   job steps in every matrix job because of the GitHub account
   payment/spending-limit gate, not because of a repository assertion.
+- `pnpm test:backup-restore` and `pnpm verify:backup-restore` pass locally;
+  the drill is isolated to the loopback Compose database and is not production
+  backup, HA, or provider restore evidence.
 - Production runtime packaging and the staged Tauri shell pass their hosted
   build/boundary checks; provider provisioning, image signing, hosted-origin,
   updater, notarization, installation, and deployment evidence remain open.
