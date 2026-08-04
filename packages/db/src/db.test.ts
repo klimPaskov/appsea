@@ -103,7 +103,8 @@ describe('database foundation', () => {
       '0087',
       '0088',
       '0089',
-      '0090'
+      '0090',
+      '0091'
     ])
     expect(migrations[0]?.checksum).toMatch(/^[a-f0-9]{64}$/)
     expect(migrations[0]?.sql).toContain('CREATE TABLE appsea.evidence_records')
@@ -243,6 +244,12 @@ describe('database foundation', () => {
     )
     expect(manualImportPolicyGateMigration?.sql).toContain(
       'GRANT EXECUTE ON FUNCTION appsea.manual_import_source_policy_collectible'
+    )
+    const manualImportDeleteStateMigration = migrations.find(
+      (migration) => migration.version === '0091'
+    )
+    expect(manualImportDeleteStateMigration?.sql).toContain(
+      'manual_import_batches_consumed_at_check'
     )
     const authMigration = migrations.find((migration) => migration.version === '0008')
     const privacyMigration = migrations.find((migration) => migration.version === '0009')

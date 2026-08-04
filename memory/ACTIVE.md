@@ -9,7 +9,7 @@ sparse; no third-party public source is enabled. A reviewed internal
 `manual-owner-import` policy now supports tenant-private owner-authorized CSV/
 JSON intake without claiming public market coverage.
 
-Migrations `0027`-`0090` cover policy evidence, checkpoints,
+Migrations `0027`-`0091` cover policy evidence, checkpoints,
 deletion/recomputation repair, leases, admissions, campaign orchestration and
 cancellation, source reconciliation, analysis history, report/plan governance,
 cost and alert projections, object references, workspace archival/purge intent/
@@ -38,8 +38,7 @@ history memo. `pnpm worker:workflow:analysis:history:check` inspects Temporal
 visibility metadata without fetching history and requires a reviewed manifest
 for visible legacy/unknown executions; it never performs archive or deletion.
 
-The long-lived worker has an idempotent SIGINT/SIGTERM lifecycle. The new
-`pnpm verify:worker:recovery` drill proves local/CI process replacement: a
+The `pnpm verify:worker:recovery` drill proves local/CI process replacement: a
 separate fixture client observes a persisted checkpoint, the first worker is
 stopped during persistence, and a replacement resumes the same execution with
 one job/run/output/checkpoint/cost effect, distinct outbox rows, and
@@ -53,9 +52,8 @@ hash-only recovery codes, MFA step-up, recovery/invitation outboxes, owner-safe
 account closure, archival, and scoped read-only agent tokens. Migration `0088`
 adds disabled-by-default OIDC identities: explicit step-up-protected
 issuer/subject link/unlink, strict state/nonce/PKCE plus RS256/verified-email
-checks, linked-only sign-in, and local-MFA challenge handoff. The identity
-binding survives the MFA handoff in the database, and sign-in telemetry runs
-only after a session is issued. Production OIDC requests now resolve provider
+checks, linked-only sign-in, and local-MFA challenge handoff. Production OIDC
+requests now resolve provider
 addresses and fail closed on private answers. Provider approval, verified email,
 delivery/DPA, account-lifetime retention/revocation, DNS pinning/egress, provider-backed
 step-up, and deployed identity operations remain external gates. MFA key
@@ -84,6 +82,8 @@ deferred to avoid SSRF and unreviewed third-party acquisition.
 Integration coverage exercises staging/replay/consumption/deletion, RLS,
 tombstones; migration `0090` keeps policy validation in a narrow definer
 function. Docker is unavailable locally.
+Migration `0091` preserves `consumed_at` when an already-consumed owner
+batch is later deleted, matching the deletion trigger and tombstone flow.
 
 ## Validated commands
 
