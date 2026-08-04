@@ -14,6 +14,21 @@ docker build --file Dockerfile.web --tag appsea-web:<commit> .
 docker build --file Dockerfile.worker --tag appsea-worker:<commit> .
 ```
 
+Before publishing or deploying those images, run the repository release
+boundary verifier:
+
+```bash
+pnpm verify:release
+```
+
+It checks the committed Compose topology, non-root/read-only container
+defaults, loopback binding, secret-free production environment example, and
+disabled-by-default identity and delivery switches. It also validates Compose
+and proves that production preflight rejects an empty environment. The command
+does not connect to PostgreSQL, Temporal, object storage, an identity provider,
+or a complaint source. Use `pnpm verify:release -- --static` when Docker is not
+available; that static result is not a substitute for the hosted Docker proof.
+
 The web image uses Next.js standalone output and listens on port `3000`. The
 worker image retains the workspace runtime packages because the durable worker,
 maintenance loop, migration command, and preflight share the reviewed worker
@@ -69,6 +84,10 @@ route, waits for the Docker healthcheck to become `healthy`, and verifies that
 worker preflight rejects an empty production environment. This is a packaging
 smoke test, not proof that external providers or a deployed migration are
 healthy.
+
+The separate `release-boundary` CI job runs `pnpm verify:release` on every
+change. Its preflight check intentionally fails closed with an empty
+environment; a zero exit from that check is a release-boundary failure.
 
 The web service is bound to loopback by default. Put a reviewed TLS reverse
 proxy or private ingress in front of it; do not expose the container directly

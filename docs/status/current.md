@@ -13,6 +13,10 @@
 - Local stack smoke: `pnpm verify:local-stack` now exercises loopback dependency
   readiness, migrations, worker/web startup, auth pages, sparse fixture
   disclosure, and container cleanup; GitHub CI runs it on every change.
+- Release boundary: `pnpm verify:release` checks the provider-neutral Compose
+  topology, non-root/read-only image defaults, secret-free production example,
+  disabled identity/delivery defaults, and fail-closed production preflight;
+  the dynamic verifier runs in a separate hosted CI job.
 - Hosted validation: GitHub Actions run `30887742764` passed for commit
   `b833a69`, including verification/security, fresh PostgreSQL and Temporal,
   worker replacement, the loopback private-stack smoke, container smoke, and

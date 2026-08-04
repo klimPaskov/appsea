@@ -86,15 +86,14 @@ stack and `pnpm verify:local-stack` smoke-tests it in CI.
 Migration `0091` preserves `consumed_at` when an already-consumed owner
 batch is later deleted, matching its deletion trigger.
 
+`pnpm verify:release` checks Compose, secret-free defaults, hardened images, and
+fail-closed preflight; CI runs Docker mode and `--static` supports no Docker.
+
 ## Validated commands
 
 - GitHub Actions run `30887742764` passed for `b833a69`; fresh
   PostgreSQL/Temporal, local-stack, worker, container, and Windows/macOS checks
   are green.
-- Dependency security hardening locks patched Next.js/PostCSS/`fast-uri`/sharp
-  versions and adds `pnpm security:audit`; the production audit reports zero
-  vulnerabilities. GitHub Actions run `30819616149` passed audit, verification,
-  fresh PostgreSQL, and fresh Temporal checks.
 - Production runtime packaging and the staged Tauri shell pass their hosted
   build/boundary checks; provider provisioning, image signing, hosted-origin,
   updater, notarization, installation, and deployment evidence remain open.

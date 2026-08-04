@@ -659,6 +659,9 @@ Implemented:
   services.
 - GitHub CI validates the Compose model, builds both images, smoke-tests web
   liveness/health, and checks fail-closed worker preflight.
+- `pnpm verify:release` adds a provider-neutral release boundary check for
+  Compose topology, hardened image defaults, secret-free configuration, and
+  fail-closed empty-environment preflight; CI runs its dynamic mode.
 
 Remaining: push signed images through an approved registry, provision the
 role-separated external services and secrets, run deployment/restore/crash
