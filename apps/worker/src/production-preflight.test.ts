@@ -16,6 +16,7 @@ function baseEnvironment(): NodeJS.ProcessEnv {
     APPSEA_DATABASE_SSL_MODE: 'verify-full',
     APPSEA_TEMPORAL_ADDRESS: 'temporal.internal:7233',
     APPSEA_TEMPORAL_NAMESPACE: 'appsea-production',
+    APPSEA_TEMPORAL_TASK_QUEUE: 'appsea-research-v1',
     APPSEA_TEMPORAL_API_KEY: 'temporal-secret',
     APPSEA_TEMPORAL_TLS_CA: '-----BEGIN CERTIFICATE-----\nMIIB\n-----END CERTIFICATE-----',
     APPSEA_OBJECT_STORE_ENDPOINT: 'https://objects.internal',
@@ -187,6 +188,24 @@ describe('production deployment configuration preflight', () => {
     expect(check(report, 'temporal').status).toBe('failed')
     expect(check(report, 'objectStore').status).toBe('failed')
     expect(check(report, 'publicOrigin').status).toBe('failed')
+  })
+
+  it('requires the reviewed task queue allowlist for production Temporal', () => {
+    const environment = baseEnvironment()
+    delete environment.APPSEA_TEMPORAL_TASK_QUEUE
+    expect(check(validateProductionEnvironment(environment), 'temporal')).toMatchObject({
+      status: 'failed',
+      failureCode: 'APPSEA_PREFLIGHT_TEMPORAL'
+    })
+
+    environment.APPSEA_TEMPORAL_TASK_QUEUE = 'unreviewed-queue'
+    expect(check(validateProductionEnvironment(environment), 'temporal')).toMatchObject({
+      status: 'failed',
+      failureCode: 'APPSEA_PREFLIGHT_TEMPORAL'
+    })
+
+    environment.APPSEA_TEMPORAL_TASK_QUEUE = 'appsea-research-v1'
+    expect(check(validateProductionEnvironment(environment), 'temporal').status).toBe('ok')
   })
 
   it('rejects role confusion, invalid flags, and malformed trusted proxy secrets', () => {

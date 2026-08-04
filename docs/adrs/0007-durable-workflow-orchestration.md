@@ -14,7 +14,9 @@ engine behavior and make cancellation and recovery ambiguous.
 ## Decision
 
 The first durable workflow implementation uses the Temporal TypeScript SDK
-`1.20.2` and a fixed `appsea-research-v1` task queue. The local Compose proof
+`1.20.2` and a fixed `appsea-research-v1` task queue. Production preflight
+requires deployments to declare that exact queue so the provider ACL can be
+reviewed against the worker image. The local Compose proof
 uses `temporalio/temporal:1.8.0` with SQLite on a named volume. That image,
 SQLite configuration, loopback binding, and unauthenticated UI are local/CI
 development choices only; they are not a production deployment recipe.
@@ -53,7 +55,7 @@ and explicitly synthetic; its first activity reports zero model/source cost.
   Temporal restart recovery, PostgreSQL idempotency, and absence of the raw local
   key from decoded Temporal payloads.
 - Production still requires an authenticated and TLS-protected Temporal endpoint,
-  namespace/task-queue provisioning, worker identity and authorization, HA,
+  namespace/task-queue ACL provisioning, worker identity and authorization, HA,
   backups/retention, alerting, deployment controls, and fault-injection proof.
   These are explicit release blockers, not implied by the local proof.
 

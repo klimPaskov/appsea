@@ -24,6 +24,14 @@ Passing on 2026-08-03:
 
 Additional validation on 2026-08-04:
 
+- The production Temporal preflight now requires the exact reviewed
+  `APPSEA_TEMPORAL_TASK_QUEUE=appsea-research-v1` declaration. A release-boundary
+  test rejects a missing or changed queue, and the worker preflight suite keeps
+  the failure fixed-code and secret-free. This narrows the deployment ACL
+  contract; it does not prove the remote namespace/task-queue ACL.
+- The affected worker suite passed 124 tests and typecheck; the release-boundary
+  script passed five tests and `pnpm verify:release -- --static` passed.
+
 - GitHub Actions run `30893053945` passed for commit `b67a51b`, including the
   release-boundary verifier, full verification/security, fresh PostgreSQL and
   Temporal checks, worker replacement, local-stack and container smoke, and

@@ -35,7 +35,7 @@ The disposable integration smoke is `pnpm verify:local-stack`.
 - PostgreSQL migrations, normalized fixture persistence, RLS, lineage, and replay verification
 - editor/owner field-level evidence redaction with immutable receipts, provenance-preserving masks, and private report/analysis read projections
 - durable fixture workflow with PostgreSQL checkpoints, bounded retries, budgets, cancellation, and Temporal restart/replay proof
-- shared fail-closed Temporal endpoint configuration for the web client and durable worker (local loopback or production TLS/API-key/namespace/CA settings)
+- shared fail-closed Temporal endpoint configuration for the web client and durable worker (local loopback or production TLS/API-key/namespace/CA settings), with production preflight requiring the reviewed `appsea-research-v1` task queue declaration
 - server-clock PostgreSQL scheduler leases for bounded maintenance and delivery commands, with a dedicated maintenance role, per-acquisition tokens, owner-checked renewal, stale takeover, fixed lease-loss events, and maintenance-role-only durable run metrics
 - authenticated production workflow ingress with durable per-workspace rate/concurrency admission, idempotent replay, and bounded admission retention
 - policy-bound production source collection leases with stable server-observed capture timestamps, post-fetch policy rechecks, and bounded lease retention

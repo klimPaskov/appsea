@@ -42,6 +42,22 @@ test('the release boundary rejects tracked credentials and weakened defaults', a
   assert.ok(findings.includes('account recovery must remain disabled by default'))
 })
 
+test('the release boundary requires the reviewed Temporal task queue', async () => {
+  const current = await inputs()
+  const findings = releaseBoundaryFindings({
+    ...current,
+    envExample: current.envExample.replace(
+      'APPSEA_TEMPORAL_TASK_QUEUE=appsea-research-v1',
+      'APPSEA_TEMPORAL_TASK_QUEUE=unreviewed-queue'
+    )
+  })
+  assert.ok(
+    findings.includes(
+      'APPSEA_TEMPORAL_TASK_QUEUE must equal the reviewed appsea-research-v1 task queue'
+    )
+  )
+})
+
 test('the release boundary rejects a service that can bypass preflight', async () => {
   const current = await inputs()
   const weakened = current.compose.replace(

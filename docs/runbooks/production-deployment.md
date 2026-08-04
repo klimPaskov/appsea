@@ -40,8 +40,9 @@ filesystem in the Compose profile, and drop Linux capabilities.
 Copy `infra/production/production.env.example` to
 `infra/production/production.env` through the deployment secret workflow. Fill
 the three role-separated database URLs, authenticated Temporal endpoint,
-pinned CA/API key/namespace, signed S3-compatible object store, public HTTPS
-origin, MFA key, scheduler identity, cost thresholds, and HTTPS alert endpoint.
+pinned CA/API key/namespace and the exact `appsea-research-v1` task queue,
+signed S3-compatible object store, public HTTPS origin, MFA key, scheduler
+identity, cost thresholds, and HTTPS alert endpoint.
 Keep recovery and invitation delivery disabled until their provider and DPA
 review is complete. Never commit `production.env`.
 
@@ -56,6 +57,11 @@ docker compose --file infra/production/compose.yaml run --rm preflight
 The Compose `preflight` dependency also gates `web`, `worker`, and
 `maintenance`. A failed preflight is a release stop, not a reason to weaken
 TLS, role separation, object-storage, alert, or identity settings.
+
+The Temporal deployment must grant the worker identity access only to the
+configured namespace and `appsea-research-v1` task queue. Record that provider
+ACL, namespace retention, TLS trust, and service-identity evidence with the
+release; the repository preflight cannot prove a remote provider's ACL.
 
 Run the forward-only migration as a separately reviewed release step:
 

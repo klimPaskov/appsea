@@ -4,7 +4,7 @@ import { isIP } from 'node:net'
 import { workspaceCostAlertLimits } from '@appsea/contracts'
 import { databaseConfigFromEnv, mfaEncryptionConfigFromEnv } from '@appsea/db'
 import { objectStoreFromEnv } from '@appsea/object-store'
-import { temporalClientConfigFromEnv } from '@appsea/workflows'
+import { fixtureResearchTaskQueue, temporalClientConfigFromEnv } from '@appsea/workflows'
 import {
   maintenanceDatabaseConfigFromEnv,
   maintenanceSchedulerLeaseSecondsFromEnv,
@@ -307,6 +307,9 @@ function assertProductionMaintenance(environment: NodeJS.ProcessEnv): void {
 function assertProductionTemporal(environment: NodeJS.ProcessEnv): void {
   const config = temporalClientConfigFromEnv(environment)
   if (config.localUnauthenticated || isLoopbackHost(new URL(`http://${config.address}`).hostname)) {
+    throw new ProductionPreflightConfigurationError()
+  }
+  if (environment.APPSEA_TEMPORAL_TASK_QUEUE?.trim() !== fixtureResearchTaskQueue) {
     throw new ProductionPreflightConfigurationError()
   }
 }

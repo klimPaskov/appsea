@@ -88,9 +88,11 @@ Implemented:
   purge, and a retryable signed provider worker; delivery remains kill-switched
   pending identity/provider approval
 - secret-free `pnpm production:preflight` validates production database role
-  separation/TLS, authenticated Temporal, signed object storage, scheduler
+  separation/TLS, authenticated Temporal, the exact reviewed
+  `appsea-research-v1` task queue declaration, signed object storage, scheduler
   ownership, HTTPS origin, delivery switches, and trusted-proxy configuration
-  without contacting dependencies or activating a source
+  without contacting dependencies or activating a source; the provider
+  namespace/task-queue ACL remains deployment evidence
 
 Migration `0066_workspace_archival.sql` adds an owner-only, step-up-backed
 workspace archival boundary. It blocks while durable workflow/run/handoff/
@@ -384,6 +386,7 @@ validated by package tests; production workflow provisioning remains blocked.
 Implemented:
 
 - Temporal TypeScript workflow/client package with fixed version/task queue,
+  production preflight allowlisting the declared `appsea-research-v1` queue,
   sanitized history, deterministic idempotency/input hashes, duplicate-start
   conflict handling, status query, bounded retries, budget rejection,
   cancellation, safe-point completion, and terminal reconciliation

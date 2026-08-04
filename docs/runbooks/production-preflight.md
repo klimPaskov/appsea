@@ -26,7 +26,11 @@ shape passed; a non-zero exit means the deployment must not proceed.
   `appsea_migrator` and `APPSEA_DATABASE_MIGRATION_ROLE` must be
   `appsea_owner`. All three use `APPSEA_DATABASE_SSL_MODE=verify-full`.
 - `APPSEA_TEMPORAL_ADDRESS` must be non-loopback and accompanied by an explicit
-  namespace, API key, and pinned PEM/base64 CA.
+  namespace, the exact reviewed `APPSEA_TEMPORAL_TASK_QUEUE=appsea-research-v1`
+  value, API key, and pinned PEM/base64 CA. The deployed Temporal namespace
+  authorization must allow only this task queue and the workflow types shipped
+  by the matching image; preflight validates the declared queue, while the
+  provider ACL and authenticated service identity remain deployment evidence.
 - Object storage must use the complete signed S3-compatible configuration over
   HTTPS with a non-loopback endpoint. Filesystem storage is not accepted for
   production.

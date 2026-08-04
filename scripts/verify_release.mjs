@@ -18,6 +18,7 @@ const requiredEnvironmentNames = [
   'APPSEA_ALERT_ROUTING_URL',
   'APPSEA_ALERT_ROUTING_SECRET'
 ]
+const requiredPlainEnvironmentNames = ['APPSEA_TEMPORAL_TASK_QUEUE']
 const secretEnvironmentNames = [
   'APPSEA_TEMPORAL_API_KEY',
   'APPSEA_TEMPORAL_TLS_CA',
@@ -119,6 +120,13 @@ export function releaseBoundaryFindings({
     if (value === null) findings.push(`production environment example is missing ${name}`)
     else if (value !== '' && !value.startsWith('https://')) {
       findings.push(`${name} must not contain a committed secret or live credential`)
+    }
+  }
+  for (const name of requiredPlainEnvironmentNames) {
+    const value = requiredEnvValue(envExample, name)
+    if (value === null) findings.push(`production environment example is missing ${name}`)
+    else if (name === 'APPSEA_TEMPORAL_TASK_QUEUE' && value !== 'appsea-research-v1') {
+      findings.push(`${name} must equal the reviewed appsea-research-v1 task queue`)
     }
   }
   for (const name of secretEnvironmentNames) {

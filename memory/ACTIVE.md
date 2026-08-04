@@ -82,6 +82,10 @@ checks now pass across all 94 migrations.
 
 `pnpm verify:release` checks Compose, secret-free defaults, hardened images, and
 fail-closed preflight; CI runs Docker mode and `--static` supports no Docker.
+Production preflight now also requires the exact reviewed
+`APPSEA_TEMPORAL_TASK_QUEUE=appsea-research-v1` declaration. This lets a
+deployment review compare the worker image with a narrow provider ACL; remote
+namespace/task-queue authorization is still external evidence.
 
 ## Validated commands
 
@@ -106,7 +110,8 @@ fail-closed preflight; CI runs Docker mode and `--static` supports no Docker.
    backup purge, pricing/billing controls, alert endpoint rotation, and
    incident routing.
 5. Review HTTPS, secret storage, rate limits, token rotation, Temporal
-   namespace controls, scheduler ownership, and the read-only MCP boundary.
+   namespace/task-queue ACLs and worker identity, scheduler ownership, and the
+   read-only MCP boundary.
 6. Complete signed Windows/macOS Tauri release validation.
 
 ## Current blockers
