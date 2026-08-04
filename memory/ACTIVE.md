@@ -88,9 +88,9 @@ batch is later deleted, matching its deletion trigger.
 
 ## Validated commands
 
-- GitHub Actions run `30882513772` passed for `7a763ba`; the hosted worker
-  replacement drill verified one job/run, seven checkpoints, one cost row,
-  and two distinct outbox rows after process loss.
+- GitHub Actions run `30884529524` passed for `0978640`; hosted worker
+  replacement, fresh PostgreSQL/Temporal, container, and Windows desktop
+  boundary checks are green.
 - Dependency security hardening locks patched Next.js/PostCSS/`fast-uri`/sharp
   versions and adds `pnpm security:audit`; the production audit reports zero
   vulnerabilities. GitHub Actions run `30819616149` passed audit, verification,
