@@ -75,15 +75,16 @@ This tranche adds `packages/connectors/src/manual-import.ts`,
 `/api/workspaces/:workspaceId/imports` routes, and the manual source policy and
 runbook plus the private `/workspace/:workspaceId/imports` owner screen. Uploads
 are bounded at 2 MiB/5,000 rows, normalized and PII-scrubbed;
-Temporal receives only a batch identifier. Batch consumption is committed with
+Temporal receives only the batch ID. Batch consumption is committed with
 collection persistence; owner deletion clears staged payloads and emits
 tombstones. URL import is
 deferred to avoid SSRF and unreviewed third-party acquisition.
 Integration coverage exercises staging/replay/consumption/deletion, RLS,
 tombstones; migration `0090` keeps policy validation in a narrow definer
-function. Docker is unavailable locally.
+function. Docker is unavailable locally; `pnpm dev:local` runs the loopback
+stack.
 Migration `0091` preserves `consumed_at` when an already-consumed owner
-batch is later deleted, matching the deletion trigger and tombstone flow.
+batch is later deleted, matching its deletion trigger.
 
 ## Validated commands
 

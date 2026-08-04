@@ -12,6 +12,7 @@ __pycache__/
 .env.*
 !.env.example
 .appsea/
+.appsea-object-store/
 *.log
 .DS_Store
 memory/index.sqlite3

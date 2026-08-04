@@ -39,6 +39,7 @@
 ## Runbooks
 
 - [`runbooks/first-run.md`](runbooks/first-run.md)
+- [`runbooks/local-stack.md`](runbooks/local-stack.md)
 - [`runbooks/fixture-research.md`](runbooks/fixture-research.md)
 - [`runbooks/postgresql-local.md`](runbooks/postgresql-local.md)
 - [`runbooks/temporal-local.md`](runbooks/temporal-local.md)

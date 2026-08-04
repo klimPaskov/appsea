@@ -9,3 +9,5 @@ PACKAGE_MANIFEST.md
 pnpm-lock.yaml
 
 apps/web/next-env.d.ts
+apps/desktop/src-tauri/gen
+apps/desktop/src-tauri/target

@@ -8,11 +8,13 @@
   },
   "scripts": {
     "dev": "turbo dev",
+    "dev:local": "node scripts/dev_local.mjs",
     "dev:web": "pnpm --filter @appsea/web dev",
     "desktop:check": "cargo check --manifest-path apps/desktop/src-tauri/Cargo.toml",
     "build": "turbo build",
     "typecheck": "turbo typecheck",
     "test": "turbo test",
+    "test:dev-local": "node --test scripts/dev_local.test.mjs",
     "lint": "turbo lint",
     "format": "prettier --write .",
     "format:check": "prettier --check .",

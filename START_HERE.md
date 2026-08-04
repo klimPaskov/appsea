@@ -18,6 +18,11 @@ pnpm dev:web
 
 Open `http://localhost:3000` after the web server starts.
 
+The command above runs the public fixture website. To exercise the private
+workspace path locally, run `pnpm dev:local`; it starts the existing loopback
+PostgreSQL/Temporal services, applies migrations, and starts the durable worker
+and web process. See [`docs/runbooks/local-stack.md`](docs/runbooks/local-stack.md).
+
 ## What works
 
 - fixture complaint collection through a policy-gated synthetic connector

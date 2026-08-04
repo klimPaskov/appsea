@@ -34,6 +34,8 @@ Implemented:
 - replay-safe fixture repository with concurrent idempotency conflict handling
 - populated upgrade, fresh install, privilege, RLS, provenance, policy, cross-wire, and replay tests
 - local runbook and CI persistence gate
+- one-command loopback private-workspace stack with migration, worker, and web
+  startup (`pnpm dev:local`)
 - PostgreSQL-backed source quota reservations shared across workspaces, with
   idempotent commit/release and bounded expiry
 - policy-derived, bounded retention tombstone enqueue reusing the deletion
