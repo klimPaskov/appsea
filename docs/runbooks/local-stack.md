@@ -11,9 +11,9 @@ services and development adapters:
 - the Next.js web process at `http://localhost:3000`
 - the durable fixture/production worker in development mode
 
-The command starts PostgreSQL and Temporal, waits for both ports, applies all
-forward migrations through the dedicated migrator role, then starts the worker
-and web process with loopback-only settings. It deliberately removes inherited
+The command starts PostgreSQL and Temporal, waits for both service health
+checks, applies all forward migrations through the dedicated migrator role,
+then starts the worker and web process with loopback-only settings. It deliberately removes inherited
 cloud object-store, remote Temporal, OIDC, delivery, proxy, and alert-routing
 settings so a production environment cannot be reused accidentally.
 

@@ -1,5 +1,4 @@
 import { spawn } from 'node:child_process'
-import { createConnection } from 'node:net'
 import { fileURLToPath, pathToFileURL } from 'node:url'
 import path from 'node:path'
 
@@ -151,32 +150,44 @@ async function terminate(child) {
   }
 }
 
-export function waitForPort(host, port, timeoutMs = 60_000) {
+export async function waitForService(service, healthArgs, label, timeoutMs = 60_000) {
   const deadline = Date.now() + timeoutMs
-  return new Promise((resolve, reject) => {
-    const attempt = () => {
-      const socket = createConnection({ host, port })
-      let settled = false
-      const finish = (error) => {
-        if (settled) return
-        settled = true
-        socket.destroy()
-        if (!error) {
-          resolve()
-          return
-        }
-        if (Date.now() >= deadline) {
-          reject(new Error(`${host}:${port} did not become reachable within ${timeoutMs}ms`))
-          return
-        }
-        setTimeout(attempt, 250)
-      }
-      socket.once('connect', () => finish())
-      socket.once('error', finish)
-      socket.setTimeout(1_000, () => finish(new Error('connection timeout')))
+  while (Date.now() < deadline) {
+    try {
+      await run('docker', ['compose', '-f', composeFile, 'exec', '-T', service, ...healthArgs], {
+        capture: true
+      })
+      return
+    } catch {
+      await new Promise((resolve) => setTimeout(resolve, 500))
     }
-    attempt()
-  })
+  }
+  throw new Error(`${label} did not become ready within ${timeoutMs}ms`)
+}
+
+async function runMigration(environment) {
+  const migrationCommand = pnpmCommand()
+  const migrationArgs = pnpmArgs(['db:migrate'])
+  let lastError
+  for (let attempt = 1; attempt <= 5; attempt += 1) {
+    try {
+      await run(migrationCommand, migrationArgs, { env: environment })
+      return
+    } catch (error) {
+      lastError = error
+      const message = error instanceof Error ? error.message : String(error)
+      if (!/Connection terminated|ECONNREFUSED|ECONNRESET/i.test(message) || attempt === 5) {
+        throw error
+      }
+      await waitForService(
+        'postgres',
+        ['pg_isready', '-U', 'appsea_migrator', '-d', 'appsea'],
+        'PostgreSQL'
+      )
+      await new Promise((resolve) => setTimeout(resolve, 500))
+    }
+  }
+  throw lastError
 }
 
 export function printHelp() {
@@ -226,8 +237,17 @@ async function main() {
   }
 
   await run('docker', ['compose', '-f', composeFile, 'up', '-d', 'postgres', 'temporal'])
-  await Promise.all([waitForPort('127.0.0.1', 5433), waitForPort('127.0.0.1', 7233)])
-  await run(pnpmCommand(), pnpmArgs(['db:migrate']), { env: environment })
+  await waitForService(
+    'postgres',
+    ['pg_isready', '-U', 'appsea_migrator', '-d', 'appsea'],
+    'PostgreSQL'
+  )
+  await waitForService(
+    'temporal',
+    ['temporal', 'operator', 'cluster', 'health', '--address', '127.0.0.1:7233'],
+    'Temporal'
+  )
+  await runMigration(environment)
 
   const children = [
     start(pnpmCommand(), pnpmArgs(['--filter', '@appsea/worker', 'workflow:worker']), environment),
