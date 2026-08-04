@@ -24,6 +24,10 @@ Passing on 2026-08-03:
 
 Additional validation on 2026-08-04:
 
+- GitHub Actions run `30893053945` passed for commit `b67a51b`, including the
+  release-boundary verifier, full verification/security, fresh PostgreSQL and
+  Temporal checks, worker replacement, local-stack and container smoke, and
+  independent Windows/macOS desktop boundary jobs.
 - GitHub Actions run `30887742764` passed for commit `b833a69`, including the
   loopback private-stack smoke, fresh PostgreSQL and Temporal checks, worker
   replacement, container builds, full verification, and independent Windows and

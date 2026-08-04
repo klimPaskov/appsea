@@ -91,9 +91,9 @@ fail-closed preflight; CI runs Docker mode and `--static` supports no Docker.
 
 ## Validated commands
 
-- GitHub Actions run `30887742764` passed for `b833a69`; fresh
-  PostgreSQL/Temporal, local-stack, worker, container, and Windows/macOS checks
-  are green.
+- GitHub Actions run `30893053945` passed for `b67a51b`; release-boundary,
+  fresh PostgreSQL/Temporal, local-stack, worker, container, and Windows/macOS
+  checks are green.
 - Production runtime packaging and the staged Tauri shell pass their hosted
   build/boundary checks; provider provisioning, image signing, hosted-origin,
   updater, notarization, installation, and deployment evidence remain open.
