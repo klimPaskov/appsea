@@ -12,6 +12,7 @@ Version 5 combines the five dark desktop references with five matching mobile la
 | `/opportunities/:slug/competitors`                         | `design/references/desktop/competitors.png`    | `design/references/mobile/competitors.png`            | Competitor comparison                   |
 | `/opportunities/:slug/plan`                                | `design/references/desktop/plan.png`           | `design/references/mobile/plan.png`                   | Coding-agent build plan                 |
 | `/account/security`                                        | `design/references/desktop/security.png`       | `design/references/mobile/security.png`               | Private session review and MFA          |
+| `/workspace/:workspaceId/agent-access`                     | `design/references/source/agent-access.svg`    | `design/references/source/agent-access-mobile.svg`    | Private read-only agent token access    |
 | `/workspace/:workspaceId/seed-reviews`                     | `design/references/source/seed-reviews.svg`    | `design/references/source/seed-reviews-mobile.svg`    | Private reviewed seed registry          |
 | `/workspace/:workspaceId/campaigns`                        | `design/references/source/campaigns.svg`       | `design/references/source/campaigns-mobile.svg`       | Private campaign configuration          |
 | `/workspace/:workspaceId/sources`                          | `design/references/source/source-coverage.svg` | `design/references/source/source-coverage-mobile.svg` | Private source policy coverage          |

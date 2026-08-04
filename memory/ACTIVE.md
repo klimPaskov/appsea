@@ -36,8 +36,11 @@ proof remain open.
 
 Authentication uses scrypt hashes, revocable sessions, membership-before-RLS,
 password step-up, TOTP/recovery codes, owner-safe closure, archival, and scoped
-read-only agent tokens. OIDC remains disabled by default and provider identity,
-delivery/DPA, retention, egress, and deployment operations remain external.
+read-only agent tokens. The private owner workspace now has an Agent access
+page for least-privilege token issue/revocation; raw credentials remain
+one-time and later reads metadata-only. OIDC remains disabled by default and
+provider identity, delivery/DPA, retention, egress, and deployment operations
+remain external.
 
 Workers have server-clock leases, fenced SQL mutations, bounded retries,
 reconciliation, deletion/source/object retention queues, campaign

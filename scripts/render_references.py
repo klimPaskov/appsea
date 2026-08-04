@@ -682,6 +682,14 @@ SCREENS = {
     'workspace-members': workspace_members_screen
 }
 
+# Some private settings screens are authored as hand-reviewed SVG references
+# rather than generated geometry. Keeping these sources in the reference loop
+# makes `pnpm ui:references` validate and rasterize them when cairosvg is
+# available without using Python to draw their shapes.
+STATIC_SOURCES = {
+    'agent-access': ('agent-access.svg', 'agent-access-mobile.svg')
+}
+
 
 def main() -> int:
     OUTPUT.mkdir(parents=True, exist_ok=True)
@@ -709,6 +717,24 @@ def main() -> int:
                         output_width=width,
                         output_height=height,
                     )
+            rendered += 1
+    for name, (desktop_source, mobile_source) in STATIC_SOURCES.items():
+        for width, height, suffix, mobile in [
+            (1440, 1000, '', False),
+            (390, 844, '-mobile', True)
+        ]:
+            source_path = SOURCE / (mobile_source if mobile else desktop_source)
+            if not source_path.exists():
+                raise FileNotFoundError(f'missing static reference source: {source_path}')
+            svg = source_path.read_text(encoding='utf-8')
+            png_path = OUTPUT / f'{name}{suffix}.png'
+            if cairosvg is not None:
+                cairosvg.svg2png(
+                    bytestring=svg.encode('utf-8'),
+                    write_to=str(png_path),
+                    output_width=width,
+                    output_height=height,
+                )
             rendered += 1
     if cairosvg is None:
         print(

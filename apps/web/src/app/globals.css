@@ -1024,6 +1024,197 @@ a:focus-visible {
   margin-top: 64px;
 }
 
+.agent-access-panel {
+  margin-top: 0;
+}
+
+.agent-access-form {
+  display: grid;
+  gap: 18px;
+  max-width: 760px;
+  margin-top: 26px;
+}
+
+.agent-access-form label,
+.agent-access-scope-fieldset legend {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.agent-access-form > label {
+  display: grid;
+  gap: 8px;
+}
+
+.agent-access-form input,
+.agent-access-form select {
+  width: 100%;
+  min-height: 44px;
+  padding: 0 12px;
+  border: 1px solid var(--line);
+  border-radius: 5px;
+  background: var(--surface);
+  color: var(--ink);
+  font: inherit;
+  letter-spacing: normal;
+  text-transform: none;
+}
+
+.agent-access-form input:focus,
+.agent-access-form select:focus,
+.agent-access-scope-option input:focus-visible {
+  outline: 3px solid color-mix(in srgb, var(--accent) 25%, transparent);
+  border-color: var(--accent);
+}
+
+.agent-access-scope-fieldset {
+  min-width: 0;
+  margin: 4px 0 0;
+  padding: 0;
+  border: 0;
+}
+
+.agent-access-scope-fieldset legend {
+  padding: 0;
+}
+
+.agent-access-scope-list {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px 18px;
+  margin-top: 12px;
+}
+
+.agent-access-scope-option {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 5px;
+  background: var(--surface);
+  cursor: pointer;
+  letter-spacing: normal !important;
+  text-transform: none !important;
+}
+
+.agent-access-scope-option input {
+  width: 18px;
+  min-height: 18px;
+  margin-top: 2px;
+  accent-color: var(--accent);
+}
+
+.agent-access-scope-option span {
+  display: grid;
+  gap: 5px;
+}
+
+.agent-access-scope-option strong {
+  color: var(--ink);
+  font-size: 14px;
+}
+
+.agent-access-scope-option small {
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.agent-access-issued {
+  display: grid;
+  gap: 18px;
+  margin-top: 56px;
+  padding: 22px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--surface);
+}
+
+.agent-access-token-value {
+  display: block;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  padding: 13px 14px;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+  font-size: 13px;
+  line-height: 1.5;
+  user-select: all;
+}
+
+.agent-access-issued-actions {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+
+.agent-access-token-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border-top: 1px solid var(--ink);
+}
+
+.agent-access-token-row {
+  display: grid;
+  grid-template-columns: minmax(140px, 0.8fr) minmax(0, 2fr) auto;
+  align-items: center;
+  gap: 24px;
+  padding: 22px 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.agent-access-token-main {
+  display: grid;
+  gap: 8px;
+}
+
+.agent-access-token-main strong {
+  font-size: 16px;
+}
+
+.agent-access-token-meta {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 18px;
+  margin: 0;
+}
+
+.agent-access-token-meta div {
+  display: grid;
+  gap: 5px;
+  min-width: 0;
+}
+
+.agent-access-token-meta dt {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.agent-access-token-meta dd {
+  margin: 0;
+  color: #41444a;
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
+
+.agent-access-token-row > .quiet-button {
+  min-height: 38px;
+  padding: 0 12px;
+  font-size: 12px;
+}
+
 .workspace-opportunity-list {
   margin: 0;
   padding: 0;
@@ -1922,9 +2113,20 @@ a:focus-visible {
   .campaign-source-option,
   .workspace-member-list li,
   .workspace-member-actions,
+  .agent-access-token-row,
   .account-session-list li {
     align-items: flex-start;
     flex-direction: column;
+  }
+
+  .agent-access-scope-list,
+  .agent-access-token-meta {
+    grid-template-columns: 1fr;
+  }
+
+  .agent-access-token-row {
+    display: flex;
+    gap: 16px;
   }
 
   .correction-control-grid,

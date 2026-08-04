@@ -362,7 +362,9 @@ report, and plan reads. Scope filtering, evidence representation policy,
 coverage gaps, synthetic disclosure, and report/plan approval gates are
 enforced in the handler. Workflow starts, connector activation, policy
 changes, deletion, deployment, and credential operations remain outside MCP.
-The token lifecycle is API-only in this tranche; see
+The private owner workspace now also exposes `/workspace/:workspaceId/agent-access`
+for least-privilege token creation and revocation; the raw token is shown only
+in the immediate create response and later reads remain metadata-only. See
 [`mcp-agent-access.md`](../../runbooks/mcp-agent-access.md).
 
 Migration `0070_research_campaign_orchestration_cancellation.sql` adds an

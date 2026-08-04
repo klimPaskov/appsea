@@ -7,6 +7,8 @@
   report, or coding plan.
 - The private competitors route explains competitive coverage and lets members
   inspect bounded source observations without turning the page into a dashboard.
+- The private Agent access route lets an owner issue and revoke scoped,
+  read-only coding-agent tokens while keeping the raw credential one-time.
 
 ## Visual language
 

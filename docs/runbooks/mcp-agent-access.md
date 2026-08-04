@@ -22,14 +22,22 @@ approved report/plan artifacts.
 
 ## Create, list, and revoke tokens
 
-The owner uses the authenticated private workspace routes. The browser session
-must be same-origin, and `POST`/`DELETE` require recent reauthentication.
+The owner can manage tokens from the private workspace **Agent access** page or
+through the authenticated private workspace routes. The browser session must
+be same-origin, and `POST`/`DELETE` require recent reauthentication (plus a
+fresh MFA step-up when MFA is enabled). The page deliberately offers only the
+read scopes below and never renders a token returned by a previous session.
 
 ```text
 GET    /api/workspaces/{workspaceId}/agent-tokens
 POST   /api/workspaces/{workspaceId}/agent-tokens
 DELETE /api/workspaces/{workspaceId}/agent-tokens/{tokenId}
 ```
+
+Open `/workspace/{workspaceId}/agent-access` as the workspace owner to create
+or revoke a token without constructing the JSON request by hand. The page
+shows the raw credential only in the immediate create response and provides a
+copy action; it does not persist or re-fetch the credential.
 
 Create with a strict JSON body:
 

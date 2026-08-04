@@ -64,6 +64,13 @@
       "mobile": "mobile/security.png"
     },
     {
+      "id": "agent-access",
+      "route": "/workspace/:workspaceId/agent-access",
+      "purpose": "Private owner-managed, read-only agent token access",
+      "desktop": "source/agent-access.svg",
+      "mobile": "source/agent-access-mobile.svg"
+    },
+    {
       "id": "seed-reviews",
       "route": "/workspace/:workspaceId/seed-reviews",
       "purpose": "Private reviewed opportunity-seed registry",

@@ -84,6 +84,14 @@ The public AppSea leaderboard is a sparse, synthetic fixture surface. Private re
   private; owner deletion clears staged rows and creates deletion tombstones.
   Owner imports are not public market coverage, and AppSea never fetches their
   URL fields.
+- Workspace owners can manage scoped, expiring read-only coding-agent tokens at
+  `/workspace/:workspaceId/agent-access`. The page is a convenience over the
+  existing token API: it lets an owner select least-privilege MCP scopes, shows
+  a new raw token only once, and lists only token metadata afterwards. Creation
+  and revocation retain the same same-origin, password-step-up, MFA,
+  workspace-owner, hash-only persistence, and expiry controls as the API. The
+  endpoint remains read-only and cannot activate sources, start workflows,
+  mutate research, or change policy.
 
 ## Research detail
 

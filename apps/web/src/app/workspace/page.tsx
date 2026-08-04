@@ -38,6 +38,14 @@ export default async function WorkspacePage() {
           <Link className="quiet-button" href={`/workspace/${workspace.workspaceId}/members`}>
             Members
           </Link>
+          {workspace.role === 'owner' && workspace.visibility === 'private' ? (
+            <Link
+              className="quiet-button"
+              href={`/workspace/${workspace.workspaceId}/agent-access`}
+            >
+              Agent access
+            </Link>
+          ) : null}
           <Link className="quiet-button" href={`/workspace/${workspace.workspaceId}/seed-reviews`}>
             Seed reviews
           </Link>
