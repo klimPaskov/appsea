@@ -41,7 +41,7 @@
   latest `30947627304` for commit `e3f28d7`, `30947761415` for commit
   `c6ffa66`, `30949355268` for the website brand-mark commit `e276876`,
   `30949551146` for the follow-up docs commit `13d3913`, and latest
-  `30951694916` for `ff65ee7`
+  `30951694916` for `ff65ee7`, and latest `30981506584` for `6eb88e0`
   all failed before repository job steps because of the account
   payment/spending-limit gate, not because of a repository assertion.
 - Complaint analysis: the versioned `deduplication` artifact/report field now

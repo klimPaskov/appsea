@@ -32,6 +32,9 @@ Status: repository slice complete; AppSea remains not production-ready.
   before PostgreSQL, Temporal, and MinIO startup; cleanup also reported that
   engine error. These are environment blockers, not repository assertion
   failures.
+- Hosted GitHub Actions run `30981506584` for commit `6eb88e0` failed before
+  repository job steps because of the account payment/spending-limit gate; it
+  is not presented as a repository assertion failure.
 
 ## Limits and simplifications
 
