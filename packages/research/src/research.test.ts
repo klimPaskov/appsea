@@ -777,5 +777,22 @@ describe('production analysis composition', () => {
     })
     expect(eligible.eligible).toBe(true)
     expect(eligible.coverageGaps.length).toBeGreaterThan(0)
+    const provisional = evaluateDeepResearchGate({
+      artifact,
+      observations: [
+        observation,
+        {
+          ...observation,
+          observationId: 'observation:research-contrary',
+          claimType: 'contrary_signal'
+        }
+      ],
+      checks,
+      clusterReviewStates: [{ clusterVersionId: 'cluster-version:one', reviewState: 'provisional' }]
+    })
+    expect(provisional.eligible).toBe(false)
+    expect(provisional.blockingReasons).toContain(
+      'Complaint clusters require human review before deep research can pass.'
+    )
   })
 })

@@ -22,6 +22,7 @@
     "./competitive-research": "./src/competitive-research.ts",
     "./deep-research-gate": "./src/deep-research-gate-repository.ts",
     "./opportunity-decision": "./src/opportunity-decision-repository.ts",
+    "./cluster-review": "./src/cluster-review-repository.ts",
     "./evidence-redaction": "./src/evidence-redaction-repository.ts",
     "./agent-access-token": "./src/agent-access-token.ts"
   },

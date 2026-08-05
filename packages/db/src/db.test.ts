@@ -118,7 +118,8 @@ describe('database foundation', () => {
       '0102',
       '0103',
       '0104',
-      '0105'
+      '0105',
+      '0106'
     ])
     expect(migrations[0]?.checksum).toMatch(/^[a-f0-9]{64}$/)
     expect(migrations[0]?.sql).toContain('CREATE TABLE appsea.evidence_records')
@@ -129,6 +130,10 @@ describe('database foundation', () => {
     expect(opportunityDecisionMigration?.sql).toContain('CREATE TABLE appsea.opportunity_decisions')
     expect(opportunityDecisionMigration?.sql).toContain('opportunity_decision_guard')
     expect(opportunityDecisionMigration?.sql).toContain('opportunity decisions are append-only')
+    const clusterReviewMigration = migrations.find((migration) => migration.version === '0106')
+    expect(clusterReviewMigration?.sql).toContain('CREATE TABLE appsea.cluster_review_events')
+    expect(clusterReviewMigration?.sql).toContain('cluster_review_guard')
+    expect(clusterReviewMigration?.sql).toContain('cluster review events are append-only')
     const cancellationMigration = migrations.find((migration) => migration.version === '0070')
     expect(cancellationMigration?.sql).toContain('cancellation_requested_at')
     expect(cancellationMigration?.sql).toContain(

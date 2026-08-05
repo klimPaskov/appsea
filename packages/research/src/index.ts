@@ -9,6 +9,7 @@ import type {
   ComplaintEntityReference,
   ComplaintType,
   ComplaintCluster,
+  ComplaintClusterReviewState,
   CompetitiveResearchObservation,
   DeepResearchGateChecks,
   DeepResearchGateCompetitorRelationType,
@@ -40,6 +41,11 @@ export interface DeepResearchGateEvaluation {
   evidenceIds: string[]
   contraryObservationIds: string[]
   competitorRelationTypes: DeepResearchGateCompetitorRelationType[]
+}
+
+export interface DeepResearchGateClusterReviewState {
+  clusterVersionId: string
+  reviewState: ComplaintClusterReviewState
 }
 
 const NEAR_DUPLICATE_THRESHOLD = 0.9
@@ -644,6 +650,7 @@ export function evaluateDeepResearchGate(input: {
   artifact: ProductionResearchArtifact
   observations: CompetitiveResearchObservation[]
   checks: DeepResearchGateChecks
+  clusterReviewStates?: readonly DeepResearchGateClusterReviewState[]
 }): DeepResearchGateEvaluation {
   const checks = deepResearchGateChecksSchema.parse(input.checks)
   const blockingReasons: string[] = []
@@ -678,6 +685,18 @@ export function evaluateDeepResearchGate(input: {
   }
   if (input.artifact.clusters.length === 0) {
     blockingReasons.push('At least one coherent complaint cluster is required.')
+  }
+  if (input.clusterReviewStates) {
+    if (input.clusterReviewStates.length < input.artifact.clusters.length) {
+      blockingReasons.push('Every complaint cluster must have a stored human review state.')
+    }
+    if (
+      input.clusterReviewStates.some(
+        (cluster) => !['reviewed', 'confirmed'].includes(cluster.reviewState)
+      )
+    ) {
+      blockingReasons.push('Complaint clusters require human review before deep research can pass.')
+    }
   }
   if (
     input.artifact.analyses.some(

@@ -320,6 +320,146 @@ export const complaintClusterSchema = z.object({
   confidence: z.number().min(0).max(1)
 })
 
+const clusterReviewIdentifierSchema = z
+  .string()
+  .min(3)
+  .max(160)
+  .regex(/^[a-z][a-z0-9_:-]*$/)
+const clusterReviewHashSchema = z
+  .string()
+  .length(64)
+  .regex(/^[a-f0-9]{64}$/)
+
+/** Stored curation state for a deterministic complaint-cluster version. */
+export const complaintClusterReviewStateSchema = z.enum([
+  'provisional',
+  'reviewed',
+  'confirmed',
+  'split',
+  'merged',
+  'rejected'
+])
+
+/** Stored curation state for an individual cluster membership. */
+export const clusterMembershipReviewStateSchema = z.enum([
+  'unreviewed',
+  'confirmed',
+  'corrected',
+  'rejected'
+])
+
+export const workspaceClusterReviewActionSchema = z.enum(['confirm', 'reject', 'split', 'merge'])
+
+export const workspaceClusterReviewInputSchema = z
+  .object({
+    action: workspaceClusterReviewActionSchema,
+    expectedInputHash: clusterReviewHashSchema,
+    note: z.string().trim().min(1).max(2_000),
+    relatedClusterVersionIds: z.array(clusterReviewIdentifierSchema).max(32).default([])
+  })
+  .strict()
+  .superRefine((value, context) => {
+    if (new Set(value.relatedClusterVersionIds).size !== value.relatedClusterVersionIds.length) {
+      context.addIssue({
+        code: 'custom',
+        path: ['relatedClusterVersionIds'],
+        message: 'Related cluster versions must be unique'
+      })
+    }
+    const requiresRelated = value.action === 'split' || value.action === 'merge'
+    if (requiresRelated && value.relatedClusterVersionIds.length < 2) {
+      context.addIssue({
+        code: 'custom',
+        path: ['relatedClusterVersionIds'],
+        message: 'Split and merge reviews require at least two related cluster versions'
+      })
+    }
+    if (!requiresRelated && value.relatedClusterVersionIds.length > 0) {
+      context.addIssue({
+        code: 'custom',
+        path: ['relatedClusterVersionIds'],
+        message: 'Confirm and reject reviews cannot include related cluster versions'
+      })
+    }
+  })
+
+/** Identifier-only cluster evidence captured with every curation event. */
+export const workspaceClusterReviewSnapshotSchema = z
+  .object({
+    workspaceId: clusterReviewIdentifierSchema,
+    clusterVersionId: clusterReviewIdentifierSchema,
+    clusterId: clusterReviewIdentifierSchema,
+    opportunityId: clusterReviewIdentifierSchema,
+    runId: clusterReviewIdentifierSchema,
+    previousReviewState: complaintClusterReviewStateSchema,
+    nextReviewState: complaintClusterReviewStateSchema,
+    inputHash: clusterReviewHashSchema,
+    complaintIds: z.array(clusterReviewIdentifierSchema).max(5_000),
+    membershipReviewStates: z
+      .array(
+        z
+          .object({
+            complaintId: clusterReviewIdentifierSchema,
+            reviewState: clusterMembershipReviewStateSchema
+          })
+          .strict()
+      )
+      .max(5_000),
+    relatedClusterVersionIds: z.array(clusterReviewIdentifierSchema).max(32),
+    snapshotHash: clusterReviewHashSchema,
+    capturedAt: z.string().datetime()
+  })
+  .strict()
+
+export const workspaceClusterReviewReadModelSchema = z
+  .object({
+    reviewId: clusterReviewIdentifierSchema,
+    clusterVersionId: clusterReviewIdentifierSchema,
+    opportunityId: clusterReviewIdentifierSchema,
+    action: workspaceClusterReviewActionSchema,
+    previousReviewState: complaintClusterReviewStateSchema,
+    nextReviewState: complaintClusterReviewStateSchema,
+    note: z.string().min(1).max(2_000),
+    relatedClusterVersionIds: z.array(clusterReviewIdentifierSchema).max(32),
+    actorId: clusterReviewIdentifierSchema,
+    snapshot: workspaceClusterReviewSnapshotSchema,
+    createdAt: z.string().datetime()
+  })
+  .strict()
+
+export const workspaceClusterMembershipReadModelSchema = z
+  .object({
+    complaintId: clusterReviewIdentifierSchema,
+    membershipConfidence: z.number().min(0).max(1),
+    inclusionReason: z.string().min(1).max(2_000),
+    reviewState: clusterMembershipReviewStateSchema
+  })
+  .strict()
+
+export const workspaceClusterReadModelSchema = z
+  .object({
+    clusterVersionId: clusterReviewIdentifierSchema,
+    clusterId: clusterReviewIdentifierSchema,
+    opportunityId: clusterReviewIdentifierSchema,
+    runId: clusterReviewIdentifierSchema,
+    clusterVersion: z.string().min(1).max(80),
+    workingLabel: z.string().min(1).max(2_000),
+    problemStatement: z.string().min(1).max(20_000),
+    product: z.string().min(1).max(240),
+    category: z.string().min(1).max(240),
+    complaintCount: z.number().int().positive(),
+    uniqueObservationCount: z.number().int().positive(),
+    sourceCount: z.number().int().positive(),
+    confidence: z.number().min(0).max(1),
+    reviewState: complaintClusterReviewStateSchema,
+    inputHash: clusterReviewHashSchema,
+    synthetic: z.boolean(),
+    redacted: z.boolean(),
+    memberships: z.array(workspaceClusterMembershipReadModelSchema).max(5_000),
+    reviewHistory: z.array(workspaceClusterReviewReadModelSchema).max(100)
+  })
+  .strict()
+
 const competitorFeatureMatrixObservationIdSchema = z
   .string()
   .min(3)
@@ -7020,6 +7160,7 @@ export const workspaceOpportunityDetailReadModelSchema = z
     opportunity: opportunitySchema,
     summary: workspaceOpportunityReadModelSchema,
     evidence: z.array(workspaceEvidenceReadModelSchema),
+    clusters: z.array(workspaceClusterReadModelSchema).max(2_000).default([]),
     competitiveResearch: competitiveResearchReadModelSchema,
     deepResearchGate: deepResearchGateSchema.nullable().default(null),
     coverageGaps: z.array(z.string()),
@@ -7362,6 +7503,16 @@ export type ComplaintEntityResolution = z.infer<typeof complaintEntityResolution
 export type ComplaintAnalysis = z.infer<typeof complaintAnalysisSchema>
 export type ComplaintAnalysisCorrection = z.infer<typeof complaintAnalysisCorrectionSchema>
 export type ComplaintCluster = z.infer<typeof complaintClusterSchema>
+export type ComplaintClusterReviewState = z.infer<typeof complaintClusterReviewStateSchema>
+export type ClusterMembershipReviewState = z.infer<typeof clusterMembershipReviewStateSchema>
+export type WorkspaceClusterReviewAction = z.infer<typeof workspaceClusterReviewActionSchema>
+export type WorkspaceClusterReviewInput = z.infer<typeof workspaceClusterReviewInputSchema>
+export type WorkspaceClusterReviewSnapshot = z.infer<typeof workspaceClusterReviewSnapshotSchema>
+export type WorkspaceClusterReviewReadModel = z.infer<typeof workspaceClusterReviewReadModelSchema>
+export type WorkspaceClusterMembershipReadModel = z.infer<
+  typeof workspaceClusterMembershipReadModelSchema
+>
+export type WorkspaceClusterReadModel = z.infer<typeof workspaceClusterReadModelSchema>
 export type ResearchQualityBenchmarkCase = z.infer<typeof researchQualityBenchmarkCaseSchema>
 export type ResearchQualityRankingCase = z.infer<typeof researchQualityRankingCaseSchema>
 export type ResearchQualityBenchmark = z.infer<typeof researchQualityBenchmarkSchema>

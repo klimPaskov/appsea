@@ -277,6 +277,14 @@ provides an opt-in, seed-bound post-collection handoff with stale-claim
 recovery; deployed scheduling, Temporal authorization, and alert ownership
 remain open.
 
+Complaint-cluster curation is now available for non-synthetic opportunity runs
+through migration `0106`: editor/owner review events are forced-RLS and
+append-only, membership states are updated transactionally, and split/merge
+relationships remain identifier-only lineage. Fixture clusters are read-only,
+and the deep-research gate refuses unreviewed current clusters. This does not
+infer authors, replace deterministic clustering, create new cluster versions,
+or authorize any source; those remain explicit follow-up work.
+
 Source and authentication maintenance entry points now use schema-validated,
 bounded pure runners with stable scheduler job IDs and secret-free structured
 result events. Migration `0046` adds a PostgreSQL server-clock lease with

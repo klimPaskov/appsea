@@ -12,7 +12,7 @@ import {
   type DeepResearchGateTransitionInput
 } from '@appsea/contracts'
 import type { ObjectStore } from '@appsea/object-store'
-import { evaluateDeepResearchGate } from '@appsea/research'
+import { evaluateDeepResearchGate, type DeepResearchGateClusterReviewState } from '@appsea/research'
 import { contentHash } from './hash'
 import { withAuthenticatedWorkspaceTransaction } from './transaction'
 
@@ -75,6 +75,11 @@ interface ObservationRow extends QueryResultRow {
   reviewed_at: Date | string | null
   created_at: Date | string
   updated_at: Date | string
+}
+
+interface ClusterReviewStateRow extends QueryResultRow {
+  cluster_version_id: string
+  review_state: DeepResearchGateClusterReviewState['reviewState']
 }
 
 export class DeepResearchGateNotFoundError extends Error {
@@ -204,6 +209,7 @@ function snapshotMaterial(input: {
   artifactId: string
   observations: CompetitiveResearchObservation[]
   competitorRelationTypes: string[]
+  clusterReviewStates: readonly DeepResearchGateClusterReviewState[]
 }): Record<string, unknown> {
   const confirmed = input.observations
     .filter(
@@ -230,7 +236,10 @@ function snapshotMaterial(input: {
     contraryObservationIds: confirmed
       .filter((observation) => observation.claimType === 'contrary_signal')
       .map((observation) => observation.observationId),
-    competitorRelationTypes: [...new Set(input.competitorRelationTypes)].sort()
+    competitorRelationTypes: [...new Set(input.competitorRelationTypes)].sort(),
+    clusterReviewStates: input.clusterReviewStates
+      .map((cluster) => ({ ...cluster }))
+      .sort((left, right) => left.clusterVersionId.localeCompare(right.clusterVersionId))
   }
 }
 
@@ -332,6 +341,32 @@ async function currentObservations(
   return result.rows.map(observationModel)
 }
 
+async function currentClusterReviewStates(
+  client: PoolClient,
+  workspaceId: string,
+  opportunityId: string,
+  runId: string
+): Promise<DeepResearchGateClusterReviewState[]> {
+  const result = await client.query<ClusterReviewStateRow>(
+    `SELECT relation.cluster_version_id, cluster.review_state
+       FROM appsea.research_run_cluster_versions relation
+       JOIN appsea.complaint_cluster_versions cluster
+         ON cluster.workspace_id = relation.workspace_id
+        AND cluster.cluster_version_id = relation.cluster_version_id
+        AND cluster.run_id = relation.run_id
+      WHERE relation.workspace_id = $1
+        AND relation.opportunity_id = $2
+        AND relation.run_id = $3
+        AND cluster.synthetic = false
+      ORDER BY relation.cluster_version_id`,
+    [workspaceId, opportunityId, runId]
+  )
+  return result.rows.map((row) => ({
+    clusterVersionId: row.cluster_version_id,
+    reviewState: row.review_state
+  }))
+}
+
 async function latestGateRow(
   client: PoolClient,
   workspaceId: string,
@@ -362,6 +397,12 @@ async function readCurrentGate(
   const artifact = await artifactForAnalysis(objectStore, workspaceId, analysis)
   if (!artifact) return staleGate(row)
   const observations = await currentObservations(client, workspaceId, opportunityId)
+  const clusterReviewStates = await currentClusterReviewStates(
+    client,
+    workspaceId,
+    opportunityId,
+    analysis.analysis_run_id
+  )
   const relationTypes = artifact.opportunity.competitors.map((competitor) => competitor.type)
   const expectedHash = contentHash(
     snapshotMaterial({
@@ -369,7 +410,8 @@ async function readCurrentGate(
       analysisRunId: analysis.analysis_run_id,
       artifactId: analysis.artifact_id,
       observations,
-      competitorRelationTypes: relationTypes
+      competitorRelationTypes: relationTypes,
+      clusterReviewStates
     })
   )
   if (
@@ -462,6 +504,12 @@ export class PostgresDeepResearchGateRepository {
           const relationTypes = artifact.opportunity.competitors.map(
             (competitor) => competitor.type
           )
+          const clusterReviewStates = await currentClusterReviewStates(
+            client,
+            parsedWorkspaceId,
+            parsedOpportunityId,
+            analysis.analysis_run_id
+          )
           const existingCurrentGate =
             parsedInput.action === 'withdraw'
               ? await readCurrentGate(
@@ -482,14 +530,16 @@ export class PostgresDeepResearchGateRepository {
           const evaluation = evaluateDeepResearchGate({
             artifact,
             observations,
-            checks
+            checks,
+            clusterReviewStates
           })
           const material = snapshotMaterial({
             opportunityId: parsedOpportunityId,
             analysisRunId: analysis.analysis_run_id,
             artifactId: analysis.artifact_id,
             observations,
-            competitorRelationTypes: relationTypes
+            competitorRelationTypes: relationTypes,
+            clusterReviewStates
           })
           const snapshotHash = contentHash(material)
           const status: DeepResearchGate['status'] =

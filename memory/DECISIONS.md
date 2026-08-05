@@ -14,16 +14,14 @@ proof, not production deployment.
 ## 2026-08-03: Global-auth TOTP MFA boundary
 
 Browser TOTP stays outside research: encrypt secrets, store recovery/challenge
-hashes, and issue sessions after verification. Closure removes MFA; OIDC,
-provider, key rotation, and high-risk enforcement stay separate.
+hashes, and issue sessions after verification. OIDC, key rotation, and high-risk
+enforcement stay separate.
 
 ## 2026-07-24: Authenticated private workspaces
 
-Store users/memberships in PostgreSQL, hash passwords/tokens, and use
-HttpOnly SameSite cookies. Every private read checks membership before RLS
-context. Keep the public leaderboard synthetic. Owner membership mutations use
-last-owner and password-step-up guards with identifier-only receipts; provider
-recovery/invitations, OIDC, and production identity remain reviewed work.
+Store users/memberships in PostgreSQL, hash passwords/tokens, and use HttpOnly
+SameSite cookies. Every private read checks membership before RLS. Keep the
+public leaderboard synthetic; owner mutations use last-owner/step-up guards.
 
 ## 2026-07-24: Durable source quota and deletion projections
 
@@ -43,22 +41,20 @@ not.
 
 ## 2026-07-24: Explicit session inventory and revocation
 
-Expose active sessions privately with stable IDs/timestamps. Revoke another only
-after same-origin password reauthentication; reject the current session and
-resolve the current token in the database. Provider recovery and deletion remain separate.
+Expose active sessions privately with stable IDs/timestamps. Revoke another
+only after same-origin password reauthentication; provider recovery and
+deletion remain separate.
 
 ## 2026-07-24: Bounded maintenance runners and scheduler correlation
 
-Keep quota/deletion and auth retention pure, contract-validated, capped, and
-independently budgeted with stable scheduler IDs. PostgreSQL is the idempotency
-boundary; deployment, alerting, and recovery ownership remain review gates.
+Quota/deletion and auth retention stay pure, bounded, independently budgeted,
+and keyed by stable scheduler IDs; PostgreSQL owns idempotency.
 
 ## 2026-07-24: Provider-neutral password recovery boundary
 
-Keep recovery global: hash-only reset tokens, encrypted outbox, latest-only
-uniqueness, narrow `SECURITY DEFINER` functions, generic responses, and bounded
-idempotent worker delivery. Production delivery stays kill-switched until
-identity/email, DPA/retention, key rotation, monitoring, and failure approval.
+Recovery remains global with hash-only tokens, encrypted outbox, generic
+responses, and bounded idempotent delivery; production delivery stays
+kill-switched pending identity/email, DPA, keys, monitoring, and approval.
 
 ## 2026-07-25: Existing-account workspace invitations
 
@@ -374,8 +370,17 @@ deployment operation and never occurs in workflow code.
 
 ## 2026-08-05: Guard private decisions and auth ingress
 
-Migration `0105` makes approve/watch/reject/archive private, forced-RLS,
-append-only, idempotent, stale-checked, and bound to identifier-only evidence/
-analysis. Owner-only approval requires deep-research/report/plan gates; step-up
-and scalar receipts are required. Fixtures/MCP stay read-only. Auth mutations
-stream 32 KiB; oversized bodies return `413` before parsing/throttling.
+Migration `0105` makes lifecycle decisions forced-RLS, append-only,
+idempotent, stale-checked, and bound to identifier-only evidence/analysis.
+Owner approval requires deep-research/report/plan gates; step-up and scalar
+receipts are required. Fixtures/MCP stay read-only. Auth mutations stream 32
+KiB and return `413` before parsing oversized bodies.
+
+## 2026-08-05: Require human review for complaint clusters
+
+Migration `0106` records owner/editor cluster curation in a forced-RLS,
+append-only ledger. Events lock cluster input hash, update cluster and
+membership states transactionally, and keep split/merge relationships as
+bounded identifiers. Snapshots and receipts exclude raw complaint text;
+fixtures are read-only; the gate hashes states and fails closed
+until every non-synthetic cluster is reviewed or confirmed.

@@ -25,7 +25,7 @@ Status: production-shaped foundation implemented and validated locally; producti
 
 Implemented:
 
-- PostgreSQL 18 schema and one hundred five forward, checksummed migrations
+- PostgreSQL 18 schema and one hundred six forward, checksummed migrations
 - normalized source, evidence, complaint, cluster, competitor, opportunity, score, report, plan, audit, cost, deletion, outbox, and lineage tables
 - no-login owner, separate migrator, and least-privilege runtime role contract
 - forced workspace RLS and transaction-scoped workspace context
@@ -35,7 +35,7 @@ Implemented:
 - populated upgrade, fresh install, privilege, RLS, provenance, policy, cross-wire, and replay tests
 - local runbook and CI persistence gate
 - isolated local PostgreSQL backup/restore runbook and CI gate; the drill
-  restores a disposable dump through all one hundred five migrations and verifies
+  restores a disposable dump through all one hundred six migrations and verifies
   forced workspace RLS plus runtime/maintenance privileges without accepting a
   remote URL
 - one-command loopback private-workspace stack with migration, worker, and web
@@ -740,6 +740,14 @@ password/MFA step-up, records scalar audit/outbox receipts, and keeps fixture
 opportunities read-only; MCP remains read-only as an intentional safety boundary.
 All auth JSON mutations now pass through a streaming 32 KiB body cap with a
 413 response for oversized declared or chunked payloads.
+Migration `0106_cluster_review_governance.sql` adds the private cluster-curation
+boundary. Append-only review events lock the current cluster input hash, update
+cluster and membership review state in one transaction, keep split/merge
+relationships as bounded identifiers, and record no complaint text. The
+Evidence route exposes review history and editor/owner controls after step-up;
+fixture clusters remain read-only. The deep-research gate includes current
+cluster review states in its reproducibility hash and cannot pass while any
+current non-synthetic cluster is provisional, split, merged, or rejected.
 The shared production seed contract now requires the six-file coding-package
 manifest at new writes and analysis admission; legacy portable-path rows remain
 readable for inspection but are blocked from analysis until replaced.

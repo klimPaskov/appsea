@@ -431,6 +431,98 @@ a:focus-visible {
   letter-spacing: -0.012em;
 }
 
+.cluster-review-list {
+  display: grid;
+  gap: 18px;
+  margin: 28px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.cluster-review-card {
+  padding: 24px;
+  border: 1px solid var(--line);
+  background: var(--surface);
+}
+
+.cluster-review-heading {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 24px;
+}
+
+.cluster-review-heading h3 {
+  margin: 10px 0 0;
+  font-size: 23px;
+  letter-spacing: -0.025em;
+}
+
+.cluster-review-count,
+.cluster-review-lineage {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.cluster-review-problem {
+  max-width: 800px;
+  margin: 18px 0 0;
+  color: #dbe2ef;
+  line-height: 1.55;
+}
+
+.cluster-review-lineage {
+  margin: 14px 0 0;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+}
+
+.cluster-review-form {
+  display: grid;
+  gap: 8px;
+  max-width: 760px;
+  margin-top: 22px;
+  padding-top: 18px;
+  border-top: 1px solid var(--line-soft);
+}
+
+.cluster-review-form label {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 650;
+}
+
+.cluster-review-form textarea,
+.cluster-review-form input {
+  width: 100%;
+  box-sizing: border-box;
+  border: 1px solid var(--line);
+  border-radius: 0;
+  padding: 10px 12px;
+  color: var(--ink);
+  background: var(--background);
+  font: inherit;
+}
+
+.cluster-review-form input {
+  margin-bottom: 6px;
+}
+
+.cluster-review-history {
+  display: grid;
+  gap: 8px;
+  margin: 22px 0 0;
+  padding: 16px 0 0 18px;
+  border-top: 1px solid var(--line-soft);
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.cluster-review-history p {
+  margin: 5px 0 0;
+  color: #c4cde0;
+  line-height: 1.45;
+}
+
 .review-actions {
   display: flex;
   align-items: center;

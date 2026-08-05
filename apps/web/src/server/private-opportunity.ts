@@ -18,6 +18,7 @@ import {
 import { PostgresCompetitiveResearchRepository } from '@appsea/db/competitive-research'
 import { PostgresDeepResearchGateRepository } from '@appsea/db/deep-research-gate'
 import { PostgresOpportunityDecisionRepository } from '@appsea/db/opportunity-decision'
+import { PostgresClusterReviewRepository } from '@appsea/db/cluster-review'
 import { PostgresProductionAnalysisRepository } from '@appsea/db/production-analysis'
 import { authRepository, readSession } from './auth-session'
 import { getDatabasePool } from './database'
@@ -47,6 +48,19 @@ async function attachDecisionHistory(
       : detail.summary,
     decisionHistory
   })
+}
+
+async function attachClusterReviews(
+  detail: WorkspaceOpportunityDetailReadModel,
+  userId: string,
+  workspaceId: string
+): Promise<WorkspaceOpportunityDetailReadModel> {
+  const clusters = await new PostgresClusterReviewRepository(getDatabasePool()).listForUser(
+    userId,
+    workspaceId,
+    detail.opportunity.id
+  )
+  return workspaceOpportunityDetailReadModelSchema.parse({ ...detail, clusters })
 }
 
 /** Map a validated production analysis into the private opportunity read model. */
@@ -180,8 +194,13 @@ export async function readPrivateOpportunityDetailForUser(
         getDatabasePool(),
         getObjectStore()
       ).readForUser(userId, parsedWorkspaceId.data, production.artifact.opportunity.id)
+      const mapped = mapProductionAnalysisToOpportunityDetail(
+        production,
+        observations,
+        deepResearchGate
+      )
       return attachDecisionHistory(
-        mapProductionAnalysisToOpportunityDetail(production, observations, deepResearchGate),
+        await attachClusterReviews(mapped, userId, parsedWorkspaceId.data),
         userId,
         parsedWorkspaceId.data
       )
@@ -225,7 +244,11 @@ export async function readPrivateOpportunityDetailForUser(
     competitiveResearch,
     deepResearchGate
   })
-  return attachDecisionHistory(enriched, userId, parsedWorkspaceId.data)
+  return attachDecisionHistory(
+    await attachClusterReviews(enriched, userId, parsedWorkspaceId.data),
+    userId,
+    parsedWorkspaceId.data
+  )
 }
 
 export async function readPrivateOpportunityContext(

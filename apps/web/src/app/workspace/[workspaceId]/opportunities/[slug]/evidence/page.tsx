@@ -3,6 +3,7 @@ import { notFound, redirect } from 'next/navigation'
 import { readSession } from '../../../../../../server/auth-session'
 import { readPrivateOpportunityContext } from '../../../../../../server/private-opportunity'
 import { WorkspaceOpportunityTabs } from '../../../../../../components/workspace-opportunity-tabs'
+import { ClusterReviewActions } from '../../../../cluster-review-actions'
 
 export const dynamic = 'force-dynamic'
 
@@ -81,6 +82,13 @@ export default async function PrivateEvidencePage({
           </p>
         ) : null}
       </section>
+      <ClusterReviewActions
+        workspaceId={workspaceId}
+        slug={slug}
+        role={context.workspace.role}
+        synthetic={detail.summary.synthetic}
+        initialClusters={detail.clusters}
+      />
       <section className="workspace-section" aria-labelledby="evidence-heading">
         <div className="section-intro">
           <h2 id="evidence-heading">Retained observations</h2>

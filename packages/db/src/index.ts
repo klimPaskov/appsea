@@ -173,6 +173,13 @@ export {
   PostgresOpportunityDecisionRepository
 } from './opportunity-decision-repository'
 export {
+  ClusterReviewBlockedError,
+  ClusterReviewConflictError,
+  ClusterReviewNotFoundError,
+  ClusterReviewPermissionError,
+  PostgresClusterReviewRepository
+} from './cluster-review-repository'
+export {
   PostgresEvidenceRedactionRepository,
   EvidenceRedactionConflictError,
   EvidenceRedactionNotFoundError,

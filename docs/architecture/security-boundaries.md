@@ -82,6 +82,21 @@ and outbox receipts omit the decision reason and source text. The web route adds
 recent password/MFA step-up and idempotency checks. Fixture rows are read-only
 and synthetic, and MCP remains read-only.
 
+## Complaint-cluster curation
+
+Migration `0106_cluster_review_governance.sql` adds a forced-RLS,
+append-only `cluster_review_events` ledger. The security-definer insert guard
+requires an authenticated owner/editor, locks the active cluster version,
+checks the expected input hash and opportunity/run lineage, rejects synthetic
+mutation, and updates cluster plus membership review states atomically. Split
+and merge relationships are bounded identifiers only; audit/outbox payloads
+omit review notes and complaint content. The snapshot contract is strict and
+identifier-only, so imported source text cannot become a code, instruction, or
+repository-memory input. Private reads apply the existing evidence-redaction
+projection to source-derived narrative fields. The deep-research gate hashes
+the current cluster review states and fails closed until all current
+non-synthetic clusters are reviewed or confirmed.
+
 All web auth JSON mutations pass through a streaming 32 KiB body reader before
 schema validation or rate-limit admission. Declared and chunked oversized
 payloads return `413`; no request body is parsed or retained after the cap.

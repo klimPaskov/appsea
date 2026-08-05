@@ -1,8 +1,8 @@
 # Hot memory
 
-- Start broad work with instructions, memory, and `docs/INDEX.md`.
-- Fixture is the complete persisted path; approved collection is separate and
-  non-synthetic. Leaderboard only. Local replacement/backup pass; hosted
+- Start broad work with instructions, memory, and docs index.
+- Fixture is complete persisted path; approved collection is separate and
+  non-synthetic. Leaderboard only. Local backup pass; hosted
   restore, crash drill, and cloud purge remain pending.
 - `CfpbConnector` is disabled pending legal/privacy/security approval;
   `StackExchangeConnector` is a disabled candidate for competitor/contrary
@@ -14,15 +14,17 @@
   review remain open.
 - Production collection persists policy-bound evidence, gaps, cost, and lineage;
   private reads use `/workspace/:workspaceId/research/:runId`; outputs use S3.
-- Migration `0104` persists confirmed owner-import competitive observations in
-  exact production-analysis lineage with observation/evidence hashes; reports
-  and plans carry the snapshot privately, restricted claims are masked, and
-  rejection/deletion invalidates consumed outputs. A new explicit reviewed run
-  is required; no automatic recompute or public coverage is implied.
+- Migration `0104` carries confirmed owner-import competitive observations into
+  exact production-analysis lineage with hashes and redaction; rejection or
+  deletion invalidates outputs and requires a new reviewed run.
 - Migration `0105` adds append-only private decisions with identifier-only
-  snapshots, stale/idempotent transitions, audited receipts, owner-only
-  approval, and step-up web history; fixtures/MCP remain read-only. Auth JSON
-  uses a streaming 32 KiB cap with `413` for oversized bodies.
+  snapshots, stale/idempotent transitions, audited receipts, owner approval,
+  and step-up web history; fixtures/MCP remain read-only. Auth JSON uses a
+  streaming 32 KiB cap with `413` for oversized bodies.
+- Migration `0106` adds append-only forced-RLS cluster review events with
+  stale hashes, bounded split/merge lineage, membership-state updates, and
+  identifier-only snapshots. Evidence exposes owner/editor curation;
+  fixtures stay read-only and the deep-research gate blocks unreviewed clusters.
 - `research-quality-v1.0.0` is synthetic/redacted regression evidence only;
   balanced v1 bindings remain reviewed inputs, not market evidence.
 - Production opportunities stay `candidate` until the explicit deep-research
@@ -31,7 +33,6 @@
   owner-reviewed gate with compact provenance/stale detection. Coverage gaps
   remain visible after a valid pass.
 - Auth, quotas, retention, admissions, tombstones, metrics, and refresh are
-  durable; owner purge remains `awaiting_external_controls`.
-- Web/worker share fail-closed Temporal config; production requires TLS/API-key/
-  namespace/CA. Maintenance uses `0046`/`0052`; alerting, role rotation,
-  recovery, and proof remain open.
+  durable; owner purge remains external.
+- Web/worker share fail-closed Temporal config; production TLS, alerting,
+  rotation, recovery, and proof remain open.

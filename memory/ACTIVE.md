@@ -11,7 +11,7 @@ CSV/JSON intake without claiming public market coverage; v1 is retained only
 for historical batches. Private competitor/contrary purposes can create
 evidence-linked observations that remain unreviewed until human review.
 
-Migrations `0027`-`0105` cover policy, deletion/leases/admissions, campaign
+Migrations `0027`-`0106` cover policy, deletion/leases/admissions, campaign
 orchestration/cancellation, source reconciliation, analysis/report/plan
 governance, cost/alerts, object refs, workspace archival/purge intent,
 evidence redaction, agent tokens, and TOTP MFA. OIDC and read-only MCP remain
@@ -56,25 +56,13 @@ source deletion invalidates active outputs without auto-recompute.
 Local-stack checks pass when Docker is available; hosted restore/HA/failover
 remain external.
 
-Scoring preserves `opportunity-score-v0.2.0` and adds reviewed-input
-balanced `opportunity-score-v1.0.0`: raw/risk-adjusted/ranking scores, bounded
-risk, confidence, uncertainty, coverage/freshness, and explanations. Migration
-`0096` stores v1 fields and private ordering uses ranking. Seeds
-without v1 retain a visible gap; no live source or calibration evidence is
-implied. A synthetic/redacted `research-quality-v1.0.0` benchmark measures
-deterministic classifier/entity, deduplication, clustering, duplicate/source
-ablation stability, ranking, and probability calibration. The versioned
-`research-quality-gate-v1.0.0` worker check enforces synthetic regression floors
-and private reports show pass/fail; neither supports source activation. Optional
-artifact/report snapshots keep explicit `reviewed-input-only`/
-`sourceCoverage: not-derived` provenance; they are regression evidence, not live
-calibration or market evidence. Smoke carries a reviewed v1 seed through private
-readback. Every v1 factor now
-has a `source-evidence` or `reviewed-seed` binding; production analysis checks
-source bindings against retained complaint evidence and seed bindings against
-the immutable review prefix. Read-only seed inspection accepts pre-provenance
-v1 rows, but strict new-write/analysis admission requires a replacement.
-Backup/restore targets through `0105`; current Docker proof is blocked.
+Scoring preserves `opportunity-score-v0.2.0` and adds reviewed-input balanced
+`opportunity-score-v1.0.0` with risk, confidence, coverage, freshness, and
+explanations. Synthetic quality benchmarks and the versioned regression gate
+remain regression evidence only. Every v1 factor binds to retained evidence or
+the immutable seed-review prefix; strict new writes and analysis reject legacy
+pre-provenance rows.
+Backup/restore targets through `0106`; current Docker proof is blocked.
 
 `pnpm verify:release` checks Compose, hardened images, and fail-closed
 preflight; remote namespace/task-queue authorization remains external.
@@ -88,12 +76,18 @@ history and guarded owner/editor controls; step-up, idempotency, stale-state,
 lineage, report/plan/gate checks remain server/database-owned. Fixtures stay
 read-only/synthetic and MCP stays read-only. Auth JSON mutations use a
 streaming 32 KiB cap and return `413` before parsing oversized requests.
+Migration `0106` adds forced-RLS append-only cluster review events with
+identifier-only snapshots, stale hashes, split/merge lineage, membership-state
+updates, redaction-aware private projections, and a deep-research gate blocker
+until current non-synthetic clusters are reviewed or confirmed. Fixture
+clusters remain read-only.
 
 ## Validated commands
 
-- `pnpm test:backup-restore` and `pnpm verify:backup-restore` pass locally;
-  the drill is isolated to the loopback Compose database and is not production
-  backup, HA, or provider restore evidence.
+- `pnpm test:backup-restore` is local-only test coverage. The latest
+  `pnpm verify:backup-restore` attempt is blocked before test steps because
+  Docker Desktop is unavailable; this drill would not be production backup,
+  HA, or provider restore evidence even when it runs.
 - Production runtime packaging and the staged Tauri shell pass their hosted
   build/boundary checks; provider provisioning, image signing, hosted-origin,
   updater, notarization, installation, and deployment evidence remain open.
