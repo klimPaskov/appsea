@@ -119,6 +119,7 @@ import {
   competitiveResearchReadModelSchema,
   competitiveResearchObservationCreateInputSchema,
   competitiveResearchObservationReviewInputSchema,
+  workspaceCompetitorTargetSchema,
   composeCompetitiveResearchReadModel,
   deepResearchGateSchema,
   deepResearchGateTransitionInputSchema,
@@ -1420,6 +1421,20 @@ describe('contracts', () => {
     ).toBe(true)
     expect(
       competitiveResearchObservationReviewInputSchema.safeParse({ action: 'reviewed' }).success
+    ).toBe(false)
+    expect(
+      workspaceCompetitorTargetSchema.safeParse({
+        competitorId: 'competitor:one',
+        name: 'Export competitor',
+        type: 'direct'
+      }).success
+    ).toBe(true)
+    expect(
+      workspaceCompetitorTargetSchema.safeParse({
+        competitorId: 'competitor:one',
+        name: 'Export competitor',
+        type: 'unknown'
+      }).success
     ).toBe(false)
 
     const seedOnly = composeCompetitiveResearchReadModel({

@@ -4,6 +4,7 @@ import { CompetitorFeatureMatrix } from '../../../../../../components/competitor
 import { readSession } from '../../../../../../server/auth-session'
 import { readPrivateOpportunityContext } from '../../../../../../server/private-opportunity'
 import { CompetitorObservationActions } from '../../../../competitor-observation-actions'
+import { CompetitorObservationCreateForm } from '../../../../competitor-observation-create-form'
 import { DeepResearchGateActions } from '../../../../deep-research-gate-actions'
 
 export const dynamic = 'force-dynamic'
@@ -216,6 +217,15 @@ export default async function PrivateCompetitorsPage({
             review state visible. Unreviewed claims do not make this research source-backed.
           </p>
         </div>
+        {!research.synthetic &&
+        (context.workspace.role === 'owner' || context.workspace.role === 'editor') ? (
+          <CompetitorObservationCreateForm
+            workspaceId={workspaceId}
+            slug={slug}
+            targets={context.competitorTargets}
+            evidence={detail.evidence}
+          />
+        ) : null}
         {research.observations.length > 0 ? (
           <div className="observation-list">
             {research.observations.map((observation) => (

@@ -27,6 +27,7 @@ vi.mock('../server/temporal', () => ({
 }))
 
 vi.mock('@appsea/connectors', () => ({
+  manualOwnerImportPolicyVersion: 'manual-owner-import-v2',
   parseManualImportContent: () => ({
     format: 'json',
     records: [
@@ -156,13 +157,13 @@ describe('manual import route', () => {
     mocks.readSession.mockResolvedValue(session)
     mocks.readCampaign.mockResolvedValue(campaign)
     mocks.readCollectible.mockResolvedValue({
-      policy: { sourceId: 'manual-owner-import', policyVersion: 'manual-owner-import-v1' }
+      policy: { sourceId: 'manual-owner-import', policyVersion: 'manual-owner-import-v2' }
     })
     mocks.createBatch.mockResolvedValue({
       batchId: 'batch:manual:one',
       campaignId: campaign.campaignId,
       sourceId: 'manual-owner-import',
-      policyVersion: 'manual-owner-import-v1',
+      policyVersion: 'manual-owner-import-v2',
       format: 'json',
       filename: 'authorized-export.json',
       recordCount: 1,
@@ -214,7 +215,7 @@ describe('manual import route', () => {
       'user:owner',
       expect.objectContaining({
         sourceId: 'manual-owner-import',
-        policyVersion: 'manual-owner-import-v1',
+        policyVersion: 'manual-owner-import-v2',
         authorizationAttested: true,
         records: expect.arrayContaining([expect.objectContaining({ sourceRecordId: 'ticket-1' })])
       })

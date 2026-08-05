@@ -1040,6 +1040,79 @@ a:focus-visible {
   color: #a23b52;
 }
 
+.competitor-observation-create {
+  display: grid;
+  gap: 18px;
+  max-width: 820px;
+  margin: 28px 0 8px;
+  padding: 20px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--surface) 84%, transparent);
+}
+
+.competitor-observation-create .section-intro {
+  margin: 0;
+}
+
+.competitor-observation-create .section-intro h3 {
+  margin: 0;
+  font-size: 18px;
+  letter-spacing: -0.02em;
+}
+
+.competitor-observation-create .section-intro p {
+  margin-bottom: 0;
+}
+
+.competitor-observation-create label {
+  display: grid;
+  gap: 8px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.competitor-observation-form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.competitor-observation-create input,
+.competitor-observation-create select,
+.competitor-observation-create textarea {
+  width: 100%;
+  min-height: 42px;
+  padding: 9px 10px;
+  border: 1px solid var(--line);
+  border-radius: 5px;
+  background: rgba(8, 14, 27, 0.9);
+  color: var(--ink);
+  font: inherit;
+  letter-spacing: normal;
+  text-transform: none;
+}
+
+.competitor-observation-create textarea {
+  min-height: 112px;
+  resize: vertical;
+  line-height: 1.5;
+}
+
+.competitor-observation-create input:focus,
+.competitor-observation-create select:focus,
+.competitor-observation-create textarea:focus {
+  outline: 3px solid color-mix(in srgb, var(--accent) 25%, transparent);
+  border-color: var(--accent);
+}
+
+.competitor-observation-create .quiet-button {
+  width: max-content;
+}
+
 .risk-block {
   margin-top: 52px;
   padding: 28px 30px;
@@ -2685,7 +2758,8 @@ a:focus-visible {
 
   .correction-control-grid,
   .correction-entity-grid,
-  .deep-research-check-row {
+  .deep-research-check-row,
+  .competitor-observation-form-grid {
     grid-template-columns: 1fr;
   }
 

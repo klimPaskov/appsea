@@ -348,6 +348,9 @@ const stackExchangeSourcePolicy = freezePolicy(
 
 export { stackExchangeSourcePolicy }
 
+/** Current immutable policy snapshot used by owner-authorized private imports. */
+export const manualOwnerImportPolicyVersion = 'manual-owner-import-v2' as const
+
 /**
  * Owner-authorized tenant-private imports are the first usable non-fixture
  * source. This policy covers only data a workspace owner is authorized to
@@ -364,6 +367,8 @@ export const manualOwnerImportSourcePolicy = freezePolicy(
     permittedPurposes: [
       'opportunity-research',
       'customer-authorized-analysis',
+      'competitor-research',
+      'contrary-evidence',
       'development',
       'testing'
     ],
@@ -376,16 +381,17 @@ export const manualOwnerImportSourcePolicy = freezePolicy(
     displayMode: 'excerpt',
     coverageNotes: [
       'Tenant-private owner-authorized evidence only; it is not public market coverage.',
+      'Competitor and contrary-signal claims are private owner-attested research and require separate human observation review.',
       'The operator must attest that the workspace is authorized to analyze the imported records.',
       'Only normalized, PII-scrubbed complaint fields are retained; raw upload bytes are discarded.',
       'URL fields are retained only as validated HTTP(S) locators and are never fetched by AppSea.',
       'Deleting a batch clears staged records and propagates tombstones through downstream evidence.'
     ],
-    reviewedAt: '2026-08-03T00:00:00.000Z',
+    reviewedAt: '2026-08-05T00:00:00.000Z',
     policyOwner: 'AppSea internal source-policy review queue',
     policyDocumentRef:
       'https://github.com/klimPaskov/appsea/blob/main/docs/product/manual-import-source-policy.md',
-    expiresAt: '2026-11-03T00:00:00.000Z',
+    expiresAt: '2026-11-05T00:00:00.000Z',
     quota: {
       requestsPerMinute: 60,
       maxRecordsPerRequest: 5_000,

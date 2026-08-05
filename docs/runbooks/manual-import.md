@@ -15,7 +15,14 @@ Use the private workspace screen at `/workspace/{workspaceId}/imports`, or the A
 }
 ```
 
-The campaign must be private, non-fixture, and explicitly include `manual-owner-import` with excerpt display mode. The body is bounded to 2 MiB; the normalized batch is bounded to 5,000 records and the campaign source-item budget. A successful response contains the private batch model, workflow ID, run ID, and hashes. Reuse the same idempotency key to safely retry a response lost after staging.
+The campaign must be private, non-fixture, and explicitly include `manual-owner-import` with excerpt display mode. New collection uses the reviewed `manual-owner-import-v2` snapshot; `manual-owner-import-v1` remains readable only for historical batches. The body is bounded to 2 MiB; the normalized batch is bounded to 5,000 records and the campaign source-item budget. A successful response contains the private batch model, workflow ID, run ID, and hashes. Reuse the same idempotency key to safely retry a response lost after staging.
+
+For competitor or weak-market work, use a campaign purpose of
+`competitor-research` or `contrary-evidence`, then create a private evidence
+observation from the Competitors route. The observation keeps source-item and
+evidence identifiers, starts `unreviewed`, and must be confirmed by an editor
+or owner before it can contribute to source-backed research. This remains
+tenant-private owner-authorized evidence, not public coverage.
 
 Supported columns/keys are `source_record_id` (or `id`), `canonical_locator` (or `url`/`link`), `captured_at`, `published_at`, `query`, `product`, `company`, `feature`, `category`, `text` (or `complaint`/`body`/`message`), and `language`. JSON may be an array or `{ "records": [] }`.
 

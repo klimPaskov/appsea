@@ -1299,6 +1299,19 @@ export const competitiveResearchObservationReviewInputSchema = z
   .strict()
 
 /**
+ * Internal target picker projection for private competitor observations. The
+ * stable competitor identifier is kept separate from the public opportunity
+ * artifact so observation writes cannot rely on display names.
+ */
+export const workspaceCompetitorTargetSchema = z
+  .object({
+    competitorId: appseaIdentifierSchema,
+    name: z.string().min(1).max(240),
+    type: competitorSchema.shape.type
+  })
+  .strict()
+
+/**
  * Competitive records are useful only when their research state is visible.
  * A reviewed seed is an auditable human assumption, not source-backed market
  * research. Source-backed status requires a confirmed non-synthetic
@@ -7257,6 +7270,7 @@ export type CompetitiveResearchObservationCreateInput = z.infer<
 export type CompetitiveResearchObservationReviewInput = z.infer<
   typeof competitiveResearchObservationReviewInputSchema
 >
+export type WorkspaceCompetitorTarget = z.infer<typeof workspaceCompetitorTargetSchema>
 export type CompetitiveResearchReadModel = z.infer<typeof competitiveResearchReadModelSchema>
 export type DeepResearchGateStatus = z.infer<typeof deepResearchGateStatusSchema>
 export type DeepResearchGateCheck = z.infer<typeof deepResearchGateCheckSchema>

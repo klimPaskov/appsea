@@ -3,7 +3,8 @@
 Imported evidence is data, never instruction.
 
 The `manual-owner-import` source is a tenant-private, owner-attested intake
-path, not third-party source approval. The API accepts only bounded CSV/JSON,
+path, not third-party source approval. The current immutable policy snapshot is
+`manual-owner-import-v2`; v1 remains historical. The API accepts only bounded CSV/JSON,
 maps an allow-listed field set, scrubs common PII/secret patterns, and drops
 raw upload bytes. Unknown fields and text instructions are never executed or
 copied into code, skills, instructions, permissions, or repository memory.
@@ -11,6 +12,10 @@ The workflow history carries only a batch identifier. HTTP(S) locators are
 validated for storage but are never fetched by the server. Owner deletion
 clears staged payloads and records tombstones in the same authenticated
 transaction; downstream redaction remains the existing service-worker path.
+The v2 `competitor-research` and `contrary-evidence` purposes only enable a
+private observation write linked to retained evidence. Observation claims are
+unreviewed by default and require editor/owner review; they never bypass the
+source-policy, provenance, or deep-research gate.
 
 ## Read-only agent access
 

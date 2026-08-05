@@ -16,6 +16,13 @@ route now lets editors submit that checklist and owners attempt or withdraw
 promotion. The current disabled source registry still means no production gate
 can honestly pass here.
 
+The reviewed `manual-owner-import-v2` policy now supports tenant-private
+`competitor-research` and `contrary-evidence` purposes. Editors and owners can
+submit an evidence-linked observation from the private Competitors route, but
+each claim starts unreviewed and the import still cannot establish public
+market coverage. CFPB, Stack Exchange, and other third-party sources remain
+disabled pending independent review.
+
 Generated report and coding-plan pages now expose the existing approval
 governance in the browser: editors can mark artifacts reviewed and owners can
 approve or withdraw them, while viewers stay read-only. This improves the

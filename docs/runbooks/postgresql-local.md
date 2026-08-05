@@ -42,6 +42,12 @@ This runbook covers the repository's PostgreSQL 18 development and integration-t
   pass/withdraw, current completed-analysis lineage, active confirmed evidence,
   contrary-signal provenance, and substitute coverage. Reads recompute the
   snapshot hash so source/evidence changes return `stale`.
+- Migration `0102` advances the owner-import policy to v2 without rewriting v1
+  history. It adds private competitor/contrary purposes while preserving the
+  source-policy, evidence, review, and tombstone gates.
+- Migration `0103` extends the competitor-observation provenance trigger to
+  accept the v2 `contrary-evidence` purpose without weakening its retained
+  evidence or independent-review requirements.
 
 Production role creation, credentials, TLS, backups, high availability, and secret rotation remain deployment responsibilities. The local bootstrap passwords in `infra/local` are deliberately non-production.
 

@@ -10,7 +10,7 @@ const row = {
   batch_id: 'batch:manual:one',
   campaign_id: 'campaign:one',
   source_id: 'manual-owner-import',
-  policy_version: 'manual-owner-import-v1',
+  policy_version: 'manual-owner-import-v2',
   format: 'json' as const,
   filename: 'support.json',
   record_count: 1,
@@ -48,7 +48,7 @@ describe('manual import batch consumption', () => {
       workspaceId: 'workspace:one',
       batchId: 'batch:manual:one',
       campaignId: 'campaign:one',
-      policyVersion: 'manual-owner-import-v1',
+      policyVersion: 'manual-owner-import-v2',
       runId: 'run:manual:one',
       observedAt: '2026-08-03T00:00:00.000Z'
     })
@@ -62,7 +62,7 @@ describe('manual import batch consumption', () => {
         workspaceId: 'workspace:one',
         batchId: 'batch:manual:one',
         campaignId: 'campaign:one',
-        policyVersion: 'manual-owner-import-v1',
+        policyVersion: 'manual-owner-import-v2',
         runId: 'run:manual:one',
         observedAt: '2026-08-03T00:00:00.000Z'
       })
@@ -77,7 +77,7 @@ describe('manual import batch consumption', () => {
         workspaceId: 'workspace:one',
         batchId: 'batch:manual:one',
         campaignId: 'campaign:one',
-        policyVersion: 'manual-owner-import-v1',
+        policyVersion: 'manual-owner-import-v2',
         runId: 'run:manual:one',
         observedAt: '2026-08-03T00:00:00.000Z'
       })

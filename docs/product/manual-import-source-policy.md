@@ -14,7 +14,12 @@ This policy is not approval of CFPB, Stack Exchange, social media, review sites,
 - Temporal receives only an identifier-only `manualImportBatchId`; complaint payloads remain in the private PostgreSQL staging boundary.
 - The private workspace screen at `/workspace/{workspaceId}/imports` exposes the same owner staging and deletion boundary without displaying raw staged rows; members can inspect batch metadata and follow completed collection runs.
 
-The source policy is versioned as `manual-owner-import-v1`, uses excerpt display mode, has a 30-day staging retention expectation, and supports tombstone propagation. Deleting a batch immediately clears staged payloads, records source tombstones, and lets the existing deletion worker redact downstream source/evidence/report/plan projections.
+The current source policy is versioned as `manual-owner-import-v2`, uses excerpt display mode, has a 30-day staging retention expectation, and supports tombstone propagation. Version `v1` remains immutable for historical batches but is no longer the current collection snapshot. Deleting a batch immediately clears staged payloads, records source tombstones, and lets the existing deletion worker redact downstream source/evidence/report/plan projections.
+
+Version `v2` additionally permits the private purposes `competitor-research` and
+`contrary-evidence`. Those purposes do not turn an owner export into public
+market research: each observation must point to retained evidence and remains
+unreviewed until an editor or owner confirms or rejects the bounded claim.
 
 ## Coverage and evidence
 

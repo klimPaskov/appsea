@@ -7,7 +7,7 @@ import {
   researchCampaignConfigurationSchema,
   researchJobBudgetSchema
 } from '@appsea/contracts'
-import { parseManualImportContent } from '@appsea/connectors'
+import { manualOwnerImportPolicyVersion, parseManualImportContent } from '@appsea/connectors'
 import {
   ManualImportConflictError,
   ManualImportPermissionError,
@@ -217,7 +217,7 @@ export async function POST(
   try {
     collectible = await new PostgresSourcePolicyRepository(pool).readCollectible(
       'manual-owner-import',
-      'manual-owner-import-v1'
+      manualOwnerImportPolicyVersion
     )
   } catch {
     return Response.json(
@@ -238,7 +238,7 @@ export async function POST(
     idempotencyKey: body.idempotencyKey,
     workflowVersion: 'production-collection-v1',
     sourceId: 'manual-owner-import',
-    policyVersion: 'manual-owner-import-v1',
+    policyVersion: manualOwnerImportPolicyVersion,
     query,
     limit: parsedImport.records.length,
     purpose,
@@ -254,7 +254,7 @@ export async function POST(
     batchId,
     campaignId: body.campaignId,
     sourceId: 'manual-owner-import',
-    policyVersion: 'manual-owner-import-v1',
+    policyVersion: manualOwnerImportPolicyVersion,
     purpose,
     requestedDisplayMode: 'excerpt',
     idempotencyDigest: prepared.input.idempotencyDigest,

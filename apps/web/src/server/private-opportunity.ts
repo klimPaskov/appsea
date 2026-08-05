@@ -12,6 +12,7 @@ import {
   type CompetitiveResearchObservation,
   type ProductionAnalysisReadModel,
   type WorkspaceOpportunityDetailReadModel,
+  type WorkspaceCompetitorTarget,
   type WorkspaceMembershipReadModel
 } from '@appsea/contracts'
 import { PostgresCompetitiveResearchRepository } from '@appsea/db/competitive-research'
@@ -26,6 +27,7 @@ export interface PrivateOpportunityContext {
   session: AuthSessionReadModel
   workspace: WorkspaceMembershipReadModel
   detail: WorkspaceOpportunityDetailReadModel
+  competitorTargets: WorkspaceCompetitorTarget[]
 }
 
 /** Map a validated production analysis into the private opportunity read model. */
@@ -221,5 +223,8 @@ export async function readPrivateOpportunityContext(
     parsedSlug.data
   )
   if (!detail) return null
-  return { session, workspace, detail }
+  const competitorTargets = await new PostgresCompetitiveResearchRepository(
+    getDatabasePool()
+  ).listTargetsForUser(session.user.userId, parsedWorkspaceId.data, detail.opportunity.id)
+  return { session, workspace, detail, competitorTargets }
 }

@@ -12,7 +12,7 @@ describe('production collection activity request reconstruction', () => {
       inputHash: 'b'.repeat(64),
       workflowVersion: 'production-collection-v1',
       sourceId: 'manual-owner-import',
-      policyVersion: 'manual-owner-import-v1',
+      policyVersion: 'manual-owner-import-v2',
       query: 'workflow problem',
       limit: 10,
       purpose: 'opportunity-research',

@@ -520,7 +520,7 @@ describe.sequential('production collection Temporal workflow', () => {
       runId: 'run-production-manual-test',
       idempotencyKey: 'production-manual-idempotency-key',
       sourceId: 'manual-owner-import',
-      policyVersion: 'manual-owner-import-v1',
+      policyVersion: 'manual-owner-import-v2',
       manualImportBatchId: 'batch:manual:test',
       limit: 1
     })

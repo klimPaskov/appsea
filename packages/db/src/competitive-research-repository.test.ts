@@ -88,6 +88,28 @@ describe('competitive research observation repository', () => {
     expect(query.mock.calls[1]?.[0]).toContain('evidence.evidence_id IS NOT NULL')
   })
 
+  it('lists stable non-synthetic competitor targets for private observation writes', async () => {
+    query.mockResolvedValueOnce({
+      rows: [
+        {
+          competitor_id: 'competitor:one',
+          name: 'Export competitor',
+          competitor_type: 'direct'
+        }
+      ],
+      rowCount: 1
+    })
+
+    const repository = new PostgresCompetitiveResearchRepository({} as Pool)
+    await expect(
+      repository.listTargetsForUser('user:editor', 'workspace:one', 'opportunity:one')
+    ).resolves.toEqual([
+      { competitorId: 'competitor:one', name: 'Export competitor', type: 'direct' }
+    ])
+    expect(query.mock.calls[0]?.[0]).toContain('opportunity_competitors')
+    expect(query.mock.calls[0]?.[0]).toContain('competitor.synthetic = false')
+  })
+
   it('creates an unreviewed observation from source-item-derived provenance', async () => {
     query
       .mockResolvedValueOnce({ rows: [{ role: 'editor' }], rowCount: 1 })

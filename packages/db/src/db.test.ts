@@ -114,7 +114,9 @@ describe('database foundation', () => {
       '0098',
       '0099',
       '0100',
-      '0101'
+      '0101',
+      '0102',
+      '0103'
     ])
     expect(migrations[0]?.checksum).toMatch(/^[a-f0-9]{64}$/)
     expect(migrations[0]?.sql).toContain('CREATE TABLE appsea.evidence_records')
@@ -179,6 +181,19 @@ describe('database foundation', () => {
     expect(deepResearchGateMigration?.sql).toContain('enforce_deep_research_gate_review')
     expect(deepResearchGateMigration?.sql).toContain("'production-analysis'")
     expect(deepResearchGateMigration?.sql).toContain('FORCE ROW LEVEL SECURITY')
+    const manualImportV2Migration = migrations.find((migration) => migration.version === '0102')
+    expect(manualImportV2Migration?.sql).toContain('manual-owner-import-v2')
+    expect(manualImportV2Migration?.sql).toContain("'competitor-research'")
+    expect(manualImportV2Migration?.sql).toContain("'contrary-evidence'")
+    expect(manualImportV2Migration?.sql).toContain(
+      "policy_version NOT IN ('manual-owner-import-v1', 'manual-owner-import-v2')"
+    )
+    expect(manualImportV2Migration?.sql).toContain('current-policy based')
+    const contraryPurposeMigration = migrations.find((migration) => migration.version === '0103')
+    expect(contraryPurposeMigration?.sql).toContain('contrary-evidence')
+    expect(contraryPurposeMigration?.sql).toContain(
+      'source_row.collection_purpose = ANY(source_row.permitted_purposes)'
+    )
     const migrationOwnerCompatibilityMigration = migrations.find(
       (migration) => migration.version === '0074'
     )

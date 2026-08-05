@@ -6,10 +6,12 @@ AppSea remains a validated fixture-first product with production-shaped
 PostgreSQL, Temporal, source-policy, private-workspace, report/plan, and
 maintenance boundaries. The public leaderboard is intentionally synthetic and
 sparse; no third-party public source is enabled. A reviewed internal
-`manual-owner-import` policy now supports tenant-private owner-authorized CSV/
-JSON intake without claiming public market coverage.
+`manual-owner-import-v2` policy now supports tenant-private owner-authorized
+CSV/JSON intake without claiming public market coverage; v1 is retained only
+for historical batches. Private competitor/contrary purposes can create
+evidence-linked observations that remain unreviewed until human review.
 
-Migrations `0027`-`0101` cover policy, deletion/leases/admissions, campaign
+Migrations `0027`-`0103` cover policy, deletion/leases/admissions, campaign
 orchestration/cancellation, source reconciliation, analysis/report/plan
 governance, cost/alerts, object refs, workspace archival/purge intent,
 evidence redaction, agent tokens, and TOTP MFA. OIDC and read-only MCP remain
@@ -20,7 +22,7 @@ analysis v2 are policy-gated/replay-safe; CFPB and Stack Exchange remain
 disabled pending independent approval. Reports/plans preserve provenance,
 coverage gaps, approval state, synthetic disclosure, and object references.
 
-Production opportunities now remain `candidate` until an explicit deep-research
+Production opportunities remain `candidate` until an explicit deep-research
 gate proves source-backed competitor/contrary coverage. Migration `0100` repairs
 legacy non-synthetic `researched` rows; `0101` persists the append-only,
 owner-reviewed gate with provenance/stale reads while fixture state stays
@@ -50,16 +52,14 @@ transitions. Plain, tampered, copied, unknown-state, or wrong-secret records
 fail closed. Migration `0099` adds an operator-only immutable event adapter;
 no worker imports or activates it.
 
-Manual owner-import (migration `0089`) is the active non-fixture path: bounded,
-normalized, PII-scrubbed, tenant-private, and Temporal-linked by batch ID only.
-Production connectors require the durable PostgreSQL quota ledger; the bounded
-in-memory map is test-only.
-Local smoke covers intake through private report/plan readback; URL fetching and
-public sources remain disabled. Migrations `0090`-`0101` keep policy/deletion/
-privilege surfaces narrow, including bounded MCP admission, audit history, and
-dormant runtime-skill persistence. Local PostgreSQL/Temporal/MinIO, worker
-replacement, private pages, and backup/restore through 101 pass; provider
-backups, HA, and failover remain deployment-owned.
+Manual owner-import (migrations `0089`, `0102`, and `0103`) is the active non-fixture
+path: bounded normalized, PII-scrubbed tenant-private CSV/JSON, with only a
+batch ID in Temporal. Production connectors require the durable quota ledger;
+the bounded in-memory map is test-only. Local smoke covers intake; URL fetching
+and public sources remain disabled.
+Migrations `0090`-`0103` keep policy/deletion/privilege surfaces narrow.
+Local PostgreSQL/Temporal/MinIO and backup/restore pass when Docker is
+available; hosted restore/HA/failover remain external.
 
 Scoring preserves `opportunity-score-v0.2.0` and adds reviewed-input
 balanced `opportunity-score-v1.0.0`: raw/risk-adjusted/ranking scores, bounded
@@ -79,8 +79,7 @@ has a `source-evidence` or `reviewed-seed` binding; production analysis checks
 source bindings against retained complaint evidence and seed bindings against
 the immutable review prefix. Read-only seed inspection accepts pre-provenance
 v1 rows, but strict new-write/analysis admission requires a replacement.
-Backup/restore
-through `0101` passes locally; provider proof remains open.
+Backup/restore targets through `0103`; current Docker proof is blocked.
 
 `pnpm verify:release` checks Compose, hardened images, and fail-closed
 preflight; remote namespace/task-queue authorization remains external.

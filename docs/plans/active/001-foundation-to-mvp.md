@@ -25,7 +25,7 @@ Status: production-shaped foundation implemented and validated locally; producti
 
 Implemented:
 
-- PostgreSQL 18 schema and one hundred one forward, checksummed migrations
+- PostgreSQL 18 schema and one hundred three forward, checksummed migrations
 - normalized source, evidence, complaint, cluster, competitor, opportunity, score, report, plan, audit, cost, deletion, outbox, and lineage tables
 - no-login owner, separate migrator, and least-privilege runtime role contract
 - forced workspace RLS and transaction-scoped workspace context
@@ -35,7 +35,7 @@ Implemented:
 - populated upgrade, fresh install, privilege, RLS, provenance, policy, cross-wire, and replay tests
 - local runbook and CI persistence gate
 - isolated local PostgreSQL backup/restore runbook and CI gate; the drill
-  restores a disposable dump through all one hundred one migrations and verifies
+  restores a disposable dump through all one hundred three migrations and verifies
   forced workspace RLS plus runtime/maintenance privileges without accepting a
   remote URL
 - one-command loopback private-workspace stack with migration, worker, and web
@@ -72,6 +72,15 @@ Implemented:
   competitors route now exposes the same checklist for editor submission and
   owner pass/withdraw actions; the API and database remain authoritative and
   still reject incomplete or stale evidence.
+- migration `0102_manual_owner_import_v2.sql` advances owner-authorized intake
+  without rewriting v1 history. The current v2 policy permits private
+  `competitor-research` and `contrary-evidence` purposes, and the Competitors
+  route exposes an evidence-linked observation form whose claims remain
+  unreviewed until editor/owner review. This remains tenant-private and does
+  not activate a public source.
+- migration `0103_competitor_observation_contrary_purpose.sql` keeps the same
+  provenance/evidence/review trigger while accepting the explicit private
+  `contrary-evidence` collection purpose.
 - migration `0031_plan_approval_governance.sql` adds object-reference format
   checks and owner/editor plan approval transitions with report-readiness gates,
   audit, and outbox receipts

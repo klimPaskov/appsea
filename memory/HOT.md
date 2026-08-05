@@ -6,9 +6,9 @@
   restore, crash drill, and cloud purge remain pending.
 - `CfpbConnector` is disabled pending legal/privacy/security approval;
   `StackExchangeConnector` is a disabled candidate for competitor/contrary
-  research. `manual-owner-import-v1` is the active non-fixture path and
-  accepts owner-attested tenant-private CSV/JSON; it never fetches URLs or
-  establishes public coverage.
+  research. `manual-owner-import-v2` is active (`v1` is historical):
+  owner-attested tenant-private CSV/JSON, no URL fetch or public coverage. V2
+  supports private competitor/contrary observations; claims start unreviewed.
 - Web auth uses scrypt/revocable sessions, membership/RLS, MFA step-up, and
   governance gates; provider identity/delivery, retention, egress, and deploy
   review remain open.

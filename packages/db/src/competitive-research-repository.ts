@@ -4,9 +4,11 @@ import {
   competitiveResearchObservationCreateInputSchema,
   competitiveResearchObservationReviewInputSchema,
   competitiveResearchObservationSchema,
+  workspaceCompetitorTargetSchema,
   type CompetitiveResearchObservation,
   type CompetitiveResearchObservationCreateInput,
-  type CompetitiveResearchObservationReviewInput
+  type CompetitiveResearchObservationReviewInput,
+  type WorkspaceCompetitorTarget
 } from '@appsea/contracts'
 import { contentHash } from './hash'
 import { withAuthenticatedWorkspaceTransaction } from './transaction'
@@ -42,6 +44,12 @@ interface SourceItemRow extends QueryResultRow {
   source_record_id: string
   synthetic: boolean
   requested_display_mode: ObservationRow['allowed_representation']
+}
+
+interface CompetitorTargetRow extends QueryResultRow {
+  competitor_id: string
+  name: string
+  competitor_type: string
 }
 
 export class CompetitiveResearchObservationNotFoundError extends Error {
@@ -278,6 +286,49 @@ export class PostgresCompetitiveResearchRepository {
         )
         if (opportunity.rowCount !== 1) throw new CompetitiveResearchObservationNotFoundError()
         return (await readRows(client, parsedWorkspaceId, parsedOpportunityId)).map(readModel)
+      },
+      { readOnly: true }
+    )
+  }
+
+  async listTargetsForUser(
+    userId: string,
+    workspaceId: string,
+    opportunityId: string
+  ): Promise<WorkspaceCompetitorTarget[]> {
+    const parsedUserId = appseaIdentifierSchema.parse(userId)
+    const parsedWorkspaceId = appseaIdentifierSchema.parse(workspaceId)
+    const parsedOpportunityId = assertWorkspaceOpportunityId(opportunityId)
+    return withAuthenticatedWorkspaceTransaction(
+      this.pool,
+      parsedUserId,
+      parsedWorkspaceId,
+      async (client) => {
+        const result = await client.query<CompetitorTargetRow>(
+          `SELECT competitor.competitor_id,
+                  competitor.name,
+                  competitor.competitor_type
+             FROM appsea.opportunity_competitors relation
+             JOIN appsea.competitors competitor
+               ON competitor.workspace_id = relation.workspace_id
+              AND competitor.competitor_id = relation.competitor_id
+            JOIN appsea.opportunities opportunity
+               ON opportunity.workspace_id = relation.workspace_id
+              AND opportunity.opportunity_id = relation.opportunity_id
+            WHERE relation.workspace_id = $1
+              AND relation.opportunity_id = $2
+              AND opportunity.availability_state = 'active'
+              AND competitor.synthetic = false
+            ORDER BY competitor.name, competitor.competitor_id`,
+          [parsedWorkspaceId, parsedOpportunityId]
+        )
+        return result.rows.map((row) =>
+          workspaceCompetitorTargetSchema.parse({
+            competitorId: row.competitor_id,
+            name: row.name,
+            type: row.competitor_type
+          })
+        )
       },
       { readOnly: true }
     )

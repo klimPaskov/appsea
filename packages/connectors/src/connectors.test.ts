@@ -13,6 +13,7 @@ import {
   assertPolicyAllowsCollection,
   cfpbSourcePolicy,
   fixtureSourcePolicy,
+  manualOwnerImportPolicyVersion,
   manualOwnerImportSourcePolicy,
   mapStackExchangeQuestion,
   mapCfpbRecord,
@@ -68,6 +69,16 @@ describe('connector policy gate', () => {
     expect(isProductionConnectorSourceId('stackexchange-stackoverflow')).toBe(true)
     expect(isProductionConnectorSourceId('manual-owner-import')).toBe(true)
     expect(isProductionConnectorSourceId('fixture-community-feed')).toBe(false)
+  })
+
+  it('keeps the current owner-import policy private and purpose-bounded', () => {
+    expect(manualOwnerImportPolicyVersion).toBe('manual-owner-import-v2')
+    expect(manualOwnerImportSourcePolicy.permittedPurposes).toEqual(
+      expect.arrayContaining(['competitor-research', 'contrary-evidence'])
+    )
+    expect(manualOwnerImportSourcePolicy.coverageNotes.join(' ')).toContain(
+      'not public market coverage'
+    )
   })
 
   it('collects labeled fixture records through an allowed request', async () => {
@@ -147,7 +158,7 @@ describe('connector policy gate', () => {
       requestedDisplayMode: 'excerpt',
       workspaceId: 'workspace:one',
       runId: 'run:manual-1',
-      policyVersion: 'manual-owner-import-v1',
+      policyVersion: manualOwnerImportPolicyVersion,
       manualImportBatchId: 'batch:one',
       beforeRequest: async () => {
         leaseChecks += 1

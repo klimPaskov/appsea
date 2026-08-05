@@ -28,11 +28,13 @@ reviewer identities, and activation controls remain outside the read model.
 Fixture sources are labeled synthetic and are never collectible production
 sources. The route is private, membership-authorized, no-store, and read-only.
 
-The `manual-owner-import-v1` policy is the reviewed internal owner-authorized
+The `manual-owner-import-v2` policy is the reviewed internal owner-authorized
 exception. It accepts a bounded CSV/JSON export only after an owner attestation,
 stores normalized PII-scrubbed rows in the private workspace, and never fetches
-imported URLs. Its evidence is tenant-private and must not be described as
-public market coverage; deletion clears staged payloads and emits tombstones.
+imported URLs. Its `competitor-research` and `contrary-evidence` purposes feed
+only private, separately reviewed observations. Its evidence is tenant-private
+and must not be described as public market coverage; deletion clears staged
+payloads and emits tombstones. The `v1` snapshot remains immutable for history.
 
 Approved-source collection checkpoints expose the recorded source policy,
 observation counts, coverage gaps, and policy-allowed evidence only inside the

@@ -232,9 +232,16 @@ describe('research campaign repository', () => {
       display_name: 'Owner-authorized private import',
       source_type: 'manual',
       lifecycle_state: 'active',
-      policy_version: 'manual-owner-import-v1',
+      policy_version: 'manual-owner-import-v2',
       policy_state: 'approved',
-      permitted_purposes: ['opportunity-research'],
+      permitted_purposes: [
+        'opportunity-research',
+        'customer-authorized-analysis',
+        'competitor-research',
+        'contrary-evidence',
+        'development',
+        'testing'
+      ],
       display_mode: 'excerpt',
       policy_enabled: true,
       coverage_notes: ['Tenant-private only'],
