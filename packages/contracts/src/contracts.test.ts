@@ -120,6 +120,8 @@ import {
   competitiveResearchObservationCreateInputSchema,
   competitiveResearchObservationReviewInputSchema,
   composeCompetitiveResearchReadModel,
+  deepResearchGateSchema,
+  deepResearchGateTransitionInputSchema,
   workspaceReportApprovalInputSchema,
   workspaceReportExportReadModelSchema,
   workspacePlanApprovalInputSchema,
@@ -1183,7 +1185,7 @@ describe('contracts', () => {
         synthetic: false,
         persistedState: 'researched',
         competitiveResearchStatus: 'source-backed',
-        coverageGaps: [],
+        coverageGaps: ['A reviewed source gap remains visible.'],
         deepResearchGatePassed: true
       })
     ).toBe('researched')
@@ -1193,6 +1195,93 @@ describe('contracts', () => {
         persistedState: 'researched'
       })
     ).toBe('researched')
+  })
+
+  it('keeps the deep-research checklist strict and provenance-only', () => {
+    const check = {
+      state: 'pass' as const,
+      note: 'Reviewed by owner.',
+      evidenceIds: ['evidence:one']
+    }
+    const checks = {
+      coherentCluster: check,
+      provenanceComplete: check,
+      copiedContentInfluence: check,
+      uniqueAuthorEstimate: check,
+      contraryEvidenceSearch: check,
+      competitorCoverage: check,
+      substituteCoverage: check,
+      sourceGapsReviewed: check,
+      policyRisksReviewed: check,
+      reproducibleSnapshot: check,
+      manipulationRiskReviewed: check,
+      extractionAgreement: check
+    }
+    expect(
+      deepResearchGateTransitionInputSchema.safeParse({
+        action: 'pass',
+        checks
+      }).success
+    ).toBe(true)
+    expect(
+      deepResearchGateTransitionInputSchema.safeParse({ action: 'withdraw', checks }).success
+    ).toBe(false)
+    expect(
+      deepResearchGateTransitionInputSchema.safeParse({ action: 'pass', checks, notes: ['Nope'] })
+        .success
+    ).toBe(false)
+    expect(
+      deepResearchGateSchema.safeParse({
+        version: 'deep-research-gate-v1.0.0',
+        gateId: 'deep-research-gate:one',
+        opportunityId: 'opportunity:one',
+        analysisRunId: 'analysis:one',
+        artifactId: 'artifact:one',
+        snapshotHash: 'a'.repeat(64),
+        status: 'passed',
+        checks,
+        confirmedObservationIds: ['observation:one'],
+        sourceIds: ['source:one'],
+        evidenceIds: ['evidence:one'],
+        contraryObservationIds: ['observation:contrary'],
+        competitorRelationTypes: ['direct', 'workaround'],
+        blockingReasons: [],
+        coverageGaps: ['A reviewed gap remains visible.'],
+        createdBy: 'user:owner',
+        createdAt: now,
+        passedBy: 'user:owner',
+        passedAt: now,
+        withdrawnBy: null,
+        withdrawnAt: null,
+        updatedAt: now
+      }).success
+    ).toBe(true)
+    expect(
+      deepResearchGateSchema.safeParse({
+        version: 'deep-research-gate-v1.0.0',
+        gateId: 'deep-research-gate:one',
+        opportunityId: 'opportunity:one',
+        analysisRunId: 'analysis:one',
+        artifactId: 'artifact:one',
+        snapshotHash: 'a'.repeat(64),
+        status: 'passed',
+        checks: { ...checks, contraryEvidenceSearch: { ...check, state: 'fail' } },
+        confirmedObservationIds: ['observation:one'],
+        sourceIds: ['source:one'],
+        evidenceIds: ['evidence:one'],
+        contraryObservationIds: ['observation:contrary'],
+        competitorRelationTypes: ['direct', 'workaround'],
+        blockingReasons: [],
+        coverageGaps: [],
+        createdBy: 'user:owner',
+        createdAt: now,
+        passedBy: 'user:owner',
+        passedAt: now,
+        withdrawnBy: null,
+        withdrawnAt: null,
+        updatedAt: now
+      }).success
+    ).toBe(false)
   })
 
   it('requires explicit coverage gaps on private opportunity details', () => {

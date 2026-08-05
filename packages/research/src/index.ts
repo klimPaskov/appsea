@@ -9,6 +9,9 @@ import type {
   ComplaintEntityReference,
   ComplaintType,
   ComplaintCluster,
+  CompetitiveResearchObservation,
+  DeepResearchGateChecks,
+  DeepResearchGateCompetitorRelationType,
   FixtureResearchArtifact,
   ProductionAnalysisComplaint,
   ProductionAnalysisInput,
@@ -17,6 +20,7 @@ import type {
 import {
   complaintAnalysisSchema,
   complaintClusterSchema,
+  deepResearchGateChecksSchema,
   fixtureResearchArtifactSchema,
   opportunitySchema,
   productionAnalysisInputSchema,
@@ -26,6 +30,17 @@ import { buildResearchQualitySnapshot } from './quality-benchmark'
 
 export const COMPLAINT_ANALYSIS_VERSION = 'complaint-analysis-v0.1.0'
 export const COMPLAINT_DEDUPLICATION_VERSION = 'complaint-deduplication-v1.0.0'
+
+export interface DeepResearchGateEvaluation {
+  eligible: boolean
+  blockingReasons: string[]
+  coverageGaps: string[]
+  confirmedObservationIds: string[]
+  sourceIds: string[]
+  evidenceIds: string[]
+  contraryObservationIds: string[]
+  competitorRelationTypes: DeepResearchGateCompetitorRelationType[]
+}
 
 const NEAR_DUPLICATE_THRESHOLD = 0.9
 const MAX_NEAR_DUPLICATE_CANDIDATES = 64
@@ -593,6 +608,109 @@ export function buildProductionResearchArtifact(
     opportunitySeedReview: parsed.opportunitySeed,
     qualitySnapshot: buildResearchQualitySnapshot(undefined, parsed.analysisAt)
   })
+}
+
+const deepResearchCheckLabels: ReadonlyArray<keyof DeepResearchGateChecks> = [
+  'coherentCluster',
+  'provenanceComplete',
+  'copiedContentInfluence',
+  'uniqueAuthorEstimate',
+  'contraryEvidenceSearch',
+  'competitorCoverage',
+  'substituteCoverage',
+  'sourceGapsReviewed',
+  'policyRisksReviewed',
+  'reproducibleSnapshot',
+  'manipulationRiskReviewed',
+  'extractionAgreement'
+]
+
+/**
+ * Evaluate the explicit deep-research checklist without inventing evidence.
+ * The database repository supplies active observations and the immutable
+ * production artifact; this pure function only derives compact provenance
+ * identifiers and deterministic blockers from those inputs.
+ */
+export function evaluateDeepResearchGate(input: {
+  artifact: ProductionResearchArtifact
+  observations: CompetitiveResearchObservation[]
+  checks: DeepResearchGateChecks
+}): DeepResearchGateEvaluation {
+  const checks = deepResearchGateChecksSchema.parse(input.checks)
+  const blockingReasons: string[] = []
+  const confirmed = input.observations.filter(
+    (observation) =>
+      !observation.synthetic &&
+      observation.reviewState === 'confirmed' &&
+      observation.evidenceId !== null
+  )
+  const confirmedObservationIds = confirmed.map((observation) => observation.observationId).sort()
+  const sourceIds = [...new Set(confirmed.map((observation) => observation.sourceId))].sort()
+  const evidenceIds = [
+    ...new Set(
+      confirmed.flatMap((observation) =>
+        observation.evidenceId === null ? [] : [observation.evidenceId]
+      )
+    )
+  ].sort()
+  const contraryObservationIds = confirmed
+    .filter((observation) => observation.claimType === 'contrary_signal')
+    .map((observation) => observation.observationId)
+    .sort()
+  const competitorRelationTypes = [
+    ...new Set(input.artifact.opportunity.competitors.map((competitor) => competitor.type))
+  ].sort() as DeepResearchGateCompetitorRelationType[]
+
+  if (input.artifact.mode !== 'production' || input.artifact.opportunity.synthetic) {
+    blockingReasons.push('Deep research cannot promote a synthetic opportunity.')
+  }
+  if (input.artifact.testOnly) {
+    blockingReasons.push('Test-only analysis transport cannot support a market conclusion.')
+  }
+  if (input.artifact.clusters.length === 0) {
+    blockingReasons.push('At least one coherent complaint cluster is required.')
+  }
+  if (
+    input.artifact.analyses.some(
+      (analysis) => !['confirmed', 'corrected'].includes(analysis.reviewState)
+    )
+  ) {
+    blockingReasons.push('Every retained complaint analysis must be confirmed or corrected.')
+  }
+  if (confirmedObservationIds.length === 0 || sourceIds.length === 0 || evidenceIds.length === 0) {
+    blockingReasons.push(
+      'At least one confirmed non-synthetic competitor observation with retained evidence is required.'
+    )
+  }
+  if (contraryObservationIds.length === 0) {
+    blockingReasons.push('A confirmed contrary-signal observation is required.')
+  }
+  if (
+    !competitorRelationTypes.includes('workaround') &&
+    !competitorRelationTypes.includes('do-nothing')
+  ) {
+    blockingReasons.push('Substitute or do-nothing competitor coverage is required.')
+  }
+
+  for (const label of deepResearchCheckLabels) {
+    const check = checks[label]
+    if (check.state !== 'pass') {
+      blockingReasons.push(`Deep-research check ${label} is ${check.state}.`)
+    } else if (check.note === null && check.evidenceIds.length === 0) {
+      blockingReasons.push(`Deep-research check ${label} has no review note or evidence reference.`)
+    }
+  }
+
+  return {
+    eligible: blockingReasons.length === 0,
+    blockingReasons: [...new Set(blockingReasons)],
+    coverageGaps: [...new Set(input.artifact.coverageGaps)],
+    confirmedObservationIds,
+    sourceIds,
+    evidenceIds,
+    contraryObservationIds,
+    competitorRelationTypes
+  }
 }
 
 export async function buildFixtureResearchArtifact(

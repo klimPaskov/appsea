@@ -633,6 +633,7 @@ interface OpportunityRow extends QueryResultRow {
   scoring_version: string | null
   score_calculated_at: Date | string | null
   current_report_id: string | null
+  deep_research_gate_passed: boolean | null
   factors: unknown
   weights: unknown
 }
@@ -979,7 +980,11 @@ function mapOpportunity(row: OpportunityRow): WorkspaceOpportunityReadModel {
     scoreCalculatedAt: iso(row.score_calculated_at ?? new Date(0)),
     state: resolveOpportunityStateForRead({
       synthetic: row.synthetic,
-      persistedState: row.state
+      persistedState: row.state,
+      ...(row.deep_research_gate_passed === true
+        ? { competitiveResearchStatus: 'source-backed' as const }
+        : {}),
+      deepResearchGatePassed: row.deep_research_gate_passed === true
     }),
     currentReportId: row.current_report_id,
     currentPlanPackageId: row.current_plan_package_id
@@ -3932,9 +3937,10 @@ export class PostgresAuthRepository {
                   opportunity.source_run_id, opportunity.current_score_snapshot_id,
                   opportunity.current_plan_package_id, score.score, score.scoring_version,
                    score.calculated_at AS score_calculated_at, score.factors, score.weights,
-                   score.score AS raw_score, score.risk_adjusted_score,
+                  score.score AS raw_score, score.risk_adjusted_score,
                    score.ranking_score, score.evidence_confidence,
-                  report.report_id AS current_report_id
+                  report.report_id AS current_report_id,
+                  deep_gate.deep_research_gate_passed
              FROM appsea.opportunities opportunity
              LEFT JOIN appsea.opportunity_score_snapshots score
                ON score.workspace_id = opportunity.workspace_id
@@ -3948,6 +3954,59 @@ export class PostgresAuthRepository {
                    AND report.deletion_state = 'active'
                  ORDER BY report.generated_at DESC LIMIT 1
               ) report ON true
+             LEFT JOIN LATERAL (
+                SELECT (gate.status = 'passed') AS deep_research_gate_passed
+                 FROM appsea.deep_research_gate_reviews gate
+                 WHERE gate.workspace_id = opportunity.workspace_id
+                   AND gate.opportunity_id = opportunity.opportunity_id
+                   AND gate.analysis_run_id = (
+                     SELECT analysis.analysis_run_id
+                       FROM appsea.production_analysis_runs analysis
+                      WHERE analysis.workspace_id = opportunity.workspace_id
+                        AND analysis.opportunity_id = opportunity.opportunity_id
+                        AND analysis.collection_run_id = opportunity.source_run_id
+                        AND analysis.state = 'completed'
+                        AND analysis.availability_state = 'active'
+                      ORDER BY analysis.completed_at DESC, analysis.analysis_run_id DESC
+                      LIMIT 1
+                   )
+                   AND gate.status = 'passed'
+                   AND NOT EXISTS (
+                     SELECT 1
+                       FROM unnest(gate.confirmed_observation_ids) AS required_observation(observation_id)
+                      WHERE NOT EXISTS (
+                        SELECT 1
+                          FROM appsea.competitor_research_observations observation
+                          JOIN appsea.source_items source_item
+                            ON source_item.workspace_id = observation.workspace_id
+                           AND source_item.source_item_id = observation.source_item_id
+                           AND source_item.deletion_state = 'active'
+                          JOIN appsea.evidence_records evidence
+                            ON evidence.workspace_id = observation.workspace_id
+                           AND evidence.evidence_id = observation.evidence_id
+                           AND evidence.deletion_state = 'active'
+                         WHERE observation.workspace_id = gate.workspace_id
+                           AND observation.observation_id = required_observation.observation_id
+                           AND observation.opportunity_id = gate.opportunity_id
+                           AND observation.review_state = 'confirmed'
+                           AND observation.synthetic = false
+                           AND observation.evidence_id IS NOT NULL
+                      )
+                   )
+                   AND NOT EXISTS (
+                     SELECT 1
+                       FROM unnest(gate.evidence_ids) AS required_evidence(evidence_id)
+                      WHERE NOT EXISTS (
+                        SELECT 1
+                          FROM appsea.evidence_records evidence
+                         WHERE evidence.workspace_id = gate.workspace_id
+                           AND evidence.evidence_id = required_evidence.evidence_id
+                           AND evidence.deletion_state = 'active'
+                      )
+                   )
+                 ORDER BY gate.updated_at DESC, gate.gate_id DESC
+                 LIMIT 1
+              ) deep_gate ON true
              WHERE opportunity.workspace_id = $1
                AND opportunity.availability_state = 'active'
               ORDER BY COALESCE(score.ranking_score, score.score) DESC NULLS LAST,
@@ -3992,7 +4051,8 @@ export class PostgresAuthRepository {
                    score.calculated_at AS score_calculated_at, score.factors, score.weights,
                    score.score AS raw_score, score.risk_adjusted_score,
                    score.ranking_score, score.evidence_confidence,
-                  report.report_id AS current_report_id
+                  report.report_id AS current_report_id,
+                  deep_gate.deep_research_gate_passed
              FROM appsea.opportunities opportunity
              LEFT JOIN appsea.opportunity_score_snapshots score
                ON score.workspace_id = opportunity.workspace_id
@@ -4005,7 +4065,60 @@ export class PostgresAuthRepository {
                    AND report.approval_state <> 'withdrawn'
                    AND report.deletion_state = 'active'
                  ORDER BY report.generated_at DESC LIMIT 1
-               ) report ON true
+              ) report ON true
+             LEFT JOIN LATERAL (
+                SELECT (gate.status = 'passed') AS deep_research_gate_passed
+                 FROM appsea.deep_research_gate_reviews gate
+                 WHERE gate.workspace_id = opportunity.workspace_id
+                   AND gate.opportunity_id = opportunity.opportunity_id
+                   AND gate.analysis_run_id = (
+                     SELECT analysis.analysis_run_id
+                       FROM appsea.production_analysis_runs analysis
+                      WHERE analysis.workspace_id = opportunity.workspace_id
+                        AND analysis.opportunity_id = opportunity.opportunity_id
+                        AND analysis.collection_run_id = opportunity.source_run_id
+                        AND analysis.state = 'completed'
+                        AND analysis.availability_state = 'active'
+                      ORDER BY analysis.completed_at DESC, analysis.analysis_run_id DESC
+                      LIMIT 1
+                   )
+                   AND gate.status = 'passed'
+                   AND NOT EXISTS (
+                     SELECT 1
+                       FROM unnest(gate.confirmed_observation_ids) AS required_observation(observation_id)
+                      WHERE NOT EXISTS (
+                        SELECT 1
+                          FROM appsea.competitor_research_observations observation
+                          JOIN appsea.source_items source_item
+                            ON source_item.workspace_id = observation.workspace_id
+                           AND source_item.source_item_id = observation.source_item_id
+                           AND source_item.deletion_state = 'active'
+                          JOIN appsea.evidence_records evidence
+                            ON evidence.workspace_id = observation.workspace_id
+                           AND evidence.evidence_id = observation.evidence_id
+                           AND evidence.deletion_state = 'active'
+                         WHERE observation.workspace_id = gate.workspace_id
+                           AND observation.observation_id = required_observation.observation_id
+                           AND observation.opportunity_id = gate.opportunity_id
+                           AND observation.review_state = 'confirmed'
+                           AND observation.synthetic = false
+                           AND observation.evidence_id IS NOT NULL
+                      )
+                   )
+                   AND NOT EXISTS (
+                     SELECT 1
+                       FROM unnest(gate.evidence_ids) AS required_evidence(evidence_id)
+                      WHERE NOT EXISTS (
+                        SELECT 1
+                          FROM appsea.evidence_records evidence
+                         WHERE evidence.workspace_id = gate.workspace_id
+                           AND evidence.evidence_id = required_evidence.evidence_id
+                           AND evidence.deletion_state = 'active'
+                      )
+                   )
+                 ORDER BY gate.updated_at DESC, gate.gate_id DESC
+                 LIMIT 1
+              ) deep_gate ON true
              WHERE opportunity.workspace_id = $1
                AND opportunity.slug = $2
                AND opportunity.availability_state = 'active'`,

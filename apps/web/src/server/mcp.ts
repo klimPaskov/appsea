@@ -374,6 +374,7 @@ async function callTool(
       opportunity: detail.opportunity,
       summary: detail.summary,
       competitiveResearch: detail.competitiveResearch,
+      deepResearchGate: detail.deepResearchGate,
       coverageGaps: detail.coverageGaps,
       sourceCoverage: detail.sourceCoverage,
       artifacts: {
@@ -478,6 +479,7 @@ async function readResource(
       opportunity: detail.opportunity,
       summary: detail.summary,
       competitiveResearch: detail.competitiveResearch,
+      deepResearchGate: detail.deepResearchGate,
       coverageGaps: detail.coverageGaps,
       sourceCoverage: detail.sourceCoverage
     })

@@ -4,6 +4,7 @@ import { CompetitorFeatureMatrix } from '../../../../../../components/competitor
 import { readSession } from '../../../../../../server/auth-session'
 import { readPrivateOpportunityContext } from '../../../../../../server/private-opportunity'
 import { CompetitorObservationActions } from '../../../../competitor-observation-actions'
+import { DeepResearchGateActions } from '../../../../deep-research-gate-actions'
 
 export const dynamic = 'force-dynamic'
 
@@ -78,6 +79,78 @@ export default async function PrivateCompetitorsPage({
         </div>
         <strong className="workspace-score">{detail.opportunity.competitors.length}</strong>
       </div>
+
+      <section className="workspace-section" aria-labelledby="deep-research-gate-heading">
+        <div className="section-intro">
+          <h2 id="deep-research-gate-heading">Deep-research gate</h2>
+          <p>
+            This is a separate readiness decision from source-backed competitor claims. It cannot
+            turn fixture data or unapproved sources into market research.
+          </p>
+        </div>
+        {detail.deepResearchGate ? (
+          <>
+            <p>
+              <strong>{detail.deepResearchGate.status}</strong>
+              {detail.deepResearchGate.gateId ? (
+                <>
+                  {' '}
+                  · review <code>{detail.deepResearchGate.gateId}</code>
+                </>
+              ) : null}
+            </p>
+            {detail.deepResearchGate.status === 'passed' ? (
+              <p className="success-note">
+                Owner-reviewed gate passed for the recorded analysis snapshot. Coverage gaps remain
+                visible below and in the evidence routes.
+              </p>
+            ) : null}
+            {detail.deepResearchGate.blockingReasons.length > 0 ? (
+              <div>
+                <p className="label">Blocking reasons</p>
+                <ul>
+                  {detail.deepResearchGate.blockingReasons.map((reason) => (
+                    <li key={reason}>{reason}</li>
+                  ))}
+                </ul>
+              </div>
+            ) : null}
+            <dl className="detail-grid">
+              <div>
+                <dt className="label">Analysis snapshot</dt>
+                <dd>
+                  {detail.deepResearchGate.analysisRunId ? (
+                    <code>{detail.deepResearchGate.analysisRunId}</code>
+                  ) : (
+                    'Not recorded'
+                  )}
+                </dd>
+              </div>
+              <div>
+                <dt className="label">Snapshot hash</dt>
+                <dd>
+                  {detail.deepResearchGate.snapshotHash ? (
+                    <code>{detail.deepResearchGate.snapshotHash}</code>
+                  ) : (
+                    'Not recorded'
+                  )}
+                </dd>
+              </div>
+            </dl>
+            <DeepResearchGateActions
+              workspaceId={workspaceId}
+              slug={slug}
+              role={context.workspace.role}
+              initialStatus={detail.deepResearchGate.status}
+            />
+          </>
+        ) : (
+          <p className="empty-state">
+            No deep-research review has been recorded. The opportunity remains a candidate even if
+            its complaint analysis and seed assumptions are complete.
+          </p>
+        )}
+      </section>
 
       <section className="workspace-section" aria-labelledby="competitive-coverage-heading">
         <div className="section-intro">

@@ -59,6 +59,17 @@ explicit deep-research gate passes. Reviewed seed values, complaint analysis,
 and a generated report are not sufficient to mark an opportunity `researched`;
 the private read boundary fails closed for legacy rows that predate this gate.
 
+The deep-research gate is an append-only, owner-reviewed checklist bound to a
+completed production analysis snapshot. It records only compact source,
+evidence, observation, competitor-relation, and snapshot-hash provenance. The
+evaluator blocks promotion when confirmed contrary evidence, workaround or
+do-nothing coverage, complaint-review state, copied-content/author review,
+policy-risk review, or reproducibility is missing. A changed analysis,
+source/evidence deletion, or changed confirmed observation marks a previously
+passed gate stale. Coverage gaps remain visible after a pass; the gate never
+means universal source coverage. Editors may submit a not-ready review, while
+only owners may pass or withdraw one through the step-up-protected private API.
+
 Private report versions move through `draft` → `reviewed` → `approved` (or
 `withdrawn`). Owners may approve or withdraw a report; owners and editors may
 mark a draft reviewed. The database records each transition as an

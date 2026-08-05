@@ -109,7 +109,10 @@ before either status source is queried.
     opportunity read model records whether competitive research is unresolved,
     reviewed-seed-only, or source-backed; source-backed status requires a
     confirmed non-synthetic observation, permitted source/evidence IDs, and an
-    observation time.
+    observation time. Migration `0101` adds an append-only deep-research gate
+    review that derives current observation/source/evidence IDs and a snapshot
+    hash, records owner/editor checklist decisions, and returns `stale` when
+    the bound analysis or retained evidence changes.
 14. Scoring calculates a versioned score only from explicit reviewed factors.
 15. A distinct post-collection analysis run rechecks the completed collection,
     approved policy review/hash, and every active complaint/evidence/source-item
@@ -147,7 +150,8 @@ before either status source is queried.
     report/plan approval states from their governance projections so private
     pages do not display stale inferred defaults. Production opportunity state
     resolves to `candidate` until the explicit deep-research gate proves
-    source-backed competitive coverage with no unresolved gaps; the public
+    source-backed competitive coverage and the current owner-reviewed gate is
+    passed; coverage gaps remain visible after promotion and the public
     leaderboard remains fixture-only.
 
 Every workspace table uses forced row-level security. Authentication must authorize a workspace before application code sets the transaction-local workspace context. Source policy state remains global and cannot be changed directly by the runtime role.

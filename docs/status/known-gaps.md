@@ -10,7 +10,9 @@ private read boundary repairs legacy non-synthetic `researched` rows through
 migration `0100`; reviewed seeds and generated reports remain insufficient by
 themselves. Source-backed competitor/contrary research, unique-author
 estimation, copied-content and manipulation checks, and independent policy
-approval remain open.
+approval remain open. Migration `0101` and the private gate API now persist the
+reviewed checklist and expose deterministic blockers, but the current disabled
+source registry still means no production gate can honestly pass here.
 
 The private `/api/mcp` boundary now supports read-only opportunity, evidence,
 source-coverage, report, and plan reads for owner-issued workspace-scoped

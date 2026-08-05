@@ -113,7 +113,8 @@ describe('database foundation', () => {
       '0097',
       '0098',
       '0099',
-      '0100'
+      '0100',
+      '0101'
     ])
     expect(migrations[0]?.checksum).toMatch(/^[a-f0-9]{64}$/)
     expect(migrations[0]?.sql).toContain('CREATE TABLE appsea.evidence_records')
@@ -171,6 +172,13 @@ describe('database foundation', () => {
     const researchMaturityMigration = migrations.find((migration) => migration.version === '0100')
     expect(researchMaturityMigration?.sql).toContain("SET state = 'candidate'")
     expect(researchMaturityMigration?.sql).toContain('synthetic = false')
+    const deepResearchGateMigration = migrations.find((migration) => migration.version === '0101')
+    expect(deepResearchGateMigration?.sql).toContain(
+      'CREATE TABLE appsea.deep_research_gate_reviews'
+    )
+    expect(deepResearchGateMigration?.sql).toContain('enforce_deep_research_gate_review')
+    expect(deepResearchGateMigration?.sql).toContain("'production-analysis'")
+    expect(deepResearchGateMigration?.sql).toContain('FORCE ROW LEVEL SECURITY')
     const migrationOwnerCompatibilityMigration = migrations.find(
       (migration) => migration.version === '0074'
     )

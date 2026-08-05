@@ -4,6 +4,7 @@ import {
   analyzeComplaints,
   buildFixtureResearchArtifact,
   buildProductionResearchArtifact,
+  evaluateDeepResearchGate,
   clusterComplaints,
   deduplicateComplaintSet,
   deduplicateComplaints
@@ -13,6 +14,8 @@ import {
   complaintAnalysisSchema,
   productionAnalysisInputSchema,
   productionResearchArtifactSchema,
+  type CompetitiveResearchObservation,
+  type DeepResearchGateChecks,
   type BalancedScoreInput
 } from '@appsea/contracts'
 
@@ -594,5 +597,138 @@ describe('production analysis composition', () => {
         }
       : artifact
     expect(productionResearchArtifactSchema.safeParse(tamperedArtifact).success).toBe(false)
+  })
+
+  it('keeps deep-research eligibility separate from source-backed status', () => {
+    const checks: DeepResearchGateChecks = {
+      coherentCluster: {
+        state: 'pass',
+        note: 'Cluster reviewed.',
+        evidenceIds: ['evidence:research-1']
+      },
+      provenanceComplete: {
+        state: 'pass',
+        note: 'Provenance reviewed.',
+        evidenceIds: ['evidence:research-1']
+      },
+      copiedContentInfluence: {
+        state: 'pass',
+        note: 'Copy influence reviewed.',
+        evidenceIds: ['evidence:research-1']
+      },
+      uniqueAuthorEstimate: {
+        state: 'pass',
+        note: 'Author estimate reviewed.',
+        evidenceIds: ['evidence:research-1']
+      },
+      contraryEvidenceSearch: {
+        state: 'pass',
+        note: 'Contrary search reviewed.',
+        evidenceIds: ['evidence:research-2']
+      },
+      competitorCoverage: {
+        state: 'pass',
+        note: 'Competitor coverage reviewed.',
+        evidenceIds: ['evidence:research-1']
+      },
+      substituteCoverage: {
+        state: 'pass',
+        note: 'Substitute coverage reviewed.',
+        evidenceIds: ['evidence:research-1']
+      },
+      sourceGapsReviewed: { state: 'pass', note: 'Coverage gaps remain visible.', evidenceIds: [] },
+      policyRisksReviewed: {
+        state: 'pass',
+        note: 'Policy review recorded.',
+        evidenceIds: ['evidence:research-1']
+      },
+      reproducibleSnapshot: { state: 'pass', note: 'Snapshot replayed.', evidenceIds: [] },
+      manipulationRiskReviewed: {
+        state: 'pass',
+        note: 'Manipulation risk reviewed.',
+        evidenceIds: ['evidence:research-1']
+      },
+      extractionAgreement: {
+        state: 'pass',
+        note: 'Extraction agreement reviewed.',
+        evidenceIds: ['evidence:research-1']
+      }
+    }
+    const reviewedAnalyses = productionInput.complaints.map((complaint) =>
+      complaintAnalysisSchema.parse({
+        ...analyzeComplaint(complaint),
+        reviewState: 'confirmed' as const
+      })
+    )
+    const artifact = buildProductionResearchArtifact({
+      ...productionInput,
+      transport: 'persisted-collection',
+      testOnly: false,
+      analyses: reviewedAnalyses,
+      opportunitySeed: {
+        ...productionInput.opportunitySeed,
+        seed: {
+          ...productionInput.opportunitySeed.seed,
+          competitors: [
+            {
+              name: 'Manual spreadsheet',
+              type: 'workaround',
+              positioning: 'A manual alternative.',
+              strengths: ['Available now'],
+              weaknesses: ['Repeated data entry'],
+              relatedComplaintCategories: ['handoff loss'],
+              featureMatrix: []
+            }
+          ]
+        }
+      }
+    })
+    const observation = {
+      observationId: 'observation:research-one',
+      opportunityId: artifact.opportunity.id,
+      competitorId: 'competitor:manual',
+      sourceId: 'source:approved',
+      sourceRecordId: 'competitor-1',
+      sourceItemId: 'source-item:competitor-1',
+      evidenceId: 'evidence:research-1',
+      claimType: 'feature' as const,
+      claim: 'The workaround requires repeated manual entry.',
+      observedAt: '2026-07-26T00:00:00.000Z',
+      capturedAt: '2026-07-26T00:00:00.000Z',
+      publishedAt: null,
+      confidence: 0.8,
+      reviewState: 'confirmed' as const,
+      synthetic: false,
+      allowedRepresentation: 'excerpt' as const,
+      canonicalLocator: null,
+      createdBy: 'user:editor',
+      reviewedBy: 'user:owner',
+      reviewedAt: '2026-07-26T00:00:00.000Z',
+      createdAt: '2026-07-26T00:00:00.000Z',
+      updatedAt: '2026-07-26T00:00:00.000Z'
+    } satisfies CompetitiveResearchObservation
+    const withoutContrary = evaluateDeepResearchGate({
+      artifact,
+      observations: [observation],
+      checks
+    })
+    expect(withoutContrary.eligible).toBe(false)
+    expect(withoutContrary.blockingReasons).toContain(
+      'A confirmed contrary-signal observation is required.'
+    )
+    const eligible = evaluateDeepResearchGate({
+      artifact,
+      observations: [
+        observation,
+        {
+          ...observation,
+          observationId: 'observation:research-contrary',
+          claimType: 'contrary_signal'
+        }
+      ],
+      checks
+    })
+    expect(eligible.eligible).toBe(true)
+    expect(eligible.coverageGaps.length).toBeGreaterThan(0)
   })
 })

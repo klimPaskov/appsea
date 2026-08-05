@@ -9,7 +9,7 @@ sparse; no third-party public source is enabled. A reviewed internal
 `manual-owner-import` policy now supports tenant-private owner-authorized CSV/
 JSON intake without claiming public market coverage.
 
-Migrations `0027`-`0100` cover policy evidence, checkpoints, deletion repair,
+Migrations `0027`-`0101` cover policy evidence, checkpoints, deletion repair,
 leases, admissions, campaign orchestration and
 cancellation, source reconciliation, analysis history, report/plan governance,
 cost/alert projections, object references, workspace archival/purge intent/
@@ -23,8 +23,10 @@ disabled pending independent approval. Reports/plans preserve provenance,
 coverage gaps, approval state, synthetic disclosure, and object references.
 
 Production opportunities now remain `candidate` until an explicit deep-research
-gate proves source-backed competitor/contrary coverage; migration `0100` repairs
-legacy non-synthetic `researched` rows while fixture state stays synthetic.
+gate proves source-backed competitor/contrary coverage. Migration `0100` repairs
+legacy non-synthetic `researched` rows; `0101` persists the append-only,
+owner-reviewed gate with compact provenance and stale-snapshot reads while
+fixture state stays synthetic. Coverage gaps remain visible after a pass.
 
 `pnpm verify:worker:recovery` proves worker replacement with one-time effects
 and sanitized history; hosted restore/failover/topology remain open.
@@ -49,10 +51,10 @@ no worker imports or activates it.
 Manual owner-import (migration `0089`) is the active non-fixture path: bounded,
 normalized, PII-scrubbed, tenant-private, and Temporal-linked by batch ID only.
 Local smoke covers intake through private report/plan readback; URL fetching and
-public sources remain disabled. Migrations `0090`-`0100` keep policy/deletion/
+public sources remain disabled. Migrations `0090`-`0101` keep policy/deletion/
 privilege surfaces narrow, including bounded MCP admission, audit history, and
 dormant runtime-skill persistence. Local PostgreSQL/Temporal/MinIO, worker
-replacement, private pages, and backup/restore through 100 pass; provider
+replacement, private pages, and backup/restore through 101 pass; provider
 backups, HA, and failover remain deployment-owned.
 
 Scoring preserves `opportunity-score-v0.2.0` and adds reviewed-input
@@ -74,17 +76,10 @@ source bindings against retained complaint evidence and seed bindings against
 the immutable review prefix. Read-only seed inspection accepts pre-provenance
 v1 rows, but strict new-write/analysis admission requires a replacement.
 Backup/restore
-through `0100` passes locally; provider proof remains open.
+through `0101` passes locally; provider proof remains open.
 
-`pnpm verify:release` checks Compose, secret-free defaults, hardened images, and
-fail-closed preflight; CI runs Docker mode and `--static` supports no Docker.
-Production preflight now also requires the exact reviewed
-`APPSEA_TEMPORAL_TASK_QUEUE=appsea-research-v1` declaration. This lets a
-deployment review compare the worker image with a narrow provider ACL; remote
-namespace/task-queue authorization is still external evidence.
-
-The 2026-08-04 website slice adds generated
-`apps/web/public/appsea-mark-generated.png`; the Tauri icon pair remains staged.
+`pnpm verify:release` checks Compose, hardened images, and fail-closed
+preflight; remote namespace/task-queue authorization remains external.
 
 The 2026-08-04 complaint slice adds versioned, provenance-linked
 `deduplication` decisions to artifacts/reports. Safe native duplicates collapse;

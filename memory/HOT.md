@@ -22,13 +22,14 @@
   review. Reviewed bindings remain non-market assumptions.
 - Production opportunities stay `candidate` until the explicit deep-research
   gate proves source-backed competitive coverage; migration `0100` repairs
-  legacy non-synthetic `researched` rows.
-- Analysis v2 carries IDs/digests; the worker rebuilds artifacts in-activity.
-  Legacy v1 drain, cloud purge, role rotation, and scheduler ownership remain
-  open. Collection writes lock leases; `0037` recovers stale dispatches.
+  legacy non-synthetic `researched` rows and `0101` persists the append-only
+  owner-reviewed gate with compact provenance/stale detection. Coverage gaps
+  remain visible after a valid pass.
 - Auth, quotas, retention, admissions, tombstones, metrics, and refresh are
   durable; owner purge is `awaiting_external_controls`.
-- Web/worker share fail-closed Temporal config; production requires TLS/API-key/namespace/CA. Maintenance uses `0046`/`0052`; alerting, role rotation, recovery, and proof remain open.
+- Web/worker share fail-closed Temporal config; production requires TLS/API-key/
+  namespace/CA. Maintenance uses `0046`/`0052`; alerting, role rotation,
+  recovery, and proof remain open.
 - Runtime skill registry is dormant: independent proposer/evaluator/approver,
   signed review/transition evidence, and migration `0099` operator-only
   persistence/audit with expected-hash concurrency; no worker import/activation.

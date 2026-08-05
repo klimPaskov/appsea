@@ -25,7 +25,7 @@ Status: production-shaped foundation implemented and validated locally; producti
 
 Implemented:
 
-- PostgreSQL 18 schema and one hundred forward, checksummed migrations
+- PostgreSQL 18 schema and one hundred one forward, checksummed migrations
 - normalized source, evidence, complaint, cluster, competitor, opportunity, score, report, plan, audit, cost, deletion, outbox, and lineage tables
 - no-login owner, separate migrator, and least-privilege runtime role contract
 - forced workspace RLS and transaction-scoped workspace context
@@ -35,7 +35,7 @@ Implemented:
 - populated upgrade, fresh install, privilege, RLS, provenance, policy, cross-wire, and replay tests
 - local runbook and CI persistence gate
 - isolated local PostgreSQL backup/restore runbook and CI gate; the drill
-  restores a disposable dump through all one hundred migrations and verifies
+  restores a disposable dump through all one hundred one migrations and verifies
   forced workspace RLS plus runtime/maintenance privileges without accepting a
   remote URL
 - one-command loopback private-workspace stack with migration, worker, and web
@@ -64,8 +64,9 @@ Implemented:
   and deterministic projections
 - production opportunity projections now persist as `candidate` until an
   explicit deep-research gate proves source-backed competitive evidence and
-  resolved coverage; migration `0100` repairs legacy non-synthetic rows while
-  leaving fixture lifecycle state unchanged
+  reviewed checklist coverage; migration `0100` repairs legacy non-synthetic
+  rows while migration `0101` persists the append-only gate and stale-snapshot
+  read validation, leaving fixture lifecycle state unchanged
 - migration `0031_plan_approval_governance.sql` adds object-reference format
   checks and owner/editor plan approval transitions with report-readiness gates,
   audit, and outbox receipts

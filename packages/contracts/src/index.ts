@@ -1456,6 +1456,193 @@ export function composeCompetitiveResearchReadModel(input: {
   })
 }
 
+/**
+ * Deep research is a separate governance gate from the lighter
+ * `source-backed` competitive read. The latter proves that at least one
+ * permitted claim exists; this gate records the full reviewed checklist
+ * required before a production opportunity may be called researched.
+ *
+ * Only compact identifiers and review metadata are stored here. Raw source
+ * content, model prompts, and imported instructions never cross this
+ * contract.
+ */
+export const deepResearchGateStatusSchema = z.enum(['not-ready', 'passed', 'stale', 'withdrawn'])
+
+export const deepResearchGateCheckStateSchema = z.enum(['pass', 'fail', 'not-reviewed'])
+
+export const deepResearchGateCheckSchema = z
+  .object({
+    state: deepResearchGateCheckStateSchema,
+    note: z.string().min(1).max(1_000).nullable(),
+    evidenceIds: z.array(appseaIdentifierSchema).max(500)
+  })
+  .strict()
+
+export const deepResearchGateChecksSchema = z
+  .object({
+    coherentCluster: deepResearchGateCheckSchema,
+    provenanceComplete: deepResearchGateCheckSchema,
+    copiedContentInfluence: deepResearchGateCheckSchema,
+    uniqueAuthorEstimate: deepResearchGateCheckSchema,
+    contraryEvidenceSearch: deepResearchGateCheckSchema,
+    competitorCoverage: deepResearchGateCheckSchema,
+    substituteCoverage: deepResearchGateCheckSchema,
+    sourceGapsReviewed: deepResearchGateCheckSchema,
+    policyRisksReviewed: deepResearchGateCheckSchema,
+    reproducibleSnapshot: deepResearchGateCheckSchema,
+    manipulationRiskReviewed: deepResearchGateCheckSchema,
+    extractionAgreement: deepResearchGateCheckSchema
+  })
+  .strict()
+
+export const deepResearchGateCompetitorRelationTypeSchema = z.enum([
+  'direct',
+  'adjacent',
+  'platform',
+  'workaround',
+  'do-nothing'
+])
+
+export const deepResearchGateSchema = z
+  .object({
+    version: z.literal('deep-research-gate-v1.0.0'),
+    gateId: appseaIdentifierSchema.nullable(),
+    opportunityId: appseaIdentifierSchema,
+    analysisRunId: appseaIdentifierSchema.nullable(),
+    artifactId: appseaIdentifierSchema.nullable(),
+    snapshotHash: contentHashSchema.nullable(),
+    status: deepResearchGateStatusSchema,
+    checks: deepResearchGateChecksSchema,
+    confirmedObservationIds: z.array(appseaIdentifierSchema).max(500),
+    sourceIds: z.array(appseaIdentifierSchema).max(100),
+    evidenceIds: z.array(appseaIdentifierSchema).max(500),
+    contraryObservationIds: z.array(appseaIdentifierSchema).max(500),
+    competitorRelationTypes: z.array(deepResearchGateCompetitorRelationTypeSchema).max(16),
+    blockingReasons: z.array(z.string().min(1).max(500)).max(100),
+    coverageGaps: z.array(z.string().min(1).max(500)).max(100),
+    createdBy: appseaIdentifierSchema.nullable(),
+    createdAt: z.string().datetime().nullable(),
+    passedBy: appseaIdentifierSchema.nullable(),
+    passedAt: z.string().datetime().nullable(),
+    withdrawnBy: appseaIdentifierSchema.nullable(),
+    withdrawnAt: z.string().datetime().nullable(),
+    updatedAt: z.string().datetime()
+  })
+  .strict()
+  .superRefine((gate, context) => {
+    const checkValues = Object.values(gate.checks)
+    if (gate.status === 'passed') {
+      if (gate.gateId === null || gate.analysisRunId === null || gate.artifactId === null) {
+        context.addIssue({
+          code: 'custom',
+          path: ['gateId'],
+          message: 'A passed deep-research gate must bind to an analysis snapshot'
+        })
+      }
+      if (gate.snapshotHash === null) {
+        context.addIssue({
+          code: 'custom',
+          path: ['snapshotHash'],
+          message: 'A passed deep-research gate must retain a snapshot hash'
+        })
+      }
+      if (gate.passedBy === null || gate.passedAt === null) {
+        context.addIssue({
+          code: 'custom',
+          path: ['passedBy'],
+          message: 'A passed deep-research gate requires owner review provenance'
+        })
+      }
+      if (gate.confirmedObservationIds.length === 0 || gate.sourceIds.length === 0) {
+        context.addIssue({
+          code: 'custom',
+          path: ['confirmedObservationIds'],
+          message: 'A passed deep-research gate requires confirmed source observations'
+        })
+      }
+      if (gate.evidenceIds.length === 0 || gate.contraryObservationIds.length === 0) {
+        context.addIssue({
+          code: 'custom',
+          path: ['evidenceIds'],
+          message: 'A passed deep-research gate requires contrary evidence provenance'
+        })
+      }
+      if (
+        !gate.competitorRelationTypes.includes('workaround') &&
+        !gate.competitorRelationTypes.includes('do-nothing')
+      ) {
+        context.addIssue({
+          code: 'custom',
+          path: ['competitorRelationTypes'],
+          message: 'A passed deep-research gate requires substitute or do-nothing coverage'
+        })
+      }
+      if (checkValues.some((check) => check.state !== 'pass')) {
+        context.addIssue({
+          code: 'custom',
+          path: ['checks'],
+          message: 'Every deep-research checklist item must pass before promotion'
+        })
+      }
+      if (gate.blockingReasons.length > 0) {
+        context.addIssue({
+          code: 'custom',
+          path: ['blockingReasons'],
+          message: 'A passed deep-research gate cannot retain blocking reasons'
+        })
+      }
+    } else if (
+      !['stale'].includes(gate.status) &&
+      (gate.passedBy !== null || gate.passedAt !== null)
+    ) {
+      context.addIssue({
+        code: 'custom',
+        path: ['passedBy'],
+        message: 'Only a passed gate may retain pass provenance'
+      })
+    }
+    if (gate.status === 'not-ready' && gate.gateId === null) {
+      if (gate.createdBy !== null || gate.createdAt !== null) {
+        context.addIssue({
+          code: 'custom',
+          path: ['createdBy'],
+          message: 'An unpersisted gate cannot retain creation provenance'
+        })
+      }
+    }
+  })
+
+export const deepResearchGateTransitionInputSchema = z
+  .object({
+    action: z.enum(['submit', 'pass', 'withdraw']),
+    checks: deepResearchGateChecksSchema.optional(),
+    notes: z.array(z.string().min(1).max(500)).max(50).default([])
+  })
+  .strict()
+  .superRefine((input, context) => {
+    if (input.action !== 'withdraw' && input.checks === undefined) {
+      context.addIssue({
+        code: 'custom',
+        path: ['checks'],
+        message: 'A gate submission or pass action requires the reviewed checklist'
+      })
+    }
+    if (input.action === 'withdraw' && input.checks !== undefined) {
+      context.addIssue({
+        code: 'custom',
+        path: ['checks'],
+        message: 'A withdrawn gate cannot change checklist evidence'
+      })
+    }
+    if (input.action !== 'submit' && input.notes.length > 0) {
+      context.addIssue({
+        code: 'custom',
+        path: ['notes'],
+        message: 'Gate notes may only be added while submitting a review'
+      })
+    }
+  })
+
 const policyVersionSchema = z
   .string()
   .min(1)
@@ -6508,9 +6695,11 @@ export const workspaceOpportunityReadModelSchema = z
  * Fixture opportunities retain their synthetic `researched` lifecycle state so
  * the regression surface remains useful. Production rows cannot claim
  * `researched` unless the caller supplies every explicit gate signal: a
- * source-backed competitive read, no unresolved coverage gaps, and a recorded
- * deep-research gate. Missing signals fail closed to `candidate`; this also
- * protects legacy rows written before the gate existed.
+ * source-backed competitive read and a recorded, currently valid
+ * deep-research gate. Coverage gaps remain visible after promotion because
+ * the gate records that they were reviewed rather than pretending coverage
+ * is universal. Missing signals fail closed to `candidate`; this also protects
+ * legacy rows written before the gate existed.
  */
 export function resolveOpportunityStateForRead(input: {
   synthetic: boolean
@@ -6522,8 +6711,7 @@ export function resolveOpportunityStateForRead(input: {
   if (input.synthetic || input.persistedState !== 'researched') return input.persistedState
   if (
     input.deepResearchGatePassed !== true ||
-    input.competitiveResearchStatus !== 'source-backed' ||
-    (input.coverageGaps?.length ?? 1) > 0
+    input.competitiveResearchStatus !== 'source-backed'
   ) {
     return 'candidate'
   }
@@ -6654,6 +6842,7 @@ export const workspaceOpportunityDetailReadModelSchema = z
     summary: workspaceOpportunityReadModelSchema,
     evidence: z.array(workspaceEvidenceReadModelSchema),
     competitiveResearch: competitiveResearchReadModelSchema,
+    deepResearchGate: deepResearchGateSchema.nullable().default(null),
     coverageGaps: z.array(z.string()),
     sourceCoverage: z.array(reportSourceCoverageSchema),
     report: workspaceReportReadModelSchema.nullable(),
@@ -7069,6 +7258,14 @@ export type CompetitiveResearchObservationReviewInput = z.infer<
   typeof competitiveResearchObservationReviewInputSchema
 >
 export type CompetitiveResearchReadModel = z.infer<typeof competitiveResearchReadModelSchema>
+export type DeepResearchGateStatus = z.infer<typeof deepResearchGateStatusSchema>
+export type DeepResearchGateCheck = z.infer<typeof deepResearchGateCheckSchema>
+export type DeepResearchGateChecks = z.infer<typeof deepResearchGateChecksSchema>
+export type DeepResearchGateCompetitorRelationType = z.infer<
+  typeof deepResearchGateCompetitorRelationTypeSchema
+>
+export type DeepResearchGate = z.infer<typeof deepResearchGateSchema>
+export type DeepResearchGateTransitionInput = z.infer<typeof deepResearchGateTransitionInputSchema>
 export type ProductionAnalysisPersistenceInput = z.infer<
   typeof productionAnalysisPersistenceInputSchema
 >

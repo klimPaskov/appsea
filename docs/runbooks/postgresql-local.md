@@ -36,6 +36,12 @@ This runbook covers the repository's PostgreSQL 18 development and integration-t
   `researched` before the deep-research gate existed. New production analysis
   rows are written as `candidate`; fixture rows remain synthetic and are not
   affected.
+- Migration `0101` adds the append-only deep-research gate review table. The
+  runtime role may insert compact owner/editor review records but cannot update
+  or delete them; the database trigger enforces workspace membership, owner-only
+  pass/withdraw, current completed-analysis lineage, active confirmed evidence,
+  contrary-signal provenance, and substitute coverage. Reads recompute the
+  snapshot hash so source/evidence changes return `stale`.
 
 Production role creation, credentials, TLS, backups, high availability, and secret rotation remain deployment responsibilities. The local bootstrap passwords in `infra/local` are deliberately non-production.
 

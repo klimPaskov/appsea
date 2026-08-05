@@ -158,6 +158,13 @@ export {
   CompetitiveResearchObservationPolicyError
 } from './competitive-research-repository'
 export {
+  PostgresDeepResearchGateRepository,
+  DeepResearchGateBlockedError,
+  DeepResearchGateConflictError,
+  DeepResearchGateNotFoundError,
+  DeepResearchGatePermissionError
+} from './deep-research-gate-repository'
+export {
   PostgresEvidenceRedactionRepository,
   EvidenceRedactionConflictError,
   EvidenceRedactionNotFoundError,

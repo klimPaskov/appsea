@@ -15,6 +15,7 @@ import {
   type WorkspaceMembershipReadModel
 } from '@appsea/contracts'
 import { PostgresCompetitiveResearchRepository } from '@appsea/db/competitive-research'
+import { PostgresDeepResearchGateRepository } from '@appsea/db/deep-research-gate'
 import { PostgresProductionAnalysisRepository } from '@appsea/db/production-analysis'
 import { authRepository, readSession } from './auth-session'
 import { getDatabasePool } from './database'
@@ -30,7 +31,8 @@ export interface PrivateOpportunityContext {
 /** Map a validated production analysis into the private opportunity read model. */
 export function mapProductionAnalysisToOpportunityDetail(
   model: ProductionAnalysisReadModel,
-  observations: CompetitiveResearchObservation[] = []
+  observations: CompetitiveResearchObservation[] = [],
+  deepResearchGate: WorkspaceOpportunityDetailReadModel['deepResearchGate'] = null
 ): WorkspaceOpportunityDetailReadModel {
   const { artifact, result, report, planPackage } = model
   const opportunity = artifact.opportunity
@@ -69,7 +71,7 @@ export function mapProductionAnalysisToOpportunityDetail(
       persistedState: 'researched',
       competitiveResearchStatus: competitiveResearch.status,
       coverageGaps: artifact.coverageGaps,
-      deepResearchGatePassed: false
+      deepResearchGatePassed: deepResearchGate?.status === 'passed'
     }),
     currentReportId: result.reportId,
     currentPlanPackageId: result.planPackageId
@@ -104,6 +106,7 @@ export function mapProductionAnalysisToOpportunityDetail(
     summary,
     evidence,
     competitiveResearch,
+    deepResearchGate,
     coverageGaps: artifact.coverageGaps,
     sourceCoverage: report.coverage.sources,
     report: workspaceReportReadModelSchema.parse({
@@ -152,7 +155,11 @@ export async function readPrivateOpportunityDetailForUser(
         parsedWorkspaceId.data,
         production.artifact.opportunity.id
       )
-      return mapProductionAnalysisToOpportunityDetail(production, observations)
+      const deepResearchGate = await new PostgresDeepResearchGateRepository(
+        getDatabasePool(),
+        getObjectStore()
+      ).readForUser(userId, parsedWorkspaceId.data, production.artifact.opportunity.id)
+      return mapProductionAnalysisToOpportunityDetail(production, observations, deepResearchGate)
     }
   }
   const detail = await repository.readWorkspaceOpportunity(
@@ -173,7 +180,26 @@ export async function readPrivateOpportunityDetailForUser(
     evidenceIds: detail.competitiveResearch.evidenceIds,
     observations
   })
-  return workspaceOpportunityDetailReadModelSchema.parse({ ...detail, competitiveResearch })
+  const deepResearchGate = await new PostgresDeepResearchGateRepository(
+    getDatabasePool(),
+    getObjectStore()
+  ).readForUser(userId, parsedWorkspaceId.data, detail.opportunity.id)
+  const summary = workspaceOpportunityReadModelSchema.parse({
+    ...detail.summary,
+    state: resolveOpportunityStateForRead({
+      synthetic: detail.summary.synthetic,
+      persistedState: detail.summary.state,
+      competitiveResearchStatus: competitiveResearch.status,
+      coverageGaps: detail.coverageGaps,
+      deepResearchGatePassed: deepResearchGate?.status === 'passed'
+    })
+  })
+  return workspaceOpportunityDetailReadModelSchema.parse({
+    ...detail,
+    summary,
+    competitiveResearch,
+    deepResearchGate
+  })
 }
 
 export async function readPrivateOpportunityContext(
