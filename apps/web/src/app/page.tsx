@@ -4,11 +4,7 @@ import { seedOpportunities } from '@appsea/catalog'
 export default function LeaderboardPage() {
   return (
     <main className="leaderboard-page">
-      <p className="leaderboard-kicker">AppSea opportunity intelligence</p>
-      <h1>Opportunity Leaderboard</h1>
-      <p className="leaderboard-intro">
-        Evidence-ranked software opportunities from repeated complaint patterns.
-      </p>
+      <h1>Leaderboard</h1>
       <div className="leaderboard" role="table" aria-label="App opportunity leaderboard">
         <div className="leaderboard-row leaderboard-head" role="row">
           <span role="columnheader">Rank</span>

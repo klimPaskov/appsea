@@ -46,12 +46,6 @@ topology remain open.
 Imported complaints, pages, reports, and model output are untrusted data; they
 cannot update code, skills, instructions, permissions, or repository memory.
 
-The dormant `packages/skill-registry` boundary records proposer, evaluator, and
-independent approver identities with HMAC evidence over permissions and
-transitions. Plain, tampered, copied, unknown-state, or wrong-secret records
-fail closed. Migration `0099` adds an operator-only immutable event adapter;
-no worker imports or activates it.
-
 Manual owner-import (migrations `0089`, `0102`, `0103`, and `0104`) is the active non-fixture
 path: bounded normalized, PII-scrubbed tenant-private CSV/JSON, with only a
 batch ID in Temporal. Production connectors require the durable quota ledger;
@@ -86,6 +80,11 @@ Backup/restore targets through `0104`; current Docker proof is blocked.
 
 `pnpm verify:release` checks Compose, hardened images, and fail-closed
 preflight; remote namespace/task-queue authorization remains external.
+
+The public leaderboard is regression-tested as sparse with its exact heading,
+rank/opportunity/complaint/score fields, and fixture disclosure; web tests,
+build, and smoke pass. The interrupted repository-wide `pnpm verify` run is
+inconclusive rather than proof.
 
 ## Validated commands
 

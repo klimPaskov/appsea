@@ -1,5 +1,5 @@
 {
-  "id": "analysis:dfaa2202cb0e62367075db473f8f66ee",
+  "id": "analysis:5f7aabfd0d2f8b40fa9f903bb6625169",
   "mode": "production",
   "createdAt": "2026-07-26T00:00:00.000Z",
   "sourcePolicies": [
@@ -706,5 +706,9 @@
     "reviewId": "review:handoff-audit-sample-v1",
     "reviewedBy": "offline analysis sample; no connector activation",
     "reviewedAt": "2026-07-26T00:00:00.000Z"
+  },
+  "competitiveResearch": {
+    "observations": [],
+    "coverageGaps": []
   }
 }

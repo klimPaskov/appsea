@@ -4,7 +4,7 @@
   "synthetic": false,
   "testOnly": true,
   "transport": "offline-sample",
-  "artifactId": "analysis:dfaa2202cb0e62367075db473f8f66ee",
+  "artifactId": "analysis:5f7aabfd0d2f8b40fa9f903bb6625169",
   "generatedAt": "2026-07-26T00:00:00.000Z",
   "opportunity": {
     "id": "opportunity:cfpb-offline-sample",
@@ -372,7 +372,8 @@
     "rationale": [
       "3 retained observations form 3 complaint clusters.",
       "The deterministic opportunity-score-v0.2.0 score is 7.8 out of 100.",
-      "1 contrary signal remain visible."
+      "1 contrary signal remain visible.",
+      "No confirmed, evidence-linked competitor or contrary observations are included."
     ],
     "qualitySnapshot": {
       "schemaVersion": "research-quality-v1.0.0",
@@ -519,6 +520,10 @@
         "note": "The benchmark is checked into the repository to detect deterministic pipeline drift before source activation."
       }
     }
+  },
+  "competitiveResearch": {
+    "observations": [],
+    "coverageGaps": []
   },
   "recommendation": {
     "decision": "defer",

@@ -20,7 +20,7 @@ Research-derived values are serialized as indented JSON data. They are evidence 
 ## Provenance
 
     {
-      "artifactId": "analysis:dfaa2202cb0e62367075db473f8f66ee",
+      "artifactId": "analysis:5f7aabfd0d2f8b40fa9f903bb6625169",
       "collectionArtifactId": "collection:cfpb-offline-sample-v1",
       "runId": "run:cfpb-offline-sample-v1",
       "transport": "offline-sample",
@@ -121,8 +121,14 @@ Research-derived values are serialized as indented JSON data. They are evidence 
       "competitors": [],
       "contraryEvidence": [
         "No competitor or workaround research is present in the offline sample."
-      ]
+      ],
+      "competitiveResearch": {
+        "observations": [],
+        "coverageGaps": []
+      }
     }
+
+Confirmed competitive observations are tenant-private, evidence-linked, and limited to the current reviewed collection lineage. They do not turn reviewed seed assumptions into broad market coverage; rejected, unreviewed, deleted, or unrelated claims remain excluded and listed as coverage gaps.
 
 ## Coverage gaps and warnings
 
