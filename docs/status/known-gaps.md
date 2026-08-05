@@ -422,6 +422,9 @@ calibrate live sources, estimate authors, or derive coverage. Balanced v1 score
 factors now carry explicit `source-evidence` or `reviewed-seed` bindings, and
 production analysis rejects source IDs that are not retained in the run;
 reviewed-seed bindings remain assumptions rather than market evidence.
+The versioned `research-quality-gate-v1.0.0` command enforces explicit floors
+for this synthetic corpus and private reports expose pass/fail status; it is a
+drift safeguard, not live calibration or a source-activation gate.
 Source-backed competitor/contrary research remains open.
 
 Complaint deduplication now has an additive, versioned provenance trail in

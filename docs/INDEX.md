@@ -103,6 +103,7 @@
 - [`adrs/0026-research-quality-benchmark.md`](adrs/0026-research-quality-benchmark.md)
 - [`adrs/0027-score-factor-provenance.md`](adrs/0027-score-factor-provenance.md)
 - [`adrs/0028-complaint-deduplication-provenance.md`](adrs/0028-complaint-deduplication-provenance.md)
+- [`adrs/0029-research-quality-regression-gate.md`](adrs/0029-research-quality-regression-gate.md)
 
 ## Generated references
 
@@ -143,6 +144,7 @@
 - [`status/research-governance-step-up-completion-report-2026-08-04.md`](status/research-governance-step-up-completion-report-2026-08-04.md)
 - [`status/opportunity-scoring-v1-completion-report-2026-08-04.md`](status/opportunity-scoring-v1-completion-report-2026-08-04.md)
 - [`status/research-quality-calibration-completion-report-2026-08-04.md`](status/research-quality-calibration-completion-report-2026-08-04.md)
+- [`status/research-quality-regression-gate-completion-report-2026-08-05.md`](status/research-quality-regression-gate-completion-report-2026-08-05.md)
 - [`status/score-factor-provenance-completion-report-2026-08-04.md`](status/score-factor-provenance-completion-report-2026-08-04.md)
 - [`status/workspace-invitation-completion-report.md`](status/workspace-invitation-completion-report.md)
 - [`status/production-readiness-audit-2026-07-25.md`](status/production-readiness-audit-2026-07-25.md)

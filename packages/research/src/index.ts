@@ -645,6 +645,9 @@ export {
   RESEARCH_QUALITY_BENCHMARK,
   RESEARCH_QUALITY_BENCHMARK_VERSION,
   RESEARCH_QUALITY_EVALUATOR_VERSION,
+  RESEARCH_QUALITY_GATE_THRESHOLDS,
+  RESEARCH_QUALITY_GATE_VERSION,
   buildResearchQualitySnapshot,
-  evaluateResearchQuality
+  evaluateResearchQuality,
+  evaluateResearchQualityGate
 } from './quality-benchmark'

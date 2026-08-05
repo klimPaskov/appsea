@@ -116,6 +116,16 @@ export default async function PrivateReportPage({
                 ) : null}
               </div>
             </div>
+            {detail.report.structuredReport.qualitySnapshot?.qualityGate ? (
+              <p className="complaint-meta">
+                Quality regression gate:{' '}
+                <span>{detail.report.structuredReport.qualitySnapshot.qualityGate.status}</span>
+                {' · synthetic benchmark regression check; not live calibration.'}
+                {detail.report.structuredReport.qualitySnapshot.qualityGate.status === 'fail'
+                  ? ` ${detail.report.structuredReport.qualitySnapshot.qualityGate.failures.length} threshold failure(s).`
+                  : ''}
+              </p>
+            ) : null}
           </section>
           <section className="workspace-section" aria-labelledby="report-recommendation-heading">
             <div className="section-intro">

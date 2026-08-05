@@ -2,7 +2,8 @@ import { describe, expect, it } from 'vitest'
 import {
   RESEARCH_QUALITY_BENCHMARK,
   buildResearchQualitySnapshot,
-  evaluateResearchQuality
+  evaluateResearchQuality,
+  evaluateResearchQualityGate
 } from './quality-benchmark'
 
 describe('research quality benchmark', () => {
@@ -13,6 +14,21 @@ describe('research quality benchmark', () => {
     expect(first.classifier.accuracy.sampleSize).toBe(RESEARCH_QUALITY_BENCHMARK.cases.length)
     expect(first.deduplication.pairRecall.value).toBeGreaterThan(0)
     expect(first.ranking.topKPrecision.value).toBeGreaterThan(0)
+    expect(evaluateResearchQualityGate(first)).toMatchObject({ status: 'pass', failures: [] })
+  })
+
+  it('fails deterministically when a regression floor is breached', () => {
+    const metrics = evaluateResearchQuality(RESEARCH_QUALITY_BENCHMARK)
+    const degraded = {
+      ...metrics,
+      ranking: {
+        ...metrics.ranking,
+        topKPrecision: { ...metrics.ranking.topKPrecision, value: 0.1 }
+      }
+    }
+    const gate = evaluateResearchQualityGate(degraded)
+    expect(gate.status).toBe('fail')
+    expect(gate.failures).toContain('ranking.topKPrecision=0.1000 < 0.5000')
   })
 
   it('builds a hashed, explicitly synthetic snapshot', () => {
@@ -25,6 +41,7 @@ describe('research quality benchmark', () => {
     expect(snapshot.reviewedInputOnly).toBe(true)
     expect(snapshot.factorProvenance).toBe('reviewed-input-only')
     expect(snapshot.provenance.sourceCoverage).toBe('not-derived')
+    expect(snapshot.qualityGate).toMatchObject({ status: 'pass', failures: [] })
     expect(snapshot.contentHash).toMatch(/^[a-f0-9]{64}$/)
     expect(buildResearchQualitySnapshot(RESEARCH_QUALITY_BENCHMARK, snapshot.generatedAt)).toEqual(
       snapshot

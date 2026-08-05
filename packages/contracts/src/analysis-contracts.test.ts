@@ -4,6 +4,7 @@ import {
   productionAnalysisInputSchema,
   productionOpportunitySeedSchema,
   productionResearchArtifactSchema,
+  researchQualityGateSchema,
   researchQualityBenchmarkSchema,
   researchQualitySnapshotSchema,
   workspaceOpportunitySeedApprovalInputSchema,
@@ -127,6 +128,30 @@ describe('research quality contracts', () => {
       researchQualitySnapshotSchema.parse({
         ...snapshot,
         provenance: { ...snapshot.provenance, sourceCoverage: 'derived' }
+      })
+    ).toThrow()
+  })
+
+  it('validates the versioned regression gate without requiring it on legacy snapshots', () => {
+    const gate = {
+      version: 'research-quality-gate-v1.0.0',
+      status: 'pass',
+      thresholds: {
+        classifierAccuracyMin: 0.9,
+        complaintTypeAccuracyMin: 0.8,
+        entityHighImpactWrongLinkRateMax: 0.05,
+        deduplicationF1Min: 0.95,
+        clusteringF1Min: 0.9,
+        rankingTopKPrecisionMin: 0.5,
+        calibrationExpectedCalibrationErrorMax: 0.35
+      },
+      failures: []
+    }
+    expect(researchQualityGateSchema.parse(gate)).toEqual(gate)
+    expect(() =>
+      researchQualityGateSchema.parse({
+        ...gate,
+        thresholds: { ...gate.thresholds, classifierAccuracyMin: 1.1 }
       })
     ).toThrow()
   })

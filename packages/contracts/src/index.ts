@@ -1074,6 +1074,25 @@ export const researchQualityRankingCaseSchema = z
   })
   .strict()
 
+export const researchQualityGateSchema = z
+  .object({
+    version: z.literal('research-quality-gate-v1.0.0'),
+    status: z.enum(['pass', 'fail']),
+    thresholds: z
+      .object({
+        classifierAccuracyMin: z.number().min(0).max(1),
+        complaintTypeAccuracyMin: z.number().min(0).max(1),
+        entityHighImpactWrongLinkRateMax: z.number().min(0).max(1),
+        deduplicationF1Min: z.number().min(0).max(1),
+        clusteringF1Min: z.number().min(0).max(1),
+        rankingTopKPrecisionMin: z.number().min(0).max(1),
+        calibrationExpectedCalibrationErrorMax: z.number().min(0).max(1)
+      })
+      .strict(),
+    failures: z.array(z.string().min(1).max(240)).max(32)
+  })
+  .strict()
+
 export const researchQualityBenchmarkSchema = z
   .object({
     version: qualityVersionSchema,
@@ -1177,6 +1196,7 @@ export const researchQualitySnapshotSchema = z
           .strict()
       })
       .strict(),
+    qualityGate: researchQualityGateSchema.optional(),
     warnings: z.array(z.string().min(1).max(1_000)).max(100),
     provenance: z
       .object({
@@ -6914,6 +6934,7 @@ export type ResearchQualityBenchmarkCase = z.infer<typeof researchQualityBenchma
 export type ResearchQualityRankingCase = z.infer<typeof researchQualityRankingCaseSchema>
 export type ResearchQualityBenchmark = z.infer<typeof researchQualityBenchmarkSchema>
 export type ResearchQualitySnapshot = z.infer<typeof researchQualitySnapshotSchema>
+export type ResearchQualityGate = z.infer<typeof researchQualityGateSchema>
 export type CompetitorFeatureMatrixStatus = z.infer<typeof competitorFeatureMatrixStatusSchema>
 export type CompetitorFeatureMatrixEvidenceBasis = z.infer<
   typeof competitorFeatureMatrixEvidenceBasisSchema

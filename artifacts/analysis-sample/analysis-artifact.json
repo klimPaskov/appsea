@@ -471,7 +471,7 @@
     "evaluatorVersion": "research-quality-evaluator-v1.0.0",
     "generatedAt": "2026-07-26T00:00:00.000Z",
     "benchmarkHash": "2303e94290fcf805ad16e344ba224fd14c2159a1c92e8b3f7704d7b1ddd5e3ce",
-    "contentHash": "530e44bd479ff38423231ff489abaf3060e7f0bbd22b1fee41bf6d2505656d03",
+    "contentHash": "966b46e29309f17ea54d30ce23f2a5e94107cf10cf10437d3aeaf1817d923700",
     "synthetic": true,
     "reviewedInputOnly": true,
     "evidenceSnapshotId": null,
@@ -583,6 +583,20 @@
           "value": 0.1009
         }
       }
+    },
+    "qualityGate": {
+      "version": "research-quality-gate-v1.0.0",
+      "status": "pass",
+      "thresholds": {
+        "classifierAccuracyMin": 0.9,
+        "complaintTypeAccuracyMin": 0.8,
+        "entityHighImpactWrongLinkRateMax": 0.05,
+        "deduplicationF1Min": 0.95,
+        "clusteringF1Min": 0.9,
+        "rankingTopKPrecisionMin": 0.5,
+        "calibrationExpectedCalibrationErrorMax": 0.35
+      },
+      "failures": []
     },
     "warnings": [
       "This quality snapshot is computed from a synthetic, redacted benchmark and is not market evidence.",

@@ -2,10 +2,12 @@ import { createHash } from 'node:crypto'
 import {
   complaintSchema,
   researchQualityBenchmarkSchema,
+  researchQualityGateSchema,
   researchQualitySnapshotSchema,
   type Complaint,
   type ResearchQualityBenchmark,
   type ResearchQualityBenchmarkCase,
+  type ResearchQualityGate,
   type ResearchQualitySnapshot
 } from '@appsea/contracts'
 import {
@@ -18,6 +20,21 @@ import { analyzeComplaint, clusterComplaints, deduplicateComplaints } from './in
 
 export const RESEARCH_QUALITY_BENCHMARK_VERSION = 'research-quality-benchmark-v1.0.0'
 export const RESEARCH_QUALITY_EVALUATOR_VERSION = 'research-quality-evaluator-v1.0.0'
+export const RESEARCH_QUALITY_GATE_VERSION = 'research-quality-gate-v1.0.0'
+
+/**
+ * Regression floors for the checked-in synthetic benchmark. These thresholds
+ * detect implementation drift; they are not production calibration claims.
+ */
+export const RESEARCH_QUALITY_GATE_THRESHOLDS = {
+  classifierAccuracyMin: 0.9,
+  complaintTypeAccuracyMin: 0.8,
+  entityHighImpactWrongLinkRateMax: 0.05,
+  deduplicationF1Min: 0.95,
+  clusteringF1Min: 0.9,
+  rankingTopKPrecisionMin: 0.5,
+  calibrationExpectedCalibrationErrorMax: 0.35
+} as const satisfies ResearchQualityGate['thresholds']
 
 const benchmarkTimestamp = '2026-08-04T00:00:00.000Z'
 
@@ -506,12 +523,77 @@ export function evaluateResearchQuality(
   }
 }
 
+type ResearchQualityMetrics = ReturnType<typeof evaluateResearchQuality>
+
+export function evaluateResearchQualityGate(metrics: ResearchQualityMetrics): ResearchQualityGate {
+  const checks = [
+    {
+      label: 'classifier.accuracy',
+      value: metrics.classifier.accuracy.value,
+      threshold: RESEARCH_QUALITY_GATE_THRESHOLDS.classifierAccuracyMin,
+      direction: 'min' as const
+    },
+    {
+      label: 'classifier.complaintTypeAccuracy',
+      value: metrics.classifier.complaintTypeAccuracy.value,
+      threshold: RESEARCH_QUALITY_GATE_THRESHOLDS.complaintTypeAccuracyMin,
+      direction: 'min' as const
+    },
+    {
+      label: 'entity.highImpactWrongLinkRate',
+      value: metrics.entity.highImpactWrongLinkRate.value,
+      threshold: RESEARCH_QUALITY_GATE_THRESHOLDS.entityHighImpactWrongLinkRateMax,
+      direction: 'max' as const
+    },
+    {
+      label: 'deduplication.f1',
+      value: metrics.deduplication.f1.value,
+      threshold: RESEARCH_QUALITY_GATE_THRESHOLDS.deduplicationF1Min,
+      direction: 'min' as const
+    },
+    {
+      label: 'clustering.f1',
+      value: metrics.clustering.f1.value,
+      threshold: RESEARCH_QUALITY_GATE_THRESHOLDS.clusteringF1Min,
+      direction: 'min' as const
+    },
+    {
+      label: 'ranking.topKPrecision',
+      value: metrics.ranking.topKPrecision.value,
+      threshold: RESEARCH_QUALITY_GATE_THRESHOLDS.rankingTopKPrecisionMin,
+      direction: 'min' as const
+    },
+    {
+      label: 'calibration.expectedCalibrationError',
+      value: metrics.calibration.expectedCalibrationError.value,
+      threshold: RESEARCH_QUALITY_GATE_THRESHOLDS.calibrationExpectedCalibrationErrorMax,
+      direction: 'max' as const
+    }
+  ]
+
+  const failures = checks.flatMap((check) => {
+    const failed =
+      check.direction === 'min' ? check.value < check.threshold : check.value > check.threshold
+    if (!failed) return []
+    const operator = check.direction === 'min' ? '<' : '>'
+    return [`${check.label}=${check.value.toFixed(4)} ${operator} ${check.threshold.toFixed(4)}`]
+  })
+
+  return researchQualityGateSchema.parse({
+    version: RESEARCH_QUALITY_GATE_VERSION,
+    status: failures.length === 0 ? 'pass' : 'fail',
+    thresholds: RESEARCH_QUALITY_GATE_THRESHOLDS,
+    failures
+  })
+}
+
 export function buildResearchQualitySnapshot(
   benchmark: ResearchQualityBenchmark = RESEARCH_QUALITY_BENCHMARK,
   generatedAt = new Date().toISOString()
 ): ResearchQualitySnapshot {
   const parsed = researchQualityBenchmarkSchema.parse(benchmark)
   const metrics = evaluateResearchQuality(parsed)
+  const qualityGate = evaluateResearchQualityGate(metrics)
   const benchmarkHash = hash(parsed)
   const withoutHash = {
     schemaVersion: 'research-quality-v1.0.0' as const,
@@ -524,10 +606,14 @@ export function buildResearchQualitySnapshot(
     evidenceSnapshotId: parsed.evidenceSnapshotId,
     factorProvenance: 'reviewed-input-only' as const,
     metrics,
+    qualityGate,
     warnings: [
       'This quality snapshot is computed from a synthetic, redacted benchmark and is not market evidence.',
       'Classifier, entity, deduplication, clustering, and ranking metrics are regression signals, not live calibration.',
-      'Coverage and score factor provenance remain reviewed-input-only; no source coverage is derived.'
+      'Coverage and score factor provenance remain reviewed-input-only; no source coverage is derived.',
+      ...(qualityGate.status === 'fail'
+        ? [`Synthetic quality regression gate failed: ${qualityGate.failures.join('; ')}`]
+        : [])
     ],
     provenance: {
       mode: 'synthetic-redacted-benchmark' as const,

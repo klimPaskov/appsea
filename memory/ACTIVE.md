@@ -61,13 +61,15 @@ balanced `opportunity-score-v1.0.0`: raw/risk-adjusted/ranking scores, bounded
 risk, confidence, uncertainty, coverage/freshness, and explanations. Migration
 `0096` stores v1 fields and private ordering uses ranking. Seeds
 without v1 retain a visible gap; no live source or calibration evidence is
-implied. A synthetic/redacted `research-quality-v1.0.0` benchmark now measures
+implied. A synthetic/redacted `research-quality-v1.0.0` benchmark measures
 deterministic classifier/entity, deduplication, clustering, duplicate/source
-ablation stability, ranking, and probability calibration behavior. Optional
-artifact/report snapshots keep the benchmark hash and explicit
-`reviewed-input-only`/`sourceCoverage: not-derived` provenance; it is regression
-evidence, not live calibration or market evidence. Smoke carries a reviewed v1 seed through owner
-intake, durable analysis, persistence, and private readback. Every v1 factor now
+ablation stability, ranking, and probability calibration. The versioned
+`research-quality-gate-v1.0.0` worker check enforces synthetic regression floors
+and private reports show pass/fail; neither supports source activation. Optional
+artifact/report snapshots keep explicit `reviewed-input-only`/
+`sourceCoverage: not-derived` provenance; they are regression evidence, not live
+calibration or market evidence. Smoke carries a reviewed v1 seed through private
+readback. Every v1 factor now
 has a `source-evidence` or `reviewed-seed` binding; production analysis checks
 source bindings against retained complaint evidence and seed bindings against
 the immutable review prefix. Read-only seed inspection accepts pre-provenance
@@ -82,9 +84,8 @@ Production preflight now also requires the exact reviewed
 deployment review compare the worker image with a narrow provider ACL; remote
 namespace/task-queue authorization is still external evidence.
 
-The 2026-08-04 website slice replaces the header placeholder with the generated
-non-text mark `apps/web/public/appsea-mark-generated.png`; it is website-only,
-and web tests/lint/typecheck pass. The Tauri icon pair remains staged.
+The 2026-08-04 website slice adds generated
+`apps/web/public/appsea-mark-generated.png`; the Tauri icon pair remains staged.
 
 The 2026-08-04 complaint slice adds versioned, provenance-linked
 `deduplication` decisions to artifacts/reports. Safe native duplicates collapse;

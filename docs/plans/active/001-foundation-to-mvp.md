@@ -666,7 +666,9 @@ reviewed-input checkpoint, not calibration or live market evidence. Optional
 artifact/report quality snapshots now record the versioned synthetic benchmark,
 deduplication/clustering/ranking stability, and bounded calibration metrics;
 they are regression evidence only and do not derive source coverage or market
-evidence. Every balanced v1 factor now carries an explicit `source-evidence` or
+evidence. The additive `research-quality-gate-v1.0.0` object and
+`pnpm research:quality` check enforce explicit synthetic floors; they do not
+calibrate live sources or authorize activation. Every balanced v1 factor now carries an explicit `source-evidence` or
 `reviewed-seed` binding; production analysis checks source bindings against
 retained complaint evidence and keeps reviewed-seed assumptions separate from
 market evidence. See [`0027-score-factor-provenance.md`](../../adrs/0027-score-factor-provenance.md).
