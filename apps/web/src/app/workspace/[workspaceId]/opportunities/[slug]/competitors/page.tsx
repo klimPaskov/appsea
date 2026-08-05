@@ -105,16 +105,6 @@ export default async function PrivateCompetitorsPage({
                 visible below and in the evidence routes.
               </p>
             ) : null}
-            {detail.deepResearchGate.blockingReasons.length > 0 ? (
-              <div>
-                <p className="label">Blocking reasons</p>
-                <ul>
-                  {detail.deepResearchGate.blockingReasons.map((reason) => (
-                    <li key={reason}>{reason}</li>
-                  ))}
-                </ul>
-              </div>
-            ) : null}
             <dl className="detail-grid">
               <div>
                 <dt className="label">Analysis snapshot</dt>
@@ -141,7 +131,7 @@ export default async function PrivateCompetitorsPage({
               workspaceId={workspaceId}
               slug={slug}
               role={context.workspace.role}
-              initialStatus={detail.deepResearchGate.status}
+              initialGate={detail.deepResearchGate}
             />
           </>
         ) : (

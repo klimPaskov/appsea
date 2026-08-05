@@ -14,6 +14,11 @@
 
 - `/leaderboard` contains only the ranked list and small heading area.
 - Opportunity, complaints, competitors, and plan stay separate.
+- The private competitors route keeps deep-research governance in a compact
+  checklist panel above competitive evidence. Editors may submit a reviewed
+  checklist; only owners may pass or withdraw promotion. Keep the checklist
+  keyboard-complete, explicit about blockers, and visually subordinate to the
+  evidence sections.
 - Workspace member settings may contain owner-only lifecycle controls. Keep
   archival in the existing calm risk-block pattern, require visible step-up
   state, and explain retained lineage versus destructive purge in text.

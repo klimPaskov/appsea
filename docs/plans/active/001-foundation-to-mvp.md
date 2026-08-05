@@ -66,7 +66,10 @@ Implemented:
   explicit deep-research gate proves source-backed competitive evidence and
   reviewed checklist coverage; migration `0100` repairs legacy non-synthetic
   rows while migration `0101` persists the append-only gate and stale-snapshot
-  read validation, leaving fixture lifecycle state unchanged
+  read validation, leaving fixture lifecycle state unchanged. The private
+  competitors route now exposes the same checklist for editor submission and
+  owner pass/withdraw actions; the API and database remain authoritative and
+  still reject incomplete or stale evidence.
 - migration `0031_plan_approval_governance.sql` adds object-reference format
   checks and owner/editor plan approval transitions with report-readiness gates,
   audit, and outbox receipts
