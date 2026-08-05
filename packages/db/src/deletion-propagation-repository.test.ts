@@ -224,6 +224,9 @@ describe('PostgresDeletionPropagationRepository', () => {
     expect(statements.some(({ text }) => text.includes('production_analysis_recompute_jobs'))).toBe(
       true
     )
+    expect(
+      statements.some(({ text }) => text.includes('research_analysis_run_competitor_observations'))
+    ).toBe(true)
     expect(statements.some(({ text }) => text.includes("SET state = 'completed'"))).toBe(true)
   })
 

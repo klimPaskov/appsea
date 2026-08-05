@@ -524,7 +524,13 @@ export class PostgresDeletionPropagationRepository {
           AND analysis.availability_state = 'active'
           AND EXISTS (
             SELECT 1
-              FROM appsea.research_analysis_run_evidence analysis_evidence
+              FROM (
+                SELECT workspace_id, analysis_run_id, source_item_id
+                  FROM appsea.research_analysis_run_evidence
+                UNION ALL
+                SELECT workspace_id, analysis_run_id, source_item_id
+                  FROM appsea.research_analysis_run_competitor_observations
+              ) analysis_evidence
               JOIN appsea.source_items source_item
                 ON source_item.workspace_id = analysis_evidence.workspace_id
                AND source_item.source_item_id = analysis_evidence.source_item_id

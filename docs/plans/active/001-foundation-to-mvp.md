@@ -81,6 +81,13 @@ Implemented:
 - migration `0103_competitor_observation_contrary_purpose.sql` keeps the same
   provenance/evidence/review trigger while accepting the explicit private
   `contrary-evidence` collection purpose.
+- migration `0104_production_analysis_competitor_lineage.sql` adds an
+  append-only, forced-RLS lineage projection for confirmed, non-synthetic,
+  evidence-linked competitor/contrary observations. The worker reconstructs
+  this exact snapshot inside the workspace boundary, and the explicit reviewed
+  analysis rerun carries it into the report and six-file plan. Rejected,
+  deleted, stale, unrelated, or policy-mismatched rows fail closed and remain
+  visible as coverage gaps; scoring remains owned by the reviewed seed.
 - migration `0031_plan_approval_governance.sql` adds object-reference format
   checks and owner/editor plan approval transitions with report-readiness gates,
   audit, and outbox receipts
@@ -711,6 +718,15 @@ record, per-claim provenance observations, and a competitors/contrary-signals
 route; it does not promote reviewed seed assumptions to source-backed market
 evidence. Observation creation/review is private and policy-gated through
 `/api/workspaces/:workspaceId/opportunities/:slug/competitor-observations`.
+Confirmed observations from the current owner-import collection lineage now
+also appear in the next explicit reviewed report and coding plan, with
+observation/evidence hashes, source IDs, claim type, review state, and visible
+tenant-private coverage caveats. This enrichment does not auto-rerun analysis,
+change the deterministic score, or activate a third-party source. Migration
+`0104_production_analysis_competitor_lineage.sql` preserves the consumed
+snapshot and blocks stale/deleted provenance at finalization. Metadata-only and
+aggregate-only observations retain identifiers/hashes but replace claim text
+with the policy-withheld marker before object/report/plan generation.
 Reports are versioned in `report_versions` and linked to their plan package. Reads
 exclude inactive source rows and non-redacted non-fixture evidence.
 Approval transitions are role-checked in the private API and guarded by migration

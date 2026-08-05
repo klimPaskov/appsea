@@ -216,6 +216,10 @@ export default async function PrivateCompetitorsPage({
             Each claim keeps its source record, retained evidence, observation time, and human
             review state visible. Unreviewed claims do not make this research source-backed.
           </p>
+          <p className="complaint-meta">
+            Confirmed observations enter the report and plan only on the next explicit reviewed
+            analysis run; reviewing a claim never refreshes an existing output automatically.
+          </p>
         </div>
         {!research.synthetic &&
         (context.workspace.role === 'owner' || context.workspace.role === 'editor') ? (

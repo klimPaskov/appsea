@@ -3,5 +3,7 @@ export {
   CompetitiveResearchObservationConflictError,
   CompetitiveResearchObservationNotFoundError,
   CompetitiveResearchObservationPermissionError,
-  CompetitiveResearchObservationPolicyError
+  CompetitiveResearchObservationPolicyError,
+  readConfirmedSnapshotForAnalysisInTransaction,
+  type ProductionCompetitiveObservationSnapshot
 } from './competitive-research-repository'

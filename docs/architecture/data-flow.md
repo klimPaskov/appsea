@@ -114,11 +114,16 @@ before either status source is queried.
     review that derives current observation/source/evidence IDs and a snapshot
     hash, records owner/editor checklist decisions, and returns `stale` when
     the bound analysis or retained evidence changes.
+    Migration `0104` adds an append-only analysis lineage projection for
+    confirmed, non-synthetic, evidence-linked owner-import observations. The
+    worker reconstructs the exact snapshot from current collection,
+    relationship, policy, and evidence joins; review, deletion, policy, or
+    collection drift excludes the row and remains a visible coverage gap.
 14. Scoring calculates a versioned score only from explicit reviewed factors.
 15. A distinct post-collection analysis run rechecks the completed collection,
     approved policy review/hash, and every active complaint/evidence/source-item
     mapping before clustering, reviewed competitor/contrary-signal attachment,
-    and deterministic scoring.
+    the exact competitive observation snapshot, and deterministic scoring.
 16. When collection input names an approved seed, migration `0034` enqueues a
     deterministic post-collection handoff in the same completion transaction.
     A skip-locked worker reconstructs the input after complaint review and
@@ -127,7 +132,9 @@ before either status source is queried.
 17. The analysis repository stores a redacted `workflow-artifact`, validated
     report JSON, and coding-agent plan through the content-addressed
     `packages/object-store` seam; PostgreSQL stores compact snapshots, hashes,
-    references, and policy/evidence/output lineage.
+    references, and policy/evidence/competitive-observation/output lineage.
+    The report and plan keep this snapshot tenant-private and do not change
+    seed-owned score factors.
 18. A workspace transaction persists immutable production projections,
     output IDs, audit/outbox receipts, and active availability state. Source
     deletion propagation invalidates the analysis run while retaining lineage

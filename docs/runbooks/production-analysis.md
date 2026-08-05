@@ -40,6 +40,31 @@ manifest (`README.md`, `01-product-brief.md`, `02-mvp-scope.md`,
 deterministic package generation fails closed at review input rather than
 after a durable worker starts.
 
+### Confirmed competitive observations
+
+The private Competitors route accepts owner/editor observations from the
+reviewed `manual-owner-import-v2` policy. A claim remains unreviewed until an
+editor or owner confirms it. After confirmation, start the existing reviewed
+production analysis explicitly for the collection run; the worker reads the
+workspace-bound snapshot immediately before persistence. It includes only
+confirmed, non-synthetic observations whose source item, evidence, competitor
+relation, current policy purpose, and collection lineage are all active. The
+snapshot retains observation/evidence hashes, source identifiers, claim type,
+representation mode, and coverage gaps.
+
+When a policy permits only `metadata-only` or `aggregate-only` representation,
+the persisted artifact, report, and plan replace the competitive claim text
+with the policy-withheld marker while retaining identifiers and hashes.
+
+The next report and six-file plan include this snapshot in a tenant-private
+competitive-evidence section. It does not alter deterministic score factors,
+does not claim broad market coverage, and does not auto-rerun when a claim is
+reviewed. Rejected, deleted, stale, unrelated, or policy-mismatched rows are
+excluded and recorded as gaps; finalization fails closed if the worker payload
+differs from the current database snapshot. Migration `0104` preserves the
+consumed lineage for audit and replay. Field redaction masks the competitive
+claim and locator through the same analysis-run evidence redaction projection.
+
 ## Durable production path
 
 `PostgresProductionAnalysisRepository.persist` accepts only a

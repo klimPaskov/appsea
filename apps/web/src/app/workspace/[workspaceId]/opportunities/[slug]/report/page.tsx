@@ -93,6 +93,55 @@ export default async function PrivateReportPage({
               ))}
             </ul>
           </section>
+          {detail.report.structuredReport.competitiveResearch ? (
+            <section className="workspace-section" aria-labelledby="report-competitive-heading">
+              <div className="section-intro">
+                <h2 id="report-competitive-heading">Confirmed competitive evidence</h2>
+                <p>
+                  Evidence-linked observations included in this explicit reviewed analysis run. They
+                  remain tenant-private and do not represent broad market coverage.
+                </p>
+              </div>
+              {detail.report.structuredReport.competitiveResearch.observations.length > 0 ? (
+                <ul className="complaint-list">
+                  {detail.report.structuredReport.competitiveResearch.observations.map(
+                    (observation) => (
+                      <li key={observation.observationId}>
+                        <div className="complaint-meta">
+                          <span>{observation.competitorName}</span>
+                          <span>{observation.competitorType}</span>
+                          <span>{observation.claimType}</span>
+                          <span>{observation.allowedRepresentation}</span>
+                        </div>
+                        <p>{observation.claim}</p>
+                        <p className="complaint-meta">
+                          Observation <code>{observation.observationId}</code> · evidence{' '}
+                          <code>{observation.evidenceId}</code> · source{' '}
+                          <code>{observation.sourceRecordId}</code>
+                        </p>
+                        {observation.canonicalLocator ? (
+                          <p className="complaint-meta">
+                            <a href={observation.canonicalLocator} target="_blank" rel="noreferrer">
+                              Open source record (attribution)
+                            </a>
+                          </p>
+                        ) : null}
+                      </li>
+                    )
+                  )}
+                </ul>
+              ) : (
+                <p className="empty-state">No confirmed competitive observations were included.</p>
+              )}
+              {detail.report.structuredReport.competitiveResearch.coverageGaps.length > 0 ? (
+                <ul>
+                  {detail.report.structuredReport.competitiveResearch.coverageGaps.map((gap) => (
+                    <li key={gap}>{gap}</li>
+                  ))}
+                </ul>
+              ) : null}
+            </section>
+          ) : null}
           <section className="workspace-section" aria-labelledby="report-inference-heading">
             <div className="section-intro">
               <h2 id="report-inference-heading">Inference</h2>

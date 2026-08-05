@@ -160,5 +160,6 @@ describe('evidence redaction repository', () => {
     ).resolves.toEqual([{ evidenceId: 'evidence:one', fields: ['canonicalLocator', 'text'] }])
     expect(query.mock.calls[0]?.[0]).toContain('research_run_source_items')
     expect(query.mock.calls[1]?.[0]).toContain('research_analysis_run_evidence')
+    expect(query.mock.calls[1]?.[0]).toContain('research_analysis_run_competitor_observations')
   })
 })

@@ -24,6 +24,7 @@ import {
   type ProductionAnalysisSnapshot,
   type ProductionAnalysisStatusReadModel,
   type ProductionResearchArtifact,
+  type ProductionCompetitiveResearchSnapshot,
   type WorkflowActor
 } from '@appsea/contracts'
 import {
@@ -48,6 +49,7 @@ import {
   ProductionAnalysisAdmissionRequiredError
 } from './production-analysis-admission-repository'
 import { PostgresEvidenceRedactionRepository } from './evidence-redaction-repository'
+import { readConfirmedSnapshotForAnalysisInTransaction } from './competitive-research-repository'
 
 const analysisVersion = 'production-analysis-v1'
 const clusterVersion = 'production-cluster-v1'
@@ -159,6 +161,29 @@ interface ExistingOpportunityRow extends QueryResultRow {
 
 interface HashRow extends QueryResultRow {
   content_hash: string
+}
+
+interface ProductionCompetitiveObservationLineageRow extends QueryResultRow {
+  observation_id: string
+  opportunity_id: string
+  competitor_id: string
+  source_id: string
+  source_record_id: string
+  source_item_id: string
+  evidence_id: string
+  observation_content_hash: string
+  evidence_content_hash: string
+  competitor_name: string
+  competitor_type: string
+}
+
+export interface ProductionCompetitiveObservationLineageInput {
+  workspaceId: string
+  collectionRunId: string
+  analysisRunId: string
+  opportunityId: string
+  snapshot: ProductionCompetitiveResearchSnapshot
+  linkedAt?: string | undefined
 }
 
 export class ProductionAnalysisAvailabilityError extends Error {
@@ -281,13 +306,33 @@ export function sanitizeProductionArtifact(
   input: ProductionResearchArtifact
 ): ProductionResearchArtifact {
   const parsed = productionResearchArtifactSchema.parse(input)
+  const restrictedCompetitiveClaims = parsed.competitiveResearch.observations.some(
+    (observation) => observation.allowedRepresentation !== 'excerpt'
+  )
+  const coverageGaps = restrictedCompetitiveClaims
+    ? [
+        ...new Set([
+          ...parsed.coverageGaps,
+          'Competitive observation claims are withheld for metadata-only or aggregate-only representations.'
+        ])
+      ]
+    : parsed.coverageGaps
   return productionResearchArtifactSchema.parse({
     ...parsed,
+    coverageGaps,
     complaints: parsed.complaints.map((complaint) => ({
       ...complaint,
       text:
         complaint.allowedRepresentation === 'excerpt' ? complaint.text : normalizerRedactionMarker
-    }))
+    })),
+    competitiveResearch: {
+      ...parsed.competitiveResearch,
+      observations: parsed.competitiveResearch.observations.map((observation) =>
+        observation.allowedRepresentation === 'excerpt'
+          ? observation
+          : { ...observation, claim: normalizerRedactionMarker }
+      )
+    }
   })
 }
 
@@ -704,6 +749,243 @@ async function assertStoredHash(
   if (result.rows[0]?.content_hash !== expectedHash) {
     throw new ImmutableRecordConflictError(label, expectedHash)
   }
+}
+
+function competitorObservationSnapshotMaterial(
+  input: ProductionCompetitiveObservationLineageInput,
+  rows: ProductionCompetitiveObservationLineageRow[]
+): Record<string, unknown> {
+  return {
+    version: 'production-competitive-observation-v1',
+    collectionRunId: input.collectionRunId,
+    opportunityId: input.opportunityId,
+    observations: [...rows]
+      .sort((left, right) => left.observation_id.localeCompare(right.observation_id))
+      .map((row) => ({
+        observationId: row.observation_id,
+        competitorId: row.competitor_id,
+        sourceId: row.source_id,
+        sourceRecordId: row.source_record_id,
+        sourceItemId: row.source_item_id,
+        evidenceId: row.evidence_id,
+        observationContentHash: row.observation_content_hash,
+        evidenceContentHash: row.evidence_content_hash
+      }))
+  }
+}
+
+/**
+ * Persist the exact confirmed observation snapshot consumed by a production
+ * analysis.  This function is transaction-only so the run/output links and
+ * observation lineage commit together.  A changed review/deletion/policy
+ * projection is reported as stale rather than being silently accepted.
+ */
+export async function persistCompetitorObservationLineageInTransaction(
+  client: PoolClient,
+  rawInput: ProductionCompetitiveObservationLineageInput
+): Promise<string> {
+  const input: ProductionCompetitiveObservationLineageInput = {
+    ...rawInput,
+    workspaceId: appseaIdentifierSchema.parse(rawInput.workspaceId),
+    collectionRunId: appseaIdentifierSchema.parse(rawInput.collectionRunId),
+    analysisRunId: appseaIdentifierSchema.parse(rawInput.analysisRunId),
+    opportunityId: appseaIdentifierSchema.parse(rawInput.opportunityId),
+    snapshot: {
+      observations: rawInput.snapshot.observations.map((observation) => ({ ...observation })),
+      coverageGaps: [...rawInput.snapshot.coverageGaps]
+    }
+  }
+  const expected = [...input.snapshot.observations].sort((left, right) =>
+    left.observationId.localeCompare(right.observationId)
+  )
+  const expectedIds = expected.map((observation) => observation.observationId)
+  if (new Set(expectedIds).size !== expectedIds.length) {
+    throw new ProductionAnalysisLineageError(
+      'Production competitive observation snapshot contains duplicate identifiers'
+    )
+  }
+  if (
+    expected.some(
+      (observation) =>
+        observation.opportunityId !== input.opportunityId ||
+        observation.synthetic ||
+        observation.reviewState !== 'confirmed' ||
+        observation.evidenceId === null ||
+        !/^[a-f0-9]{64}$/.test(observation.observationHash) ||
+        !/^[a-f0-9]{64}$/.test(observation.evidenceHash)
+    )
+  ) {
+    throw new ProductionAnalysisLineageError(
+      'Production competitive observation snapshot contains an unconfirmed or synthetic row'
+    )
+  }
+
+  const current = await readConfirmedSnapshotForAnalysisInTransaction(
+    client,
+    input.workspaceId,
+    input.collectionRunId,
+    input.opportunityId
+  )
+  const currentIds = current.observations
+    .map((observation) => observation.observationId)
+    .sort((left, right) => left.localeCompare(right))
+  // Older production artifacts predate the competitive snapshot and default
+  // this field to an empty list. Treat the repository's generic empty-snapshot
+  // notice as derived compatibility metadata, but fail closed on every other
+  // coverage change (rejection, deletion, relation, or policy drift).
+  const genericNoObservationGap =
+    'No confirmed non-synthetic competitor observations are available.'
+  const expectedCoverageGaps = [...new Set(input.snapshot.coverageGaps)]
+    .filter((gap) => gap !== genericNoObservationGap)
+    .sort()
+  const currentCoverageGaps = [...new Set(current.coverageGaps)]
+    .filter((gap) => gap !== genericNoObservationGap)
+    .sort()
+  if (
+    currentIds.length !== expectedIds.length ||
+    currentIds.some((observationId, index) => observationId !== expectedIds[index]) ||
+    currentCoverageGaps.length !== expectedCoverageGaps.length ||
+    currentCoverageGaps.some((gap, index) => gap !== expectedCoverageGaps[index])
+  ) {
+    throw new ProductionAnalysisLineageError(
+      'Production competitive observation snapshot is stale; confirmation or provenance changed'
+    )
+  }
+  const currentById = new Map(
+    current.observations.map((observation) => [observation.observationId, observation])
+  )
+  for (const observation of expected) {
+    const currentObservation = currentById.get(observation.observationId)
+    if (
+      !currentObservation ||
+      currentObservation.claim !== observation.claim ||
+      currentObservation.sourceItemId !== observation.sourceItemId ||
+      currentObservation.evidenceId !== observation.evidenceId ||
+      currentObservation.competitorId !== observation.competitorId ||
+      currentObservation.observedAt !== observation.observedAt ||
+      currentObservation.observationHash !== observation.observationHash ||
+      currentObservation.evidenceHash !== observation.evidenceHash ||
+      currentObservation.competitorName !== observation.competitorName ||
+      currentObservation.competitorType !== observation.competitorType
+    ) {
+      throw new ProductionAnalysisLineageError(
+        `Production competitive observation ${observation.observationId} changed after snapshot`
+      )
+    }
+  }
+
+  const hashRows = await client.query<ProductionCompetitiveObservationLineageRow>(
+    `SELECT observation.observation_id,
+            observation.opportunity_id,
+            observation.competitor_id,
+            observation.source_id,
+            observation.source_record_id,
+            observation.source_item_id,
+            observation.evidence_id,
+            observation.content_hash AS observation_content_hash,
+            evidence.content_hash AS evidence_content_hash,
+            competitor.name AS competitor_name,
+            competitor.competitor_type
+       FROM appsea.competitor_research_observations observation
+       JOIN appsea.evidence_records evidence
+         ON evidence.workspace_id = observation.workspace_id
+        AND evidence.evidence_id = observation.evidence_id
+       JOIN appsea.competitors competitor
+         ON competitor.workspace_id = observation.workspace_id
+        AND competitor.competitor_id = observation.competitor_id
+      WHERE observation.workspace_id = $1
+        AND observation.opportunity_id = $2
+        AND observation.observation_id = ANY($3::text[])
+        AND observation.review_state = 'confirmed'
+        AND observation.synthetic = false
+        AND observation.evidence_id IS NOT NULL`,
+    [input.workspaceId, input.opportunityId, expectedIds]
+  )
+  if (hashRows.rows.length !== expected.length) {
+    throw new ProductionAnalysisLineageError(
+      'Production competitive observation content is no longer available'
+    )
+  }
+  const hashById = new Map(hashRows.rows.map((row) => [row.observation_id, row]))
+  const lineageRows = expected.map((observation) => {
+    const row = hashById.get(observation.observationId)
+    if (!row) {
+      throw new ProductionAnalysisLineageError(
+        `Production competitive observation ${observation.observationId} is stale`
+      )
+    }
+    if (
+      row.observation_content_hash !== observation.observationHash ||
+      row.evidence_content_hash !== observation.evidenceHash ||
+      row.competitor_name !== observation.competitorName ||
+      row.competitor_type !== observation.competitorType
+    ) {
+      throw new ProductionAnalysisLineageError(
+        `Production competitive observation ${observation.observationId} hashes or competitor identity changed`
+      )
+    }
+    return row
+  })
+
+  const existing = await client.query<ProductionCompetitiveObservationLineageRow>(
+    `SELECT observation_id, opportunity_id, competitor_id, source_id, source_record_id,
+            source_item_id, evidence_id, observation_content_hash, evidence_content_hash
+       FROM appsea.research_analysis_run_competitor_observations
+      WHERE workspace_id = $1 AND analysis_run_id = $2
+      ORDER BY observation_id`,
+    [input.workspaceId, input.analysisRunId]
+  )
+  if (existing.rows.length > 0) {
+    const existingIds = existing.rows.map((row) => row.observation_id)
+    if (
+      existingIds.length !== lineageRows.length ||
+      existingIds.some(
+        (observationId, index) => observationId !== lineageRows[index]?.observation_id
+      )
+    ) {
+      throw new ProductionAnalysisLineageError(
+        'Production competitive observation lineage conflicts with an existing run snapshot'
+      )
+    }
+    for (const [index, row] of lineageRows.entries()) {
+      if (
+        existing.rows[index]?.observation_content_hash !== row.observation_content_hash ||
+        existing.rows[index]?.evidence_content_hash !== row.evidence_content_hash
+      ) {
+        throw new ImmutableRecordConflictError(
+          'production competitive observation lineage',
+          row.observation_id
+        )
+      }
+    }
+  }
+
+  for (const row of lineageRows) {
+    await client.query(
+      `INSERT INTO appsea.research_analysis_run_competitor_observations
+       (workspace_id, analysis_run_id, opportunity_id, observation_id, competitor_id,
+        source_id, source_record_id, source_item_id, evidence_id,
+        observation_content_hash, evidence_content_hash, linked_at)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11,
+             COALESCE($12::timestamptz, clock_timestamp()))
+     ON CONFLICT (workspace_id, analysis_run_id, observation_id) DO NOTHING`,
+      [
+        input.workspaceId,
+        input.analysisRunId,
+        input.opportunityId,
+        row.observation_id,
+        row.competitor_id,
+        row.source_id,
+        row.source_record_id,
+        row.source_item_id,
+        row.evidence_id,
+        row.observation_content_hash,
+        row.evidence_content_hash,
+        input.linkedAt ?? null
+      ]
+    )
+  }
+  return contentHash(competitorObservationSnapshotMaterial(input, lineageRows))
 }
 
 export class PostgresProductionAnalysisRepository {
@@ -1261,8 +1543,8 @@ export class PostgresProductionAnalysisRepository {
 
     const retention = retentionUntil(parsed)
     const artifact = sanitizeProductionArtifact(parsed.artifact)
-    const report = generateOpportunityReport(parsed.artifact, parsed.artifact.createdAt)
-    const planPackage = generateProductionPlanPackage(parsed.artifact, parsed.artifact.createdAt)
+    const report = generateOpportunityReport(artifact, parsed.artifact.createdAt)
+    const planPackage = generateProductionPlanPackage(artifact, parsed.artifact.createdAt)
     const reportManifestHash = contentHash(report)
     const planManifestHash = contentHash(planPackage)
     const opportunityId = parsed.artifact.opportunity.id
@@ -1577,6 +1859,20 @@ export class PostgresProductionAnalysisRepository {
               ]
             )
           }
+
+          // Owner-import competitor and contrary observations are a separate
+          // reviewed input. Persist the worker-reconstructed snapshot after
+          // the opportunity/competitor relations exist so the database trigger
+          // can enforce source, evidence, and collection-run lineage.
+          const observationSnapshot = parsed.artifact.competitiveResearch
+          await persistCompetitorObservationLineageInTransaction(client, {
+            workspaceId: parsed.workspaceId,
+            collectionRunId: parsed.collectionRunId,
+            analysisRunId: parsed.analysisRunId,
+            opportunityId,
+            snapshot: observationSnapshot,
+            linkedAt: completedAt
+          })
 
           await client.query(
             `INSERT INTO appsea.opportunity_score_snapshots

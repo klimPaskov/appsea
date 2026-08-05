@@ -140,7 +140,14 @@ export function generateOpportunityReport(
           : []),
         artifact.opportunity.contraryEvidence.length > 0
           ? `${artifact.opportunity.contraryEvidence.length} contrary signal${artifact.opportunity.contraryEvidence.length === 1 ? '' : 's'} remain visible.`
-          : 'No contrary evidence was recorded in this artifact.'
+          : 'No contrary evidence was recorded in this artifact.',
+        ...(artifact.mode === 'production'
+          ? [
+              artifact.competitiveResearch.observations.length > 0
+                ? `${artifact.competitiveResearch.observations.length} confirmed, evidence-linked competitor or contrary observation${artifact.competitiveResearch.observations.length === 1 ? '' : 's'} are included from the private collection lineage.`
+                : 'No confirmed, evidence-linked competitor or contrary observations are included.'
+            ]
+          : [])
       ],
       ...(qualitySnapshot ? { qualitySnapshot } : {})
     },
@@ -166,6 +173,9 @@ export function generateOpportunityReport(
       sources
     },
     ...(qualitySnapshot ? { qualitySnapshot } : {}),
+    ...(artifact.mode === 'production'
+      ? { competitiveResearch: artifact.competitiveResearch }
+      : {}),
     warnings: artifact.warnings
   })
 }
@@ -677,7 +687,13 @@ ${indentedJson(
 
 ## Competitors and contrary evidence
 
-${indentedJson({ competitors: opportunity.competitors, contraryEvidence: opportunity.contraryEvidence })}
+${indentedJson({
+  competitors: opportunity.competitors,
+  contraryEvidence: opportunity.contraryEvidence,
+  competitiveResearch: artifact.competitiveResearch
+})}
+
+Confirmed competitive observations are tenant-private, evidence-linked, and limited to the current reviewed collection lineage. They do not turn reviewed seed assumptions into broad market coverage; rejected, unreviewed, deleted, or unrelated claims remain excluded and listed as coverage gaps.
 
 ## Coverage gaps and warnings
 

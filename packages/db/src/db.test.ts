@@ -116,7 +116,8 @@ describe('database foundation', () => {
       '0100',
       '0101',
       '0102',
-      '0103'
+      '0103',
+      '0104'
     ])
     expect(migrations[0]?.checksum).toMatch(/^[a-f0-9]{64}$/)
     expect(migrations[0]?.sql).toContain('CREATE TABLE appsea.evidence_records')
@@ -194,6 +195,31 @@ describe('database foundation', () => {
     expect(contraryPurposeMigration?.sql).toContain(
       'source_row.collection_purpose = ANY(source_row.permitted_purposes)'
     )
+    const competitorLineageMigration = migrations.find((migration) => migration.version === '0104')
+    expect(competitorLineageMigration?.sql).toContain(
+      'CREATE TABLE appsea.research_analysis_run_competitor_observations'
+    )
+    expect(competitorLineageMigration?.sql).toContain(
+      'production_analysis_competitor_observation_lineage_guard'
+    )
+    expect(competitorLineageMigration?.sql).toContain(
+      'competitor_observation_analysis_invalidation'
+    )
+    expect(competitorLineageMigration?.sql).toContain(
+      'CREATE OR REPLACE FUNCTION appsea.invalidate_competitive_observation_analysis()'
+    )
+    expect(competitorLineageMigration?.sql).toContain("availability_state = 'invalidated'")
+    expect(competitorLineageMigration?.sql).toContain(
+      'action, target_type,\n         target_id, correlation_id'
+    )
+    expect(competitorLineageMigration?.sql).toContain(
+      'research_analysis_run_competitor_observations'
+    )
+    expect(competitorLineageMigration?.sql).toContain(
+      'observation_row.collection_purpose = ANY(policy.permitted_purposes)'
+    )
+    expect(competitorLineageMigration?.sql).toContain('evidence_content_hash char(64)')
+    expect(competitorLineageMigration?.sql).toContain('FORCE ROW LEVEL SECURITY')
     const migrationOwnerCompatibilityMigration = migrations.find(
       (migration) => migration.version === '0074'
     )

@@ -424,6 +424,53 @@ describe('production analysis composition', () => {
     )
   })
 
+  it('carries only the confirmed evidence-linked competitive snapshot into the artifact', () => {
+    const competitiveResearch = {
+      observations: [
+        {
+          observationId: 'observation:research-competitor',
+          opportunityId: 'opportunity:research-test',
+          competitorId: 'competitor:manual',
+          competitorName: 'Manual spreadsheet',
+          competitorType: 'workaround' as const,
+          sourceId: 'source:approved',
+          sourceRecordId: '2',
+          sourceItemId: 'source-item:research-2',
+          evidenceId: 'evidence:research-2',
+          observationHash: 'd'.repeat(64),
+          evidenceHash: '2'.repeat(64),
+          claimType: 'feature' as const,
+          claim: 'The workaround requires repeated manual entry.',
+          observedAt: '2026-07-25T00:00:00.000Z',
+          capturedAt: '2026-07-25T00:00:00.000Z',
+          publishedAt: null,
+          confidence: 0.8,
+          reviewState: 'confirmed' as const,
+          synthetic: false as const,
+          allowedRepresentation: 'excerpt' as const,
+          canonicalLocator: null
+        }
+      ],
+      coverageGaps: ['Only the current private collection lineage is represented.']
+    }
+    const artifact = buildProductionResearchArtifact({ ...productionInput, competitiveResearch })
+    expect(artifact.competitiveResearch).toEqual(competitiveResearch)
+    expect(artifact.coverageGaps).toContain(
+      'Only the current private collection lineage is represented.'
+    )
+    expect(artifact.coverageGaps).toContain(
+      'Only confirmed, evidence-linked observations from the current private collection lineage are included; unreviewed, rejected, deleted, or unrelated claims remain excluded.'
+    )
+    const changed = buildProductionResearchArtifact({
+      ...productionInput,
+      competitiveResearch: {
+        ...competitiveResearch,
+        observations: [{ ...competitiveResearch.observations[0]!, claim: 'A changed claim.' }]
+      }
+    })
+    expect(changed.id).not.toBe(artifact.id)
+  })
+
   it('retains high-similarity production observations and records the coverage gap', () => {
     const nearDuplicate = {
       ...productionInput.complaints[0]!,

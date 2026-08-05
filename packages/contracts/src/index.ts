@@ -1470,6 +1470,87 @@ export function composeCompetitiveResearchReadModel(input: {
 }
 
 /**
+ * A confirmed, evidence-linked competitive observation copied into a
+ * production-analysis snapshot.  This is deliberately narrower than the
+ * private observation read model: rejected/unreviewed claims, synthetic rows,
+ * and claims without retained evidence cannot influence a report or plan.
+ * The content hashes let the persistence boundary re-check that the source
+ * observation and evidence have not changed between reconstruction and write.
+ */
+export const productionCompetitiveObservationSnapshotSchema = z
+  .object({
+    observationId: appseaIdentifierSchema,
+    opportunityId: appseaIdentifierSchema,
+    competitorId: appseaIdentifierSchema,
+    competitorName: z.string().min(1).max(240),
+    competitorType: competitorSchema.shape.type,
+    sourceId: appseaIdentifierSchema,
+    sourceRecordId: z.string().min(1).max(240),
+    sourceItemId: appseaIdentifierSchema,
+    evidenceId: appseaIdentifierSchema,
+    observationHash: contentHashSchema,
+    evidenceHash: contentHashSchema,
+    claimType: competitiveResearchObservationClaimTypeSchema,
+    claim: competitiveResearchObservationClaimSchema,
+    observedAt: z.string().datetime(),
+    capturedAt: z.string().datetime(),
+    publishedAt: z.string().datetime().nullable(),
+    confidence: z.number().min(0).max(1),
+    reviewState: z.literal('confirmed'),
+    synthetic: z.literal(false),
+    allowedRepresentation: z.enum(['excerpt', 'metadata-only', 'aggregate-only']),
+    canonicalLocator: canonicalLocatorSchema.nullable()
+  })
+  .strict()
+
+export const productionCompetitiveResearchSnapshotSchema = z
+  .object({
+    observations: z.array(productionCompetitiveObservationSnapshotSchema).max(500),
+    coverageGaps: z.array(z.string().min(1).max(500)).max(100)
+  })
+  .strict()
+
+function validateProductionCompetitiveResearch(
+  snapshot: ProductionCompetitiveResearchSnapshot,
+  input: {
+    opportunityId: string
+    sourceId: string
+    evidenceIds: ReadonlySet<string>
+  },
+  addIssue: (path: Array<string | number>, message: string) => void,
+  pathPrefix: Array<string | number>
+): void {
+  const observationIds = new Set<string>()
+  for (const [index, observation] of snapshot.observations.entries()) {
+    if (observationIds.has(observation.observationId)) {
+      addIssue(
+        [...pathPrefix, 'observations', index, 'observationId'],
+        'Competitive observation IDs must be unique in an analysis snapshot'
+      )
+    }
+    observationIds.add(observation.observationId)
+    if (observation.opportunityId !== input.opportunityId) {
+      addIssue(
+        [...pathPrefix, 'observations', index, 'opportunityId'],
+        'Competitive observation opportunity must match the analyzed opportunity'
+      )
+    }
+    if (observation.sourceId !== input.sourceId) {
+      addIssue(
+        [...pathPrefix, 'observations', index, 'sourceId'],
+        'Competitive observation source must match the reviewed collection policy'
+      )
+    }
+    if (!input.evidenceIds.has(observation.evidenceId)) {
+      addIssue(
+        [...pathPrefix, 'observations', index, 'evidenceId'],
+        'Competitive observation evidence must be retained in the analyzed collection'
+      )
+    }
+  }
+}
+
+/**
  * Deep research is a separate governance gate from the lighter
  * `source-backed` competitive read. The latter proves that at least one
  * permitted claim exists; this gate records the full reviewed checklist
@@ -2449,6 +2530,9 @@ export const opportunityReportSchema = z
         qualitySnapshot: researchQualitySnapshotSchema.optional()
       })
       .strict(),
+    competitiveResearch: productionCompetitiveResearchSnapshotSchema
+      .default({ observations: [], coverageGaps: [] })
+      .optional(),
     recommendation: z
       .object({
         decision: z.enum(['validate', 'explore', 'defer']),
@@ -2972,6 +3056,10 @@ export const productionAnalysisInputSchema = z
     complaints: z.array(productionAnalysisComplaintSchema).max(5_000),
     analyses: z.array(complaintAnalysisSchema).max(5_000).optional(),
     deletions: z.array(sourceDeletionEventSchema).max(5_000),
+    competitiveResearch: productionCompetitiveResearchSnapshotSchema.default({
+      observations: [],
+      coverageGaps: []
+    }),
     coverageGaps: z.array(z.string().max(500)).max(500),
     warnings: z.array(z.string().max(500)).max(500),
     opportunitySeed: productionOpportunitySeedReviewSchema,
@@ -3098,6 +3186,16 @@ export const productionAnalysisInputSchema = z
         }
       })
     }
+    validateProductionCompetitiveResearch(
+      input.competitiveResearch,
+      {
+        opportunityId: input.opportunitySeed.seed.id,
+        sourceId: input.request.sourceId,
+        evidenceIds: new Set(input.complaints.map((complaint) => complaint.evidenceId))
+      },
+      addIssue,
+      ['competitiveResearch']
+    )
     const balancedScoreInput = input.opportunitySeed.seed.balancedScoreInput
     if (balancedScoreInput) {
       addBalancedScoreFactorProvenanceIssues(
@@ -3126,7 +3224,11 @@ export const productionResearchArtifactSchema = researchArtifactSchema
     testOnly: z.boolean(),
     policySnapshot: productionPolicySnapshotSchema,
     opportunitySeedReview: productionOpportunitySeedReviewSchema,
-    complaints: z.array(productionAnalysisComplaintSchema).min(1).max(5_000)
+    complaints: z.array(productionAnalysisComplaintSchema).min(1).max(5_000),
+    competitiveResearch: productionCompetitiveResearchSnapshotSchema.default({
+      observations: [],
+      coverageGaps: []
+    })
   })
   .superRefine((artifact, context) => {
     const addIssue = (path: Array<string | number>, message: string): void => {
@@ -3147,6 +3249,16 @@ export const productionResearchArtifactSchema = researchArtifactSchema
     ) {
       addIssue(['analyses'], 'Production analyses must cover each retained complaint exactly once')
     }
+    validateProductionCompetitiveResearch(
+      artifact.competitiveResearch,
+      {
+        opportunityId: artifact.opportunity.id,
+        sourceId: artifact.policySnapshot.sourceId,
+        evidenceIds: new Set(artifact.complaints.map((complaint) => complaint.evidenceId))
+      },
+      addIssue,
+      ['competitiveResearch']
+    )
     const memberships = artifact.clusters.flatMap((cluster) => cluster.complaintIds)
     if (artifact.analysisRunId === artifact.runId) {
       addIssue(['analysisRunId'], 'Analysis run must be distinct from the collection run')
@@ -3562,6 +3674,10 @@ export const productionCollectionAnalysisSourceSchema = z
     complaints: z.array(productionAnalysisComplaintSchema).max(5_000),
     analyses: z.array(complaintAnalysisSchema).max(5_000).optional(),
     deletions: z.array(sourceDeletionEventSchema).max(5_000),
+    competitiveResearch: productionCompetitiveResearchSnapshotSchema.default({
+      observations: [],
+      coverageGaps: []
+    }),
     coverageGaps: z.array(z.string().max(500)).max(500),
     warnings: z.array(z.string().max(500)).max(500)
   })
@@ -7034,6 +7150,18 @@ export function redactProductionResearchArtifact(
     const complaintId = byComplaintId.get(evidenceId)
     if (complaintId) masksByComplaintId.set(complaintId, fields)
   }
+  const redactCompetitiveObservation = (
+    observation: ProductionCompetitiveObservationSnapshot
+  ): ProductionCompetitiveObservationSnapshot => {
+    const fields = byEvidenceId.get(observation.evidenceId)
+    if (!fields) return observation
+    const narrativeRedacted = [...fields].some((field) => field !== 'canonicalLocator')
+    return {
+      ...observation,
+      ...(narrativeRedacted ? { claim: evidenceRedactionMarker } : {}),
+      ...(fields.has('canonicalLocator') ? { canonicalLocator: null } : {})
+    }
+  }
   return productionResearchArtifactSchema.parse({
     ...artifact,
     opportunity: redactOpportunity(artifact.opportunity, masks),
@@ -7053,7 +7181,11 @@ export function redactProductionResearchArtifact(
           title: evidenceRedactionMarker,
           summary: evidenceRedactionMarker
         }))
-      : artifact.clusters
+      : artifact.clusters,
+    competitiveResearch: {
+      ...artifact.competitiveResearch,
+      observations: artifact.competitiveResearch.observations.map(redactCompetitiveObservation)
+    }
   })
 }
 
@@ -7112,6 +7244,23 @@ export function redactOpportunityReport(
           rationale: [evidenceRedactionMarker]
         }
       : report.inference,
+    competitiveResearch: report.competitiveResearch
+      ? {
+          ...report.competitiveResearch,
+          observations: report.competitiveResearch.observations.map((observation) => {
+            const fields = byEvidenceId.get(observation.evidenceId)
+            if (!fields) return observation
+            const observationNarrativeRedacted = [...fields].some(
+              (field) => field !== 'canonicalLocator'
+            )
+            return {
+              ...observation,
+              ...(observationNarrativeRedacted ? { claim: evidenceRedactionMarker } : {}),
+              ...(fields.has('canonicalLocator') ? { canonicalLocator: null } : {})
+            }
+          })
+        }
+      : undefined,
     recommendation: narrativeRedacted
       ? {
           ...report.recommendation,
@@ -7272,6 +7421,12 @@ export type CompetitiveResearchObservationReviewInput = z.infer<
 >
 export type WorkspaceCompetitorTarget = z.infer<typeof workspaceCompetitorTargetSchema>
 export type CompetitiveResearchReadModel = z.infer<typeof competitiveResearchReadModelSchema>
+export type ProductionCompetitiveObservationSnapshot = z.infer<
+  typeof productionCompetitiveObservationSnapshotSchema
+>
+export type ProductionCompetitiveResearchSnapshot = z.infer<
+  typeof productionCompetitiveResearchSnapshotSchema
+>
 export type DeepResearchGateStatus = z.infer<typeof deepResearchGateStatusSchema>
 export type DeepResearchGateCheck = z.infer<typeof deepResearchGateCheckSchema>
 export type DeepResearchGateChecks = z.infer<typeof deepResearchGateChecksSchema>

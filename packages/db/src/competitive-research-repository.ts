@@ -8,10 +8,13 @@ import {
   type CompetitiveResearchObservation,
   type CompetitiveResearchObservationCreateInput,
   type CompetitiveResearchObservationReviewInput,
+  type ProductionCompetitiveResearchSnapshot,
   type WorkspaceCompetitorTarget
 } from '@appsea/contracts'
 import { contentHash } from './hash'
-import { withAuthenticatedWorkspaceTransaction } from './transaction'
+import { withAuthenticatedWorkspaceTransaction, withWorkspaceTransaction } from './transaction'
+
+export type ProductionCompetitiveObservationSnapshot = ProductionCompetitiveResearchSnapshot
 
 interface ObservationRow extends QueryResultRow {
   workspace_id: string
@@ -52,6 +55,32 @@ interface CompetitorTargetRow extends QueryResultRow {
   competitor_type: string
 }
 
+interface SnapshotObservationRow extends ObservationRow {
+  content_hash: string
+  evidence_content_hash: string
+  competitor_name: string
+  competitor_type: 'direct' | 'adjacent' | 'platform' | 'workaround' | 'do-nothing'
+}
+
+interface SnapshotCoverageRow extends QueryResultRow {
+  review_state: ObservationRow['review_state']
+  synthetic: boolean
+  source_item_deletion_state: string | null
+  evidence_deletion_state: string | null
+  evidence_id: string | null
+  relation_competitor_id: string | null
+  competitor_synthetic: boolean | null
+  collection_source_item_id: string | null
+  collection_source_id: string | null
+  collection_policy_source_id: string | null
+}
+
+/**
+ * The private production-analysis handoff intentionally carries only the
+ * validated observation projection.  It is structural so the contracts
+ * package can add a richer named version without making this persistence
+ * package depend on a caller-owned payload.
+ */
 export class CompetitiveResearchObservationNotFoundError extends Error {
   constructor() {
     super('Competitive research observation was not found')
@@ -103,6 +132,8 @@ function confidence(value: string | number): number {
   return parsed
 }
 
+const sourcePolicyClaimRedactionMarker = '[Content withheld by source policy]'
+
 function isUniqueViolation(error: unknown): boolean {
   return (
     typeof error === 'object' &&
@@ -131,7 +162,10 @@ function readModel(row: ObservationRow): CompetitiveResearchObservation {
     sourceItemId: row.source_item_id,
     evidenceId: row.evidence_id,
     claimType: row.claim_type,
-    claim: row.claim,
+    claim:
+      row.allowed_representation === 'excerpt' || row.allowed_representation === 'fixture'
+        ? row.claim
+        : sourcePolicyClaimRedactionMarker,
     observedAt: requiredIso(row.observed_at),
     capturedAt: requiredIso(row.captured_at),
     publishedAt: iso(row.published_at),
@@ -260,8 +294,263 @@ async function readRows(
   return result.rows
 }
 
+const productionSnapshotSelect = `
+  SELECT observation.workspace_id,
+         observation.observation_id,
+         observation.opportunity_id,
+         observation.competitor_id,
+         source_item.source_id,
+         source_item.source_record_id,
+         observation.source_item_id,
+         observation.evidence_id,
+         observation.claim_type,
+         observation.claim,
+         observation.observed_at,
+         source_item.captured_at,
+         source_item.published_at,
+         observation.confidence,
+         observation.review_state,
+         observation.synthetic,
+         observation.allowed_representation,
+         source_item.canonical_locator,
+         observation.created_by,
+         observation.reviewed_by,
+         observation.reviewed_at,
+         observation.created_at,
+         observation.updated_at,
+         observation.content_hash,
+         evidence.content_hash AS evidence_content_hash,
+         competitor.name AS competitor_name,
+         competitor.competitor_type
+    FROM appsea.competitor_research_observations observation
+    JOIN appsea.source_items source_item
+      ON source_item.workspace_id = observation.workspace_id
+     AND source_item.source_item_id = observation.source_item_id
+    JOIN appsea.evidence_records evidence
+      ON evidence.workspace_id = observation.workspace_id
+     AND evidence.evidence_id = observation.evidence_id
+    JOIN appsea.research_run_source_items collection_item
+      ON collection_item.workspace_id = observation.workspace_id
+     AND collection_item.run_id = $2
+     AND collection_item.source_item_id = observation.source_item_id
+     AND collection_item.source_id = source_item.source_id
+     AND collection_item.source_policy_version = source_item.source_policy_version
+    JOIN appsea.research_run_source_policies collection_policy
+      ON collection_policy.workspace_id = collection_item.workspace_id
+     AND collection_policy.run_id = collection_item.run_id
+     AND collection_policy.source_id = collection_item.source_id
+     AND collection_policy.policy_version = collection_item.source_policy_version
+    JOIN appsea.source_policy_versions policy
+      ON policy.source_id = source_item.source_id
+     AND policy.policy_version = source_item.source_policy_version
+    JOIN appsea.sources source
+      ON source.source_id = source_item.source_id
+    JOIN appsea.source_policy_reviews policy_review
+      ON policy_review.source_id = policy.source_id
+     AND policy_review.policy_version = policy.policy_version
+     AND policy_review.content_hash = policy.content_hash
+     AND policy_review.decision = 'approved'
+     AND policy_review.independence_attested
+     AND policy_review.reviewer_role <> 'legacy'
+    JOIN appsea.opportunity_competitors relation
+      ON relation.workspace_id = observation.workspace_id
+     AND relation.opportunity_id = observation.opportunity_id
+     AND relation.competitor_id = observation.competitor_id
+    JOIN appsea.competitors competitor
+      ON competitor.workspace_id = relation.workspace_id
+     AND competitor.competitor_id = relation.competitor_id
+   WHERE observation.workspace_id = $1
+     AND observation.opportunity_id = $3
+     AND observation.review_state = 'confirmed'
+     AND observation.synthetic = false
+     AND observation.evidence_id IS NOT NULL
+     AND source_item.deletion_state = 'active'
+     AND evidence.deletion_state = 'active'
+     AND evidence.synthetic = false
+     AND evidence.redacted = true
+     AND evidence.allowed_representation = source_item.requested_display_mode
+     AND source.source_type <> 'fixture'
+     AND source.lifecycle_state = 'active'
+     AND source.current_policy_version = policy.policy_version
+     AND policy.policy_state = 'approved'
+     AND policy.commercial_use IN ('allowed', 'restricted')
+     AND policy.reviewed_at IS NOT NULL
+     AND (policy.expires_at IS NULL OR policy.expires_at > clock_timestamp())
+     AND source_item.collection_purpose IN ('competitor-research', 'contrary-evidence')
+     AND source_item.collection_purpose = ANY(policy.permitted_purposes)
+     AND competitor.synthetic = false
+   ORDER BY observation.observation_id`
+
+async function readProductionSnapshotRows(
+  client: PoolClient,
+  workspaceId: string,
+  collectionRunId: string,
+  opportunityId: string
+): Promise<SnapshotObservationRow[]> {
+  const result = await client.query<SnapshotObservationRow>(productionSnapshotSelect, [
+    workspaceId,
+    collectionRunId,
+    opportunityId
+  ])
+  return result.rows
+}
+
+async function readProductionSnapshotCoverage(
+  client: PoolClient,
+  workspaceId: string,
+  collectionRunId: string,
+  opportunityId: string
+): Promise<SnapshotCoverageRow[]> {
+  const result = await client.query<SnapshotCoverageRow>(
+    `SELECT observation.review_state,
+            observation.synthetic,
+            source_item.deletion_state AS source_item_deletion_state,
+            evidence.deletion_state AS evidence_deletion_state,
+            observation.evidence_id,
+            relation.competitor_id AS relation_competitor_id,
+            competitor.synthetic AS competitor_synthetic,
+            collection_item.source_item_id AS collection_source_item_id,
+            collection_item.source_id AS collection_source_id,
+            collection_policy.source_id AS collection_policy_source_id
+       FROM appsea.competitor_research_observations observation
+       LEFT JOIN appsea.source_items source_item
+         ON source_item.workspace_id = observation.workspace_id
+        AND source_item.source_item_id = observation.source_item_id
+       LEFT JOIN appsea.evidence_records evidence
+         ON evidence.workspace_id = observation.workspace_id
+        AND evidence.evidence_id = observation.evidence_id
+       LEFT JOIN appsea.opportunity_competitors relation
+         ON relation.workspace_id = observation.workspace_id
+        AND relation.opportunity_id = observation.opportunity_id
+        AND relation.competitor_id = observation.competitor_id
+       LEFT JOIN appsea.competitors competitor
+         ON competitor.workspace_id = relation.workspace_id
+        AND competitor.competitor_id = relation.competitor_id
+       LEFT JOIN appsea.research_run_source_items collection_item
+         ON collection_item.workspace_id = observation.workspace_id
+        AND collection_item.run_id = $2
+        AND collection_item.source_item_id = observation.source_item_id
+       LEFT JOIN appsea.research_run_source_policies collection_policy
+         ON collection_policy.workspace_id = collection_item.workspace_id
+        AND collection_policy.run_id = collection_item.run_id
+        AND collection_policy.source_id = collection_item.source_id
+        AND collection_policy.policy_version = collection_item.source_policy_version
+      WHERE observation.workspace_id = $1
+        AND observation.opportunity_id = $3`,
+    [workspaceId, collectionRunId, opportunityId]
+  )
+  return result.rows
+}
+
+function productionSnapshotCoverageGaps(rows: SnapshotCoverageRow[], validCount: number): string[] {
+  const gaps = new Set<string>()
+  for (const row of rows) {
+    if (row.review_state === 'rejected') {
+      gaps.add('A competitive observation was rejected after the snapshot was captured.')
+    }
+    if (
+      row.review_state === 'confirmed' &&
+      (row.source_item_deletion_state !== 'active' || row.evidence_deletion_state !== 'active')
+    ) {
+      gaps.add('A confirmed competitive observation has deleted or inactive provenance.')
+    }
+    if (
+      row.review_state === 'confirmed' &&
+      (row.relation_competitor_id === null || row.competitor_synthetic !== false)
+    ) {
+      gaps.add('A confirmed competitive observation is missing an active non-synthetic competitor.')
+    }
+    if (
+      row.review_state === 'confirmed' &&
+      (row.evidence_id === null || row.collection_source_item_id === null)
+    ) {
+      gaps.add('A confirmed competitive observation is missing collection evidence lineage.')
+    }
+    if (
+      row.review_state === 'confirmed' &&
+      row.collection_source_item_id !== null &&
+      (row.collection_source_id === null ||
+        row.collection_policy_source_id !== row.collection_source_id)
+    ) {
+      gaps.add('A confirmed competitive observation is missing its collection source policy.')
+    }
+  }
+  if (validCount === 0) {
+    gaps.add('No confirmed non-synthetic competitor observations are available.')
+  }
+  return [...gaps]
+}
+
+/** Read the deterministic, policy-bound competitor/contrary snapshot inside a workspace transaction. */
+export async function readConfirmedSnapshotForAnalysisInTransaction(
+  client: PoolClient,
+  workspaceId: string,
+  collectionRunId: string,
+  opportunityId: string
+): Promise<ProductionCompetitiveObservationSnapshot> {
+  const rows = await readProductionSnapshotRows(client, workspaceId, collectionRunId, opportunityId)
+  const coverage = await readProductionSnapshotCoverage(
+    client,
+    workspaceId,
+    collectionRunId,
+    opportunityId
+  )
+  return {
+    observations: rows.map((row) => {
+      const observation = readModel(row)
+      return {
+        observationId: observation.observationId,
+        opportunityId: observation.opportunityId,
+        competitorId: observation.competitorId,
+        competitorName: row.competitor_name,
+        competitorType: row.competitor_type,
+        sourceId: observation.sourceId,
+        sourceRecordId: observation.sourceRecordId,
+        sourceItemId: observation.sourceItemId,
+        evidenceId: observation.evidenceId as string,
+        observationHash: row.content_hash,
+        evidenceHash: row.evidence_content_hash,
+        claimType: observation.claimType,
+        claim: observation.claim,
+        observedAt: observation.observedAt,
+        capturedAt: observation.capturedAt,
+        publishedAt: observation.publishedAt,
+        confidence: observation.confidence,
+        reviewState: 'confirmed' as const,
+        synthetic: false as const,
+        allowedRepresentation: observation.allowedRepresentation as
+          'excerpt' | 'metadata-only' | 'aggregate-only',
+        canonicalLocator: observation.canonicalLocator
+      }
+    }),
+    coverageGaps: productionSnapshotCoverageGaps(coverage, rows.length)
+  }
+}
+
 export class PostgresCompetitiveResearchRepository {
   constructor(private readonly pool: Pool) {}
+
+  async readConfirmedSnapshotForAnalysis(
+    workspaceId: string,
+    collectionRunId: string,
+    opportunityId: string
+  ): Promise<ProductionCompetitiveObservationSnapshot> {
+    const parsedWorkspaceId = appseaIdentifierSchema.parse(workspaceId)
+    const parsedCollectionRunId = appseaIdentifierSchema.parse(collectionRunId)
+    const parsedOpportunityId = assertWorkspaceOpportunityId(opportunityId)
+    return withWorkspaceTransaction(
+      this.pool,
+      parsedWorkspaceId,
+      (client) =>
+        readConfirmedSnapshotForAnalysisInTransaction(
+          client,
+          parsedWorkspaceId,
+          parsedCollectionRunId,
+          parsedOpportunityId
+        ),
+      { readOnly: true }
+    )
+  }
 
   async listForUser(
     userId: string,

@@ -1,5 +1,6 @@
 import {
   OpportunitySeedReviewLineageError,
+  PostgresCompetitiveResearchRepository,
   PostgresOpportunitySeedReviewRepository,
   PostgresProductionCollectionRepository,
   ProductionCollectionAnalysisUnavailableError
@@ -27,6 +28,7 @@ export async function reconstructProductionAnalysisArtifact(
   input: ProductionAnalysisArtifactReconstructionInput
 ): Promise<ProductionResearchArtifact> {
   const collections = new PostgresProductionCollectionRepository(pool)
+  const competitiveResearch = new PostgresCompetitiveResearchRepository(pool)
   const seeds = new PostgresOpportunitySeedReviewRepository(pool)
   const source = await collections.readForAnalysisAsWorker(input.workspaceId, input.collectionRunId)
   if (!source) throw new ProductionCollectionAnalysisUnavailableError()
@@ -34,6 +36,11 @@ export async function reconstructProductionAnalysisArtifact(
   if (!seedReview) throw new OpportunitySeedReviewLineageError()
   const seed = productionOpportunitySeedSchema.safeParse(seedReview.seed)
   if (!seed.success) throw new OpportunitySeedReviewLineageError()
+  const competitiveSnapshot = await competitiveResearch.readConfirmedSnapshotForAnalysis(
+    input.workspaceId,
+    input.collectionRunId,
+    seed.data.id
+  )
   return buildProductionResearchArtifact({
     collectionArtifactId: source.collectionArtifactId,
     runId: source.runId,
@@ -45,6 +52,7 @@ export async function reconstructProductionAnalysisArtifact(
     complaints: source.complaints,
     analyses: source.analyses,
     deletions: source.deletions,
+    competitiveResearch: competitiveSnapshot,
     coverageGaps: source.coverageGaps,
     warnings: source.warnings,
     opportunitySeed: {

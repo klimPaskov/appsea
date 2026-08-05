@@ -304,6 +304,10 @@ function input(overrides: Partial<ProductionAnalysisInput> = {}): ProductionAnal
         allowedRepresentation: 'excerpt'
       }
     ],
+    competitiveResearch: {
+      observations: [],
+      coverageGaps: []
+    },
     deletions: [],
     coverageGaps: ['The sample is not a statistical sample.'],
     warnings: ['Test-only transport.'],

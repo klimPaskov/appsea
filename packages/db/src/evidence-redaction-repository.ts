@@ -218,16 +218,23 @@ export class PostgresEvidenceRedactionRepository {
     analysisRunId: string
   ): Promise<EvidenceRedactionMaskRow[]> {
     const result = await client.query<EvidenceRedactionMaskRow>(
-      `SELECT event.evidence_id,
-              array_agg(DISTINCT field ORDER BY field)::text[] AS fields
-         FROM appsea.evidence_redaction_events event
-         JOIN appsea.research_analysis_run_evidence analysis_evidence
-           ON analysis_evidence.workspace_id = event.workspace_id
-          AND analysis_evidence.evidence_id = event.evidence_id
-        CROSS JOIN LATERAL unnest(event.fields) AS event_field(field)
-        WHERE event.workspace_id = $1
-          AND analysis_evidence.analysis_run_id = $2
-        GROUP BY event.evidence_id`,
+      `WITH analysis_evidence AS (
+        SELECT workspace_id, analysis_run_id, evidence_id
+          FROM appsea.research_analysis_run_evidence
+         UNION
+        SELECT workspace_id, analysis_run_id, evidence_id
+          FROM appsea.research_analysis_run_competitor_observations
+      )
+      SELECT event.evidence_id,
+             array_agg(DISTINCT field ORDER BY field)::text[] AS fields
+        FROM appsea.evidence_redaction_events event
+        JOIN analysis_evidence
+          ON analysis_evidence.workspace_id = event.workspace_id
+         AND analysis_evidence.evidence_id = event.evidence_id
+       CROSS JOIN LATERAL unnest(event.fields) AS event_field(field)
+       WHERE event.workspace_id = $1
+         AND analysis_evidence.analysis_run_id = $2
+       GROUP BY event.evidence_id`,
       [workspaceId, analysisRunId]
     )
     return result.rows

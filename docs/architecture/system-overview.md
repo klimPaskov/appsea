@@ -164,6 +164,16 @@ independently approved `competitor-research` purpose, and editor/owner review
 is required before the private read model can report source-backed research.
 The migration retains provenance metadata only and activates no connector.
 
+Migration `0104_production_analysis_competitor_lineage.sql` adds a separate
+append-only, forced-RLS projection of the exact confirmed snapshot consumed by
+an explicit production-analysis rerun. The worker joins current collection
+source items, policy purpose, retained evidence, and non-synthetic competitor
+relations before carrying observation/evidence hashes, names, claim types, and
+representation metadata into the validated artifact, report, and plan. A
+changed review/deletion/policy/relationship state fails closed and remains a
+coverage gap; it does not trigger autonomous recomputation or alter seed-owned
+scoring.
+
 Migration `0063_competitor_feature_matrix.sql` adds a bounded feature matrix
 to each normalized competitor row. Entries carry a status, an explicit
 evidence basis, bounded notes, and (for source-backed or mixed claims) retained

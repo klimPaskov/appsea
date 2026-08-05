@@ -14,24 +14,20 @@
   review remain open.
 - Production collection persists policy-bound evidence, gaps, cost, and lineage;
   private reads use `/workspace/:workspaceId/research/:runId`; outputs use S3.
+- Migration `0104` persists confirmed owner-import competitive observations in
+  exact production-analysis lineage with observation/evidence hashes; reports
+  and plans carry the snapshot privately, restricted claims are masked, and
+  rejection/deletion invalidates consumed outputs. A new explicit reviewed run
+  is required; no automatic recompute or public coverage is implied.
 - `research-quality-v1.0.0` is synthetic/redacted regression evidence only;
-  snapshots expose classifier/entity, dedup, clustering, ranking, and
-  calibration metrics with `reviewed-input-only`/`sourceCoverage:not-derived`.
-- Balanced v1 factors carry `source-evidence` or `reviewed-seed` bindings;
-  source refs must match retained complaint evidence and reviewed refs the seed
-  review. Reviewed bindings remain non-market assumptions.
+  balanced v1 bindings remain reviewed inputs, not market evidence.
 - Production opportunities stay `candidate` until the explicit deep-research
   gate proves source-backed competitive coverage; migration `0100` repairs
   legacy non-synthetic `researched` rows and `0101` persists the append-only
   owner-reviewed gate with compact provenance/stale detection. Coverage gaps
   remain visible after a valid pass.
 - Auth, quotas, retention, admissions, tombstones, metrics, and refresh are
-  durable; owner purge is `awaiting_external_controls`.
+  durable; owner purge remains `awaiting_external_controls`.
 - Web/worker share fail-closed Temporal config; production requires TLS/API-key/
   namespace/CA. Maintenance uses `0046`/`0052`; alerting, role rotation,
   recovery, and proof remain open.
-- Runtime skill registry is dormant: independent proposer/evaluator/approver,
-  signed review/transition evidence, and migration `0099` operator-only
-  persistence/audit with expected-hash concurrency; no worker import/activation.
-- MCP tokens recheck membership and use PostgreSQL windows and
-  leases; edge limits, secret storage, and hosted monitoring remain open.

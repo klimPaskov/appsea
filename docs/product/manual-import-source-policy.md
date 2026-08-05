@@ -20,6 +20,12 @@ Version `v2` additionally permits the private purposes `competitor-research` and
 `contrary-evidence`. Those purposes do not turn an owner export into public
 market research: each observation must point to retained evidence and remains
 unreviewed until an editor or owner confirms or rejects the bounded claim.
+Only a confirmed, non-synthetic observation from the current collection
+lineage can enter a later explicit production-analysis rerun. That rerun
+copies the observation and evidence hashes into an append-only analysis lineage
+record and exposes the claim in the private report and coding plan. Rejected,
+deleted, stale, or policy-mismatched observations stay out of outputs and are
+shown as coverage gaps; review does not trigger an autonomous rerun.
 
 ## Coverage and evidence
 

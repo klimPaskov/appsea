@@ -2,7 +2,8 @@ import type { Pool, PoolClient, QueryResultRow } from 'pg'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 const transactionMocks = vi.hoisted(() => ({
-  withAuthenticatedWorkspaceTransaction: vi.fn()
+  withAuthenticatedWorkspaceTransaction: vi.fn(),
+  withWorkspaceTransaction: vi.fn()
 }))
 
 vi.mock('./transaction', () => transactionMocks)
@@ -48,6 +49,7 @@ describe('competitive research observation repository', () => {
   beforeEach(() => {
     query.mockReset()
     transactionMocks.withAuthenticatedWorkspaceTransaction.mockReset()
+    transactionMocks.withWorkspaceTransaction.mockReset()
     transactionMocks.withAuthenticatedWorkspaceTransaction.mockImplementation(
       async (
         _pool: Pool,
@@ -60,6 +62,108 @@ describe('competitive research observation repository', () => {
         return operation(client)
       }
     )
+    transactionMocks.withWorkspaceTransaction.mockImplementation(
+      async (
+        _pool: Pool,
+        workspaceId: string,
+        operation: (transactionClient: PoolClient) => Promise<unknown>
+      ) => {
+        expect(workspaceId).toBe('workspace:one')
+        return operation(client)
+      }
+    )
+  })
+
+  it('reads a deterministic confirmed production observation snapshot with visible coverage gaps', async () => {
+    query
+      .mockResolvedValueOnce({
+        rows: [
+          {
+            ...row,
+            content_hash: 'a'.repeat(64),
+            evidence_content_hash: 'b'.repeat(64),
+            competitor_name: 'Export competitor',
+            competitor_type: 'direct'
+          }
+        ],
+        rowCount: 1
+      })
+      .mockResolvedValueOnce({
+        rows: [
+          {
+            review_state: 'confirmed',
+            synthetic: false,
+            source_item_deletion_state: 'active',
+            evidence_deletion_state: 'active',
+            evidence_id: 'evidence:one',
+            relation_competitor_id: 'competitor:one',
+            competitor_synthetic: false,
+            collection_source_item_id: 'source-item:one',
+            collection_source_id: 'source:directory',
+            collection_policy_source_id: 'source:directory'
+          }
+        ],
+        rowCount: 1
+      })
+
+    const repository = new PostgresCompetitiveResearchRepository({} as Pool)
+    await expect(
+      repository.readConfirmedSnapshotForAnalysis(
+        'workspace:one',
+        'run:collection',
+        'opportunity:one'
+      )
+    ).resolves.toEqual({
+      observations: [expect.objectContaining({ observationId: 'observation:one' })],
+      coverageGaps: []
+    })
+    expect(query.mock.calls[0]?.[0]).toContain('research_run_source_policies')
+    expect(query.mock.calls[0]?.[0]).toContain("observation.review_state = 'confirmed'")
+  })
+
+  it('keeps rejection and deleted provenance visible as coverage gaps', async () => {
+    query.mockResolvedValueOnce({ rows: [], rowCount: 0 }).mockResolvedValueOnce({
+      rows: [
+        {
+          review_state: 'rejected',
+          synthetic: false,
+          source_item_deletion_state: 'active',
+          evidence_deletion_state: 'active',
+          evidence_id: 'evidence:one',
+          relation_competitor_id: 'competitor:one',
+          competitor_synthetic: false,
+          collection_source_item_id: 'source-item:one',
+          collection_source_id: 'source:directory',
+          collection_policy_source_id: 'source:directory'
+        },
+        {
+          review_state: 'confirmed',
+          synthetic: false,
+          source_item_deletion_state: 'source_deleted',
+          evidence_deletion_state: 'source_deleted',
+          evidence_id: 'evidence:two',
+          relation_competitor_id: 'competitor:one',
+          competitor_synthetic: false,
+          collection_source_item_id: 'source-item:two',
+          collection_source_id: 'source:directory',
+          collection_policy_source_id: 'source:directory'
+        }
+      ],
+      rowCount: 2
+    })
+
+    const repository = new PostgresCompetitiveResearchRepository({} as Pool)
+    const snapshot = await repository.readConfirmedSnapshotForAnalysis(
+      'workspace:one',
+      'run:collection',
+      'opportunity:one'
+    )
+    expect(snapshot.observations).toEqual([])
+    expect(snapshot.coverageGaps).toEqual([
+      'A competitive observation was rejected after the snapshot was captured.',
+      'A confirmed competitive observation has deleted or inactive provenance.',
+      'No confirmed non-synthetic competitor observations are available.'
+    ])
   })
 
   it('lists only active, workspace-bound observation provenance', async () => {
@@ -86,6 +190,22 @@ describe('competitive research observation repository', () => {
     ])
     expect(query.mock.calls[1]?.[0]).toContain("source_item.deletion_state = 'active'")
     expect(query.mock.calls[1]?.[0]).toContain('evidence.evidence_id IS NOT NULL')
+  })
+
+  it('withholds metadata-only claim text from private observation reads', async () => {
+    query.mockResolvedValueOnce({ rows: [{}], rowCount: 1 }).mockResolvedValueOnce({
+      rows: [{ ...row, allowed_representation: 'metadata-only' }],
+      rowCount: 1
+    })
+
+    const repository = new PostgresCompetitiveResearchRepository({} as Pool)
+    const observations = await repository.listForUser(
+      'user:editor',
+      'workspace:one',
+      'opportunity:one'
+    )
+
+    expect(observations[0]?.claim).toBe('[Content withheld by source policy]')
   })
 
   it('lists stable non-synthetic competitor targets for private observation writes', async () => {

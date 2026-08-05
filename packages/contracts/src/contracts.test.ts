@@ -117,6 +117,8 @@ import {
   resolveOpportunityStateForRead,
   workspaceOpportunityDetailReadModelSchema,
   competitiveResearchReadModelSchema,
+  productionCompetitiveObservationSnapshotSchema,
+  productionCompetitiveResearchSnapshotSchema,
   competitiveResearchObservationCreateInputSchema,
   competitiveResearchObservationReviewInputSchema,
   workspaceCompetitorTargetSchema,
@@ -1468,6 +1470,51 @@ describe('contracts', () => {
     expect(sourceBacked.evidenceIds).toEqual(['evidence:competitor'])
   })
 
+  it('only accepts confirmed evidence-linked competitive analysis snapshots', () => {
+    const snapshot = {
+      observationId: 'observation:production-one',
+      opportunityId: 'opportunity:one',
+      competitorId: 'competitor:one',
+      competitorName: 'Export competitor',
+      competitorType: 'direct' as const,
+      sourceId: 'source:directory',
+      sourceRecordId: 'record-1',
+      sourceItemId: 'source-item:one',
+      evidenceId: 'evidence:competitor',
+      observationHash: 'a'.repeat(64),
+      evidenceHash: 'b'.repeat(64),
+      claimType: 'feature' as const,
+      claim: 'The competitor lacks a reliable export workflow.',
+      observedAt: now,
+      capturedAt: now,
+      publishedAt: null,
+      confidence: 0.8,
+      reviewState: 'confirmed' as const,
+      synthetic: false as const,
+      allowedRepresentation: 'excerpt' as const,
+      canonicalLocator: 'https://example.com/record-1'
+    }
+    expect(productionCompetitiveObservationSnapshotSchema.safeParse(snapshot).success).toBe(true)
+    expect(
+      productionCompetitiveResearchSnapshotSchema.safeParse({
+        observations: [snapshot],
+        coverageGaps: ['Only the current private collection lineage is represented.']
+      }).success
+    ).toBe(true)
+    expect(
+      productionCompetitiveObservationSnapshotSchema.safeParse({
+        ...snapshot,
+        reviewState: 'unreviewed'
+      }).success
+    ).toBe(false)
+    expect(
+      productionCompetitiveObservationSnapshotSchema.safeParse({
+        ...snapshot,
+        synthetic: true
+      }).success
+    ).toBe(false)
+  })
+
   it('keeps report approval actions strict and export hashes bounded', () => {
     expect(workspaceReportApprovalInputSchema.safeParse({ action: 'reviewed' }).success).toBe(true)
     expect(workspaceReportApprovalInputSchema.safeParse({ action: 'approved' }).success).toBe(true)
@@ -1808,6 +1855,34 @@ describe('contracts', () => {
         confidence: 'medium',
         rationale: ['Sensitive rationale']
       },
+      competitiveResearch: {
+        observations: [
+          {
+            observationId: 'observation:one',
+            opportunityId: 'opportunity:one',
+            competitorId: 'competitor:one',
+            competitorName: 'Sensitive competitor',
+            competitorType: 'direct',
+            sourceId: 'source:one',
+            sourceRecordId: 'record:one',
+            sourceItemId: 'source-item:one',
+            evidenceId: 'evidence:one',
+            observationHash: 'c'.repeat(64),
+            evidenceHash: 'd'.repeat(64),
+            claimType: 'feature',
+            claim: 'Sensitive competitor claim',
+            observedAt: now,
+            capturedAt: now,
+            publishedAt: null,
+            confidence: 0.7,
+            reviewState: 'confirmed',
+            synthetic: false,
+            allowedRepresentation: 'excerpt',
+            canonicalLocator: 'https://example.com/competitor/one'
+          }
+        ],
+        coverageGaps: []
+      },
       recommendation: {
         decision: 'explore',
         firstWedge: 'Sensitive recommendation',
@@ -1817,7 +1892,7 @@ describe('contracts', () => {
       warnings: []
     })
     const maskedReport = redactOpportunityReport(report, [
-      { evidenceId: 'evidence:one', fields: ['text', 'product'] }
+      { evidenceId: 'evidence:one', fields: ['text', 'product', 'canonicalLocator'] }
     ])
     expect(maskedReport.evidence.observations[0]?.excerpt).toBe(
       '[Content redacted by workspace privacy policy]'
@@ -1829,6 +1904,10 @@ describe('contracts', () => {
     expect(maskedReport.evidence.clusters[0]?.title).toBe(
       '[Content redacted by workspace privacy policy]'
     )
+    expect(maskedReport.competitiveResearch?.observations[0]?.claim).toBe(
+      '[Content redacted by workspace privacy policy]'
+    )
+    expect(maskedReport.competitiveResearch?.observations[0]?.canonicalLocator).toBeNull()
     const maskedPlan = redactPlanPackage(validFixturePersistenceInput.planPackage, [
       { evidenceId: 'evidence:one', fields: ['product'] }
     ])

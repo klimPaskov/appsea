@@ -1,10 +1,11 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import { calculateOpportunityScore } from '@appsea/scoring'
 import { analyzeComplaint } from '@appsea/research'
 import { contentHash } from './hash'
 import {
   assertProductionAnalysisTimestamps,
   buildProductionAnalysisSnapshot,
+  persistCompetitorObservationLineageInTransaction,
   sanitizeProductionArtifact
 } from './production-analysis-repository'
 import {
@@ -162,11 +163,248 @@ function artifact(): ProductionResearchArtifact {
 }
 
 describe('production analysis persistence helpers', () => {
+  it('persists a confirmed owner-import competitor snapshot and rejects stale rows', async () => {
+    const observation = {
+      observationId: 'observation:competitor',
+      opportunityId: 'opportunity:permitted',
+      competitorId: 'competitor:one',
+      competitorName: 'Export competitor',
+      competitorType: 'direct' as const,
+      sourceId: 'source:permitted',
+      sourceRecordId: 'record-competitor',
+      sourceItemId: 'source-item:competitor',
+      evidenceId: 'evidence:competitor',
+      observationHash: 'a'.repeat(64),
+      evidenceHash: 'b'.repeat(64),
+      claimType: 'feature' as const,
+      claim: 'The competitor lacks a reliable export workflow.',
+      observedAt: at,
+      capturedAt: at,
+      publishedAt: null,
+      confidence: 0.84,
+      reviewState: 'confirmed' as const,
+      synthetic: false as const,
+      allowedRepresentation: 'excerpt' as const,
+      canonicalLocator: 'https://example.com/record-competitor'
+    }
+    const query = vi.fn()
+    query
+      .mockResolvedValueOnce({
+        rows: [
+          {
+            workspace_id: 'workspace:one',
+            observation_id: observation.observationId,
+            opportunity_id: observation.opportunityId,
+            competitor_id: observation.competitorId,
+            source_id: observation.sourceId,
+            source_record_id: observation.sourceRecordId,
+            source_item_id: observation.sourceItemId,
+            evidence_id: observation.evidenceId,
+            claim_type: observation.claimType,
+            claim: observation.claim,
+            observed_at: at,
+            captured_at: at,
+            published_at: null,
+            confidence: observation.confidence,
+            review_state: 'confirmed',
+            synthetic: false,
+            allowed_representation: 'excerpt',
+            canonical_locator: observation.canonicalLocator,
+            created_by: 'user:owner',
+            reviewed_by: 'user:owner',
+            reviewed_at: at,
+            created_at: at,
+            updated_at: at,
+            content_hash: observation.observationHash,
+            evidence_content_hash: observation.evidenceHash,
+            competitor_name: observation.competitorName,
+            competitor_type: observation.competitorType
+          }
+        ],
+        rowCount: 1
+      })
+      .mockResolvedValueOnce({
+        rows: [
+          {
+            review_state: 'confirmed',
+            synthetic: false,
+            source_item_deletion_state: 'active',
+            evidence_deletion_state: 'active',
+            evidence_id: observation.evidenceId,
+            relation_competitor_id: observation.competitorId,
+            competitor_synthetic: false,
+            collection_source_item_id: observation.sourceItemId,
+            collection_source_id: observation.sourceId,
+            collection_policy_source_id: observation.sourceId
+          }
+        ],
+        rowCount: 1
+      })
+      .mockResolvedValueOnce({
+        rows: [
+          {
+            observation_id: observation.observationId,
+            opportunity_id: observation.opportunityId,
+            competitor_id: observation.competitorId,
+            source_id: observation.sourceId,
+            source_record_id: observation.sourceRecordId,
+            source_item_id: observation.sourceItemId,
+            evidence_id: observation.evidenceId,
+            observation_content_hash: observation.observationHash,
+            evidence_content_hash: observation.evidenceHash,
+            competitor_name: observation.competitorName,
+            competitor_type: observation.competitorType
+          }
+        ],
+        rowCount: 1
+      })
+      .mockResolvedValueOnce({ rows: [], rowCount: 0 })
+      .mockResolvedValueOnce({ rows: [], rowCount: 1 })
+
+    const snapshotHash = await persistCompetitorObservationLineageInTransaction(
+      { query } as never,
+      {
+        workspaceId: 'workspace:one',
+        collectionRunId: 'run:collection',
+        analysisRunId: 'analysis-run:one',
+        opportunityId: observation.opportunityId,
+        snapshot: { observations: [observation], coverageGaps: [] },
+        linkedAt: at
+      }
+    )
+
+    expect(snapshotHash).toMatch(/^[a-f0-9]{64}$/)
+    expect(query.mock.calls[4]?.[0]).toContain('research_analysis_run_competitor_observations')
+  })
+
+  it('fails closed when a captured observation is rejected before analysis commit', async () => {
+    const staleObservation = {
+      observationId: 'observation:stale',
+      opportunityId: 'opportunity:permitted',
+      competitorId: 'competitor:one',
+      competitorName: 'Export competitor',
+      competitorType: 'direct' as const,
+      sourceId: 'source:permitted',
+      sourceRecordId: 'record-stale',
+      sourceItemId: 'source-item:stale',
+      evidenceId: 'evidence:stale',
+      observationHash: 'a'.repeat(64),
+      evidenceHash: 'b'.repeat(64),
+      claimType: 'contrary_signal' as const,
+      claim: 'A contrary signal was reviewed.',
+      observedAt: at,
+      capturedAt: at,
+      publishedAt: null,
+      confidence: 0.7,
+      reviewState: 'confirmed' as const,
+      synthetic: false as const,
+      allowedRepresentation: 'excerpt' as const,
+      canonicalLocator: null
+    }
+    const query = vi.fn()
+    query.mockResolvedValueOnce({ rows: [], rowCount: 0 }).mockResolvedValueOnce({
+      rows: [
+        {
+          review_state: 'rejected',
+          synthetic: false,
+          source_item_deletion_state: 'active',
+          evidence_deletion_state: 'active',
+          evidence_id: staleObservation.evidenceId,
+          relation_competitor_id: staleObservation.competitorId,
+          competitor_synthetic: false,
+          collection_source_item_id: staleObservation.sourceItemId,
+          collection_source_id: staleObservation.sourceId,
+          collection_policy_source_id: staleObservation.sourceId
+        }
+      ],
+      rowCount: 1
+    })
+
+    await expect(
+      persistCompetitorObservationLineageInTransaction({ query } as never, {
+        workspaceId: 'workspace:one',
+        collectionRunId: 'run:collection',
+        analysisRunId: 'analysis-run:stale',
+        opportunityId: staleObservation.opportunityId,
+        snapshot: { observations: [staleObservation], coverageGaps: [] }
+      })
+    ).rejects.toThrow('snapshot is stale')
+    expect(query).toHaveBeenCalledTimes(2)
+  })
+
+  it('fails closed when a rejected-only coverage gap changes before commit', async () => {
+    const query = vi.fn()
+    query.mockResolvedValueOnce({ rows: [], rowCount: 0 }).mockResolvedValueOnce({
+      rows: [
+        {
+          review_state: 'rejected',
+          synthetic: false,
+          source_item_deletion_state: 'active',
+          evidence_deletion_state: 'active',
+          evidence_id: 'evidence:rejected',
+          relation_competitor_id: 'competitor:one',
+          competitor_synthetic: false,
+          collection_source_item_id: 'source-item:rejected',
+          collection_source_id: 'source:permitted',
+          collection_policy_source_id: 'source:permitted'
+        }
+      ],
+      rowCount: 1
+    })
+
+    await expect(
+      persistCompetitorObservationLineageInTransaction({ query } as never, {
+        workspaceId: 'workspace:one',
+        collectionRunId: 'run:collection',
+        analysisRunId: 'analysis-run:coverage-stale',
+        opportunityId: 'opportunity:permitted',
+        snapshot: { observations: [], coverageGaps: [] }
+      })
+    ).rejects.toThrow('snapshot is stale')
+    expect(query).toHaveBeenCalledTimes(2)
+  })
+
   it('sanitizes restricted representations without changing evidence identity', () => {
-    const parsed = artifact()
+    const parsed = productionResearchArtifactSchema.parse({
+      ...artifact(),
+      competitiveResearch: {
+        observations: [
+          {
+            observationId: 'observation:metadata-only',
+            opportunityId: 'opportunity:permitted',
+            competitorId: 'competitor:one',
+            competitorName: 'Metadata competitor',
+            competitorType: 'direct',
+            sourceId: 'source:permitted',
+            sourceRecordId: 'record-one',
+            sourceItemId: 'source-item:one',
+            evidenceId: 'evidence:one',
+            observationHash: 'c'.repeat(64),
+            evidenceHash: 'a'.repeat(64),
+            claimType: 'feature',
+            claim: 'This claim must not be rendered from metadata-only input.',
+            observedAt: at,
+            capturedAt: at,
+            publishedAt: null,
+            confidence: 0.7,
+            reviewState: 'confirmed',
+            synthetic: false,
+            allowedRepresentation: 'metadata-only',
+            canonicalLocator: null
+          }
+        ],
+        coverageGaps: []
+      }
+    })
     const sanitized = sanitizeProductionArtifact(parsed)
     expect(sanitized.complaints[0]?.text).toBe('[Content withheld by source policy]')
     expect(sanitized.complaints[0]?.evidenceHash).toBe(parsed.complaints[0]?.evidenceHash)
+    expect(sanitized.competitiveResearch.observations[0]?.claim).toBe(
+      '[Content withheld by source policy]'
+    )
+    expect(sanitized.coverageGaps).toContain(
+      'Competitive observation claims are withheld for metadata-only or aggregate-only representations.'
+    )
   })
 
   it('builds a deterministic lineage snapshot from the reviewed artifact', () => {

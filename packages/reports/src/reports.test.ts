@@ -103,6 +103,34 @@ function buildProductionArtifact() {
           allowedRepresentation: 'excerpt'
         }
       ],
+      competitiveResearch: {
+        observations: [
+          {
+            observationId: 'observation:report-competitor',
+            opportunityId: 'opportunity:report-test',
+            competitorId: 'competitor:report-manual',
+            competitorName: 'Manual workflow',
+            competitorType: 'workaround' as const,
+            sourceId: 'source:report-test',
+            sourceRecordId: '1',
+            sourceItemId: 'source-item:report-test',
+            evidenceId: 'evidence:report-test',
+            observationHash: 'd'.repeat(64),
+            evidenceHash: 'b'.repeat(64),
+            claimType: 'feature' as const,
+            claim: 'The manual workflow requires repeated entry.',
+            observedAt: now,
+            capturedAt: now,
+            publishedAt: null,
+            confidence: 0.82,
+            reviewState: 'confirmed' as const,
+            synthetic: false as const,
+            allowedRepresentation: 'excerpt' as const,
+            canonicalLocator: null
+          }
+        ],
+        coverageGaps: ['Only the private owner-import route is represented.']
+      },
       deletions: [],
       coverageGaps: ['The report test payload is not a statistical sample.'],
       warnings: ['Test-only transport.'],
@@ -232,6 +260,13 @@ describe('opportunity report generation', () => {
     expect(report.coverage.gaps).toContain(
       'This analysis was composed from a test-only offline transport and cannot support market conclusions.'
     )
+    expect(report.competitiveResearch?.observations[0]?.observationId).toBe(
+      'observation:report-competitor'
+    )
+    expect(report.competitiveResearch?.observations[0]?.evidenceId).toBe('evidence:report-test')
+    expect(report.competitiveResearch?.coverageGaps).toContain(
+      'Only the private owner-import route is represented.'
+    )
     expect(report.qualitySnapshot?.reviewedInputOnly).toBe(true)
   })
 
@@ -246,6 +281,12 @@ describe('opportunity report generation', () => {
     const parsedGraph = taskGraphSchema.parse(JSON.parse(graph.content)) as { tasks: unknown[] }
     expect(parsedGraph.tasks.length).toBeGreaterThan(0)
     expect(first.files.find((file) => file.path === 'README.md')?.content).toContain('test-only')
+    expect(first.files.find((file) => file.path === '01-product-brief.md')?.content).toContain(
+      'observation:report-competitor'
+    )
+    expect(first.files.find((file) => file.path === '01-product-brief.md')?.content).toContain(
+      'The manual workflow requires repeated entry.'
+    )
   })
 
   it('stores and tombstones a plan package through the object-store seam', async () => {

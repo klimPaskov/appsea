@@ -11,7 +11,7 @@ CSV/JSON intake without claiming public market coverage; v1 is retained only
 for historical batches. Private competitor/contrary purposes can create
 evidence-linked observations that remain unreviewed until human review.
 
-Migrations `0027`-`0103` cover policy, deletion/leases/admissions, campaign
+Migrations `0027`-`0104` cover policy, deletion/leases/admissions, campaign
 orchestration/cancellation, source reconciliation, analysis/report/plan
 governance, cost/alerts, object refs, workspace archival/purge intent,
 evidence redaction, agent tokens, and TOTP MFA. OIDC and read-only MCP remain
@@ -52,12 +52,15 @@ transitions. Plain, tampered, copied, unknown-state, or wrong-secret records
 fail closed. Migration `0099` adds an operator-only immutable event adapter;
 no worker imports or activates it.
 
-Manual owner-import (migrations `0089`, `0102`, and `0103`) is the active non-fixture
+Manual owner-import (migrations `0089`, `0102`, `0103`, and `0104`) is the active non-fixture
 path: bounded normalized, PII-scrubbed tenant-private CSV/JSON, with only a
 batch ID in Temporal. Production connectors require the durable quota ledger;
 the bounded in-memory map is test-only. Local smoke covers intake; URL fetching
-and public sources remain disabled.
-Migrations `0090`-`0103` keep policy/deletion/privilege surfaces narrow.
+and public sources remain disabled. Confirmed competitive observations are
+carried only into the next explicit reviewed production analysis; lineage keeps
+observation/evidence hashes, restricted claim text is masked, and rejection or
+source deletion invalidates active outputs without auto-recompute.
+Migrations `0090`-`0104` keep policy/deletion/privilege surfaces narrow.
 Local PostgreSQL/Temporal/MinIO and backup/restore pass when Docker is
 available; hosted restore/HA/failover remain external.
 
@@ -79,24 +82,13 @@ has a `source-evidence` or `reviewed-seed` binding; production analysis checks
 source bindings against retained complaint evidence and seed bindings against
 the immutable review prefix. Read-only seed inspection accepts pre-provenance
 v1 rows, but strict new-write/analysis admission requires a replacement.
-Backup/restore targets through `0103`; current Docker proof is blocked.
+Backup/restore targets through `0104`; current Docker proof is blocked.
 
 `pnpm verify:release` checks Compose, hardened images, and fail-closed
 preflight; remote namespace/task-queue authorization remains external.
 
-The 2026-08-04 complaint slice adds versioned, provenance-linked
-`deduplication` decisions to artifacts/reports. Safe native duplicates collapse;
-high-similarity records remain for human review with a coverage gap. Legacy
-JSON defaults to an empty list; no unique authors, semantic matches, live
-calibration, or public market coverage are inferred.
-
 ## Validated commands
 
-- CI run `30893053945` passed; feature/docs runs `30941697155`, `30941804877`,
-  `30941916282`, `30944735291`, `30944900421`, `30947627304`, `30947761415`,
-  and `30949355268`, follow-up `30949551146`, and `30951694916` failed
-  before steps from the payment/spending-limit gate, not a repository
-  assertion.
 - `pnpm test:backup-restore` and `pnpm verify:backup-restore` pass locally;
   the drill is isolated to the loopback Compose database and is not production
   backup, HA, or provider restore evidence.
@@ -125,6 +117,9 @@ calibration, or public market coverage are inferred.
 
 - No third-party public source is active; fixture rankings and owner-import
   evidence are not public market research.
+- Competitive lineage/report enrichment is locally unit-tested, but fresh
+  PostgreSQL RLS, rejection-trigger, and deletion-propagation execution still
+  await Docker or hosted CI; the workflow remains manual-rerun and tenant-private.
 - Production DB/Temporal, role separation, HA, backups, scheduler/endpoint
   operations, provider recovery, alerting, billing, and deployment validation
   remain; the repository outbox/drain is not an external transaction.

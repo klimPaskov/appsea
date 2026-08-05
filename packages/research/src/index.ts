@@ -553,9 +553,16 @@ export function buildProductionResearchArtifact(
     planFiles: seed.planFiles
   })
   const coverageGaps = new Set(parsed.coverageGaps)
-  coverageGaps.add(
-    'No permitted competitor or contrary-signal source evidence is attached; reviewed seed values are not market research.'
-  )
+  for (const gap of parsed.competitiveResearch.coverageGaps) coverageGaps.add(gap)
+  if (parsed.competitiveResearch.observations.length === 0) {
+    coverageGaps.add(
+      'No permitted competitor or contrary-signal source evidence is attached; reviewed seed values are not market research.'
+    )
+  } else {
+    coverageGaps.add(
+      'Only confirmed, evidence-linked observations from the current private collection lineage are included; unreviewed, rejected, deleted, or unrelated claims remain excluded.'
+    )
+  }
   if (parsed.testOnly) {
     coverageGaps.add(
       'This analysis was composed from a test-only offline transport and cannot support market conclusions.'
@@ -584,7 +591,8 @@ export function buildProductionResearchArtifact(
     ...(seed.balancedScoreInput ? { balancedScoreInput: seed.balancedScoreInput } : {}),
     policySnapshot: parsed.policySnapshot,
     opportunitySeed: parsed.opportunitySeed,
-    evidenceIds: complaints.map((complaint) => complaint.evidenceId)
+    evidenceIds: complaints.map((complaint) => complaint.evidenceId),
+    competitiveResearch: parsed.competitiveResearch
   }).slice(0, 32)}`
   return productionResearchArtifactSchema.parse({
     id: artifactId,
@@ -606,6 +614,7 @@ export function buildProductionResearchArtifact(
     warnings: parsed.warnings,
     policySnapshot: parsed.policySnapshot,
     opportunitySeedReview: parsed.opportunitySeed,
+    competitiveResearch: parsed.competitiveResearch,
     qualitySnapshot: buildResearchQualitySnapshot(undefined, parsed.analysisAt)
   })
 }

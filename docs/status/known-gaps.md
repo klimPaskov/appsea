@@ -23,6 +23,16 @@ each claim starts unreviewed and the import still cannot establish public
 market coverage. CFPB, Stack Exchange, and other third-party sources remain
 disabled pending independent review.
 
+Migration `0104` now carries the exact confirmed observation snapshot from an
+explicit owner/editor-reviewed analysis into the private report and six-file
+plan package. The forced-RLS lineage retains observation and evidence hashes;
+rejected or deleted consumed provenance makes active analysis/opportunity reads
+unavailable, and metadata-only or aggregate-only observations have their claim
+text withheld. This is still a manual, tenant-private rerun boundary: no review
+action or policy change starts a new analysis automatically, and Docker-backed
+fresh-schema/deletion integration proof remains unavailable in the current
+environment.
+
 Generated report and coding-plan pages now expose the existing approval
 governance in the browser: editors can mark artifacts reviewed and owners can
 approve or withdraw them, while viewers stay read-only. This improves the

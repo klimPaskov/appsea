@@ -24,6 +24,15 @@ evidence identifiers, starts `unreviewed`, and must be confirmed by an editor
 or owner before it can contribute to source-backed research. This remains
 tenant-private owner-authorized evidence, not public coverage.
 
+After an observation is confirmed, rerun the reviewed production analysis
+explicitly for the collection run to refresh the report and coding plan. The
+worker includes only the current confirmed evidence-linked snapshot; it keeps
+observation/evidence hashes and source identifiers in migration `0104` lineage
+and fails closed if review, deletion, source policy, competitor relation, or
+collection membership changed. This is not an automatic refresh and does not
+change the reviewed seed score. The report and plan keep the tenant-private
+scope and remaining coverage gaps visible.
+
 Supported columns/keys are `source_record_id` (or `id`), `canonical_locator` (or `url`/`link`), `captured_at`, `published_at`, `query`, `product`, `company`, `feature`, `category`, `text` (or `complaint`/`body`/`message`), and `language`. JSON may be an array or `{ "records": [] }`.
 
 Inspect batches with `GET /api/workspaces/{workspaceId}/imports` or `GET /api/workspaces/{workspaceId}/imports/{batchId}`. Delete with the owner-only `DELETE` endpoint. Deletion is idempotent, records immediately due retryable source tombstones, and returns the number of tombstones recorded. Do not treat an owner export as broad public coverage, and do not paste secrets or unredacted personal data into an import.
