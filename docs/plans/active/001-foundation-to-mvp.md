@@ -48,7 +48,9 @@ Implemented:
   pages, fixture disclosure, and Compose cleanup in CI; the smoke row is not
   market evidence
 - PostgreSQL-backed source quota reservations shared across workspaces, with
-  idempotent commit/release and bounded expiry
+  idempotent commit/release and bounded expiry; every production connector
+  requires this durable quota capability, while the bounded in-memory fallback
+  is test-only
 - policy-derived, bounded retention tombstone enqueue reusing the deletion
   propagation path
 - content-addressed object-reference contract with deterministic in-memory,

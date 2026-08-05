@@ -25,6 +25,7 @@ export const MANUAL_IMPORT_MAX_BYTES = 2 * 1024 * 1024
 export const MANUAL_IMPORT_MAX_RECORDS = 5_000
 const MANUAL_IMPORT_MAX_COLUMNS = 32
 const MANUAL_IMPORT_MAX_CELL_BYTES = 20_000
+const MAX_TRACKED_LOCAL_RUN_QUOTA_KEYS = 10_000
 
 const manualImportWarnings = [
   'Owner-authorized imports are tenant-private and do not establish public market coverage.',
@@ -429,6 +430,9 @@ export class ManualImportConnector implements SourceConnector {
     ) {
       throw new Error('Manual import connector policy identity does not match the reviewed source')
     }
+    if (process.env.NODE_ENV !== 'test' && !options.quotaLedger) {
+      throw new Error('Manual import connector requires a durable quota ledger outside tests')
+    }
     this.policy = policy
     this.batchReader = options.batchReader
     this.quotaLedger = options.quotaLedger
@@ -450,6 +454,12 @@ export class ManualImportConnector implements SourceConnector {
     }
     this.requestTimestamps.push(now)
     this.runRecordCounts.set(runKey, { count: used + request.limit, touchedAt: now })
+    if (this.runRecordCounts.size > MAX_TRACKED_LOCAL_RUN_QUOTA_KEYS) {
+      const oldest = [...this.runRecordCounts.entries()]
+        .sort((left, right) => left[1].touchedAt - right[1].touchedAt)
+        .slice(0, this.runRecordCounts.size - MAX_TRACKED_LOCAL_RUN_QUOTA_KEYS)
+      for (const [key] of oldest) this.runRecordCounts.delete(key)
+    }
   }
 
   private async reserveQuota(

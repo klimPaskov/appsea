@@ -237,6 +237,25 @@ describe('connector policy gate', () => {
     }
   })
 
+  it('requires a durable quota ledger for owner imports outside tests', () => {
+    vi.stubEnv('NODE_ENV', 'production')
+    try {
+      expect(
+        () =>
+          new ManualImportConnector({
+            policy: { ...manualOwnerImportSourcePolicy, expiresAt: null },
+            batchReader: {
+              async readForCollection() {
+                return { records: [], warnings: [] }
+              }
+            }
+          })
+      ).toThrow(/durable quota ledger/)
+    } finally {
+      vi.unstubAllEnvs()
+    }
+  })
+
   it('maps an approved public record without retaining the raw payload', () => {
     const complaint = mapCfpbRecord(cfpbRecord, '2026-07-24T00:00:00.000Z', 'card')
     expect(complaint).toMatchObject({

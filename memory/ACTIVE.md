@@ -9,13 +9,11 @@ sparse; no third-party public source is enabled. A reviewed internal
 `manual-owner-import` policy now supports tenant-private owner-authorized CSV/
 JSON intake without claiming public market coverage.
 
-Migrations `0027`-`0101` cover policy evidence, checkpoints, deletion repair,
-leases, admissions, campaign orchestration and
-cancellation, source reconciliation, analysis history, report/plan governance,
-cost/alert projections, object references, workspace archival/purge intent/
-manifest,
-field-level evidence redaction, agent access tokens, and global-auth TOTP MFA.
-MFA rotation, OIDC, and read-only MCP remain provider/deployment-gated.
+Migrations `0027`-`0101` cover policy, deletion/leases/admissions, campaign
+orchestration/cancellation, source reconciliation, analysis/report/plan
+governance, cost/alerts, object refs, workspace archival/purge intent,
+evidence redaction, agent tokens, and TOTP MFA. OIDC and read-only MCP remain
+provider/deployment-gated.
 
 Fixture is the persisted path. Production collection and
 analysis v2 are policy-gated/replay-safe; CFPB and Stack Exchange remain
@@ -54,6 +52,8 @@ no worker imports or activates it.
 
 Manual owner-import (migration `0089`) is the active non-fixture path: bounded,
 normalized, PII-scrubbed, tenant-private, and Temporal-linked by batch ID only.
+Production connectors require the durable PostgreSQL quota ledger; the bounded
+in-memory map is test-only.
 Local smoke covers intake through private report/plan readback; URL fetching and
 public sources remain disabled. Migrations `0090`-`0101` keep policy/deletion/
 privilege surfaces narrow, including bounded MCP admission, audit history, and

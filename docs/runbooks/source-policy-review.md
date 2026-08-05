@@ -22,6 +22,11 @@ not activate the connector. Review the policy document, intended purpose,
 commercial use, display representation, retention, attribution, quotas, and
 deletion behavior before continuing.
 
+Every production connector, including the active tenant-private
+`manual-owner-import` path, must receive the durable PostgreSQL quota ledger at
+runtime. The connector's in-memory quota bookkeeping is a test-only fallback;
+it is bounded and must never be used as production cost or rate enforcement.
+
 The Stack Exchange candidate uses the same operator boundary with its own
 review CLI and version variable:
 
