@@ -32,6 +32,10 @@ This runbook covers the repository's PostgreSQL 18 development and integration-t
   and read functions; service, maintenance, and worker roles cannot read the
   tables or execute the functions. Privileged activation additionally requires
   an `operator:` actor and an expected record hash.
+- Migration `0100` repairs legacy non-synthetic opportunities that were marked
+  `researched` before the deep-research gate existed. New production analysis
+  rows are written as `candidate`; fixture rows remain synthetic and are not
+  affected.
 
 Production role creation, credentials, TLS, backups, high availability, and secret rotation remain deployment responsibilities. The local bootstrap passwords in `infra/local` are deliberately non-production.
 

@@ -54,6 +54,11 @@ composed without a live persisted collection; this checkpoint is not a market
 research result and does not replace durable storage, review, or source
 activation.
 
+Production opportunities remain in the `candidate` lifecycle state until the
+explicit deep-research gate passes. Reviewed seed values, complaint analysis,
+and a generated report are not sufficient to mark an opportunity `researched`;
+the private read boundary fails closed for legacy rows that predate this gate.
+
 Private report versions move through `draft` → `reviewed` → `approved` (or
 `withdrawn`). Owners may approve or withdraw a report; owners and editors may
 mark a draft reviewed. The database records each transition as an

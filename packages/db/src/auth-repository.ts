@@ -76,6 +76,7 @@ import {
   redactOpportunity,
   redactOpportunityReadModel,
   redactPlanPackage,
+  resolveOpportunityStateForRead,
   type MaintenanceSchedulerFence,
   type AuthSessionReadModel,
   type AuthSessionSummaryReadModel,
@@ -976,7 +977,10 @@ function mapOpportunity(row: OpportunityRow): WorkspaceOpportunityReadModel {
       : { evidenceConfidence: Number(row.evidence_confidence) }),
     scoreVersion: row.scoring_version ?? 'unknown',
     scoreCalculatedAt: iso(row.score_calculated_at ?? new Date(0)),
-    state: row.state,
+    state: resolveOpportunityStateForRead({
+      synthetic: row.synthetic,
+      persistedState: row.state
+    }),
     currentReportId: row.current_report_id,
     currentPlanPackageId: row.current_plan_package_id
   })

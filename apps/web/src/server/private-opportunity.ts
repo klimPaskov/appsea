@@ -2,6 +2,7 @@ import {
   appseaIdentifierSchema,
   composeCompetitiveResearchReadModel,
   opportunitySlugSchema,
+  resolveOpportunityStateForRead,
   workspaceEvidenceReadModelSchema,
   workspaceOpportunityDetailReadModelSchema,
   workspaceOpportunityReadModelSchema,
@@ -33,6 +34,18 @@ export function mapProductionAnalysisToOpportunityDetail(
 ): WorkspaceOpportunityDetailReadModel {
   const { artifact, result, report, planPackage } = model
   const opportunity = artifact.opportunity
+  const competitiveResearch = composeCompetitiveResearchReadModel({
+    synthetic: false,
+    coverageGaps: artifact.coverageGaps,
+    observations,
+    seedReview: {
+      reviewId: artifact.opportunitySeedReview.reviewId,
+      seedVersion: artifact.opportunitySeedReview.seedVersion,
+      contentHash: artifact.opportunitySeedReview.contentHash,
+      reviewedBy: artifact.opportunitySeedReview.reviewedBy,
+      reviewedAt: artifact.opportunitySeedReview.reviewedAt
+    }
+  })
   const summary = workspaceOpportunityReadModelSchema.parse({
     id: opportunity.id,
     slug: opportunity.slug,
@@ -51,7 +64,13 @@ export function mapProductionAnalysisToOpportunityDetail(
       : {}),
     scoreVersion: opportunity.scoreSnapshot.version,
     scoreCalculatedAt: opportunity.scoreSnapshot.calculatedAt,
-    state: 'researched',
+    state: resolveOpportunityStateForRead({
+      synthetic: false,
+      persistedState: 'researched',
+      competitiveResearchStatus: competitiveResearch.status,
+      coverageGaps: artifact.coverageGaps,
+      deepResearchGatePassed: false
+    }),
     currentReportId: result.reportId,
     currentPlanPackageId: result.planPackageId
   })
@@ -84,18 +103,7 @@ export function mapProductionAnalysisToOpportunityDetail(
     opportunity,
     summary,
     evidence,
-    competitiveResearch: composeCompetitiveResearchReadModel({
-      synthetic: false,
-      coverageGaps: artifact.coverageGaps,
-      observations,
-      seedReview: {
-        reviewId: artifact.opportunitySeedReview.reviewId,
-        seedVersion: artifact.opportunitySeedReview.seedVersion,
-        contentHash: artifact.opportunitySeedReview.contentHash,
-        reviewedBy: artifact.opportunitySeedReview.reviewedBy,
-        reviewedAt: artifact.opportunitySeedReview.reviewedAt
-      }
-    }),
+    competitiveResearch,
     coverageGaps: artifact.coverageGaps,
     sourceCoverage: report.coverage.sources,
     report: workspaceReportReadModelSchema.parse({

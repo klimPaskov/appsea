@@ -6471,6 +6471,16 @@ export const authSignInResultSchema = z.discriminatedUnion('mfaRequired', [
   authMfaRequiredResultSchema
 ])
 
+export const workspaceOpportunityStateSchema = z.enum([
+  'signal',
+  'candidate',
+  'researched',
+  'planned',
+  'approved',
+  'monitoring',
+  'archived'
+])
+
 export const workspaceOpportunityReadModelSchema = z
   .object({
     id: appseaIdentifierSchema,
@@ -6486,19 +6496,39 @@ export const workspaceOpportunityReadModelSchema = z
     evidenceConfidence: z.number().min(0).max(1).optional(),
     scoreVersion: z.string().min(1),
     scoreCalculatedAt: z.string().datetime(),
-    state: z.enum([
-      'signal',
-      'candidate',
-      'researched',
-      'planned',
-      'approved',
-      'monitoring',
-      'archived'
-    ]),
+    state: workspaceOpportunityStateSchema,
     currentReportId: appseaIdentifierSchema.nullable(),
     currentPlanPackageId: appseaIdentifierSchema.nullable()
   })
   .strict()
+
+/**
+ * Resolve a persisted opportunity lifecycle state at the application boundary.
+ *
+ * Fixture opportunities retain their synthetic `researched` lifecycle state so
+ * the regression surface remains useful. Production rows cannot claim
+ * `researched` unless the caller supplies every explicit gate signal: a
+ * source-backed competitive read, no unresolved coverage gaps, and a recorded
+ * deep-research gate. Missing signals fail closed to `candidate`; this also
+ * protects legacy rows written before the gate existed.
+ */
+export function resolveOpportunityStateForRead(input: {
+  synthetic: boolean
+  persistedState: z.infer<typeof workspaceOpportunityStateSchema>
+  competitiveResearchStatus?: CompetitiveResearchReadModel['status']
+  coverageGaps?: readonly string[]
+  deepResearchGatePassed?: boolean
+}): z.infer<typeof workspaceOpportunityStateSchema> {
+  if (input.synthetic || input.persistedState !== 'researched') return input.persistedState
+  if (
+    input.deepResearchGatePassed !== true ||
+    input.competitiveResearchStatus !== 'source-backed' ||
+    (input.coverageGaps?.length ?? 1) > 0
+  ) {
+    return 'candidate'
+  }
+  return 'researched'
+}
 
 export const workspaceEvidenceReadModelSchema = z
   .object({

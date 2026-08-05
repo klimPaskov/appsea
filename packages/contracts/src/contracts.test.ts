@@ -114,6 +114,7 @@ import {
   operationalAlertOutboxClaimInputSchema,
   operationalAlertOutboxFailureInputSchema,
   workspaceOpportunityReadModelSchema,
+  resolveOpportunityStateForRead,
   workspaceOpportunityDetailReadModelSchema,
   competitiveResearchReadModelSchema,
   competitiveResearchObservationCreateInputSchema,
@@ -1165,6 +1166,33 @@ describe('contracts', () => {
         currentPlanPackageId: 'plan:one'
       }).success
     ).toBe(true)
+  })
+
+  it('fails closed for production rows without the deep-research gate', () => {
+    expect(
+      resolveOpportunityStateForRead({
+        synthetic: false,
+        persistedState: 'researched',
+        competitiveResearchStatus: 'source-backed',
+        coverageGaps: [],
+        deepResearchGatePassed: false
+      })
+    ).toBe('candidate')
+    expect(
+      resolveOpportunityStateForRead({
+        synthetic: false,
+        persistedState: 'researched',
+        competitiveResearchStatus: 'source-backed',
+        coverageGaps: [],
+        deepResearchGatePassed: true
+      })
+    ).toBe('researched')
+    expect(
+      resolveOpportunityStateForRead({
+        synthetic: true,
+        persistedState: 'researched'
+      })
+    ).toBe('researched')
   })
 
   it('requires explicit coverage gaps on private opportunity details', () => {

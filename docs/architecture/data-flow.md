@@ -145,8 +145,10 @@ before either status source is queried.
     have an authenticated run read route and active-output mapping for private
     opportunity pages. Production analysis read models also carry the current
     report/plan approval states from their governance projections so private
-    pages do not display stale inferred defaults. The public leaderboard remains
-    fixture-only.
+    pages do not display stale inferred defaults. Production opportunity state
+    resolves to `candidate` until the explicit deep-research gate proves
+    source-backed competitive coverage with no unresolved gaps; the public
+    leaderboard remains fixture-only.
 
 Every workspace table uses forced row-level security. Authentication must authorize a workspace before application code sets the transaction-local workspace context. Source policy state remains global and cannot be changed directly by the runtime role.
 

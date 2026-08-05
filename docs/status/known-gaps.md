@@ -4,6 +4,14 @@
 
 No live social platform is enabled. Fixture data cannot estimate market size, complaint frequency, or current momentum.
 
+Production complaint analysis is intentionally a `candidate`, not a
+`researched` opportunity, until the explicit deep-research gate passes. The
+private read boundary repairs legacy non-synthetic `researched` rows through
+migration `0100`; reviewed seeds and generated reports remain insufficient by
+themselves. Source-backed competitor/contrary research, unique-author
+estimation, copied-content and manipulation checks, and independent policy
+approval remain open.
+
 The private `/api/mcp` boundary now supports read-only opportunity, evidence,
 source-coverage, report, and plan reads for owner-issued workspace-scoped
 tokens. It preserves policy representation, redaction, synthetic disclosure,

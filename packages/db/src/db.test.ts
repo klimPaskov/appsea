@@ -112,7 +112,8 @@ describe('database foundation', () => {
       '0096',
       '0097',
       '0098',
-      '0099'
+      '0099',
+      '0100'
     ])
     expect(migrations[0]?.checksum).toMatch(/^[a-f0-9]{64}$/)
     expect(migrations[0]?.sql).toContain('CREATE TABLE appsea.evidence_records')
@@ -167,6 +168,9 @@ describe('database foundation', () => {
     expect(runtimeSkillMigration?.sql).toContain('persist_runtime_skill_record')
     expect(runtimeSkillMigration?.sql).toContain('runtime skill events are immutable')
     expect(runtimeSkillMigration?.sql).toContain('GRANT EXECUTE ON FUNCTION')
+    const researchMaturityMigration = migrations.find((migration) => migration.version === '0100')
+    expect(researchMaturityMigration?.sql).toContain("SET state = 'candidate'")
+    expect(researchMaturityMigration?.sql).toContain('synthetic = false')
     const migrationOwnerCompatibilityMigration = migrations.find(
       (migration) => migration.version === '0074'
     )

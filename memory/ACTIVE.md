@@ -9,7 +9,7 @@ sparse; no third-party public source is enabled. A reviewed internal
 `manual-owner-import` policy now supports tenant-private owner-authorized CSV/
 JSON intake without claiming public market coverage.
 
-Migrations `0027`-`0099` cover policy evidence, checkpoints, deletion repair,
+Migrations `0027`-`0100` cover policy evidence, checkpoints, deletion repair,
 leases, admissions, campaign orchestration and
 cancellation, source reconciliation, analysis history, report/plan governance,
 cost/alert projections, object references, workspace archival/purge intent/
@@ -22,38 +22,37 @@ analysis v2 are policy-gated/replay-safe; CFPB and Stack Exchange remain
 disabled pending independent approval. Reports/plans preserve provenance,
 coverage gaps, approval state, synthetic disclosure, and object references.
 
-`pnpm verify:worker:recovery` proves local/CI worker replacement with one-time
-durable effects and sanitized history; hosted restore/failover and topology
-proof remain open.
+Production opportunities now remain `candidate` until an explicit deep-research
+gate proves source-backed competitor/contrary coverage; migration `0100` repairs
+legacy non-synthetic `researched` rows while fixture state stays synthetic.
 
-Authentication uses scrypt sessions, membership/RLS, password/MFA and
-governance step-up, closure/archival, and scoped read-only agent tokens. OIDC,
-provider identity/delivery, retention, egress, and deployment operations remain
-external.
+`pnpm verify:worker:recovery` proves worker replacement with one-time effects
+and sanitized history; hosted restore/failover/topology remain open.
 
-Workers have server-clock leases, fenced mutations, retries/reconciliation,
-retention queues, campaign/cancellation recovery, metrics, and signed alerts;
-deployment scheduler ownership, billing, cloud/backup purge, and topology
-remain open.
+Authentication uses scrypt sessions, membership/RLS, MFA/governance step-up,
+closure/archival, and scoped read-only agent tokens. OIDC, delivery, retention,
+egress, and deployment operations remain external.
 
-Imported complaints, pages, reports, and model output remain untrusted data;
-they cannot update code, skills, instructions, permissions, or repository
-memory.
+Workers have server-clock leases, fenced mutations, retries, recovery, metrics,
+and signed alerts; scheduler ownership, billing, cloud/backup purge, and
+topology remain open.
+
+Imported complaints, pages, reports, and model output are untrusted data; they
+cannot update code, skills, instructions, permissions, or repository memory.
 
 The dormant `packages/skill-registry` boundary records proposer, evaluator, and
-independent approver identities with HMAC evidence over permissions, review,
-and active/retired transitions. Plain, tampered, copied, unknown-state, or
-wrong-secret records fail closed. Migration `0099` adds an operator-only,
-immutable event adapter with expected-hash concurrency; no worker imports or
-activates it, and no runtime permission became active.
+independent approver identities with HMAC evidence over permissions and
+transitions. Plain, tampered, copied, unknown-state, or wrong-secret records
+fail closed. Migration `0099` adds an operator-only immutable event adapter;
+no worker imports or activates it.
 
 Manual owner-import (migration `0089`) is the active non-fixture path: bounded,
 normalized, PII-scrubbed, tenant-private, and Temporal-linked by batch ID only.
 Local smoke covers intake through private report/plan readback; URL fetching and
-public sources remain disabled. Migrations `0090`-`0099` keep policy/deletion/
+public sources remain disabled. Migrations `0090`-`0100` keep policy/deletion/
 privilege surfaces narrow, including bounded MCP admission, audit history, and
 dormant runtime-skill persistence. Local PostgreSQL/Temporal/MinIO, worker
-replacement, private pages, and backup/restore through 99 pass; provider
+replacement, private pages, and backup/restore through 100 pass; provider
 backups, HA, and failover remain deployment-owned.
 
 Scoring preserves `opportunity-score-v0.2.0` and adds reviewed-input
@@ -75,7 +74,7 @@ source bindings against retained complaint evidence and seed bindings against
 the immutable review prefix. Read-only seed inspection accepts pre-provenance
 v1 rows, but strict new-write/analysis admission requires a replacement.
 Backup/restore
-through `0099` passes locally; provider proof remains open.
+through `0100` passes locally; provider proof remains open.
 
 `pnpm verify:release` checks Compose, secret-free defaults, hardened images, and
 fail-closed preflight; CI runs Docker mode and `--static` supports no Docker.
