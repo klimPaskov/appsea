@@ -82,6 +82,14 @@ updates, redaction-aware private projections, and a deep-research gate blocker
 until current non-synthetic clusters are reviewed or confirmed. Fixture
 clusters remain read-only.
 
+The 2026-08-05 source-health tranche adds a bounded health projection to the
+authenticated source registry without a migration. Health is derived from
+existing collection jobs, retained active source items, and deletion tombstones;
+the private page shows fixed state/note values, safe timestamps, bounded
+counters, and open deletion count. It is observational only: no raw failure
+text, payload, credential, reviewer identity, retry, activation, or quota/deletion
+mutation crosses the read boundary.
+
 ## Validated commands
 
 - `pnpm test:backup-restore` is local-only test coverage. The latest

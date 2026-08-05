@@ -395,8 +395,12 @@ The private source registry at `/workspace/:workspaceId/sources` and its
 no-store API make current policy readiness, quotas, retention/deletion duties,
 and coverage notes visible to workspace members. It is intentionally a
 read-only projection over existing source-policy tables: it does not activate
-connectors or expose policy payloads, hashes, or reviewer identities. A source
-remains a visible gap until the independent approval gate is satisfied.
+connectors or expose policy payloads, hashes, or reviewer identities. The same
+projection now includes bounded health state, collection timestamps, active
+record/open-deletion counters, and fixed failure codes from workspace-local
+workflow, source-item, and tombstone rows; it does not expose raw failure text
+or provide retry controls. A source remains a visible gap until the independent
+approval gate is satisfied.
 
 The CFPB Consumer Complaint Database connector is implemented with an explicit
 typed policy, conservative quotas, narrative-only mapping, bounded request

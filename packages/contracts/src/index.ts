@@ -1040,6 +1040,27 @@ export const workspaceEvidenceRedactionInputSchema = z
     }
   })
 
+export const sourceHealthStateSchema = z.enum(['healthy', 'degraded', 'blocked', 'unknown'])
+
+export const workspaceSourceHealthReadModelSchema = z
+  .object({
+    state: sourceHealthStateSchema,
+    lastAttemptAt: z.string().datetime().nullable(),
+    lastSuccessfulCollectionAt: z.string().datetime().nullable(),
+    lastFailureCode: z
+      .string()
+      .min(3)
+      .max(80)
+      .regex(/^[a-z][a-z0-9_:-]*$/)
+      .nullable(),
+    lastRecordCount: z.number().int().nonnegative().max(5_000),
+    activeRecordCount: z.number().int().nonnegative().max(5_000_000),
+    lastCostMicros: z.number().int().nonnegative().max(1_000_000_000_000),
+    openDeletionCount: z.number().int().nonnegative().max(1_000_000),
+    note: z.string().min(1).max(240)
+  })
+  .strict()
+
 /** Safe private source-registry metadata; policy payloads and review identities stay out. */
 export const workspaceSourceReadModelSchema = z
   .object({
@@ -1071,7 +1092,18 @@ export const workspaceSourceReadModelSchema = z
     deletion: sourceDeletionPolicySchema.nullable(),
     enabled: z.boolean(),
     synthetic: z.boolean(),
-    collectible: z.boolean()
+    collectible: z.boolean(),
+    health: workspaceSourceHealthReadModelSchema.default({
+      state: 'unknown',
+      lastAttemptAt: null,
+      lastSuccessfulCollectionAt: null,
+      lastFailureCode: null,
+      lastRecordCount: 0,
+      activeRecordCount: 0,
+      lastCostMicros: 0,
+      openDeletionCount: 0,
+      note: 'No completed collection has been observed for this workspace.'
+    })
   })
   .strict()
 
@@ -7489,6 +7521,8 @@ export type SourceDeletionPolicy = z.infer<typeof sourceDeletionPolicySchema>
 export type SourcePolicyState = z.infer<typeof sourcePolicyStateSchema>
 export type SourcePolicyReviewerRole = z.infer<typeof sourcePolicyReviewerRoleSchema>
 export type SourcePolicyApprovalInput = z.infer<typeof sourcePolicyApprovalInputSchema>
+export type SourceHealthState = z.infer<typeof sourceHealthStateSchema>
+export type WorkspaceSourceHealthReadModel = z.infer<typeof workspaceSourceHealthReadModelSchema>
 export type WorkspaceSourceReadModel = z.infer<typeof workspaceSourceReadModelSchema>
 export type SourceDeletionEvent = z.infer<typeof sourceDeletionEventSchema>
 export type EvidenceRedactionInput = z.infer<typeof evidenceRedactionInputSchema>

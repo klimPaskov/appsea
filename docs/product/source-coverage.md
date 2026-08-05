@@ -21,12 +21,18 @@ Private members can inspect the read-only source registry at
 `/workspace/:workspaceId/sources` or
 `GET /api/workspaces/:workspaceId/sources`. The registry exposes source and
 policy identifiers, lifecycle/readiness, permitted purposes, access method,
-quota, retention/deletion duties, expiry, and coverage notes. It derives
-`collectible` from the active current policy plus an independent approval
-review; it never trusts a draft payload flag. Policy payloads, content hashes,
-reviewer identities, and activation controls remain outside the read model.
-Fixture sources are labeled synthetic and are never collectible production
-sources. The route is private, membership-authorized, no-store, and read-only.
+quota, retention/deletion duties, expiry, coverage notes, and a bounded health
+projection. Health shows fixed state (`healthy`, `degraded`, `blocked`, or
+`unknown`), last attempt/success timestamps, active-record and open-deletion
+counts, the last fixed failure code, and a safe explanatory note. It is derived
+from workspace-local collection workflow, retained source-item, and tombstone
+projections; it does not expose raw error text or source payloads.
+`collectible` remains derived from the active current policy plus an independent
+approval review; it never trusts a draft payload flag. Policy payloads, content
+hashes, reviewer identities, and activation controls remain outside the read
+model. Fixture sources are labeled synthetic and are never collectible
+production sources. The route is private, membership-authorized, no-store, and
+read-only; health cannot start or retry collection.
 
 The `manual-owner-import-v2` policy is the reviewed internal owner-authorized
 exception. It accepts a bounded CSV/JSON export only after an owner attestation,

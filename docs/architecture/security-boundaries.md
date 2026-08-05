@@ -157,6 +157,13 @@ for that pre-context authorization lookup.
   approved policy, expiry, and independent review. It excludes policy
   payloads, content hashes, reviewer identities, and activation methods, and
   never mutates the global source registry.
+- The same source-registry projection exposes bounded connector health derived
+  from workspace-local collection workflow state, retained active source-item
+  timestamps/counts, and pending deletion tombstones. It returns fixed health
+  states, timestamps, counters, and failure codes only; raw failure summaries,
+  provider payloads, credentials, policy hashes, and reviewer identities stay
+  outside the read model. Health is observational and cannot activate a source,
+  retry a run, settle quota, or alter deletion state.
 - Research campaign creation is a separate private boundary. The web route
   requires an authenticated owner/editor and same-origin request; the
   repository repeats membership and private-workspace checks inside an RLS

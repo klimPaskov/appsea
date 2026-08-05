@@ -90,6 +90,7 @@ import {
   researchCampaignOrchestrationCancelResultSchema,
   sourcePolicySchema,
   sourcePolicyApprovalInputSchema,
+  workspaceSourceHealthReadModelSchema,
   workspaceSourceReadModelSchema,
   complaintAnalysisCorrectionSchema,
   workspaceComplaintReviewInputSchema,
@@ -694,6 +695,33 @@ describe('contracts', () => {
       collectible: false
     })
     expect(source.collectible).toBe(false)
+    expect(source.health.state).toBe('unknown')
+    expect(
+      workspaceSourceHealthReadModelSchema.safeParse({
+        state: 'degraded',
+        lastAttemptAt: now,
+        lastSuccessfulCollectionAt: null,
+        lastFailureCode: 'activity_failed',
+        lastRecordCount: 0,
+        activeRecordCount: 0,
+        lastCostMicros: 0,
+        openDeletionCount: 1,
+        note: 'Latest collection attempt failed.'
+      }).success
+    ).toBe(true)
+    expect(
+      workspaceSourceHealthReadModelSchema.safeParse({
+        state: 'healthy',
+        lastAttemptAt: null,
+        lastSuccessfulCollectionAt: null,
+        lastFailureCode: null,
+        lastRecordCount: 5_001,
+        activeRecordCount: 0,
+        lastCostMicros: 0,
+        openDeletionCount: 0,
+        note: 'bounded'
+      }).success
+    ).toBe(false)
     expect(workspaceSourceReadModelSchema.safeParse({ ...source, policyPayload: {} }).success).toBe(
       false
     )

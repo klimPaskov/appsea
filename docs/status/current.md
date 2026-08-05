@@ -237,8 +237,12 @@ The private workspace now also exposes a read-only source registry at
 `GET /api/workspaces/:workspaceId/sources`. It projects existing policy rows
 without a migration, derives enabled/collectible state from the database
 approval gate, and keeps quotas, deletion duties, and coverage notes visible.
-Policy payloads, hashes, reviewer identities, and activation controls remain
-outside the contract; fixture sources stay explicitly synthetic.
+It now also derives a bounded connector-health projection from workspace-local
+collection jobs, retained source items, and open deletion tombstones, exposing
+fixed health state, timestamps, counters, and failure codes without raw error
+text. Policy payloads, hashes, reviewer identities, and activation controls
+remain outside the contract; fixture sources stay explicitly synthetic and
+health remains observational/read-only.
 
 The campaign page and private API expose bounded, cursor-paginated production
 run projections with safe state/checkpoint/counter/timestamp fields. The

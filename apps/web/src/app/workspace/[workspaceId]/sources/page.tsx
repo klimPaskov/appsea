@@ -27,6 +27,23 @@ function statusLabel(source: WorkspaceSourceReadModel): string {
   return 'Not collectible'
 }
 
+function healthLabel(source: WorkspaceSourceReadModel): string {
+  switch (source.health.state) {
+    case 'healthy':
+      return 'Healthy'
+    case 'degraded':
+      return 'Degraded'
+    case 'blocked':
+      return 'Blocked'
+    default:
+      return 'Unknown'
+  }
+}
+
+function healthDate(value: string | null): string {
+  return value ? new Date(value).toLocaleString('en-US') : 'Not observed'
+}
+
 export default async function WorkspaceSourcesPage({
   params
 }: {
@@ -114,6 +131,36 @@ export default async function WorkspaceSourcesPage({
                         ? 'Synthetic fixture evidence is available only inside a fixture workspace and is not market research.'
                         : 'This source remains visible as a coverage gap until its current policy gate permits collection.'}
                   </p>
+                  <div
+                    className="source-health"
+                    aria-label={`${source.displayName} connector health`}
+                  >
+                    <div>
+                      <p className="label">Connector health</p>
+                      <strong className={`source-health-state is-${source.health.state}`}>
+                        {healthLabel(source)}
+                      </strong>
+                      <p className="muted-note">{source.health.note}</p>
+                    </div>
+                    <dl className="source-health-stats">
+                      <div>
+                        <dt>Last success</dt>
+                        <dd>{healthDate(source.health.lastSuccessfulCollectionAt)}</dd>
+                      </div>
+                      <div>
+                        <dt>Active records</dt>
+                        <dd>{source.health.activeRecordCount.toLocaleString('en-US')}</dd>
+                      </div>
+                      <div>
+                        <dt>Open deletions</dt>
+                        <dd>{source.health.openDeletionCount.toLocaleString('en-US')}</dd>
+                      </div>
+                      <div>
+                        <dt>Last failure</dt>
+                        <dd>{source.health.lastFailureCode ?? 'None recorded'}</dd>
+                      </div>
+                    </dl>
+                  </div>
                   <dl className="detail-grid source-registry-details">
                     <div>
                       <dt className="label">Lifecycle</dt>

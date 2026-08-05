@@ -5,31 +5,30 @@ Foundation decisions from 2026-07-10 are archived in
 
 ## 2026-07-24: Temporal orchestration with PostgreSQL commit authority
 
-Use pinned Temporal workflows for scheduling, retries, cancellation,
-and recovery, with sanitized history and side effects in activities. PostgreSQL
-owns RLS, checkpoints, lineage, and ledgers; the persistence safe point and
-terminal reconciliation handle late cancellation. Local Compose is development
-proof, not production deployment.
+Use pinned Temporal workflows for retries, cancellation, and recovery with
+sanitized history and activity side effects. PostgreSQL owns RLS, checkpoints,
+lineage, and ledgers; persistence safe points reconcile late cancellation.
+Compose is local proof, not production deployment.
 
 ## 2026-08-03: Global-auth TOTP MFA boundary
 
-Browser TOTP stays outside research: encrypt secrets, store recovery/challenge
-hashes, and issue sessions after verification. OIDC, key rotation, and high-risk
-enforcement stay separate.
+Browser TOTP stays outside research: encrypt secrets, hash recovery/challenges,
+and issue sessions only after verification. OIDC and high-risk enforcement stay
+separate.
 
 ## 2026-07-24: Authenticated private workspaces
 
 Store users/memberships in PostgreSQL, hash passwords/tokens, and use HttpOnly
-SameSite cookies. Every private read checks membership before RLS. Keep the
-public leaderboard synthetic; owner mutations use last-owner/step-up guards.
+SameSite cookies. Private reads check membership before RLS; the public
+leaderboard stays synthetic and owner mutations use last-owner/step-up guards.
 
 ## 2026-07-24: Durable source quota and deletion projections
 
 Source quotas use security-definer reservations with global minute windows,
-workspace/run/idempotency lineage, and idempotent commit/release/expiry. A
-narrow connector capability fails closed outside tests. Deletion tombstones
-clear raw references, mark dependent reports/plans unavailable, and retain
-provenance; recomputation and external purge remain open.
+workspace/run/idempotency lineage, and idempotent commit/release/expiry. The
+connector capability fails closed outside tests. Deletion tombstones clear raw
+references, mark dependent outputs unavailable, and retain provenance; purge
+and recomputation remain separate.
 
 ## 2026-07-24: Review before report export
 
@@ -378,9 +377,13 @@ KiB and return `413` before parsing oversized bodies.
 
 ## 2026-08-05: Require human review for complaint clusters
 
-Migration `0106` records owner/editor cluster curation in a forced-RLS,
-append-only ledger. Events lock cluster input hash, update cluster and
-membership states transactionally, and keep split/merge relationships as
-bounded identifiers. Snapshots and receipts exclude raw complaint text;
-fixtures are read-only; the gate hashes states and fails closed
-until every non-synthetic cluster is reviewed or confirmed.
+Migration `0106` records owner/editor curation in a forced-RLS append-only
+ledger with stale hashes, bounded split/merge IDs, and redaction-safe snapshots.
+Fixtures stay read-only; the gate fails closed until every non-synthetic cluster
+is reviewed or confirmed.
+
+## 2026-08-05: Keep source health bounded
+
+Derive private connector health from jobs, active items, and tombstones. Expose
+bounded state, timestamps, notes, and counters only; keep raw failures and
+mutation controls out of the read model.

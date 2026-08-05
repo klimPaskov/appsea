@@ -5,7 +5,8 @@ import {
   sourcePolicySchema,
   workspaceSourceReadModelSchema,
   type SourcePolicy,
-  type SourcePolicyApprovalInput as SourcePolicyApprovalInputContract
+  type SourcePolicyApprovalInput as SourcePolicyApprovalInputContract,
+  type WorkspaceSourceHealthReadModel
 } from '@appsea/contracts'
 import { contentHash } from './hash'
 import { withAuthenticatedWorkspaceTransaction, withDatabaseTransaction } from './transaction'
@@ -36,6 +37,15 @@ interface SourcePolicyRow extends QueryResultRow {
 interface SourcePolicyRegistryRow extends SourcePolicyRow {
   enabled: boolean
   collectible: boolean
+  health_state: WorkspaceSourceHealthReadModel['state']
+  health_last_attempt_at: Date | string | null
+  health_last_successful_collection_at: Date | string | null
+  health_last_failure_code: string | null
+  health_last_record_count: number | string | null
+  health_active_record_count: number | string | null
+  health_last_cost_micros: number | string | null
+  health_open_deletion_count: number | string | null
+  health_note: string
 }
 
 export interface SourcePolicyRecord {
@@ -70,6 +80,28 @@ function iso(value: Date | string | null): string | null {
     : value instanceof Date
       ? value.toISOString()
       : new Date(value).toISOString()
+}
+
+function boundedInteger(value: number | string | null, maximum: number): number {
+  const parsed = typeof value === 'number' ? value : Number(value ?? 0)
+  if (!Number.isSafeInteger(parsed) || parsed < 0 || parsed > maximum) {
+    throw new Error('Stored source health counter is outside the supported range')
+  }
+  return parsed
+}
+
+const sourceHealthNotes = new Set([
+  'Synthetic fixture is available locally; it is not market evidence.',
+  'Collection is blocked until the current source policy is active and approved.',
+  'A completed collection or retained private observation is available.',
+  'The latest collection attempt is still running or did not complete successfully.',
+  'No completed collection has been observed for this workspace.'
+])
+
+function safeHealthNote(value: string | null): string {
+  return value && sourceHealthNotes.has(value)
+    ? value
+    : 'No completed collection has been observed for this workspace.'
 }
 
 function mapRecord(row: SourcePolicyRow): SourcePolicyRecord {
@@ -128,7 +160,18 @@ function mapWorkspaceSource(row: SourcePolicyRegistryRow) {
     deletion: policy?.deletion ?? null,
     enabled: row.enabled,
     synthetic: row.source_type === 'fixture' || policy?.displayMode === 'fixture',
-    collectible: row.collectible
+    collectible: row.collectible,
+    health: {
+      state: row.health_state ?? 'unknown',
+      lastAttemptAt: iso(row.health_last_attempt_at ?? null),
+      lastSuccessfulCollectionAt: iso(row.health_last_successful_collection_at ?? null),
+      lastFailureCode: row.health_last_failure_code ?? null,
+      lastRecordCount: boundedInteger(row.health_last_record_count, 5_000),
+      activeRecordCount: boundedInteger(row.health_active_record_count, 5_000_000),
+      lastCostMicros: boundedInteger(row.health_last_cost_micros, 1_000_000_000_000),
+      openDeletionCount: boundedInteger(row.health_open_deletion_count, 1_000_000),
+      note: safeHealthNote(row.health_note ?? null)
+    }
   })
 }
 
@@ -302,11 +345,79 @@ export class PostgresSourcePolicyRepository {
                          AND review.content_hash = policy.content_hash
                          AND review.independence_attested
                     )
-                  ), false) AS collectible
+                  ), false) AS collectible,
+                  CASE
+                    WHEN source.source_type = 'fixture' AND source.lifecycle_state = 'active'
+                      THEN 'healthy'
+                    WHEN source.lifecycle_state <> 'active'
+                      OR policy.policy_state IS DISTINCT FROM 'approved'
+                      OR policy.reviewed_at IS NULL
+                      OR (policy.expires_at IS NOT NULL AND policy.expires_at <= clock_timestamp())
+                      THEN 'blocked'
+                    WHEN health_job.state = 'completed'
+                      OR source_observation.last_observed_at IS NOT NULL
+                      THEN 'healthy'
+                    WHEN health_job.state IS NOT NULL
+                      THEN 'degraded'
+                    ELSE 'unknown'
+                  END AS health_state,
+                  health_job.last_attempt_at AS health_last_attempt_at,
+                  COALESCE(health_job.last_success_at, source_observation.last_observed_at)
+                    AS health_last_successful_collection_at,
+                  health_job.failure_code AS health_last_failure_code,
+                  COALESCE(health_job.record_count, 0) AS health_last_record_count,
+                  COALESCE(source_observation.active_record_count, 0) AS health_active_record_count,
+                  COALESCE(health_job.cost_micros, 0) AS health_last_cost_micros,
+                  COALESCE(deletion_backlog.open_deletion_count, 0) AS health_open_deletion_count,
+                  CASE
+                    WHEN source.source_type = 'fixture' AND source.lifecycle_state = 'active'
+                      THEN 'Synthetic fixture is available locally; it is not market evidence.'
+                    WHEN source.lifecycle_state <> 'active'
+                      OR policy.policy_state IS DISTINCT FROM 'approved'
+                      OR policy.reviewed_at IS NULL
+                      OR (policy.expires_at IS NOT NULL AND policy.expires_at <= clock_timestamp())
+                      THEN 'Collection is blocked until the current source policy is active and approved.'
+                    WHEN health_job.state = 'completed'
+                      OR source_observation.last_observed_at IS NOT NULL
+                      THEN 'A completed collection or retained private observation is available.'
+                    WHEN health_job.state IS NOT NULL
+                      THEN 'The latest collection attempt is still running or did not complete successfully.'
+                    ELSE 'No completed collection has been observed for this workspace.'
+                  END AS health_note
              FROM appsea.sources source
              LEFT JOIN appsea.source_policy_versions policy
                ON policy.source_id = source.source_id
               AND policy.policy_version = source.current_policy_version
+             LEFT JOIN LATERAL (
+                SELECT job.state,
+                       job.updated_at AS last_attempt_at,
+                       CASE WHEN job.state = 'completed' THEN job.finished_at END AS last_success_at,
+                       job.failure_code,
+                       CASE WHEN job.state = 'completed' THEN job.consumed_source_items ELSE 0 END
+                         AS record_count,
+                       CASE WHEN job.state = 'completed' THEN job.consumed_cost_micros ELSE 0 END
+                         AS cost_micros
+                  FROM appsea.production_collection_workflow_jobs job
+                 WHERE job.workspace_id = appsea.current_workspace_id()
+                   AND job.source_id = source.source_id
+                 ORDER BY job.updated_at DESC, job.workflow_id DESC
+                 LIMIT 1
+             ) health_job ON true
+             LEFT JOIN LATERAL (
+                SELECT MAX(item.captured_at) AS last_observed_at,
+                       LEAST(COUNT(*)::bigint, 5000000::bigint) AS active_record_count
+                  FROM appsea.source_items item
+                 WHERE item.workspace_id = appsea.current_workspace_id()
+                   AND item.source_id = source.source_id
+                   AND item.deletion_state = 'active'
+             ) source_observation ON true
+             LEFT JOIN LATERAL (
+                SELECT COUNT(*)::bigint AS open_deletion_count
+                  FROM appsea.deletion_tombstones tombstone
+                 WHERE tombstone.workspace_id = appsea.current_workspace_id()
+                   AND tombstone.source_id = source.source_id
+                   AND tombstone.state IN ('pending', 'processing')
+             ) deletion_backlog ON true
             ORDER BY source.display_name, source.source_id`
         )
         return result.rows.map(mapWorkspaceSource)

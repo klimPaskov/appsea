@@ -67,7 +67,18 @@ const source = {
   },
   enabled: false,
   synthetic: false,
-  collectible: false
+  collectible: false,
+  health: {
+    state: 'blocked' as const,
+    lastAttemptAt: null,
+    lastSuccessfulCollectionAt: null,
+    lastFailureCode: null,
+    lastRecordCount: 0,
+    activeRecordCount: 0,
+    lastCostMicros: 0,
+    openDeletionCount: 0,
+    note: 'Collection is blocked until the current source policy is active and approved.'
+  }
 }
 
 describe('source registry route', () => {

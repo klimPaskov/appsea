@@ -419,7 +419,11 @@ authenticated read-only registry at `/workspace/:workspaceId/sources` plus
 rows without a migration, derives production collectibility from independent
 approval evidence, and keeps quota, deletion duties, and coverage gaps
 visible. No policy payload, reviewer identity, hash, or activation control
-crosses the private read boundary.
+crosses the private read boundary. The registry now also exposes a bounded,
+workspace-local connector-health projection derived from completed collection
+jobs, retained active source items, and pending deletion tombstones. It uses
+fixed state/note values and counters only; it does not expose raw failure text,
+credentials, payloads, reviewer identity, or retry/activation controls.
 
 Migration `0069_agent_access_tokens.sql` adds the first authenticated
 coding-agent access boundary. Owners of active private workspaces can issue,

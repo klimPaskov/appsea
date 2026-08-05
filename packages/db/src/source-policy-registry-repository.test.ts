@@ -186,12 +186,74 @@ describe('source policy registry repository', () => {
     const statement = query.mock.calls[0]?.[0] as string
     expect(statement).toContain('source_policy_reviews')
     expect(statement).toContain('clock_timestamp()')
+    expect(statement).toContain('production_collection_workflow_jobs')
+    expect(statement).toContain('deletion_tombstones')
     expect(transactionMocks.withAuthenticatedWorkspaceTransaction).toHaveBeenCalledWith(
       {},
       'user:editor',
       'workspace:one',
       expect.any(Function),
       { readOnly: true }
+    )
+  })
+
+  it('maps bounded connector health without exposing failure text', async () => {
+    query.mockResolvedValue({
+      rows: [
+        {
+          ...rowFor(pendingPolicy, {
+            lifecycleState: 'active',
+            enabled: true,
+            collectible: true
+          }),
+          health_state: 'degraded',
+          health_last_attempt_at: '2026-08-01T01:00:00.000Z',
+          health_last_successful_collection_at: '2026-07-31T01:00:00.000Z',
+          health_last_failure_code: 'activity_failed',
+          health_last_record_count: '42',
+          health_active_record_count: '40',
+          health_last_cost_micros: '1200',
+          health_open_deletion_count: '2',
+          health_note: 'raw provider response must not cross the read boundary'
+        }
+      ]
+    })
+    const repository = new PostgresSourcePolicyRepository({} as Pool)
+
+    const [source] = await repository.listForUser('user:editor', 'workspace:one')
+
+    expect(source?.health).toEqual({
+      state: 'degraded',
+      lastAttemptAt: '2026-08-01T01:00:00.000Z',
+      lastSuccessfulCollectionAt: '2026-07-31T01:00:00.000Z',
+      lastFailureCode: 'activity_failed',
+      lastRecordCount: 42,
+      activeRecordCount: 40,
+      lastCostMicros: 1200,
+      openDeletionCount: 2,
+      note: 'No completed collection has been observed for this workspace.'
+    })
+    expect(source).not.toHaveProperty('failureSummary')
+  })
+
+  it('fails closed when a source health counter exceeds the bounded read model', async () => {
+    query.mockResolvedValue({
+      rows: [
+        {
+          ...rowFor(pendingPolicy, {
+            lifecycleState: 'active',
+            enabled: true,
+            collectible: true
+          }),
+          health_state: 'healthy',
+          health_last_record_count: '5001'
+        }
+      ]
+    })
+    const repository = new PostgresSourcePolicyRepository({} as Pool)
+
+    await expect(repository.listForUser('user:editor', 'workspace:one')).rejects.toThrow(
+      /source health counter/
     )
   })
 
