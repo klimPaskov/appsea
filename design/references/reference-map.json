@@ -57,6 +57,13 @@
       "mobileSource": "mobile/source/plan.png"
     },
     {
+      "id": "artifact-approval",
+      "route": "/workspace/:workspaceId/opportunities/:slug/report",
+      "purpose": "Private report and plan approval controls",
+      "desktop": "source/artifact-approval.svg",
+      "mobile": "source/artifact-approval-mobile.svg"
+    },
+    {
       "id": "security",
       "route": "/account/security",
       "purpose": "Private session review, revocation, and MFA enrollment",

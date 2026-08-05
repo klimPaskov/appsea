@@ -25,11 +25,12 @@ coverage gaps, approval state, synthetic disclosure, and object references.
 Production opportunities now remain `candidate` until an explicit deep-research
 gate proves source-backed competitor/contrary coverage. Migration `0100` repairs
 legacy non-synthetic `researched` rows; `0101` persists the append-only,
-owner-reviewed gate with compact provenance and stale-snapshot reads while
-fixture state stays synthetic. Coverage gaps remain visible after a pass. The
-private competitors route now exposes checklist review: editors submit, owners
-promote or withdraw. The server/API owns evidence, snapshot, membership, and
-step-up checks; the UI never activates sources.
+owner-reviewed gate with provenance/stale reads while fixture state stays
+synthetic. Gaps remain visible after pass. Competitors exposes checklist review:
+editors submit; owners promote/withdraw. API owns evidence/snapshot/membership/
+step-up; UI never activates sources.
+Private report/plan pages expose approval: editors review, owners
+approve/withdraw, viewers read-only; plan readiness stays server-owned.
 
 `pnpm verify:worker:recovery` proves worker replacement with one-time effects
 and sanitized history; hosted restore/failover/topology remain open.

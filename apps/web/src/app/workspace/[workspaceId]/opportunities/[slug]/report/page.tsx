@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { notFound, redirect } from 'next/navigation'
 import { readSession } from '../../../../../../server/auth-session'
 import { readPrivateOpportunityContext } from '../../../../../../server/private-opportunity'
+import { ArtifactApprovalActions } from '../../../../report-plan-approval-actions'
 
 export const dynamic = 'force-dynamic'
 
@@ -17,7 +18,7 @@ export default async function PrivateReportPage({
     if (!session) redirect('/login')
     notFound()
   }
-  const { detail } = context
+  const { detail, workspace } = context
   return (
     <main className="workspace-page">
       <p className="breadcrumb">
@@ -48,6 +49,15 @@ export default async function PrivateReportPage({
           ) : null}
         </div>
       </div>
+      {detail.report ? (
+        <ArtifactApprovalActions
+          workspaceId={workspaceId}
+          artifactId={detail.report.id}
+          kind="report"
+          role={workspace.role}
+          initialState={detail.report.approvalState}
+        />
+      ) : null}
       {detail.report ? (
         <>
           {detail.report.structuredReport.synthetic ? (

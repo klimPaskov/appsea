@@ -76,7 +76,11 @@
   and an explicit reviewed-evidence analysis-start route implemented. Production
   private opportunity reads also
   carry the linked report and plan approval states from PostgreSQL governance
-  projections instead of inferring draft defaults from object payloads
+  projections instead of inferring draft defaults from object payloads. The
+  private report and plan pages now expose those transitions to editors and
+  owners through a small responsive governance panel; viewers remain
+  read-only, plan readiness is visible, and the API/database still own every
+  permission and linked-report conflict.
 - Opportunity scoring: legacy fixture and historical `opportunity-score-v0.2.0`
   snapshots remain replayable; reviewed production seeds may now carry the
   additive balanced `opportunity-score-v1.0.0` envelope with raw,

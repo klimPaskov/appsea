@@ -16,6 +16,12 @@ route now lets editors submit that checklist and owners attempt or withdraw
 promotion. The current disabled source registry still means no production gate
 can honestly pass here.
 
+Generated report and coding-plan pages now expose the existing approval
+governance in the browser: editors can mark artifacts reviewed and owners can
+approve or withdraw them, while viewers stay read-only. This improves the
+private workflow but does not change the external source, deployment, export,
+or linked-report approval blockers.
+
 The private `/api/mcp` boundary now supports read-only opportunity, evidence,
 source-coverage, report, and plan reads for owner-issued workspace-scoped
 tokens. It preserves policy representation, redaction, synthetic disclosure,

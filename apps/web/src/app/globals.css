@@ -382,6 +382,38 @@ a:focus-visible {
   flex-basis: 100%;
 }
 
+.artifact-approval-actions {
+  display: grid;
+  gap: 10px;
+  margin-top: 28px;
+  padding: 18px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--surface);
+}
+
+.artifact-approval-heading {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 18px;
+}
+
+.artifact-approval-heading .label {
+  margin-bottom: 6px;
+}
+
+.artifact-approval-state {
+  margin: 0;
+  color: var(--ink);
+  font-size: 16px;
+  font-weight: 650;
+}
+
+.artifact-approval-actions .review-actions {
+  margin-top: 2px;
+}
+
 .deep-research-gate-actions {
   display: grid;
   gap: 18px;

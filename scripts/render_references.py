@@ -688,7 +688,8 @@ SCREENS = {
 # available without using Python to draw their shapes.
 STATIC_SOURCES = {
     'agent-access': ('agent-access.svg', 'agent-access-mobile.svg'),
-    'workspace-usage': ('workspace-usage.svg', 'workspace-usage-mobile.svg')
+    'workspace-usage': ('workspace-usage.svg', 'workspace-usage-mobile.svg'),
+    'artifact-approval': ('artifact-approval.svg', 'artifact-approval-mobile.svg')
 }
 
 

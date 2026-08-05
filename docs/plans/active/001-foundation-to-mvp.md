@@ -663,6 +663,12 @@ approval/export now hydrate validated object-backed production payloads before
 applying their separate governance boundaries. Production analysis read models
 carry the linked report/plan approval states from PostgreSQL so private
 opportunity pages do not infer stale draft defaults.
+The private report and plan pages now expose the same governance boundary in
+the browser: editors can mark generated artifacts reviewed, owners can approve
+or withdraw them, viewers remain read-only, and the plan page surfaces the
+readiness blocker before an approval attempt. These controls are a client
+projection only; the existing same-origin API, step-up check, and database
+transition guards remain authoritative.
 
 The report contract keeps retained observations and their derived analysis,
 deterministic score inference,

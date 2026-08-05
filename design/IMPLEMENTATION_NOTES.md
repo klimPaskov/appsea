@@ -19,6 +19,13 @@
   checklist; only owners may pass or withdraw promotion. Keep the checklist
   keyboard-complete, explicit about blockers, and visually subordinate to the
   evidence sections.
+- Private report and coding-plan routes place a small governance panel beside
+  each generated artifact. Editors can mark an artifact reviewed, owners can
+  approve or withdraw it, viewers remain read-only, and plan readiness is shown
+  before an approval attempt. The approval API and database remain authoritative
+  for linked-report and export constraints. Hand-authored `artifact-approval`
+  SVG references cover the desktop and mobile interaction; no decorative icon
+  asset is needed for this control.
 - Workspace member settings may contain owner-only lifecycle controls. Keep
   archival in the existing calm risk-block pattern, require visible step-up
   state, and explain retained lineage versus destructive purge in text.
