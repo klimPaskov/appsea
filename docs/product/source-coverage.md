@@ -14,6 +14,7 @@ A source record tracks:
 - attribution and display rules
 - known gaps
 - connector health
+- reviewed freshness expectation (scheduled or on-demand)
 
 A blocked source remains visible as a gap. Missing data must never be described as proof that complaints do not exist.
 
@@ -33,6 +34,17 @@ hashes, reviewer identities, and activation controls remain outside the read
 model. Fixture sources are labeled synthetic and are never collectible
 production sources. The route is private, membership-authorized, no-store, and
 read-only; health cannot start or retry collection.
+
+The private health projection also reports freshness separately from connector
+health. A reviewed `scheduled` policy produces `fresh` or `stale` from the
+latest retained source observation and its expected interval plus allowed
+delay. A reviewed `on_demand` policy is labeled `on_demand`, while legacy or
+unconfigured policies remain `unknown`; a blocked policy is never presented as
+fresh. The age, threshold, and fixed note are bounded read metadata, not a
+claim that missing observations imply missing complaints. Freshness metadata is
+an additive optional field in the validated policy JSONB payload, so legacy
+immutable policy hashes remain readable without a SQL backfill; changing a
+reviewed policy still requires a new policy version and approval.
 
 The `manual-owner-import-v2` policy is the reviewed internal owner-authorized
 exception. It accepts a bounded CSV/JSON export only after an owner attestation,

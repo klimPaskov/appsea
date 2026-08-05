@@ -40,6 +40,29 @@ function healthLabel(source: WorkspaceSourceReadModel): string {
   }
 }
 
+function freshnessLabel(source: WorkspaceSourceReadModel): string {
+  switch (source.health.freshness.state) {
+    case 'fresh':
+      return 'Fresh'
+    case 'stale':
+      return 'Stale'
+    case 'on_demand':
+      return 'On demand'
+    case 'blocked':
+      return 'Blocked'
+    default:
+      return 'Unknown'
+  }
+}
+
+function freshnessWindow(source: WorkspaceSourceReadModel): string {
+  const { expectedIntervalHours, allowedDelayHours } = source.health.freshness
+  if (expectedIntervalHours === null || allowedDelayHours === null) {
+    return 'No scheduled window recorded'
+  }
+  return `${expectedIntervalHours}h interval · ${allowedDelayHours}h allowed delay`
+}
+
 function healthDate(value: string | null): string {
   return value ? new Date(value).toLocaleString('en-US') : 'Not observed'
 }
@@ -142,6 +165,15 @@ export default async function WorkspaceSourcesPage({
                       </strong>
                       <p className="muted-note">{source.health.note}</p>
                     </div>
+                    <div>
+                      <p className="label">Source freshness</p>
+                      <strong className={`source-health-state is-${source.health.freshness.state}`}>
+                        {freshnessLabel(source)}
+                      </strong>
+                      <p className="muted-note">
+                        {source.health.freshness.note} {freshnessWindow(source)}
+                      </p>
+                    </div>
                     <dl className="source-health-stats">
                       <div>
                         <dt>Last success</dt>
@@ -158,6 +190,18 @@ export default async function WorkspaceSourcesPage({
                       <div>
                         <dt>Last failure</dt>
                         <dd>{source.health.lastFailureCode ?? 'None recorded'}</dd>
+                      </div>
+                      <div>
+                        <dt>Last observed</dt>
+                        <dd>{healthDate(source.health.freshness.lastObservedAt)}</dd>
+                      </div>
+                      <div>
+                        <dt>Observation age</dt>
+                        <dd>
+                          {source.health.freshness.ageHours === null
+                            ? 'Not observed'
+                            : `${source.health.freshness.ageHours.toLocaleString('en-US')} hours`}
+                        </dd>
                       </div>
                     </dl>
                   </div>

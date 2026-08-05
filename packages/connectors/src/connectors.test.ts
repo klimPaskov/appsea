@@ -73,12 +73,28 @@ describe('connector policy gate', () => {
 
   it('keeps the current owner-import policy private and purpose-bounded', () => {
     expect(manualOwnerImportPolicyVersion).toBe('manual-owner-import-v2')
+    expect(manualOwnerImportSourcePolicy.freshness).toBeUndefined()
     expect(manualOwnerImportSourcePolicy.permittedPurposes).toEqual(
       expect.arrayContaining(['competitor-research', 'contrary-evidence'])
     )
     expect(manualOwnerImportSourcePolicy.coverageNotes.join(' ')).toContain(
       'not public market coverage'
     )
+  })
+
+  it('keeps third-party freshness expectations explicit while connectors remain disabled', () => {
+    expect(cfpbSourcePolicy.freshness).toEqual({
+      mode: 'scheduled',
+      expectedIntervalHours: 24,
+      allowedDelayHours: 24
+    })
+    expect(stackExchangeSourcePolicy.freshness).toEqual({
+      mode: 'scheduled',
+      expectedIntervalHours: 24,
+      allowedDelayHours: 48
+    })
+    expect(cfpbSourcePolicy.enabled).toBe(false)
+    expect(stackExchangeSourcePolicy.enabled).toBe(false)
   })
 
   it('collects labeled fixture records through an allowed request', async () => {

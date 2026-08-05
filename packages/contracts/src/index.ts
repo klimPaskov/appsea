@@ -67,6 +67,44 @@ export const sourceDeletionPolicySchema = z
   })
   .strict()
 
+/**
+ * Operational freshness expectations are part of the reviewed source policy,
+ * but remain optional so legacy immutable policy payloads keep their original
+ * content hashes. On-demand sources intentionally do not pretend to have a
+ * scheduled freshness SLA.
+ */
+export const sourceFreshnessPolicySchema = z
+  .object({
+    mode: z.enum(['scheduled', 'on_demand']),
+    expectedIntervalHours: z.number().int().positive().max(8_760).nullable(),
+    allowedDelayHours: z.number().int().nonnegative().max(8_760).nullable()
+  })
+  .strict()
+  .superRefine((value, context) => {
+    if (value.mode === 'scheduled') {
+      if (value.expectedIntervalHours === null) {
+        context.addIssue({
+          code: 'custom',
+          path: ['expectedIntervalHours'],
+          message: 'Scheduled freshness requires an expected interval'
+        })
+      }
+      if (value.allowedDelayHours === null) {
+        context.addIssue({
+          code: 'custom',
+          path: ['allowedDelayHours'],
+          message: 'Scheduled freshness requires an allowed delay'
+        })
+      }
+    } else if (value.expectedIntervalHours !== null || value.allowedDelayHours !== null) {
+      context.addIssue({
+        code: 'custom',
+        path: ['mode'],
+        message: 'On-demand freshness cannot declare a scheduled interval or delay'
+      })
+    }
+  })
+
 export const sourcePolicyStateSchema = z.enum(['approved', 'pending_review', 'expired', 'revoked'])
 
 const policyDocumentRefSchema = z
@@ -110,6 +148,7 @@ export const sourcePolicySchema = z.object({
   policyOwner: z.string().min(1).max(160).default('unassigned'),
   policyDocumentRef: policyDocumentRefSchema.nullable().default(null),
   expiresAt: z.string().datetime().nullable().default(null),
+  freshness: sourceFreshnessPolicySchema.optional(),
   quota: sourceQuotaSchema.default({
     requestsPerMinute: 60,
     maxRecordsPerRequest: 5_000,
@@ -1042,6 +1081,25 @@ export const workspaceEvidenceRedactionInputSchema = z
 
 export const sourceHealthStateSchema = z.enum(['healthy', 'degraded', 'blocked', 'unknown'])
 
+export const sourceFreshnessStateSchema = z.enum([
+  'fresh',
+  'stale',
+  'unknown',
+  'on_demand',
+  'blocked'
+])
+
+export const workspaceSourceFreshnessReadModelSchema = z
+  .object({
+    state: sourceFreshnessStateSchema,
+    lastObservedAt: z.string().datetime().nullable(),
+    ageHours: z.number().int().nonnegative().max(87_600).nullable(),
+    expectedIntervalHours: z.number().int().positive().max(8_760).nullable(),
+    allowedDelayHours: z.number().int().nonnegative().max(8_760).nullable(),
+    note: z.string().min(1).max(240)
+  })
+  .strict()
+
 export const workspaceSourceHealthReadModelSchema = z
   .object({
     state: sourceHealthStateSchema,
@@ -1057,7 +1115,15 @@ export const workspaceSourceHealthReadModelSchema = z
     activeRecordCount: z.number().int().nonnegative().max(5_000_000),
     lastCostMicros: z.number().int().nonnegative().max(1_000_000_000_000),
     openDeletionCount: z.number().int().nonnegative().max(1_000_000),
-    note: z.string().min(1).max(240)
+    note: z.string().min(1).max(240),
+    freshness: workspaceSourceFreshnessReadModelSchema.default({
+      state: 'unknown',
+      lastObservedAt: null,
+      ageHours: null,
+      expectedIntervalHours: null,
+      allowedDelayHours: null,
+      note: 'Freshness is not configured for this source.'
+    })
   })
   .strict()
 
@@ -1088,6 +1154,7 @@ export const workspaceSourceReadModelSchema = z
     policyDocumentRef: policyDocumentRefSchema.nullable(),
     reviewedAt: z.string().datetime().nullable(),
     expiresAt: z.string().datetime().nullable(),
+    freshness: sourceFreshnessPolicySchema.nullable().default(null),
     quota: sourceQuotaSchema.nullable(),
     deletion: sourceDeletionPolicySchema.nullable(),
     enabled: z.boolean(),
@@ -1102,7 +1169,15 @@ export const workspaceSourceReadModelSchema = z
       activeRecordCount: 0,
       lastCostMicros: 0,
       openDeletionCount: 0,
-      note: 'No completed collection has been observed for this workspace.'
+      note: 'No completed collection has been observed for this workspace.',
+      freshness: {
+        state: 'unknown',
+        lastObservedAt: null,
+        ageHours: null,
+        expectedIntervalHours: null,
+        allowedDelayHours: null,
+        note: 'Freshness is not configured for this source.'
+      }
     })
   })
   .strict()
@@ -7518,10 +7593,15 @@ export function redactPlanPackage(
 export type SourcePolicy = z.infer<typeof sourcePolicySchema>
 export type SourceQuota = z.infer<typeof sourceQuotaSchema>
 export type SourceDeletionPolicy = z.infer<typeof sourceDeletionPolicySchema>
+export type SourceFreshnessPolicy = z.infer<typeof sourceFreshnessPolicySchema>
 export type SourcePolicyState = z.infer<typeof sourcePolicyStateSchema>
 export type SourcePolicyReviewerRole = z.infer<typeof sourcePolicyReviewerRoleSchema>
 export type SourcePolicyApprovalInput = z.infer<typeof sourcePolicyApprovalInputSchema>
 export type SourceHealthState = z.infer<typeof sourceHealthStateSchema>
+export type SourceFreshnessState = z.infer<typeof sourceFreshnessStateSchema>
+export type WorkspaceSourceFreshnessReadModel = z.infer<
+  typeof workspaceSourceFreshnessReadModelSchema
+>
 export type WorkspaceSourceHealthReadModel = z.infer<typeof workspaceSourceHealthReadModelSchema>
 export type WorkspaceSourceReadModel = z.infer<typeof workspaceSourceReadModelSchema>
 export type SourceDeletionEvent = z.infer<typeof sourceDeletionEventSchema>

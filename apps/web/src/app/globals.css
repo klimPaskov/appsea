@@ -2089,6 +2089,18 @@ a:focus-visible {
   color: var(--muted);
 }
 
+.source-health-state.is-fresh {
+  color: var(--success);
+}
+
+.source-health-state.is-stale {
+  color: var(--warning);
+}
+
+.source-health-state.is-on_demand {
+  color: var(--accent);
+}
+
 .source-health .muted-note {
   margin: 8px 0 0;
   line-height: 1.45;

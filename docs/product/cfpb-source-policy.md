@@ -59,6 +59,9 @@ The typed record is `cfpbSourcePolicy` in
 - Retention: AppSea keeps a maximum of 30 days before policy-driven redaction or
   tombstoning; the upstream agency's records schedule is not AppSea permission
   to retain a local copy indefinitely.
+- Freshness: the engineering draft declares a 24-hour expected collection
+  interval plus a 24-hour allowed delay. This is an operational read-model
+  threshold, not a provider guarantee or activation approval.
 - Attribution: required; reports must identify the CFPB Consumer Complaint
   Database and link to the official route.
 - Quota: AppSea self-imposes six requests per minute, 1,000 records per request,

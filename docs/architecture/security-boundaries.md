@@ -164,6 +164,14 @@ for that pre-context authorization lookup.
   provider payloads, credentials, policy hashes, and reviewer identities stay
   outside the read model. Health is observational and cannot activate a source,
   retry a run, settle quota, or alter deletion state.
+- The source-registry health projection derives a separate bounded freshness
+  state from the reviewed optional policy freshness metadata and the latest
+  retained source observation. It uses only fixed `fresh`, `stale`, `unknown`,
+  `on_demand`, or `blocked` values plus age/threshold metadata; legacy policies
+  remain unknown, and a blocked or non-collectible source cannot be shown as
+  fresh. The optional JSONB field preserves legacy content hashes, while any
+  reviewed threshold change still requires a new immutable policy version and
+  approval. No source fetch, schedule mutation, or retry is exposed.
 - Research campaign creation is a separate private boundary. The web route
   requires an authenticated owner/editor and same-origin request; the
   repository repeats membership and private-workspace checks inside an RLS

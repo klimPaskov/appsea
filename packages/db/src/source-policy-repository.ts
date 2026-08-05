@@ -9,6 +9,7 @@ import {
   type WorkspaceSourceHealthReadModel
 } from '@appsea/contracts'
 import { contentHash } from './hash'
+import { deriveSourceFreshness } from './source-freshness'
 import { withAuthenticatedWorkspaceTransaction, withDatabaseTransaction } from './transaction'
 
 interface SourcePolicyRow extends QueryResultRow {
@@ -39,6 +40,7 @@ interface SourcePolicyRegistryRow extends SourcePolicyRow {
   collectible: boolean
   health_state: WorkspaceSourceHealthReadModel['state']
   health_last_attempt_at: Date | string | null
+  health_last_observed_at: Date | string | null
   health_last_successful_collection_at: Date | string | null
   health_last_failure_code: string | null
   health_last_record_count: number | string | null
@@ -137,6 +139,9 @@ function mapWorkspaceSource(row: SourcePolicyRegistryRow) {
   ) {
     throw new Error(`Stored policy ${row.source_id} failed its source identity check`)
   }
+  const healthState = row.health_state ?? 'unknown'
+  const synthetic = row.source_type === 'fixture' || policy?.displayMode === 'fixture'
+  const lastObservedAt = iso(row.health_last_observed_at ?? null)
   return workspaceSourceReadModelSchema.parse({
     sourceId: record.sourceId,
     displayName: record.displayName,
@@ -156,13 +161,14 @@ function mapWorkspaceSource(row: SourcePolicyRegistryRow) {
     policyDocumentRef: row.policy_document_ref,
     reviewedAt: iso(row.reviewed_at),
     expiresAt: iso(row.expires_at),
+    freshness: policy?.freshness ?? null,
     quota: policy?.quota ?? null,
     deletion: policy?.deletion ?? null,
     enabled: row.enabled,
-    synthetic: row.source_type === 'fixture' || policy?.displayMode === 'fixture',
+    synthetic,
     collectible: row.collectible,
     health: {
-      state: row.health_state ?? 'unknown',
+      state: healthState,
       lastAttemptAt: iso(row.health_last_attempt_at ?? null),
       lastSuccessfulCollectionAt: iso(row.health_last_successful_collection_at ?? null),
       lastFailureCode: row.health_last_failure_code ?? null,
@@ -170,7 +176,14 @@ function mapWorkspaceSource(row: SourcePolicyRegistryRow) {
       activeRecordCount: boundedInteger(row.health_active_record_count, 5_000_000),
       lastCostMicros: boundedInteger(row.health_last_cost_micros, 1_000_000_000_000),
       openDeletionCount: boundedInteger(row.health_open_deletion_count, 1_000_000),
-      note: safeHealthNote(row.health_note ?? null)
+      note: safeHealthNote(row.health_note ?? null),
+      freshness: deriveSourceFreshness({
+        policy,
+        healthState,
+        collectible: row.collectible,
+        synthetic,
+        lastObservedAt
+      })
     }
   })
 }
@@ -362,6 +375,7 @@ export class PostgresSourcePolicyRepository {
                     ELSE 'unknown'
                   END AS health_state,
                   health_job.last_attempt_at AS health_last_attempt_at,
+                  source_observation.last_observed_at AS health_last_observed_at,
                   COALESCE(health_job.last_success_at, source_observation.last_observed_at)
                     AS health_last_successful_collection_at,
                   health_job.failure_code AS health_last_failure_code,

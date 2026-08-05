@@ -89,6 +89,7 @@ import {
   researchCampaignOrchestrationHistoryPageSchema,
   researchCampaignOrchestrationCancelResultSchema,
   sourcePolicySchema,
+  sourceFreshnessPolicySchema,
   sourcePolicyApprovalInputSchema,
   workspaceSourceHealthReadModelSchema,
   workspaceSourceReadModelSchema,
@@ -658,6 +659,54 @@ describe('contracts', () => {
     ).toBe(false)
   })
 
+  it('validates reviewed freshness modes without changing legacy policy payloads', () => {
+    expect(
+      sourceFreshnessPolicySchema.safeParse({
+        mode: 'scheduled',
+        expectedIntervalHours: 24,
+        allowedDelayHours: 48
+      }).success
+    ).toBe(true)
+    expect(
+      sourceFreshnessPolicySchema.safeParse({
+        mode: 'on_demand',
+        expectedIntervalHours: null,
+        allowedDelayHours: null
+      }).success
+    ).toBe(true)
+    expect(
+      sourceFreshnessPolicySchema.safeParse({
+        mode: 'scheduled',
+        expectedIntervalHours: null,
+        allowedDelayHours: 24
+      }).success
+    ).toBe(false)
+    expect(
+      sourceFreshnessPolicySchema.safeParse({
+        mode: 'on_demand',
+        expectedIntervalHours: 24,
+        allowedDelayHours: null
+      }).success
+    ).toBe(false)
+    const legacy = sourcePolicySchema.parse({
+      sourceId: 'legacy-source',
+      displayName: 'Legacy source',
+      sourceType: 'api',
+      enabled: false,
+      policyState: 'pending_review',
+      permittedPurposes: ['testing'],
+      commercialUse: 'unknown',
+      accessMethod: 'No access',
+      retentionDays: 0,
+      deletionRequired: false,
+      attributionRequired: false,
+      displayMode: 'metadata-only',
+      coverageNotes: [],
+      reviewedAt: now
+    })
+    expect(legacy.freshness).toBeUndefined()
+  })
+
   it('keeps the private source registry bounded and policy-safe', () => {
     const source = workspaceSourceReadModelSchema.parse({
       sourceId: 'cfpb-consumer-complaints',
@@ -696,6 +745,11 @@ describe('contracts', () => {
     })
     expect(source.collectible).toBe(false)
     expect(source.health.state).toBe('unknown')
+    expect(source.health.freshness).toMatchObject({
+      state: 'unknown',
+      expectedIntervalHours: null,
+      allowedDelayHours: null
+    })
     expect(
       workspaceSourceHealthReadModelSchema.safeParse({
         state: 'degraded',

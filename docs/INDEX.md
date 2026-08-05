@@ -155,6 +155,7 @@
 - [`status/deep-research-gate-review-ui-completion-report-2026-08-05.md`](status/deep-research-gate-review-ui-completion-report-2026-08-05.md)
 - [`status/cluster-review-completion-report-2026-08-05.md`](status/cluster-review-completion-report-2026-08-05.md)
 - [`status/source-health-completion-report-2026-08-05.md`](status/source-health-completion-report-2026-08-05.md)
+- [`status/source-freshness-completion-report-2026-08-06.md`](status/source-freshness-completion-report-2026-08-06.md)
 - [`status/owner-import-competitive-observation-completion-report-2026-08-05.md`](status/owner-import-competitive-observation-completion-report-2026-08-05.md)
 - [`status/score-factor-provenance-completion-report-2026-08-04.md`](status/score-factor-provenance-completion-report-2026-08-04.md)
 - [`status/workspace-invitation-completion-report.md`](status/workspace-invitation-completion-report.md)

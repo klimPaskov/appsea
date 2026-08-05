@@ -44,6 +44,7 @@ Connector freshness has source-specific objectives. Do not apply one global fres
 
 - status by source
 - last successful collection
+- source-specific freshness state and latest retained observation age
 - requests and records
 - quota remaining
 - auth expiry
@@ -51,6 +52,15 @@ Connector freshness has source-specific objectives. Do not apply one global fres
 - schema changes
 - deletion backlog
 - cost
+
+The first private source-registry implementation exposes a bounded read-only
+subset of this dashboard: connector state, last attempt/success, retained
+observation age, reviewed freshness interval/delay when configured, active
+records, deletion backlog, fixed failure code, and cost. Legacy policies remain
+freshness-unknown, and on-demand sources do not receive a scheduled SLA. Quota
+remaining, provider-auth expiry, alert delivery, and deployment SLO ownership
+remain operational follow-up work; stale or missing observations are never
+treated as proof of absent complaints.
 
 ### Research quality
 

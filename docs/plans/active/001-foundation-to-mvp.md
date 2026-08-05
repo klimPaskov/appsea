@@ -425,6 +425,14 @@ jobs, retained active source items, and pending deletion tombstones. It uses
 fixed state/note values and counters only; it does not expose raw failure text,
 credentials, payloads, reviewer identity, or retry/activation controls.
 
+The source-health follow-up adds optional reviewed freshness metadata without
+rewriting legacy policy JSONB or hashes. Scheduled policies declare an expected
+interval and allowed delay; on-demand sources declare no SLA. The private
+projection derives fresh/stale/unknown/on-demand/blocked state from the latest
+retained observation and keeps the age, threshold, and coverage note visible.
+This remains observational: it does not schedule, retry, activate, or infer
+absence of complaints.
+
 Migration `0069_agent_access_tokens.sql` adds the first authenticated
 coding-agent access boundary. Owners of active private workspaces can issue,
 list, and revoke expiring scoped tokens after recent step-up authentication;

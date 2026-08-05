@@ -53,6 +53,11 @@ const source = {
   policyDocumentRef: 'https://example.com/policy',
   reviewedAt: '2026-08-01T00:00:00.000Z',
   expiresAt: '2026-10-25T00:00:00.000Z',
+  freshness: {
+    mode: 'scheduled' as const,
+    expectedIntervalHours: 24,
+    allowedDelayHours: 24
+  },
   quota: {
     requestsPerMinute: 6,
     maxRecordsPerRequest: 1000,
@@ -77,7 +82,15 @@ const source = {
     activeRecordCount: 0,
     lastCostMicros: 0,
     openDeletionCount: 0,
-    note: 'Collection is blocked until the current source policy is active and approved.'
+    note: 'Collection is blocked until the current source policy is active and approved.',
+    freshness: {
+      state: 'blocked' as const,
+      lastObservedAt: null,
+      ageHours: null,
+      expectedIntervalHours: 24,
+      allowedDelayHours: 24,
+      note: 'Freshness is blocked while the current source policy gate is not collectible.'
+    }
   }
 }
 

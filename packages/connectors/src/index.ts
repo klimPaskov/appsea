@@ -143,6 +143,7 @@ export interface SourceConnector {
 function freezePolicy(policy: SourcePolicy): SourcePolicy {
   Object.freeze(policy.permittedPurposes)
   Object.freeze(policy.coverageNotes)
+  if (policy.freshness) Object.freeze(policy.freshness)
   Object.freeze(policy.quota)
   Object.freeze(policy.deletion)
   return Object.freeze(policy) as SourcePolicy
@@ -280,6 +281,11 @@ const cfpbSourcePolicy = freezePolicy(
     policyOwner: 'AppSea source-policy review queue',
     policyDocumentRef: 'https://www.consumerfinance.gov/complaint/data-use/',
     expiresAt: '2026-10-24T00:00:00.000Z',
+    freshness: {
+      mode: 'scheduled',
+      expectedIntervalHours: 24,
+      allowedDelayHours: 24
+    },
     quota: {
       requestsPerMinute: 6,
       maxRecordsPerRequest: 1_000,
@@ -331,6 +337,11 @@ const stackExchangeSourcePolicy = freezePolicy(
     policyOwner: 'AppSea source-policy review queue',
     policyDocumentRef: 'https://engineering.stackexchange.com/legal/api-terms-of-use',
     expiresAt: '2026-11-02T00:00:00.000Z',
+    freshness: {
+      mode: 'scheduled',
+      expectedIntervalHours: 24,
+      allowedDelayHours: 48
+    },
     quota: {
       requestsPerMinute: 30,
       maxRecordsPerRequest: 100,

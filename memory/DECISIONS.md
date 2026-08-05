@@ -242,20 +242,15 @@ reservations alone are reclaimable.
 
 ## 2026-08-01: Reclaim stale recomputation dispatches from the server clock
 
-Deletion-triggered analysis repair claims are committed before a worker calls
-Temporal. A crash in that gap must not strand the job, and caller time must not
-control recovery. The repository reclaims `dispatching` rows older than 15
-minutes from PostgreSQL's clock, allows 24 claims, and records fixed terminal
-failure for exhausted stale rows. Deterministic workflow identity makes a late
-start replay the same run; per-attempt claim tokens remain future fencing work.
+Commit deletion-triggered repair claims before Temporal. Reclaim dispatching
+rows older than 15 minutes from PostgreSQL's clock, bound claims, and record
+fixed terminal failure; deterministic workflow IDs make late starts idempotent.
 
 ## 2026-08-01: Retry deletion propagation before terminal failure
 
-The first propagation exception must not erase a source deletion or make a
-partial redaction look complete. Migration `0044` adds an attempt counter and
-server-clock `next_attempt_at`; claims use a 15-minute stale lease and failed
-rows retry after 60 seconds until eight attempts. Exhausted rows retain fixed
-failure metadata and cannot re-enter processing; completion remains idempotent.
+Migration `0044` adds bounded attempts, server-clock retry timing, a 15-minute
+stale lease, and fixed exhausted state. Partial redaction never looks complete;
+completion remains idempotent.
 
 ## 2026-08-01: Version analysis and source-policy reviews
 
@@ -387,3 +382,11 @@ is reviewed or confirmed.
 Derive private connector health from jobs, active items, and tombstones. Expose
 bounded state, timestamps, notes, and counters only; keep raw failures and
 mutation controls out of the read model.
+
+## 2026-08-06: Keep source freshness additive and observational
+
+Optional validated policy JSONB freshness keeps legacy hashes readable.
+Scheduled sources declare interval/delay; on-demand sources declare no SLA.
+The private registry derives state from observations and never schedules,
+activates, settles quota, or infers complaint absence. Threshold changes need a
+new reviewed policy version.

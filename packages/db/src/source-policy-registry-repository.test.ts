@@ -208,6 +208,7 @@ describe('source policy registry repository', () => {
           }),
           health_state: 'degraded',
           health_last_attempt_at: '2026-08-01T01:00:00.000Z',
+          health_last_observed_at: '2026-07-31T01:00:00.000Z',
           health_last_successful_collection_at: '2026-07-31T01:00:00.000Z',
           health_last_failure_code: 'activity_failed',
           health_last_record_count: '42',
@@ -231,7 +232,15 @@ describe('source policy registry repository', () => {
       activeRecordCount: 40,
       lastCostMicros: 1200,
       openDeletionCount: 2,
-      note: 'No completed collection has been observed for this workspace.'
+      note: 'No completed collection has been observed for this workspace.',
+      freshness: expect.objectContaining({
+        state: 'unknown',
+        lastObservedAt: '2026-07-31T01:00:00.000Z',
+        ageHours: expect.any(Number),
+        expectedIntervalHours: null,
+        allowedDelayHours: null,
+        note: 'Freshness is not configured for this source.'
+      })
     })
     expect(source).not.toHaveProperty('failureSummary')
   })

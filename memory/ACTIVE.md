@@ -67,20 +67,12 @@ Backup/restore targets through `0106`; current Docker proof is blocked.
 `pnpm verify:release` checks Compose, hardened images, and fail-closed
 preflight; remote namespace/task-queue authorization remains external.
 
-The public leaderboard is regression-tested as sparse with its exact heading,
-rank/opportunity/complaint/score fields, and fixture disclosure; web tests,
-build, and smoke pass.
-Private opportunity pages share accessible Overview/Evidence/Competitors/
-Report/Plan tabs. Migration `0105` adds forced-RLS append-only private decision
-history and guarded owner/editor controls; step-up, idempotency, stale-state,
-lineage, report/plan/gate checks remain server/database-owned. Fixtures stay
-read-only/synthetic and MCP stays read-only. Auth JSON mutations use a
-streaming 32 KiB cap and return `413` before parsing oversized requests.
-Migration `0106` adds forced-RLS append-only cluster review events with
-identifier-only snapshots, stale hashes, split/merge lineage, membership-state
-updates, redaction-aware private projections, and a deep-research gate blocker
-until current non-synthetic clusters are reviewed or confirmed. Fixture
-clusters remain read-only.
+The public leaderboard is regression-tested as sparse with fixture disclosure;
+private opportunity tabs, decision/cluster review, step-up, idempotency, and
+lineage checks remain server/database-owned. Fixtures and MCP stay read-only;
+auth JSON mutations cap streaming bodies at 32 KiB and return `413` before
+parsing oversized requests. Migrations `0105`/`0106` provide append-only
+decision and cluster review ledgers with stale/hash/redaction-safe gates.
 
 The 2026-08-05 source-health tranche adds a bounded health projection to the
 authenticated source registry without a migration. Health is derived from
@@ -90,15 +82,21 @@ counters, and open deletion count. It is observational only: no raw failure
 text, payload, credential, reviewer identity, retry, activation, or quota/deletion
 mutation crosses the read boundary.
 
+The 2026-08-06 source-freshness tranche adds optional reviewed policy metadata:
+scheduled sources declare an expected interval and allowed delay. The
+tenant-private `manual-owner-import-v2` path is operationally on demand but its
+legacy payload has no freshness SLA, so the registry stays unknown until a new
+reviewed version adds one. The projection derives fresh/stale/unknown/on-demand/
+blocked state, shows bounded age/thresholds, and preserves legacy hashes.
+It remains observational; no scheduler, retry, quota settlement, provider-auth
+expiry, activation, or public-coverage claim is added.
+
 ## Validated commands
 
-- `pnpm test:backup-restore` is local-only test coverage. The latest
-  `pnpm verify:backup-restore` attempt is blocked before test steps because
-  Docker Desktop is unavailable; this drill would not be production backup,
-  HA, or provider restore evidence even when it runs.
-- Production runtime packaging and the staged Tauri shell pass their hosted
-  build/boundary checks; provider provisioning, image signing, hosted-origin,
-  updater, notarization, installation, and deployment evidence remain open.
+Repository tests, type checks, builds, fixture/plan generation, and web smoke
+pass. Backup/restore is local-only and currently blocked before execution by
+the unavailable Docker Desktop engine; hosted provisioning, signing, updater,
+notarization, and deployment evidence remain open.
 
 ## Next production tranche
 

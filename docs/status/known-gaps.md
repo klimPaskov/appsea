@@ -23,6 +23,14 @@ each claim starts unreviewed and the import still cannot establish public
 market coverage. CFPB, Stack Exchange, and other third-party sources remain
 disabled pending independent review.
 
+Source freshness is now visible for policies that declare a reviewed schedule,
+but it is still an observational read model. The current slice does not own
+scheduler alerting, quota-remaining accounting, provider authentication expiry,
+or source activation; scheduled freshness therefore remains `unknown` until a
+policy supplies thresholds and a retained observation exists. Deployment-owned
+monitoring and live source approvals are still required before freshness can be
+used as an operational SLO.
+
 Migration `0104` now carries the exact confirmed observation snapshot from an
 explicit owner/editor-reviewed analysis into the private report and six-file
 plan package. The forced-RLS lineage retains observation and evidence hashes;

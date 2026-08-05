@@ -47,6 +47,9 @@ views.
   existing source-retention/redaction worker. Deletion is required, but the
   API provides no tombstone feed. Filtered search never proves that a missing
   question was deleted.
+- Freshness is modeled as a 24-hour expected interval plus a 48-hour allowed
+  delay for the private read projection; this is an engineering threshold, not
+  an API guarantee or activation approval.
 - The connector emits no deletion tombstones. Source absence remains a visible
   coverage gap; retention expiry and an approved deletion mechanism are separate
   duties.
