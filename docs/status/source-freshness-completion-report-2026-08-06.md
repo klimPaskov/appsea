@@ -1,5 +1,8 @@
 # Source freshness observability completion report — 2026-08-06
 
+This report covers the freshness-only tranche. The subsequent quota projection
+is documented in [`source-quota-headroom-completion-report-2026-08-06.md`](source-quota-headroom-completion-report-2026-08-06.md).
+
 ## Outcome
 
 The private source-registry health projection now distinguishes connector

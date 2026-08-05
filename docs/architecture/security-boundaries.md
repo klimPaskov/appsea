@@ -172,6 +172,13 @@ for that pre-context authorization lookup.
   fresh. The optional JSONB field preserves legacy content hashes, while any
   reviewed threshold change still requires a new immutable policy version and
   approval. No source fetch, schedule mutation, or retry is exposed.
+- Migration `0107` adds `read_source_quota_headroom`, a security-definer,
+  workspace-context-required read of the shared current-minute quota window.
+  The authenticated registry receives only limit, used, remaining, and window
+  timestamps; direct runtime access to `source_quota_windows` remains revoked.
+  The function never reserves, settles, releases, refunds, or exposes
+  workspace-specific reservation rows, and pending/expired policies return no
+  usable headroom.
 - Research campaign creation is a separate private boundary. The web route
   requires an authenticated owner/editor and same-origin request; the
   repository repeats membership and private-workspace checks inside an RLS

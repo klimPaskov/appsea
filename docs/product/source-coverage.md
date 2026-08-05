@@ -46,6 +46,16 @@ an additive optional field in the validated policy JSONB payload, so legacy
 immutable policy hashes remain readable without a SQL backfill; changing a
 reviewed policy still requires a new policy version and approval.
 
+The same private health projection reports current quota headroom when the
+approved policy and shared source window are available. It shows only the
+bounded requests-per-minute limit, requests used, requests remaining, and the
+current minute boundary. Source quota windows are intentionally shared across
+workspaces, so this is an operational capacity indicator rather than a
+workspace usage ledger; reservation IDs, other workspace rows, and settlement
+controls never cross the read boundary. Pending, expired, or non-collectible
+policies remain blocked or unknown, and the projection cannot reserve, settle,
+release, refund, or retry a request.
+
 The `manual-owner-import-v2` policy is the reviewed internal owner-authorized
 exception. It accepts a bounded CSV/JSON export only after an owner attestation,
 stores normalized PII-scrubbed rows in the private workspace, and never fetches

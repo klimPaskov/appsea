@@ -25,7 +25,7 @@ Status: production-shaped foundation implemented and validated locally; producti
 
 Implemented:
 
-- PostgreSQL 18 schema and one hundred six forward, checksummed migrations
+- PostgreSQL 18 schema and one hundred seven forward, checksummed migrations
 - normalized source, evidence, complaint, cluster, competitor, opportunity, score, report, plan, audit, cost, deletion, outbox, and lineage tables
 - no-login owner, separate migrator, and least-privilege runtime role contract
 - forced workspace RLS and transaction-scoped workspace context
@@ -35,7 +35,7 @@ Implemented:
 - populated upgrade, fresh install, privilege, RLS, provenance, policy, cross-wire, and replay tests
 - local runbook and CI persistence gate
 - isolated local PostgreSQL backup/restore runbook and CI gate; the drill
-  restores a disposable dump through all one hundred six migrations and verifies
+  restores a disposable dump through all one hundred seven migrations and verifies
   forced workspace RLS plus runtime/maintenance privileges without accepting a
   remote URL
 - one-command loopback private-workspace stack with migration, worker, and web
@@ -760,6 +760,11 @@ Evidence route exposes review history and editor/owner controls after step-up;
 fixture clusters remain read-only. The deep-research gate includes current
 cluster review states in its reproducibility hash and cannot pass while any
 current non-synthetic cluster is provisional, split, merged, or rejected.
+Migration `0107_source_quota_headroom_read.sql` adds a security-definer,
+workspace-context-required read of the shared current-minute source quota
+window. The private source registry exposes only bounded limit/used/remaining
+capacity and window timestamps; direct runtime access to the global window table,
+reservation IDs, and every quota mutation remains denied.
 The shared production seed contract now requires the six-file coding-package
 manifest at new writes and analysis admission; legacy portable-path rows remain
 readable for inspection but are blocked from analysis until replaced.
@@ -779,6 +784,9 @@ and Temporal-start idempotency. Production collection now carries settled source
 request cost from quota settlement through its immutable snapshot/result,
 workflow checkpoint, and audit/outbox metadata; known policy-cost overages are
 rejected before source lease acquisition;
+`0107` adds an authenticated, read-only source quota headroom projection for
+the shared current-minute window; reservation and settlement remain worker-
+owned and provider/deployment alerting remains open;
 scheduled commands now share migration `0046`'s server-clock owner/token lease
 with renewal, stale takeover, migration `0052` transaction fencing for selected
 SQL mutations, and fixed lease-loss failures;

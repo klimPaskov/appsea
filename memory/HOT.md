@@ -11,8 +11,10 @@
 - Source registry health is private/read-only. It separates connector state
   from reviewed freshness: scheduled metadata yields fresh/stale/unknown/
   blocked; owner import is operationally on-demand but its legacy v2 policy has
-  no SLA and remains unknown. No scheduler, activation, quota mutation, or
-  absence inference crosses the read.
+  no SLA and remains unknown. Migration `0107` also exposes bounded shared
+  current-minute quota headroom (limit/used/remaining/window) without
+  reservation rows or mutation capability. No scheduler, activation, quota
+  mutation, or absence inference crosses the read.
 - Production collection persists policy-bound evidence, gaps, cost, and
   lineage; private reads use `/workspace/:workspaceId/research/:runId`; outputs
   use object storage. Reports/plans preserve provenance, approvals, and gaps.

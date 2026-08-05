@@ -14,7 +14,7 @@ AppSea is an opportunity intelligence system for software products. It turns per
 - A future Tauri shell will reuse the website contract.
 - `packages/db` owns PostgreSQL 18 migrations, transaction-scoped workspace RLS, and persistence repositories.
 - Local and CI PostgreSQL use a no-login owner, separate migrator, and non-owner runtime role. Production provisioning remains external and unimplemented.
-- `scripts/run_db_backup_restore.mjs` provides a local 106-migration dump/restore drill with forced RLS and least-privilege checks; it is not provider HA or production restore evidence.
+- `scripts/run_db_backup_restore.mjs` provides a local 107-migration dump/restore drill with forced RLS and least-privilege checks; it is not provider HA or production restore evidence.
 - `packages/workflows` owns deterministic Temporal orchestration and client hashing; `apps/worker` owns activity adapters and local worker startup; `packages/db` owns RLS-protected fixture and production-collection job projections and checkpoints. Production workflow security, HA, object-store/backups purge, deployment, and Docker-backed integration proof remain external.
 - Campaign cancellation is a durable control boundary: migrations `0070`/`0071` store owner/editor intent before Temporal for multi-source and one-source runs; the worker retries external cancellation, while each workflow owns safe reconciliation.
 - Private campaign history uses strict bounded cursor pages ordered by request timestamp plus stable identifier; only the validated boundary crosses private APIs. The public leaderboard is unaffected.
@@ -39,6 +39,10 @@ AppSea is an opportunity intelligence system for software products. It turns per
 - Migrations `0046`-`0052` own server-clock maintenance leases/fencing, scheduler metrics, cost/quota inspection, explicit tombstone-bound re-collection, and the direct-CFPB worker admission branch. The lease is allowlisted to four scheduler names and callable only through `appsea_maintenance`; re-collection is never automatic. External source/provider/object-store effects, deployed scheduler ownership, alert routing, billing, and lock/recovery proof remain external.
 - Private workspace members can read exact currency-separated cost totals and bounded quota-reconciliation cases at `/workspace/:workspaceId/usage`; the page is inspection-only and cannot resolve, refund, or re-fetch anything. Maintenance-role resolution remains separate from the browser boundary.
 - The private source registry includes bounded connector health from jobs, active items, and deletion tombstones; raw failures and mutation controls stay outside the read boundary.
+- Migration `0107` adds a workspace-context-required, security-definer source
+  quota headroom projection. It reports only shared current-minute limit/used/
+  remaining capacity and window timestamps; direct runtime access to global
+  quota windows and reservation rows remains denied.
 - `apps/worker` also owns the bounded `auth:recovery` outbox runner. It decrypts a reset token only in memory, sends a signed/idempotent fragment-link request with redirect blocking, and records fixed-code retries without logging provider responses or raw errors.
 - `apps/worker` provides an explicit CFPB policy-review wrapper and a
   PostgreSQL-idempotent approved-source collection checkpoint. It never activates

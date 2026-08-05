@@ -10,6 +10,7 @@ import {
 } from '@appsea/contracts'
 import { contentHash } from './hash'
 import { deriveSourceFreshness } from './source-freshness'
+import { deriveSourceQuotaHeadroom } from './source-quota-headroom'
 import { withAuthenticatedWorkspaceTransaction, withDatabaseTransaction } from './transaction'
 
 interface SourcePolicyRow extends QueryResultRow {
@@ -48,6 +49,10 @@ interface SourcePolicyRegistryRow extends SourcePolicyRow {
   health_last_cost_micros: number | string | null
   health_open_deletion_count: number | string | null
   health_note: string
+  quota_window_started_at: Date | string | null
+  quota_window_ends_at: Date | string | null
+  quota_requests_used: number | string | null
+  quota_requests_remaining: number | string | null
 }
 
 export interface SourcePolicyRecord {
@@ -177,6 +182,16 @@ function mapWorkspaceSource(row: SourcePolicyRegistryRow) {
       lastCostMicros: boundedInteger(row.health_last_cost_micros, 1_000_000_000_000),
       openDeletionCount: boundedInteger(row.health_open_deletion_count, 1_000_000),
       note: safeHealthNote(row.health_note ?? null),
+      quota: deriveSourceQuotaHeadroom({
+        policyQuota: policy?.quota ?? null,
+        enabled: row.enabled,
+        collectible: row.collectible,
+        synthetic,
+        windowStartedAt: iso(row.quota_window_started_at ?? null),
+        windowEndsAt: iso(row.quota_window_ends_at ?? null),
+        requestsUsed: row.quota_requests_used ?? null,
+        requestsRemaining: row.quota_requests_remaining ?? null
+      }),
       freshness: deriveSourceFreshness({
         policy,
         healthState,
@@ -323,6 +338,10 @@ export class PostgresSourcePolicyRepository {
                   policy.display_mode, policy.coverage_notes,
                   policy.policy_document_ref, policy.reviewed_at,
                   policy.expires_at, policy.policy_payload, policy.content_hash,
+                  quota_headroom.window_started_at AS quota_window_started_at,
+                  quota_headroom.window_ends_at AS quota_window_ends_at,
+                  quota_headroom.requests_used AS quota_requests_used,
+                  quota_headroom.requests_remaining AS quota_requests_remaining,
                   COALESCE((
                     source.lifecycle_state = 'active'
                     AND policy.policy_version = source.current_policy_version
@@ -432,6 +451,16 @@ export class PostgresSourcePolicyRepository {
                    AND tombstone.source_id = source.source_id
                    AND tombstone.state IN ('pending', 'processing')
              ) deletion_backlog ON true
+             LEFT JOIN LATERAL (
+                SELECT headroom.window_started_at,
+                       headroom.window_ends_at,
+                       headroom.requests_used,
+                       headroom.requests_remaining
+                  FROM appsea.read_source_quota_headroom(
+                    source.source_id,
+                    policy.policy_version
+                  ) headroom
+             ) quota_headroom ON true
             ORDER BY source.display_name, source.source_id`
         )
         return result.rows.map(mapWorkspaceSource)

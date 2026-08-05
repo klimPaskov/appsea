@@ -11,7 +11,7 @@ CSV/JSON intake without claiming public market coverage; v1 is retained only
 for historical batches. Private competitor/contrary purposes can create
 evidence-linked observations that remain unreviewed until human review.
 
-Migrations `0027`-`0106` cover policy, deletion/leases/admissions, campaign
+Migrations `0027`-`0107` cover policy, deletion/leases/admissions, campaign
 orchestration/cancellation, source reconciliation, analysis/report/plan
 governance, cost/alerts, object refs, workspace archival/purge intent,
 evidence redaction, agent tokens, and TOTP MFA. OIDC and read-only MCP remain
@@ -62,7 +62,7 @@ explanations. Synthetic quality benchmarks and the versioned regression gate
 remain regression evidence only. Every v1 factor binds to retained evidence or
 the immutable seed-review prefix; strict new writes and analysis reject legacy
 pre-provenance rows.
-Backup/restore targets through `0106`; current Docker proof is blocked.
+Backup/restore targets through `0107`; current Docker proof is blocked.
 
 `pnpm verify:release` checks Compose, hardened images, and fail-closed
 preflight; remote namespace/task-queue authorization remains external.
@@ -74,22 +74,12 @@ auth JSON mutations cap streaming bodies at 32 KiB and return `413` before
 parsing oversized requests. Migrations `0105`/`0106` provide append-only
 decision and cluster review ledgers with stale/hash/redaction-safe gates.
 
-The 2026-08-05 source-health tranche adds a bounded health projection to the
-authenticated source registry without a migration. Health is derived from
-existing collection jobs, retained active source items, and deletion tombstones;
-the private page shows fixed state/note values, safe timestamps, bounded
-counters, and open deletion count. It is observational only: no raw failure
-text, payload, credential, reviewer identity, retry, activation, or quota/deletion
-mutation crosses the read boundary.
-
-The 2026-08-06 source-freshness tranche adds optional reviewed policy metadata:
-scheduled sources declare an expected interval and allowed delay. The
-tenant-private `manual-owner-import-v2` path is operationally on demand but its
-legacy payload has no freshness SLA, so the registry stays unknown until a new
-reviewed version adds one. The projection derives fresh/stale/unknown/on-demand/
-blocked state, shows bounded age/thresholds, and preserves legacy hashes.
-It remains observational; no scheduler, retry, quota settlement, provider-auth
-expiry, activation, or public-coverage claim is added.
+Recent source-registry tranches add bounded connector health, optional reviewed
+freshness (scheduled/on-demand), and migration `0107` authenticated shared
+current-minute quota headroom. All are private/read-only projections: raw failures, payloads,
+credentials, reviewer identities, reservation rows, scheduler/retry controls,
+activation, settlement, and public-coverage claims remain outside the boundary.
+Legacy owner-import freshness stays unknown until a new reviewed policy version.
 
 ## Validated commands
 

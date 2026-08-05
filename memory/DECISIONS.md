@@ -377,16 +377,11 @@ ledger with stale hashes, bounded split/merge IDs, and redaction-safe snapshots.
 Fixtures stay read-only; the gate fails closed until every non-synthetic cluster
 is reviewed or confirmed.
 
-## 2026-08-05: Keep source health bounded
+## 2026-08-06: Keep source observability bounded and additive
 
-Derive private connector health from jobs, active items, and tombstones. Expose
-bounded state, timestamps, notes, and counters only; keep raw failures and
-mutation controls out of the read model.
-
-## 2026-08-06: Keep source freshness additive and observational
-
-Optional validated policy JSONB freshness keeps legacy hashes readable.
-Scheduled sources declare interval/delay; on-demand sources declare no SLA.
-The private registry derives state from observations and never schedules,
-activates, settles quota, or infers complaint absence. Threshold changes need a
-new reviewed policy version.
+Source health/freshness remain private projections from retained jobs,
+observations, and optional reviewed schedule metadata; legacy hashes stay
+readable and no stale state implies absent complaints. Migration `0107` adds an
+authenticated workspace-context security-definer read of shared current-minute
+quota limit/used/remaining capacity. Reservation rows and all quota mutation,
+activation, scheduler, retry, and settlement controls remain outside the read.

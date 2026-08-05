@@ -1089,6 +1089,43 @@ export const sourceFreshnessStateSchema = z.enum([
   'blocked'
 ])
 
+export const sourceQuotaHeadroomStateSchema = z.enum([
+  'available',
+  'near_limit',
+  'exhausted',
+  'unknown',
+  'blocked'
+])
+
+export const workspaceSourceQuotaHeadroomReadModelSchema = z
+  .object({
+    state: sourceQuotaHeadroomStateSchema,
+    windowStartedAt: z.string().datetime().nullable(),
+    windowEndsAt: z.string().datetime().nullable(),
+    requestsPerMinute: z.number().int().positive().max(10_000).nullable(),
+    requestsUsed: z.number().int().nonnegative().max(10_000).nullable(),
+    requestsRemaining: z.number().int().nonnegative().max(10_000).nullable(),
+    note: z.string().min(1).max(240)
+  })
+  .strict()
+  .superRefine((value, context) => {
+    if (value.requestsPerMinute === null) return
+    if (value.requestsUsed !== null && value.requestsUsed > value.requestsPerMinute) {
+      context.addIssue({
+        code: 'custom',
+        path: ['requestsUsed'],
+        message: 'Quota usage cannot exceed the per-minute limit'
+      })
+    }
+    if (value.requestsRemaining !== null && value.requestsRemaining > value.requestsPerMinute) {
+      context.addIssue({
+        code: 'custom',
+        path: ['requestsRemaining'],
+        message: 'Quota remaining cannot exceed the per-minute limit'
+      })
+    }
+  })
+
 export const workspaceSourceFreshnessReadModelSchema = z
   .object({
     state: sourceFreshnessStateSchema,
@@ -1116,6 +1153,15 @@ export const workspaceSourceHealthReadModelSchema = z
     lastCostMicros: z.number().int().nonnegative().max(1_000_000_000_000),
     openDeletionCount: z.number().int().nonnegative().max(1_000_000),
     note: z.string().min(1).max(240),
+    quota: workspaceSourceQuotaHeadroomReadModelSchema.default({
+      state: 'unknown',
+      windowStartedAt: null,
+      windowEndsAt: null,
+      requestsPerMinute: null,
+      requestsUsed: null,
+      requestsRemaining: null,
+      note: 'Quota headroom is not available for this source.'
+    }),
     freshness: workspaceSourceFreshnessReadModelSchema.default({
       state: 'unknown',
       lastObservedAt: null,
@@ -1170,6 +1216,15 @@ export const workspaceSourceReadModelSchema = z
       lastCostMicros: 0,
       openDeletionCount: 0,
       note: 'No completed collection has been observed for this workspace.',
+      quota: {
+        state: 'unknown',
+        windowStartedAt: null,
+        windowEndsAt: null,
+        requestsPerMinute: null,
+        requestsUsed: null,
+        requestsRemaining: null,
+        note: 'Quota headroom is not available for this source.'
+      },
       freshness: {
         state: 'unknown',
         lastObservedAt: null,
@@ -7599,6 +7654,10 @@ export type SourcePolicyReviewerRole = z.infer<typeof sourcePolicyReviewerRoleSc
 export type SourcePolicyApprovalInput = z.infer<typeof sourcePolicyApprovalInputSchema>
 export type SourceHealthState = z.infer<typeof sourceHealthStateSchema>
 export type SourceFreshnessState = z.infer<typeof sourceFreshnessStateSchema>
+export type SourceQuotaHeadroomState = z.infer<typeof sourceQuotaHeadroomStateSchema>
+export type WorkspaceSourceQuotaHeadroomReadModel = z.infer<
+  typeof workspaceSourceQuotaHeadroomReadModelSchema
+>
 export type WorkspaceSourceFreshnessReadModel = z.infer<
   typeof workspaceSourceFreshnessReadModelSchema
 >

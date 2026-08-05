@@ -2101,6 +2101,18 @@ a:focus-visible {
   color: var(--accent);
 }
 
+.source-health-state.is-available {
+  color: var(--success);
+}
+
+.source-health-state.is-near_limit {
+  color: var(--warning);
+}
+
+.source-health-state.is-exhausted {
+  color: var(--danger);
+}
+
 .source-health .muted-note {
   margin: 8px 0 0;
   line-height: 1.45;

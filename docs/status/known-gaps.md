@@ -24,12 +24,14 @@ market coverage. CFPB, Stack Exchange, and other third-party sources remain
 disabled pending independent review.
 
 Source freshness is now visible for policies that declare a reviewed schedule,
-but it is still an observational read model. The current slice does not own
-scheduler alerting, quota-remaining accounting, provider authentication expiry,
-or source activation; scheduled freshness therefore remains `unknown` until a
+and migration `0107` adds a bounded shared current-minute quota-headroom
+projection. Both remain observational read models: the source registry does
+not own scheduler alerting, provider authentication expiry, reservation/
+settlement, or source activation. Quota headroom is global by source/policy,
+not a per-workspace usage ledger; scheduled freshness remains `unknown` until a
 policy supplies thresholds and a retained observation exists. Deployment-owned
-monitoring and live source approvals are still required before freshness can be
-used as an operational SLO.
+monitoring and live source approvals are still required before either signal
+can be used as an operational SLO.
 
 Migration `0104` now carries the exact confirmed observation snapshot from an
 explicit owner/editor-reviewed analysis into the private report and six-file

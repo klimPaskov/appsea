@@ -119,7 +119,8 @@ describe('database foundation', () => {
       '0103',
       '0104',
       '0105',
-      '0106'
+      '0106',
+      '0107'
     ])
     expect(migrations[0]?.checksum).toMatch(/^[a-f0-9]{64}$/)
     expect(migrations[0]?.sql).toContain('CREATE TABLE appsea.evidence_records')
@@ -134,6 +135,17 @@ describe('database foundation', () => {
     expect(clusterReviewMigration?.sql).toContain('CREATE TABLE appsea.cluster_review_events')
     expect(clusterReviewMigration?.sql).toContain('cluster_review_guard')
     expect(clusterReviewMigration?.sql).toContain('cluster review events are append-only')
+    const quotaHeadroomMigration = migrations.find((migration) => migration.version === '0107')
+    expect(quotaHeadroomMigration?.sql).toContain(
+      'CREATE OR REPLACE FUNCTION appsea.read_source_quota_headroom'
+    )
+    expect(quotaHeadroomMigration?.sql).toContain(
+      'source quota headroom requires an authenticated workspace context'
+    )
+    expect(quotaHeadroomMigration?.sql).toContain(
+      'GRANT EXECUTE ON FUNCTION appsea.read_source_quota_headroom(text, text) TO appsea_service'
+    )
+    expect(quotaHeadroomMigration?.sql).toContain('GRANT EXECUTE ON FUNCTION')
     const cancellationMigration = migrations.find((migration) => migration.version === '0070')
     expect(cancellationMigration?.sql).toContain('cancellation_requested_at')
     expect(cancellationMigration?.sql).toContain(

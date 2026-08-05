@@ -83,6 +83,15 @@ const source = {
     lastCostMicros: 0,
     openDeletionCount: 0,
     note: 'Collection is blocked until the current source policy is active and approved.',
+    quota: {
+      state: 'blocked' as const,
+      windowStartedAt: null,
+      windowEndsAt: null,
+      requestsPerMinute: 6,
+      requestsUsed: null,
+      requestsRemaining: null,
+      note: 'Quota headroom is unavailable until the current source policy is active and approved.'
+    },
     freshness: {
       state: 'blocked' as const,
       lastObservedAt: null,

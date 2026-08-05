@@ -90,6 +90,7 @@ import {
   researchCampaignOrchestrationCancelResultSchema,
   sourcePolicySchema,
   sourceFreshnessPolicySchema,
+  workspaceSourceQuotaHeadroomReadModelSchema,
   sourcePolicyApprovalInputSchema,
   workspaceSourceHealthReadModelSchema,
   workspaceSourceReadModelSchema,
@@ -750,6 +751,34 @@ describe('contracts', () => {
       expectedIntervalHours: null,
       allowedDelayHours: null
     })
+    expect(source.health.quota).toMatchObject({
+      state: 'unknown',
+      requestsPerMinute: null,
+      requestsUsed: null,
+      requestsRemaining: null
+    })
+    expect(
+      workspaceSourceQuotaHeadroomReadModelSchema.safeParse({
+        state: 'near_limit',
+        windowStartedAt: now,
+        windowEndsAt: '2026-08-01T00:01:00.000Z',
+        requestsPerMinute: 6,
+        requestsUsed: 5,
+        requestsRemaining: 1,
+        note: 'Quota is near the current source limit.'
+      }).success
+    ).toBe(true)
+    expect(
+      workspaceSourceQuotaHeadroomReadModelSchema.safeParse({
+        state: 'available',
+        windowStartedAt: now,
+        windowEndsAt: '2026-08-01T00:01:00.000Z',
+        requestsPerMinute: 6,
+        requestsUsed: 6,
+        requestsRemaining: 7,
+        note: 'bounded'
+      }).success
+    ).toBe(false)
     expect(
       workspaceSourceHealthReadModelSchema.safeParse({
         state: 'degraded',

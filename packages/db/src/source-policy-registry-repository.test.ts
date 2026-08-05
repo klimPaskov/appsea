@@ -188,6 +188,7 @@ describe('source policy registry repository', () => {
     expect(statement).toContain('clock_timestamp()')
     expect(statement).toContain('production_collection_workflow_jobs')
     expect(statement).toContain('deletion_tombstones')
+    expect(statement).toContain('read_source_quota_headroom')
     expect(transactionMocks.withAuthenticatedWorkspaceTransaction).toHaveBeenCalledWith(
       {},
       'user:editor',
@@ -233,6 +234,13 @@ describe('source policy registry repository', () => {
       lastCostMicros: 1200,
       openDeletionCount: 2,
       note: 'No completed collection has been observed for this workspace.',
+      quota: expect.objectContaining({
+        state: 'unknown',
+        requestsPerMinute: 6,
+        requestsUsed: null,
+        requestsRemaining: null,
+        note: 'Quota usage has not been observed for the current source window.'
+      }),
       freshness: expect.objectContaining({
         state: 'unknown',
         lastObservedAt: '2026-07-31T01:00:00.000Z',
@@ -243,6 +251,40 @@ describe('source policy registry repository', () => {
       })
     })
     expect(source).not.toHaveProperty('failureSummary')
+  })
+
+  it('maps the current-minute quota window without exposing reservation rows', async () => {
+    query.mockResolvedValue({
+      rows: [
+        {
+          ...rowFor(pendingPolicy, {
+            lifecycleState: 'active',
+            enabled: true,
+            collectible: true
+          }),
+          quota_window_started_at: '2026-08-06T10:00:00.000Z',
+          quota_window_ends_at: '2026-08-06T10:01:00.000Z',
+          quota_requests_used: '5',
+          quota_requests_remaining: '1',
+          health_state: 'healthy',
+          health_note: 'A completed collection or retained private observation is available.'
+        }
+      ]
+    })
+    const repository = new PostgresSourcePolicyRepository({} as Pool)
+
+    const [source] = await repository.listForUser('user:editor', 'workspace:one')
+
+    expect(source?.health.quota).toEqual({
+      state: 'near_limit',
+      windowStartedAt: '2026-08-06T10:00:00.000Z',
+      windowEndsAt: '2026-08-06T10:01:00.000Z',
+      requestsPerMinute: 6,
+      requestsUsed: 5,
+      requestsRemaining: 1,
+      note: 'Quota is near the current source limit.'
+    })
+    expect(source).not.toHaveProperty('quotaReservations')
   })
 
   it('fails closed when a source health counter exceeds the bounded read model', async () => {

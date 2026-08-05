@@ -63,6 +63,15 @@ function freshnessWindow(source: WorkspaceSourceReadModel): string {
   return `${expectedIntervalHours}h interval · ${allowedDelayHours}h allowed delay`
 }
 
+function quotaHeadroom(source: WorkspaceSourceReadModel): string {
+  const quota = source.health.quota
+  if (quota.requestsRemaining !== null && quota.requestsPerMinute !== null) {
+    return `${quota.requestsRemaining.toLocaleString('en-US')} / ${quota.requestsPerMinute.toLocaleString('en-US')} requests left`
+  }
+  if (quota.state === 'blocked') return 'Blocked by policy'
+  return 'Not observed'
+}
+
 function healthDate(value: string | null): string {
   return value ? new Date(value).toLocaleString('en-US') : 'Not observed'
 }
@@ -201,6 +210,14 @@ export default async function WorkspaceSourcesPage({
                           {source.health.freshness.ageHours === null
                             ? 'Not observed'
                             : `${source.health.freshness.ageHours.toLocaleString('en-US')} hours`}
+                        </dd>
+                      </div>
+                      <div>
+                        <dt>Quota now (shared)</dt>
+                        <dd>
+                          <span className={`source-health-state is-${source.health.quota.state}`}>
+                            {quotaHeadroom(source)}
+                          </span>
                         </dd>
                       </div>
                     </dl>
