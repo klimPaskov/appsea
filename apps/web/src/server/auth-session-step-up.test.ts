@@ -15,7 +15,7 @@ vi.mock('@appsea/db/auth', () => ({
   }
 }))
 
-import { requireRecentMutationStepUp, sessionCookieName } from './auth-session'
+import { readBoundedJsonBody, requireRecentMutationStepUp, sessionCookieName } from './auth-session'
 
 describe('requireRecentMutationStepUp', () => {
   beforeEach(() => {
@@ -60,5 +60,44 @@ describe('requireRecentMutationStepUp', () => {
     await expect(requireRecentMutationStepUp()).resolves.toBeNull()
     expect(mocks.hasRecentReauthentication).toHaveBeenCalledWith('a'.repeat(48))
     expect(mocks.hasRecentMfaReauthentication).toHaveBeenCalledWith('a'.repeat(48))
+  })
+})
+
+describe('readBoundedJsonBody', () => {
+  it('rejects declared and chunked bodies above the auth limit before parsing', async () => {
+    const declared = await readBoundedJsonBody(
+      new Request('https://appsea.example', {
+        method: 'POST',
+        headers: { 'content-length': '32769' },
+        body: '{}'
+      })
+    )
+    expect(declared).toEqual({ ok: false, tooLarge: true })
+
+    const oversized = new TextEncoder().encode('x'.repeat(32_769))
+    const chunked = await readBoundedJsonBody(
+      new Request('https://appsea.example', {
+        method: 'POST',
+        duplex: 'half',
+        body: new ReadableStream({
+          start(controller) {
+            controller.enqueue(oversized)
+            controller.close()
+          }
+        })
+      } as RequestInit & { duplex: 'half' })
+    )
+    expect(chunked).toEqual({ ok: false, tooLarge: true })
+  })
+
+  it('parses bounded JSON without exposing a second request.json buffer', async () => {
+    await expect(
+      readBoundedJsonBody(
+        new Request('https://appsea.example', {
+          method: 'POST',
+          body: JSON.stringify({ code: '123456' })
+        })
+      )
+    ).resolves.toEqual({ ok: true, value: { code: '123456' } })
   })
 })

@@ -3,6 +3,7 @@ import { notFound, redirect } from 'next/navigation'
 import { readSession } from '../../../../../../server/auth-session'
 import { readPrivateOpportunityContext } from '../../../../../../server/private-opportunity'
 import { ArtifactApprovalActions } from '../../../../report-plan-approval-actions'
+import { WorkspaceOpportunityTabs } from '../../../../../../components/workspace-opportunity-tabs'
 
 export const dynamic = 'force-dynamic'
 
@@ -28,6 +29,7 @@ export default async function PrivateReportPage({
         <span aria-hidden="true">/</span>
         <span>Report</span>
       </p>
+      <WorkspaceOpportunityTabs workspaceId={workspaceId} slug={slug} active="report" />
       <div className="workspace-toolbar workspace-opportunity-heading">
         <div>
           <p className="eyebrow">Evidence-backed report</p>

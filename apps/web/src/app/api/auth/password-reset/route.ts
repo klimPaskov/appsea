@@ -9,6 +9,8 @@ import {
   authRepository,
   invalidRequest,
   privateResponseHeaders,
+  readBoundedJsonBody,
+  requestBodyTooLargeResponse,
   sameOriginRequest
 } from '../../../../server/auth-session'
 
@@ -19,12 +21,12 @@ export async function POST(request: Request): Promise<Response> {
     return Response.json({ error: 'Origin not allowed' }, { status: 403 })
   }
 
-  let payload: unknown
-  try {
-    payload = await request.json()
-  } catch {
-    return invalidRequest('Request body must be valid JSON')
-  }
+  const body = await readBoundedJsonBody(request)
+  if (!body.ok)
+    return body.tooLarge
+      ? requestBodyTooLargeResponse()
+      : invalidRequest('Request body must be valid JSON')
+  const payload = body.value
   const parsed = authPasswordResetInputSchema.safeParse(payload)
   if (!parsed.success) return invalidRequest('A reset link and valid password are required')
 

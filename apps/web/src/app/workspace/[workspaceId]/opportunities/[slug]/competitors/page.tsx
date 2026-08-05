@@ -6,6 +6,7 @@ import { readPrivateOpportunityContext } from '../../../../../../server/private-
 import { CompetitorObservationActions } from '../../../../competitor-observation-actions'
 import { CompetitorObservationCreateForm } from '../../../../competitor-observation-create-form'
 import { DeepResearchGateActions } from '../../../../deep-research-gate-actions'
+import { WorkspaceOpportunityTabs } from '../../../../../../components/workspace-opportunity-tabs'
 
 export const dynamic = 'force-dynamic'
 
@@ -48,27 +49,7 @@ export default async function PrivateCompetitorsPage({
         <span aria-hidden="true">/</span>
         <span>Competitors</span>
       </p>
-      <nav className="tabs" aria-label="Opportunity research sections">
-        <Link className="tab" href={`/workspace/${workspaceId}/opportunities/${slug}`}>
-          Overview
-        </Link>
-        <Link className="tab" href={`/workspace/${workspaceId}/opportunities/${slug}/evidence`}>
-          Evidence
-        </Link>
-        <Link
-          className="tab active"
-          href={`/workspace/${workspaceId}/opportunities/${slug}/competitors`}
-          aria-current="page"
-        >
-          Competitors
-        </Link>
-        <Link className="tab" href={`/workspace/${workspaceId}/opportunities/${slug}/report`}>
-          Report
-        </Link>
-        <Link className="tab" href={`/workspace/${workspaceId}/opportunities/${slug}/plan`}>
-          Plan
-        </Link>
-      </nav>
+      <WorkspaceOpportunityTabs workspaceId={workspaceId} slug={slug} active="competitors" />
       <div className="workspace-toolbar workspace-opportunity-heading">
         <div>
           <p className="eyebrow">Competitive intelligence</p>

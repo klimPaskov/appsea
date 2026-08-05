@@ -11,7 +11,7 @@ CSV/JSON intake without claiming public market coverage; v1 is retained only
 for historical batches. Private competitor/contrary purposes can create
 evidence-linked observations that remain unreviewed until human review.
 
-Migrations `0027`-`0104` cover policy, deletion/leases/admissions, campaign
+Migrations `0027`-`0105` cover policy, deletion/leases/admissions, campaign
 orchestration/cancellation, source reconciliation, analysis/report/plan
 governance, cost/alerts, object refs, workspace archival/purge intent,
 evidence redaction, agent tokens, and TOTP MFA. OIDC and read-only MCP remain
@@ -30,7 +30,6 @@ synthetic. Gaps remain visible after pass. Competitors exposes checklist review:
 editors submit; owners promote/withdraw. API owns evidence/snapshot/membership/
 step-up; UI never activates sources.
 Report/plan approval is editor/owner-gated; readiness is server-owned.
-Private Activity renders scalar audit receipts; no mutation/export.
 
 `pnpm verify:worker:recovery` proves worker replacement with one-time effects
 and sanitized history; hosted restore/failover/topology remain open.
@@ -54,9 +53,8 @@ and public sources remain disabled. Confirmed competitive observations are
 carried only into the next explicit reviewed production analysis; lineage keeps
 observation/evidence hashes, restricted claim text is masked, and rejection or
 source deletion invalidates active outputs without auto-recompute.
-Migrations `0090`-`0104` keep policy/deletion/privilege surfaces narrow.
-Local PostgreSQL/Temporal/MinIO and backup/restore pass when Docker is
-available; hosted restore/HA/failover remain external.
+Local-stack checks pass when Docker is available; hosted restore/HA/failover
+remain external.
 
 Scoring preserves `opportunity-score-v0.2.0` and adds reviewed-input
 balanced `opportunity-score-v1.0.0`: raw/risk-adjusted/ranking scores, bounded
@@ -76,15 +74,20 @@ has a `source-evidence` or `reviewed-seed` binding; production analysis checks
 source bindings against retained complaint evidence and seed bindings against
 the immutable review prefix. Read-only seed inspection accepts pre-provenance
 v1 rows, but strict new-write/analysis admission requires a replacement.
-Backup/restore targets through `0104`; current Docker proof is blocked.
+Backup/restore targets through `0105`; current Docker proof is blocked.
 
 `pnpm verify:release` checks Compose, hardened images, and fail-closed
 preflight; remote namespace/task-queue authorization remains external.
 
 The public leaderboard is regression-tested as sparse with its exact heading,
 rank/opportunity/complaint/score fields, and fixture disclosure; web tests,
-build, and smoke pass. The interrupted repository-wide `pnpm verify` run is
-inconclusive rather than proof.
+build, and smoke pass.
+Private opportunity pages share accessible Overview/Evidence/Competitors/
+Report/Plan tabs. Migration `0105` adds forced-RLS append-only private decision
+history and guarded owner/editor controls; step-up, idempotency, stale-state,
+lineage, report/plan/gate checks remain server/database-owned. Fixtures stay
+read-only/synthetic and MCP stays read-only. Auth JSON mutations use a
+streaming 32 KiB cap and return `413` before parsing oversized requests.
 
 ## Validated commands
 

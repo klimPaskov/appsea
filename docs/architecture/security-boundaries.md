@@ -69,6 +69,23 @@ concurrent transitions, and requires an `operator:` actor when a privileged
 skill becomes active. This is an operator-operated audit adapter, not worker
 activation: the worker still does not import the registry or grant permissions.
 
+## Opportunity lifecycle decisions
+
+Migration `0105_opportunity_decisions.sql` is the private lifecycle governance
+boundary. Its forced-RLS table is append-only; a security-definer trigger locks
+the active opportunity, checks the authenticated editor/owner actor and stale
+state, binds the identifier-only evidence snapshot to the current source run
+and active production-analysis artifact, and updates lifecycle state in the same
+transaction. Approval is owner-only and requires the current passed
+deep-research gate plus an approved report and ready/approved plan. Scalar audit
+and outbox receipts omit the decision reason and source text. The web route adds
+recent password/MFA step-up and idempotency checks. Fixture rows are read-only
+and synthetic, and MCP remains read-only.
+
+All web auth JSON mutations pass through a streaming 32 KiB body reader before
+schema validation or rate-limit admission. Declared and chunked oversized
+payloads return `413`; no request body is parsed or retained after the cap.
+
 Blocked flows:
 
 - complaint text to shell execution

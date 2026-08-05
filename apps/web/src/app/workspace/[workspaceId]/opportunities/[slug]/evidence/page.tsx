@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { notFound, redirect } from 'next/navigation'
 import { readSession } from '../../../../../../server/auth-session'
 import { readPrivateOpportunityContext } from '../../../../../../server/private-opportunity'
+import { WorkspaceOpportunityTabs } from '../../../../../../components/workspace-opportunity-tabs'
 
 export const dynamic = 'force-dynamic'
 
@@ -27,6 +28,7 @@ export default async function PrivateEvidencePage({
         <span aria-hidden="true">/</span>
         <span>Evidence</span>
       </p>
+      <WorkspaceOpportunityTabs workspaceId={workspaceId} slug={slug} active="evidence" />
       <div className="workspace-toolbar workspace-opportunity-heading">
         <div>
           <p className="eyebrow">Evidence inspection</p>

@@ -30,6 +30,10 @@ vi.mock('../server/auth-session', () => ({
   allowAuthAttempt: mocks.allowAuthAttempt,
   forbiddenResponse: () => Response.json({ error: 'Workspace access denied' }, { status: 403 }),
   invalidRequest: (message: string) => Response.json({ error: message }, { status: 400 }),
+  readBoundedJsonBody: async (request: Request) =>
+    ({ ok: true, value: await request.json() }) as const,
+  requestBodyTooLargeResponse: () =>
+    Response.json({ error: 'Request body is too large' }, { status: 413 }),
   mfaReauthenticationRequiredResponse: () =>
     Response.json({ error: 'Recent MFA verification required' }, { status: 428 }),
   privateResponseHeaders: { 'cache-control': 'private, no-store' },

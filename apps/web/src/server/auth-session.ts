@@ -56,6 +56,64 @@ export function invalidRequest(message = 'Invalid request'): Response {
   return Response.json({ error: message }, { status: 400, headers: privateResponseHeaders })
 }
 
+export type BoundedJsonBodyResult = { ok: true; value: unknown } | { ok: false; tooLarge: boolean }
+
+/**
+ * Read an auth request body without allowing Request.json() to buffer an
+ * unbounded unauthenticated payload before validation or throttling.
+ */
+export async function readBoundedJsonBody(
+  request: Request,
+  maxBytes = 32_768
+): Promise<BoundedJsonBodyResult> {
+  const declaredLength = request.headers.get('content-length')
+  if (declaredLength !== null) {
+    const parsedLength = Number(declaredLength)
+    if (!Number.isSafeInteger(parsedLength) || parsedLength < 0 || parsedLength > maxBytes) {
+      return { ok: false, tooLarge: true }
+    }
+  }
+  if (!request.body) return { ok: false, tooLarge: false }
+
+  const reader = request.body.getReader()
+  const chunks: Uint8Array[] = []
+  let total = 0
+  try {
+    for (;;) {
+      const { done, value } = await reader.read()
+      if (done) break
+      if (!value) continue
+      total += value.byteLength
+      if (total > maxBytes) {
+        await reader.cancel('request body exceeds the auth limit')
+        return { ok: false, tooLarge: true }
+      }
+      chunks.push(value)
+    }
+  } catch {
+    return { ok: false, tooLarge: false }
+  }
+
+  const bytes = new Uint8Array(total)
+  let offset = 0
+  for (const chunk of chunks) {
+    bytes.set(chunk, offset)
+    offset += chunk.byteLength
+  }
+  try {
+    return { ok: true, value: JSON.parse(new TextDecoder().decode(bytes)) }
+  } catch {
+    return { ok: false, tooLarge: false }
+  }
+}
+
+export function requestBodyTooLargeResponse(): Response {
+  return Response.json(
+    { error: 'Request body is too large' },
+    { status: 413, headers: privateResponseHeaders }
+  )
+}
+
 export function unauthorizedResponse(): Response {
   return Response.json(
     { error: 'Authentication required' },

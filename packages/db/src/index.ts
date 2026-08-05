@@ -166,6 +166,13 @@ export {
   DeepResearchGatePermissionError
 } from './deep-research-gate-repository'
 export {
+  OpportunityDecisionBlockedError,
+  OpportunityDecisionConflictError,
+  OpportunityDecisionNotFoundError,
+  OpportunityDecisionPermissionError,
+  PostgresOpportunityDecisionRepository
+} from './opportunity-decision-repository'
+export {
   PostgresEvidenceRedactionRepository,
   EvidenceRedactionConflictError,
   EvidenceRedactionNotFoundError,

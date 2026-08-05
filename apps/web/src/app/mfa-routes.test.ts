@@ -33,6 +33,17 @@ vi.mock('../server/auth-session', () => ({
       { status: 400, headers: { 'cache-control': 'private, no-store' } }
     ),
   privateResponseHeaders: { 'cache-control': 'private, no-store' },
+  readBoundedJsonBody: async (request: Request) => {
+    if (Number(request.headers.get('content-length') ?? '0') > 32_768) {
+      return { ok: false, tooLarge: true } as const
+    }
+    return { ok: true, value: await request.json() } as const
+  },
+  requestBodyTooLargeResponse: () =>
+    Response.json(
+      { error: 'Request body is too large' },
+      { status: 413, headers: { 'cache-control': 'private, no-store' } }
+    ),
   readSession: mocks.readSession,
   readSessionToken: mocks.readSessionToken,
   readOidcMfaChallengeToken: mocks.readOidcMfaChallengeToken,
@@ -130,6 +141,18 @@ describe('MFA authentication routes', () => {
     )
     expect(limited.status).toBe(429)
     expect(mocks.repository.completeMfaSignIn).toHaveBeenCalledTimes(1)
+  })
+
+  it('returns 413 for an oversized MFA login body before rate limiting', async () => {
+    const response = await completeMfaLogin(
+      new Request('https://appsea.example/api/auth/mfa/login', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json', 'content-length': '32769' },
+        body: '{}'
+      })
+    )
+    expect(response.status).toBe(413)
+    expect(mocks.allowAuthAttempt).not.toHaveBeenCalled()
   })
 
   it('accepts a pending OIDC MFA challenge from its HttpOnly cookie without exposing the token', async () => {

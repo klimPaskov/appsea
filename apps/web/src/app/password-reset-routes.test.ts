@@ -22,6 +22,17 @@ vi.mock('../server/auth-session', () => ({
       { status: 400, headers: { 'cache-control': 'private, no-store' } }
     ),
   privateResponseHeaders: { 'cache-control': 'private, no-store' },
+  readBoundedJsonBody: async (request: Request) => {
+    if (Number(request.headers.get('content-length') ?? '0') > 32_768) {
+      return { ok: false, tooLarge: true } as const
+    }
+    return { ok: true, value: await request.json() } as const
+  },
+  requestBodyTooLargeResponse: () =>
+    Response.json(
+      { error: 'Request body is too large' },
+      { status: 413, headers: { 'cache-control': 'private, no-store' } }
+    ),
   sameOriginRequest: mocks.sameOriginRequest
 }))
 
@@ -95,6 +106,18 @@ describe('password recovery routes', () => {
     )
     expect(limited.status).toBe(429)
     expect(mocks.repository.requestPasswordReset).not.toHaveBeenCalled()
+  })
+
+  it('returns 413 for an oversized recovery body before rate limiting', async () => {
+    const response = await requestReset(
+      new Request('https://appsea.example/api/auth/password-reset/request', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json', 'content-length': '32769' },
+        body: '{}'
+      })
+    )
+    expect(response.status).toBe(413)
+    expect(mocks.allowAuthAttempt).not.toHaveBeenCalled()
   })
 
   it('accepts a valid reset and maps invalid tokens without echoing them', async () => {

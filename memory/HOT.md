@@ -19,6 +19,10 @@
   and plans carry the snapshot privately, restricted claims are masked, and
   rejection/deletion invalidates consumed outputs. A new explicit reviewed run
   is required; no automatic recompute or public coverage is implied.
+- Migration `0105` adds append-only private decisions with identifier-only
+  snapshots, stale/idempotent transitions, audited receipts, owner-only
+  approval, and step-up web history; fixtures/MCP remain read-only. Auth JSON
+  uses a streaming 32 KiB cap with `413` for oversized bodies.
 - `research-quality-v1.0.0` is synthetic/redacted regression evidence only;
   balanced v1 bindings remain reviewed inputs, not market evidence.
 - Production opportunities stay `candidate` until the explicit deep-research

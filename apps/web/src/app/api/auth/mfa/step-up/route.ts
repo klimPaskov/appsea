@@ -9,6 +9,8 @@ import {
   authRepository,
   invalidRequest,
   privateResponseHeaders,
+  readBoundedJsonBody,
+  requestBodyTooLargeResponse,
   readSession,
   readSessionToken,
   sameOriginRequest,
@@ -25,12 +27,12 @@ export async function POST(request: Request): Promise<Response> {
   const session = token ? await readSession() : null
   if (!token || !session) return unauthorizedResponse()
 
-  let payload: unknown
-  try {
-    payload = await request.json()
-  } catch {
-    return invalidRequest('Request body must be valid JSON')
-  }
+  const body = await readBoundedJsonBody(request)
+  if (!body.ok)
+    return body.tooLarge
+      ? requestBodyTooLargeResponse()
+      : invalidRequest('Request body must be valid JSON')
+  const payload = body.value
   const parsed = authMfaStepUpInputSchema.safeParse(payload)
   if (!parsed.success) return invalidRequest('Enter an authenticator or recovery code')
   if (!(await allowAuthAttempt(request, session.user.email, 'mfa'))) {

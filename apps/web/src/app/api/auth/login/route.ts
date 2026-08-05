@@ -6,6 +6,8 @@ import {
   authRepository,
   invalidRequest,
   privateResponseHeaders,
+  readBoundedJsonBody,
+  requestBodyTooLargeResponse,
   sameOriginRequest,
   sessionCookieName,
   sessionCookieOptions
@@ -16,12 +18,12 @@ export const runtime = 'nodejs'
 export async function POST(request: Request): Promise<Response> {
   if (!sameOriginRequest(request))
     return Response.json({ error: 'Origin not allowed' }, { status: 403 })
-  let payload: unknown
-  try {
-    payload = await request.json()
-  } catch {
-    return invalidRequest('Request body must be valid JSON')
-  }
+  const body = await readBoundedJsonBody(request)
+  if (!body.ok)
+    return body.tooLarge
+      ? requestBodyTooLargeResponse()
+      : invalidRequest('Request body must be valid JSON')
+  const payload = body.value
   const parsed = authSignInInputSchema.safeParse(payload)
   if (!parsed.success) return invalidRequest('Email and password are required')
 

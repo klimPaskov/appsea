@@ -7,6 +7,8 @@ import {
   invalidRequest,
   mfaReauthenticationRequiredResponse,
   privateResponseHeaders,
+  readBoundedJsonBody,
+  requestBodyTooLargeResponse,
   readSession,
   readSessionToken,
   reauthenticationRequiredResponse,
@@ -27,12 +29,12 @@ export async function DELETE(request: Request): Promise<Response> {
   const session = token ? await readSession() : null
   if (!token || !session) return unauthorizedResponse()
 
-  let payload: unknown
-  try {
-    payload = await request.json()
-  } catch {
-    return invalidRequest('Request body must be valid JSON')
-  }
+  const body = await readBoundedJsonBody(request)
+  if (!body.ok)
+    return body.tooLarge
+      ? requestBodyTooLargeResponse()
+      : invalidRequest('Request body must be valid JSON')
+  const payload = body.value
   const parsed = authAccountDeletionInputSchema.safeParse(payload)
   if (!parsed.success) return invalidRequest('Type DELETE MY ACCOUNT to close this account')
 

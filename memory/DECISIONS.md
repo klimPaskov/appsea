@@ -262,15 +262,10 @@ server-clock `next_attempt_at`; claims use a 15-minute stale lease and failed
 rows retry after 60 seconds until eight attempts. Exhausted rows retain fixed
 failure metadata and cannot re-enter processing; completion remains idempotent.
 
-## 2026-08-01: Versioned complaint analysis snapshots
+## 2026-08-01: Version analysis and source-policy reviews
 
-`0053` stores derived analysis beside each complaint; unresolved entity types
-stay explicit.
-
-## 2026-08-01: Source-policy review integrity
-
-`0054` requires reviewer identity, independent role, and attestation; legacy
-approvals require re-review.
+`0053` stores derived analysis; `0054` requires independent attested review
+and re-review of legacy approvals.
 
 ## 2026-08-01: Keep competitive research state explicit
 
@@ -359,15 +354,10 @@ explicit.
 
 ## 2026-08-04: Keep purge manifests metadata-only and provider-neutral
 
-Migration `0083` stores an expiring inventory per workspace
-and object-list hash after archival. Migration `0084` repairs PostgreSQL 18
-output-column qualification in `archive_workspace`; `0085` removes the
-row-locking read check rejected by read-only transactions. The repository
-deduplicates persisted object URI/kind references and records identifier-only
-receipts. Owner membership, password step-up, MFA step-up, forced RLS, and
-confirmation protect the web boundary. Manifest coordinates
-object-store/export/backup controls; it cannot authorize deletion or contain
-bodies, source payloads, or credentials.
+Migration `0083` stores an expiring per-workspace object inventory/hash after
+archival; `0084`/`0085` repair PostgreSQL/read-only behavior. Deduplicated
+URI/kinds and identifier-only receipts stay behind owner/password-MFA step-up,
+RLS, confirmation, and a metadata-only non-deleting boundary.
 
 ## 2026-08-03: Require conditional MFA for password-gated mutations
 
@@ -381,3 +371,11 @@ New production-analysis v2 starts carry a strict identifier-only memo. A
 visibility-only checker and reviewed manifest classify legacy/unknown runs and
 fail closed before the v1 worker is removed; archive/deletion stays an approved
 deployment operation and never occurs in workflow code.
+
+## 2026-08-05: Guard private decisions and auth ingress
+
+Migration `0105` makes approve/watch/reject/archive private, forced-RLS,
+append-only, idempotent, stale-checked, and bound to identifier-only evidence/
+analysis. Owner-only approval requires deep-research/report/plan gates; step-up
+and scalar receipts are required. Fixtures/MCP stay read-only. Auth mutations
+stream 32 KiB; oversized bodies return `413` before parsing/throttling.

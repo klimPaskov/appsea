@@ -17,6 +17,7 @@ import {
 } from '@appsea/contracts'
 import { PostgresCompetitiveResearchRepository } from '@appsea/db/competitive-research'
 import { PostgresDeepResearchGateRepository } from '@appsea/db/deep-research-gate'
+import { PostgresOpportunityDecisionRepository } from '@appsea/db/opportunity-decision'
 import { PostgresProductionAnalysisRepository } from '@appsea/db/production-analysis'
 import { authRepository, readSession } from './auth-session'
 import { getDatabasePool } from './database'
@@ -28,6 +29,24 @@ export interface PrivateOpportunityContext {
   workspace: WorkspaceMembershipReadModel
   detail: WorkspaceOpportunityDetailReadModel
   competitorTargets: WorkspaceCompetitorTarget[]
+}
+
+async function attachDecisionHistory(
+  detail: WorkspaceOpportunityDetailReadModel,
+  userId: string,
+  workspaceId: string
+): Promise<WorkspaceOpportunityDetailReadModel> {
+  const decisionHistory = await new PostgresOpportunityDecisionRepository(
+    getDatabasePool()
+  ).listForUser(userId, workspaceId, detail.opportunity.id)
+  const latestDecision = decisionHistory[0]
+  return workspaceOpportunityDetailReadModelSchema.parse({
+    ...detail,
+    summary: latestDecision
+      ? { ...detail.summary, state: latestDecision.nextState }
+      : detail.summary,
+    decisionHistory
+  })
 }
 
 /** Map a validated production analysis into the private opportunity read model. */
@@ -161,7 +180,11 @@ export async function readPrivateOpportunityDetailForUser(
         getDatabasePool(),
         getObjectStore()
       ).readForUser(userId, parsedWorkspaceId.data, production.artifact.opportunity.id)
-      return mapProductionAnalysisToOpportunityDetail(production, observations, deepResearchGate)
+      return attachDecisionHistory(
+        mapProductionAnalysisToOpportunityDetail(production, observations, deepResearchGate),
+        userId,
+        parsedWorkspaceId.data
+      )
     }
   }
   const detail = await repository.readWorkspaceOpportunity(
@@ -196,12 +219,13 @@ export async function readPrivateOpportunityDetailForUser(
       deepResearchGatePassed: deepResearchGate?.status === 'passed'
     })
   })
-  return workspaceOpportunityDetailReadModelSchema.parse({
+  const enriched = workspaceOpportunityDetailReadModelSchema.parse({
     ...detail,
     summary,
     competitiveResearch,
     deepResearchGate
   })
+  return attachDecisionHistory(enriched, userId, parsedWorkspaceId.data)
 }
 
 export async function readPrivateOpportunityContext(

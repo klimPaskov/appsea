@@ -22,6 +22,13 @@ vi.mock('../server/auth-session', () => ({
       { error: message },
       { status: 400, headers: { 'cache-control': 'private, no-store' } }
     ),
+  readBoundedJsonBody: async (request: Request) =>
+    ({ ok: true, value: await request.json() }) as const,
+  requestBodyTooLargeResponse: () =>
+    Response.json(
+      { error: 'Request body is too large' },
+      { status: 413, headers: { 'cache-control': 'private, no-store' } }
+    ),
   privateResponseHeaders: { 'cache-control': 'private, no-store' },
   mfaReauthenticationRequiredResponse: () =>
     Response.json(

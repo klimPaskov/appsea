@@ -6797,6 +6797,56 @@ export const workspaceOpportunityStateSchema = z.enum([
   'archived'
 ])
 
+/** Human-governed lifecycle decisions for a private opportunity workspace. */
+export const workspaceOpportunityDecisionTypeSchema = z.enum([
+  'approve',
+  'watch',
+  'reject',
+  'archive'
+])
+
+export const workspaceOpportunityDecisionInputSchema = z
+  .object({
+    decision: workspaceOpportunityDecisionTypeSchema,
+    reason: z.string().trim().min(1).max(2_000),
+    expectedState: workspaceOpportunityStateSchema
+  })
+  .strict()
+
+/** Identifier-only evidence context captured with every lifecycle decision. */
+export const workspaceOpportunityDecisionEvidenceSnapshotSchema = z
+  .object({
+    opportunityId: appseaIdentifierSchema,
+    sourceRunId: appseaIdentifierSchema,
+    previousState: workspaceOpportunityStateSchema,
+    scoreSnapshotId: appseaIdentifierSchema.nullable(),
+    reportId: appseaIdentifierSchema.nullable(),
+    planPackageId: appseaIdentifierSchema.nullable(),
+    deepResearchGateId: appseaIdentifierSchema.nullable(),
+    evidenceIds: z.array(appseaIdentifierSchema).max(5_000),
+    coverageGapCount: z.number().int().nonnegative().max(5_000),
+    snapshotHash: z
+      .string()
+      .length(64)
+      .regex(/^[a-f0-9]{64}$/),
+    capturedAt: z.string().datetime()
+  })
+  .strict()
+
+export const workspaceOpportunityDecisionReadModelSchema = z
+  .object({
+    decisionId: appseaIdentifierSchema,
+    opportunityId: appseaIdentifierSchema,
+    actorId: appseaIdentifierSchema,
+    decision: workspaceOpportunityDecisionTypeSchema,
+    previousState: workspaceOpportunityStateSchema,
+    nextState: workspaceOpportunityStateSchema,
+    reason: z.string().min(1).max(2_000),
+    evidenceSnapshot: workspaceOpportunityDecisionEvidenceSnapshotSchema,
+    createdAt: z.string().datetime()
+  })
+  .strict()
+
 export const workspaceOpportunityReadModelSchema = z
   .object({
     id: appseaIdentifierSchema,
@@ -6974,6 +7024,7 @@ export const workspaceOpportunityDetailReadModelSchema = z
     deepResearchGate: deepResearchGateSchema.nullable().default(null),
     coverageGaps: z.array(z.string()),
     sourceCoverage: z.array(reportSourceCoverageSchema),
+    decisionHistory: z.array(workspaceOpportunityDecisionReadModelSchema).max(200).default([]),
     report: workspaceReportReadModelSchema.nullable(),
     plan: workspacePlanReadModelSchema.nullable()
   })
@@ -7762,6 +7813,7 @@ export type WorkspaceMemberRoleUpdateInput = z.infer<typeof workspaceMemberRoleU
 export type WorkspaceMembershipReadModel = z.infer<typeof workspaceMembershipReadModelSchema>
 export type WorkspaceMemberReadModel = z.infer<typeof workspaceMemberReadModelSchema>
 export type WorkspaceOpportunityReadModel = z.infer<typeof workspaceOpportunityReadModelSchema>
+export type WorkspaceOpportunityState = z.infer<typeof workspaceOpportunityStateSchema>
 export type WorkspaceEvidenceReadModel = z.infer<typeof workspaceEvidenceReadModelSchema>
 export type WorkspaceComplaintReviewInput = z.infer<typeof workspaceComplaintReviewInputSchema>
 export type WorkspaceComplaintReviewReadModel = z.infer<
@@ -7775,6 +7827,18 @@ export type WorkspaceReportExportReadModel = z.infer<typeof workspaceReportExpor
 export type WorkspacePlanReadModel = z.infer<typeof workspacePlanReadModelSchema>
 export type WorkspacePlanApprovalInput = z.infer<typeof workspacePlanApprovalInputSchema>
 export type WorkspacePlanExportReadModel = z.infer<typeof workspacePlanExportReadModelSchema>
+export type WorkspaceOpportunityDecisionType = z.infer<
+  typeof workspaceOpportunityDecisionTypeSchema
+>
+export type WorkspaceOpportunityDecisionInput = z.infer<
+  typeof workspaceOpportunityDecisionInputSchema
+>
+export type WorkspaceOpportunityDecisionEvidenceSnapshot = z.infer<
+  typeof workspaceOpportunityDecisionEvidenceSnapshotSchema
+>
+export type WorkspaceOpportunityDecisionReadModel = z.infer<
+  typeof workspaceOpportunityDecisionReadModelSchema
+>
 export type WorkspaceOpportunityDetailReadModel = z.infer<
   typeof workspaceOpportunityDetailReadModelSchema
 >

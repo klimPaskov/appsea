@@ -8,6 +8,8 @@ import {
   allowAuthAttempt,
   invalidRequest,
   privateResponseHeaders,
+  readBoundedJsonBody,
+  requestBodyTooLargeResponse,
   readSession,
   sameOriginRequest,
   unauthorizedResponse
@@ -30,12 +32,12 @@ export async function POST(request: Request): Promise<Response> {
   }
   const session = await readSession()
   if (!session) return unauthorizedResponse()
-  let payload: unknown
-  try {
-    payload = await request.json()
-  } catch {
-    return invalidRequest('Request body must be valid JSON')
-  }
+  const body = await readBoundedJsonBody(request)
+  if (!body.ok)
+    return body.tooLarge
+      ? requestBodyTooLargeResponse()
+      : invalidRequest('Request body must be valid JSON')
+  const payload = body.value
   const parsed = workspaceInvitationAcceptInputSchema.safeParse(payload)
   if (!parsed.success) return invalidRequest('A valid invitation link is required')
 

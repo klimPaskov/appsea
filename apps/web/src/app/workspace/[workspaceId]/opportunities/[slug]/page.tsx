@@ -3,6 +3,8 @@ import { notFound, redirect } from 'next/navigation'
 import { opportunitySlugSchema } from '@appsea/contracts'
 import { readSession } from '../../../../../server/auth-session'
 import { readPrivateOpportunityContext } from '../../../../../server/private-opportunity'
+import { WorkspaceOpportunityTabs } from '../../../../../components/workspace-opportunity-tabs'
+import { OpportunityDecisionActions } from '../../../opportunity-decision-actions'
 
 export const dynamic = 'force-dynamic'
 
@@ -28,23 +30,7 @@ export default async function PrivateOpportunityPage({
         <span aria-hidden="true">/</span>
         <span>{opportunity.name}</span>
       </p>
-      <nav className="tabs" aria-label="Opportunity research sections">
-        <Link className="tab active" href={`/workspace/${workspaceId}/opportunities/${slug}`}>
-          Overview
-        </Link>
-        <Link className="tab" href={`/workspace/${workspaceId}/opportunities/${slug}/evidence`}>
-          Evidence
-        </Link>
-        <Link className="tab" href={`/workspace/${workspaceId}/opportunities/${slug}/competitors`}>
-          Competitors
-        </Link>
-        <Link className="tab" href={`/workspace/${workspaceId}/opportunities/${slug}/report`}>
-          Report
-        </Link>
-        <Link className="tab" href={`/workspace/${workspaceId}/opportunities/${slug}/plan`}>
-          Plan
-        </Link>
-      </nav>
+      <WorkspaceOpportunityTabs workspaceId={workspaceId} slug={slug} active="overview" />
       <div className="workspace-toolbar workspace-opportunity-heading">
         <div>
           <p className="eyebrow">Private research package</p>
@@ -115,6 +101,14 @@ export default async function PrivateOpportunityPage({
           </div>
         </div>
       </section>
+      <OpportunityDecisionActions
+        workspaceId={workspaceId}
+        slug={slug}
+        role={context.workspace.role}
+        synthetic={detail.summary.synthetic}
+        initialState={detail.summary.state}
+        initialHistory={detail.decisionHistory}
+      />
     </main>
   )
 }

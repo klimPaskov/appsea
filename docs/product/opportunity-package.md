@@ -82,3 +82,15 @@ their PostgreSQL governance projections. Private opportunity pages therefore
 show the actual current state (including after a later approval transition)
 instead of inferring `draft` or `unreviewed` from the immutable object payload.
 The report and plan export routes remain the authoritative approval gates.
+
+## Lifecycle decisions
+
+Private editors and owners can record a bounded reason to watch, reject, or
+archive an opportunity; only an owner can approve a planned, source-backed
+opportunity after its current deep-research gate, report, and plan gates pass.
+Each decision is append-only, idempotent, stale-state protected, and linked to
+the current source-run evidence identifiers and analysis lineage. The Overview
+route renders the decision history and requires recent password/MFA step-up for
+mutations. Archived opportunities cannot be reopened in this tranche. Fixture
+opportunities remain read-only and visibly synthetic, and the MCP surface stays
+read-only.

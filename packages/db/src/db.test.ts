@@ -117,11 +117,18 @@ describe('database foundation', () => {
       '0101',
       '0102',
       '0103',
-      '0104'
+      '0104',
+      '0105'
     ])
     expect(migrations[0]?.checksum).toMatch(/^[a-f0-9]{64}$/)
     expect(migrations[0]?.sql).toContain('CREATE TABLE appsea.evidence_records')
     expect(migrations[0]?.sql).toContain('ENABLE ROW LEVEL SECURITY')
+    const opportunityDecisionMigration = migrations.find(
+      (migration) => migration.version === '0105'
+    )
+    expect(opportunityDecisionMigration?.sql).toContain('CREATE TABLE appsea.opportunity_decisions')
+    expect(opportunityDecisionMigration?.sql).toContain('opportunity_decision_guard')
+    expect(opportunityDecisionMigration?.sql).toContain('opportunity decisions are append-only')
     const cancellationMigration = migrations.find((migration) => migration.version === '0070')
     expect(cancellationMigration?.sql).toContain('cancellation_requested_at')
     expect(cancellationMigration?.sql).toContain(

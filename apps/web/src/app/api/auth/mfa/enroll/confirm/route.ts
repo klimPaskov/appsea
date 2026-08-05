@@ -9,6 +9,8 @@ import {
   reauthenticationRequiredResponse,
   invalidRequest,
   privateResponseHeaders,
+  readBoundedJsonBody,
+  requestBodyTooLargeResponse,
   readSessionToken,
   sameOriginRequest,
   unauthorizedResponse
@@ -21,12 +23,12 @@ export async function POST(request: Request): Promise<Response> {
     return Response.json({ error: 'Origin not allowed' }, { status: 403 })
   const token = await readSessionToken()
   if (!token) return unauthorizedResponse()
-  let payload: unknown
-  try {
-    payload = await request.json()
-  } catch {
-    return invalidRequest('Request body must be valid JSON')
-  }
+  const body = await readBoundedJsonBody(request)
+  if (!body.ok)
+    return body.tooLarge
+      ? requestBodyTooLargeResponse()
+      : invalidRequest('Request body must be valid JSON')
+  const payload = body.value
   const parsed = authMfaEnrollmentConfirmInputSchema.safeParse(payload)
   if (!parsed.success) return invalidRequest('Enter the six-digit authenticator code')
   if (!(await authRepository().hasRecentReauthentication(token))) {

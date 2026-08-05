@@ -5,6 +5,8 @@ import {
   authRepository,
   invalidRequest,
   privateResponseHeaders,
+  readBoundedJsonBody,
+  requestBodyTooLargeResponse,
   readSession,
   readSessionToken,
   reauthenticationRequiredResponse,
@@ -23,12 +25,12 @@ export async function DELETE(request: Request): Promise<Response> {
   if (!(await authRepository().hasRecentReauthentication(token))) {
     return reauthenticationRequiredResponse()
   }
-  let payload: unknown
-  try {
-    payload = await request.json()
-  } catch {
-    return invalidRequest('Request body must be valid JSON')
-  }
+  const body = await readBoundedJsonBody(request)
+  if (!body.ok)
+    return body.tooLarge
+      ? requestBodyTooLargeResponse()
+      : invalidRequest('Request body must be valid JSON')
+  const payload = body.value
   const parsed = authMfaDisableInputSchema.safeParse(payload)
   if (!parsed.success) return invalidRequest('Enter an authenticator or recovery code')
   if (!(await allowAuthAttempt(request, session.user.email, 'mfa'))) {
