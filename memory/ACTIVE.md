@@ -29,8 +29,8 @@ owner-reviewed gate with provenance/stale reads while fixture state stays
 synthetic. Gaps remain visible after pass. Competitors exposes checklist review:
 editors submit; owners promote/withdraw. API owns evidence/snapshot/membership/
 step-up; UI never activates sources.
-Private report/plan pages expose approval: editors review, owners
-approve/withdraw, viewers read-only; plan readiness stays server-owned.
+Report/plan approval is editor/owner-gated; readiness is server-owned.
+Private Activity renders scalar audit receipts; no mutation/export.
 
 `pnpm verify:worker:recovery` proves worker replacement with one-time effects
 and sanitized history; hosted restore/failover/topology remain open.

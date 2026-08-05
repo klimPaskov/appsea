@@ -85,6 +85,13 @@
       "mobile": "source/workspace-usage-mobile.svg"
     },
     {
+      "id": "workspace-activity",
+      "route": "/workspace/:workspaceId/activity",
+      "purpose": "Private read-only audit history",
+      "desktop": "source/workspace-activity.svg",
+      "mobile": "source/workspace-activity-mobile.svg"
+    },
+    {
       "id": "seed-reviews",
       "route": "/workspace/:workspaceId/seed-reviews",
       "purpose": "Private reviewed opportunity-seed registry",

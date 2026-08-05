@@ -1,19 +1,19 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1440" height="520" viewBox="0 0 1440 520">
-<rect width="1440" height="520" fill="#f7f6f2" />
-<line x1="0" y1="76" x2="1440" y2="76" stroke="#e8e6df" stroke-width="1" />
-<rect x="76" y="24" width="28" height="28" rx="8" fill="#171a1f" />
+<rect width="1440" height="520" fill="#050711" />
+<line x1="0" y1="76" x2="1440" y2="76" stroke="#18243a" stroke-width="1" />
+<rect x="76" y="24" width="28" height="28" rx="8" fill="#9b5cff" />
 <text x="90" y="42.5" font-family="Arial, Helvetica, sans-serif" font-size="12" font-weight="700" fill="#ffffff" text-anchor="middle">A</text>
-<text x="114" y="43.5" font-family="Arial, Helvetica, sans-serif" font-size="15" font-weight="700" fill="#171a1f">AppSea</text>
-<text x="1364" y="43" font-family="Arial, Helvetica, sans-serif" font-size="13" font-weight="600" fill="#73767c" text-anchor="end">Leaderboard</text>
-<text x="220" y="132" font-family="Arial, Helvetica, sans-serif" font-size="11" font-weight="700" fill="#73767c" letter-spacing="1.2">PRIVATE OPPORTUNITY  /  REPORT</text>
-<text x="220" y="188" font-family="Arial, Helvetica, sans-serif" font-size="40" font-weight="650" fill="#171a1f" letter-spacing="-1.4">Evidence-backed report</text>
-<text x="220" y="222" font-family="Arial, Helvetica, sans-serif" font-size="16" fill="#73767c">Governance stays separate from source collection and policy activation.</text>
-<rect x="220" y="270" width="1000" height="172" rx="6" fill="#fcfbf8" stroke="#d9d8d2" />
-<text x="242" y="304" font-family="Arial, Helvetica, sans-serif" font-size="10" font-weight="700" fill="#73767c" letter-spacing="1.1">GOVERNANCE</text>
-<text x="242" y="335" font-family="Arial, Helvetica, sans-serif" font-size="18" font-weight="650" fill="#171a1f">Report approval: draft</text>
-<text x="242" y="363" font-family="Arial, Helvetica, sans-serif" font-size="13" fill="#73767c">Editors mark a report reviewed; owners approve or withdraw it.</text>
-<rect x="242" y="386" width="146" height="34" rx="5" fill="#fcfbf8" stroke="#171a1f" />
-<text x="315" y="408" font-family="Arial, Helvetica, sans-serif" font-size="11" font-weight="650" fill="#171a1f" text-anchor="middle">Mark reviewed</text>
-<rect x="402" y="386" width="142" height="34" rx="5" fill="#fcfbf8" stroke="#171a1f" />
-<text x="473" y="408" font-family="Arial, Helvetica, sans-serif" font-size="11" font-weight="650" fill="#171a1f" text-anchor="middle">Withdraw report</text>
+<text x="114" y="43.5" font-family="Arial, Helvetica, sans-serif" font-size="15" font-weight="700" fill="#f5f7ff">AppSea</text>
+<text x="1364" y="43" font-family="Arial, Helvetica, sans-serif" font-size="13" font-weight="600" fill="#9ba8c3" text-anchor="end">Leaderboard</text>
+<text x="220" y="132" font-family="Arial, Helvetica, sans-serif" font-size="11" font-weight="700" fill="#9ba8c3" letter-spacing="1.2">PRIVATE OPPORTUNITY  /  REPORT</text>
+<text x="220" y="188" font-family="Arial, Helvetica, sans-serif" font-size="40" font-weight="650" fill="#f5f7ff" letter-spacing="-1.4">Evidence-backed report</text>
+<text x="220" y="222" font-family="Arial, Helvetica, sans-serif" font-size="16" fill="#9ba8c3">Governance stays separate from source collection and policy activation.</text>
+<rect x="220" y="270" width="1000" height="172" rx="6" fill="#0b1220" stroke="#2a3854" />
+<text x="242" y="304" font-family="Arial, Helvetica, sans-serif" font-size="10" font-weight="700" fill="#9ba8c3" letter-spacing="1.1">GOVERNANCE</text>
+<text x="242" y="335" font-family="Arial, Helvetica, sans-serif" font-size="18" font-weight="650" fill="#f5f7ff">Report approval: draft</text>
+<text x="242" y="363" font-family="Arial, Helvetica, sans-serif" font-size="13" fill="#9ba8c3">Editors mark a report reviewed; owners approve or withdraw it.</text>
+<rect x="242" y="386" width="146" height="34" rx="5" fill="#0b1220" stroke="#f5f7ff" />
+<text x="315" y="408" font-family="Arial, Helvetica, sans-serif" font-size="11" font-weight="650" fill="#f5f7ff" text-anchor="middle">Mark reviewed</text>
+<rect x="402" y="386" width="142" height="34" rx="5" fill="#0b1220" stroke="#f5f7ff" />
+<text x="473" y="408" font-family="Arial, Helvetica, sans-serif" font-size="11" font-weight="650" fill="#f5f7ff" text-anchor="middle">Withdraw report</text>
 </svg>

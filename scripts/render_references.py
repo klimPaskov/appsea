@@ -13,12 +13,15 @@ ROOT = Path(__file__).resolve().parents[1]
 OUTPUT = ROOT / 'design' / 'references'
 SOURCE = OUTPUT / 'source'
 
-PAPER = '#f7f6f2'
-SURFACE = '#fcfbf8'
-INK = '#171a1f'
-MUTED = '#73767c'
-LINE = '#d9d8d2'
-ACCENT = '#315ee8'
+PAPER = '#050711'
+SURFACE = '#0b1220'
+INK = '#f5f7ff'
+MUTED = '#9ba8c3'
+LINE = '#2a3854'
+SOFT_LINE = '#18243a'
+BODY = '#c4cde0'
+ACCENT = '#9b5cff'
+BRAND = '#9b5cff'
 FONT = 'Arial, Helvetica, sans-serif'
 
 
@@ -77,8 +80,8 @@ def shell(width: int, height: int, content: str, mobile: bool = False) -> str:
     nav_x = width - margin
     return f'''<svg xmlns="http://www.w3.org/2000/svg" width="{width}" height="{height}" viewBox="0 0 {width} {height}">
 <rect width="{width}" height="{height}" fill="{PAPER}" />
-{line(0, header_height, width, header_height, '#e8e6df')}
-{rect(brand_x, brand_y - mark_size / 2, mark_size, mark_size, INK, 8)}
+{line(0, header_height, width, header_height, SOFT_LINE)}
+{rect(brand_x, brand_y - mark_size / 2, mark_size, mark_size, BRAND, 8)}
 {text(brand_x + mark_size / 2, brand_y + 4.5, 'A', 12, 700, '#ffffff', 'middle')}
 {text(brand_x + mark_size + 10, brand_y + 5.5, 'AppSea', 15, 700)}
 {text(nav_x, brand_y + 5, 'Leaderboard', 13, 600, MUTED, 'end')}
@@ -169,15 +172,15 @@ def opportunity_screen(width: int, height: int, mobile: bool) -> str:
     content += line(margin, detail_y, width - margin, detail_y)
     if mobile:
         content += text(margin, detail_y + 34, 'AUDIENCE', 10, 700, MUTED, letter=1.1)
-        content += multiline(margin, detail_y + 62, 'Small support and operations teams using shared email.', 14, 42, 22, fill='#41444a')
+        content += multiline(margin, detail_y + 62, 'Small support and operations teams using shared email.', 14, 42, 22, fill=BODY)
         content += text(margin, detail_y + 132, 'FIRST WEDGE', 10, 700, MUTED, letter=1.1)
-        content += multiline(margin, detail_y + 160, 'Read-only inbox sync, ownership history, unresolved handoffs, and a shift summary.', 14, 42, 22, fill='#41444a')
+        content += multiline(margin, detail_y + 160, 'Read-only inbox sync, ownership history, unresolved handoffs, and a shift summary.', 14, 42, 22, fill=BODY)
     else:
         half = (width - margin * 2 - 64) / 2
         content += text(margin, detail_y + 38, 'AUDIENCE', 10, 700, MUTED, letter=1.1)
-        content += multiline(margin, detail_y + 70, 'Small support, customer success, and operations teams using shared email.', 15, 48, 24, fill='#41444a')
+        content += multiline(margin, detail_y + 70, 'Small support, customer success, and operations teams using shared email.', 15, 48, 24, fill=BODY)
         content += text(margin + half + 64, detail_y + 38, 'FIRST WEDGE', 10, 700, MUTED, letter=1.1)
-        content += multiline(margin + half + 64, detail_y + 70, 'Read-only inbox sync with ownership history, unresolved handoff queue, and shift summary.', 15, 48, 24, fill='#41444a')
+        content += multiline(margin + half + 64, detail_y + 70, 'Read-only inbox sync with ownership history, unresolved handoff queue, and shift summary.', 15, 48, 24, fill=BODY)
     return shell(width, height, content, mobile)
 
 
@@ -233,14 +236,14 @@ def competitors_screen(width: int, height: int, mobile: bool) -> str:
         row_y = y + 28 + index * row_h
         content += text(margin, row_y + 37, name, 17 if mobile else 21, 650, letter=-0.3)
         content += text(width - margin, row_y + 37, kind, 10 if mobile else 11, 400, MUTED, 'end')
-        content += multiline(margin, row_y + 70, body, 13 if mobile else 15, 45 if mobile else 82, 21 if mobile else 24, fill='#41444a')
+        content += multiline(margin, row_y + 70, body, 13 if mobile else 15, 45 if mobile else 82, 21 if mobile else 24, fill=BODY)
         content += text(margin, row_y + 105, 'FEATURE COVERAGE', 9, 700, MUTED, letter=0.8)
         content += multiline(margin, row_y + 126, coverage, 11 if mobile else 12, 48 if mobile else 92, 17 if mobile else 19, fill=MUTED)
         content += line(margin, row_y + row_h, width - margin, row_y + row_h)
     risk_y = y + 28 + row_h * len(items) + 36
     content += rect(margin, risk_y, width - margin * 2, 104 if mobile else 112, SURFACE, 0, LINE)
     content += text(margin + 22, risk_y + 29, 'CONTRARY EVIDENCE', 10, 700, MUTED, letter=1.1)
-    content += multiline(margin + 22, risk_y + 59, 'Existing shared inbox suites may solve the problem through better configuration.', 13 if mobile else 14, 43 if mobile else 92, 21, fill='#41444a')
+    content += multiline(margin + 22, risk_y + 59, 'Existing shared inbox suites may solve the problem through better configuration.', 13 if mobile else 14, 43 if mobile else 92, 21, fill=BODY)
     return shell(width, height, content, mobile)
 
 
@@ -301,14 +304,14 @@ def security_screen(width: int, height: int, mobile: bool) -> str:
     box_height = 132 if mobile else 104
     content += rect(margin, box_y, width - margin * 2, box_height, SURFACE, 6, LINE)
     content += text(margin + 18, box_y + 28, 'VERIFY BEFORE REVOKING ACCESS', 10, 700, MUTED, letter=1.0)
-    content += text(margin + 18, box_y + 55, 'Enter your password to enable revocation for 15 minutes.', 13, 400, '#41444a')
+    content += text(margin + 18, box_y + 55, 'Enter your password to enable revocation for 15 minutes.', 13, 400, BODY)
     if mobile:
         content += rect(margin + 18, box_y + 76, width - margin * 2 - 36, 34, PAPER, 5, LINE)
         content += text(margin + 30, box_y + 98, 'Password', 12, 400, MUTED)
     else:
         content += rect(margin + 18, box_y + 67, 230, 32, PAPER, 5, LINE)
         content += text(margin + 30, box_y + 88, 'Password', 12, 400, MUTED)
-        content += rect(margin + 262, box_y + 67, 124, 32, INK, 5)
+        content += rect(margin + 262, box_y + 67, 124, 32, ACCENT, 5)
         content += text(margin + 324, box_y + 88, 'Verify password', 11, 650, '#ffffff', 'middle')
     list_y = box_y + box_height + (42 if mobile else 48)
     content += text(margin, list_y, 'ACTIVE SESSIONS', 10, 700, MUTED, letter=1.1)
@@ -340,7 +343,7 @@ def security_screen(width: int, height: int, mobile: bool) -> str:
         13,
         width - margin * 2 - 36,
         21,
-        fill='#41444a',
+        fill=BODY,
     )
     if mobile:
         content += text(margin + 18, mfa_y + 108, 'Password step-up required', 11, 400, MUTED)
@@ -382,16 +385,16 @@ def seed_reviews_screen(width: int, height: int, mobile: bool) -> str:
     form_height = 164 if mobile else 142
     content += rect(margin, form_y, width - margin * 2, form_height, SURFACE, 6, LINE)
     content += text(margin + 18, form_y + 28, 'REGISTER A REVIEWED SEED', 10, 700, MUTED, letter=1.0)
-    content += text(margin + 18, form_y + 55, 'Seed JSON is validated and stored as immutable content.', 13, 400, '#41444a')
+    content += text(margin + 18, form_y + 55, 'Seed JSON is validated and stored as immutable content.', 13, 400, BODY)
     if mobile:
         content += rect(margin + 18, form_y + 78, width - margin * 2 - 36, 34, PAPER, 5, LINE)
         content += text(margin + 30, form_y + 100, 'seed-review-new', 12, 400, MUTED)
-        content += rect(margin + 18, form_y + 120, 144, 32, INK, 5)
+        content += rect(margin + 18, form_y + 120, 144, 32, ACCENT, 5)
         content += text(margin + 90, form_y + 141, 'Save seed review', 11, 650, '#ffffff', 'middle')
     else:
         content += rect(margin + 18, form_y + 76, 230, 32, PAPER, 5, LINE)
         content += text(margin + 30, form_y + 97, 'seed-review-new', 12, 400, MUTED)
-        content += rect(margin + 262, form_y + 76, 124, 32, INK, 5)
+        content += rect(margin + 262, form_y + 76, 124, 32, ACCENT, 5)
         content += text(margin + 324, form_y + 97, 'Save seed review', 11, 650, '#ffffff', 'middle')
     return shell(width, height, content, mobile)
 
@@ -437,7 +440,7 @@ def campaigns_screen(width: int, height: int, mobile: bool) -> str:
     form_height = 146 if mobile else 136
     content += rect(margin, form_y, width - margin * 2, form_height, SURFACE, 6, LINE)
     content += text(margin + 18, form_y + 28, 'CREATE A DRAFT CAMPAIGN', 10, 700, MUTED, letter=1.0)
-    content += text(margin + 18, form_y + 53, 'New drafts never activate a connector.', 13, 400, '#41444a')
+    content += text(margin + 18, form_y + 53, 'New drafts never activate a connector.', 13, 400, BODY)
     content += text(margin + 18, form_y + 72, 'Source allowlist  ·  policy state stays visible', 11, 400, MUTED)
     if mobile:
         content += rect(margin + 18, form_y + 90, width - margin * 2 - 36, 32, PAPER, 5, LINE)
@@ -445,7 +448,7 @@ def campaigns_screen(width: int, height: int, mobile: bool) -> str:
     else:
         content += rect(margin + 18, form_y + 90, 230, 32, PAPER, 5, LINE)
         content += text(margin + 30, form_y + 111, 'campaign-name', 12, 400, MUTED)
-        content += rect(margin + 262, form_y + 90, 124, 32, INK, 5)
+        content += rect(margin + 262, form_y + 90, 124, 32, ACCENT, 5)
         content += text(margin + 324, form_y + 111, 'Save draft', 11, 650, '#ffffff', 'middle')
     return shell(width, height, content, mobile)
 
@@ -489,7 +492,7 @@ def campaign_history_screen(width: int, height: int, mobile: bool) -> str:
         13 if mobile else 15,
         43 if mobile else 78,
         21 if mobile else 24,
-        fill='#41444a',
+        fill=BODY,
     )
     return shell(width, height, content, mobile)
 
@@ -529,7 +532,7 @@ def source_coverage_screen(width: int, height: int, mobile: bool) -> str:
             12,
             43 if mobile else 82,
             20,
-            fill='#41444a',
+            fill=BODY,
         )
         if index == 0:
             content += text(margin, row_y + (126 if mobile else 106), 'Coverage gap: historical export is not covered.', 11, 400, MUTED)
@@ -545,7 +548,7 @@ def source_coverage_screen(width: int, height: int, mobile: bool) -> str:
         12,
         43 if mobile else 88,
         20,
-        fill='#41444a',
+        fill=BODY,
     )
     return shell(width, height, content, mobile)
 
@@ -574,7 +577,7 @@ def campaign_status_screen(width: int, height: int, mobile: bool) -> str:
         content += text(width - margin, row_y + 30, value, 14, 600, INK, 'end')
         content += line(margin, row_y + row_height, width - margin, row_y + row_height)
     action_y = status_y + 24 + row_height * len(rows) + (38 if mobile else 46)
-    content += rect(margin, action_y, 170, 34, INK, 5)
+    content += rect(margin, action_y, 170, 34, ACCENT, 5)
     content += text(margin + 85, action_y + 22, 'Inspect retained evidence', 11, 650, '#ffffff', 'middle')
     return shell(width, height, content, mobile)
 
@@ -651,7 +654,7 @@ def workspace_members_screen(width: int, height: int, mobile: bool) -> str:
         13 if mobile else 14,
         42 if mobile else 78,
         21 if mobile else 23,
-        fill='#41444a',
+        fill=BODY,
     )
     summary_y = box_y + (132 if mobile else 112)
     content += text(margin + 18, summary_y, 'ACTIVE WORK', 10, 700, MUTED, letter=1.0)
@@ -661,7 +664,7 @@ def workspace_members_screen(width: int, height: int, mobile: bool) -> str:
     content += text(width - margin - 18, summary_y + 42, '0', 14, 650, INK, 'end')
     button_y = box_y + box_height - 48
     button_width = 178 if mobile else 196
-    content += rect(margin + 18, button_y, button_width, 32, INK, 5)
+    content += rect(margin + 18, button_y, button_width, 32, ACCENT, 5)
     content += text(margin + 18 + button_width / 2, button_y + 21, 'Request deletion review', 11, 650, '#ffffff', 'middle')
     return shell(width, height, content, mobile)
 
@@ -689,7 +692,8 @@ SCREENS = {
 STATIC_SOURCES = {
     'agent-access': ('agent-access.svg', 'agent-access-mobile.svg'),
     'workspace-usage': ('workspace-usage.svg', 'workspace-usage-mobile.svg'),
-    'artifact-approval': ('artifact-approval.svg', 'artifact-approval-mobile.svg')
+    'artifact-approval': ('artifact-approval.svg', 'artifact-approval-mobile.svg'),
+    'workspace-activity': ('workspace-activity.svg', 'workspace-activity-mobile.svg')
 }
 
 

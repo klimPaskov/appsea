@@ -47,6 +47,11 @@ export default async function WorkspacePage() {
             </Link>
           ) : null}
           {workspace.visibility === 'private' ? (
+            <Link className="quiet-button" href={`/workspace/${workspace.workspaceId}/activity`}>
+              Activity
+            </Link>
+          ) : null}
+          {workspace.visibility === 'private' ? (
             <Link className="quiet-button" href={`/workspace/${workspace.workspaceId}/usage`}>
               Usage
             </Link>

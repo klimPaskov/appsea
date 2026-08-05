@@ -4,7 +4,11 @@ import { seedOpportunities } from '@appsea/catalog'
 export default function LeaderboardPage() {
   return (
     <main className="leaderboard-page">
-      <h1>Leaderboard</h1>
+      <p className="leaderboard-kicker">AppSea opportunity intelligence</p>
+      <h1>Opportunity Leaderboard</h1>
+      <p className="leaderboard-intro">
+        Evidence-ranked software opportunities from repeated complaint patterns.
+      </p>
       <div className="leaderboard" role="table" aria-label="App opportunity leaderboard">
         <div className="leaderboard-row leaderboard-head" role="row">
           <span role="columnheader">Rank</span>
@@ -23,8 +27,8 @@ export default function LeaderboardPage() {
             key={opportunity.id}
             role="row"
           >
-            <span className="rank" role="cell">
-              {String(index + 1).padStart(2, '0')}
+            <span className="rank" role="cell" aria-label={`Rank ${index + 1}`}>
+              <span className="rank-badge">{index + 1}</span>
             </span>
             <span className="opportunity-name" role="cell">
               {opportunity.name}
@@ -32,8 +36,16 @@ export default function LeaderboardPage() {
             <span className="number-cell complaint-count" role="cell">
               {opportunity.complaintCount.toLocaleString('en-US')}
             </span>
-            <span className="number-cell score" role="cell">
-              {opportunity.scoreSnapshot.score.toFixed(1)}
+            <span className="number-cell score-cell" role="cell">
+              <span className="score">{opportunity.scoreSnapshot.score.toFixed(1)}</span>
+              <span className="score-meter" aria-hidden="true">
+                <span
+                  className="score-meter-fill"
+                  style={{
+                    width: `${Math.min(100, Math.max(0, opportunity.scoreSnapshot.score))}%`
+                  }}
+                />
+              </span>
             </span>
           </Link>
         ))}

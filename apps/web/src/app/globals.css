@@ -1,13 +1,18 @@
 :root {
-  --paper: #f7f6f2;
-  --surface: #fcfbf8;
-  --ink: #171a1f;
-  --muted: #73767c;
-  --line: #d9d8d2;
-  --line-soft: #e8e6df;
-  --accent: #315ee8;
-  --accent-soft: #e9eeff;
-  color-scheme: light;
+  --paper: #050711;
+  --surface: #0b1220;
+  --surface-raised: #101a2d;
+  --ink: #f5f7ff;
+  --muted: #9ba8c3;
+  --line: #2a3854;
+  --line-soft: #18243a;
+  --accent: #9b5cff;
+  --accent-cyan: #4da8ff;
+  --accent-soft: #211644;
+  --success: #66db8a;
+  --warning: #ffb454;
+  --danger: #ff6480;
+  color-scheme: dark;
   font-family:
     Inter,
     ui-sans-serif,
@@ -30,7 +35,9 @@ html {
 body {
   min-height: 100vh;
   margin: 0;
-  background: var(--paper);
+  background:
+    radial-gradient(circle at 50% 12%, rgba(45, 63, 165, 0.2), transparent 34rem),
+    radial-gradient(circle at 82% 36%, rgba(111, 53, 201, 0.12), transparent 30rem), var(--paper);
   color: var(--ink);
 }
 
@@ -46,11 +53,13 @@ a:focus-visible {
 }
 
 .site-header {
+  background: rgba(5, 7, 17, 0.78);
   border-bottom: 1px solid var(--line-soft);
+  backdrop-filter: blur(18px);
 }
 
 .header-inner {
-  width: min(1120px, calc(100% - 48px));
+  width: min(1360px, calc(100% - 80px));
   height: 76px;
   margin: 0 auto;
   display: flex;
@@ -90,62 +99,113 @@ a:focus-visible {
 }
 
 .leaderboard-page {
-  width: min(1000px, calc(100% - 48px));
+  width: min(1236px, calc(100% - 48px));
   margin: 0 auto;
-  padding: 92px 0 72px;
+  padding: 68px 0 88px;
+  text-align: center;
 }
 
 .leaderboard-page h1,
 .opportunity-heading h1 {
   margin: 0;
-  font-size: clamp(42px, 5vw, 62px);
+  font-size: clamp(42px, 5vw, 58px);
   line-height: 0.98;
   letter-spacing: -0.055em;
   font-weight: 650;
 }
 
+.leaderboard-kicker {
+  margin: 0 0 16px;
+  color: var(--accent-cyan);
+  font-size: 11px;
+  font-weight: 750;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.leaderboard-intro {
+  max-width: 680px;
+  margin: 18px auto 0;
+  color: var(--muted);
+  font-size: 17px;
+  line-height: 1.5;
+}
+
 .leaderboard {
-  margin-top: 62px;
-  border-top: 1px solid var(--ink);
+  margin-top: 46px;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: linear-gradient(145deg, rgba(15, 24, 43, 0.92), rgba(7, 12, 24, 0.96));
+  box-shadow: 0 24px 80px rgba(25, 38, 98, 0.15);
 }
 
 .leaderboard-row {
   display: grid;
-  grid-template-columns: 80px minmax(260px, 1fr) 150px 110px;
+  grid-template-columns: 88px minmax(260px, 1fr) 170px 178px;
   align-items: center;
-  min-height: 78px;
+  min-height: 82px;
   border-bottom: 1px solid var(--line);
+  padding: 0 22px;
+}
+
+.leaderboard-row:last-child {
+  border-bottom: 0;
 }
 
 .leaderboard-head {
-  min-height: 46px;
+  min-height: 58px;
   color: var(--muted);
-  font-size: 12px;
+  background: rgba(10, 17, 31, 0.8);
+  font-size: 11px;
   font-weight: 650;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.1em;
   text-transform: uppercase;
+  text-align: left;
 }
 
 .leaderboard-entry {
   transition:
-    background 140ms ease,
-    padding 140ms ease;
+    background 180ms ease,
+    transform 180ms ease;
 }
 
 .leaderboard-entry:hover {
-  background: var(--surface);
+  background: rgba(43, 62, 108, 0.26);
+  transform: translateY(-1px);
 }
 
 .rank {
-  color: var(--muted);
-  font-size: 14px;
+  color: var(--ink);
+  font-size: 13px;
   font-variant-numeric: tabular-nums;
 }
 
+.rank-badge {
+  display: grid;
+  width: 42px;
+  height: 42px;
+  place-items: center;
+  border: 1px solid #32415f;
+  border-radius: 50%;
+  background: rgba(24, 35, 59, 0.66);
+  box-shadow: inset 0 0 16px rgba(72, 100, 168, 0.1);
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.leaderboard-entry:first-of-type .rank-badge {
+  border-color: var(--accent);
+  box-shadow:
+    0 0 18px rgba(155, 92, 255, 0.45),
+    inset 0 0 14px rgba(155, 92, 255, 0.2);
+}
+
 .opportunity-name {
-  font-size: clamp(19px, 2vw, 24px);
+  font-size: clamp(18px, 2vw, 22px);
   font-weight: 600;
   letter-spacing: -0.025em;
+  text-align: left;
 }
 
 .number-cell {
@@ -155,24 +215,50 @@ a:focus-visible {
 
 .complaint-count {
   color: var(--muted);
-  font-size: 15px;
+  font-size: 14px;
+}
+
+.score-cell {
+  display: grid;
+  grid-template-columns: auto minmax(74px, 1fr);
+  align-items: center;
+  gap: 14px;
 }
 
 .score {
-  font-size: 20px;
+  color: var(--ink);
+  font-size: 19px;
   font-weight: 650;
 }
 
+.score-meter {
+  display: block;
+  width: 100%;
+  height: 7px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: #050912;
+  box-shadow: inset 0 0 0 1px rgba(66, 91, 143, 0.2);
+}
+
+.score-meter-fill {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, var(--accent), var(--accent-cyan));
+  box-shadow: 0 0 12px rgba(77, 168, 255, 0.5);
+}
+
 .fixture-note {
-  margin: 22px 0 0;
+  margin: 22px auto 0;
   color: var(--muted);
   font-size: 12px;
 }
 
 .opportunity-page {
-  width: min(1000px, calc(100% - 48px));
+  width: min(1120px, calc(100% - 48px));
   margin: 0 auto;
-  padding: 44px 0 96px;
+  padding: 52px 0 96px;
 }
 
 .breadcrumb {
@@ -191,7 +277,7 @@ a:focus-visible {
   display: flex;
   justify-content: space-between;
   align-items: end;
-  margin-top: 60px;
+  margin-top: 54px;
 }
 
 .eyebrow,
@@ -215,7 +301,7 @@ a:focus-visible {
 .tabs {
   display: flex;
   gap: 28px;
-  margin-top: 56px;
+  margin-top: 48px;
   border-bottom: 1px solid var(--line);
 }
 
@@ -239,7 +325,8 @@ a:focus-visible {
   bottom: -1px;
   left: 0;
   height: 2px;
-  background: var(--ink);
+  background: linear-gradient(90deg, var(--accent), var(--accent-cyan));
+  box-shadow: 0 0 16px rgba(155, 92, 255, 0.7);
 }
 
 .content-stack {
@@ -268,13 +355,13 @@ a:focus-visible {
 
 .detail-grid p:not(.label) {
   margin: 0;
-  color: #41444a;
+  color: #c4cde0;
   line-height: 1.65;
 }
 
 .detail-grid dd {
   margin: 0;
-  color: #41444a;
+  color: #c4cde0;
   line-height: 1.65;
 }
 
@@ -435,7 +522,7 @@ a:focus-visible {
 .deep-research-gate-blockers ul {
   margin: 0;
   padding-left: 18px;
-  color: #41444a;
+  color: #c4cde0;
   font-size: 13px;
   line-height: 1.55;
 }
@@ -464,7 +551,7 @@ a:focus-visible {
 .deep-research-checklist-intro {
   max-width: 720px;
   margin: 0;
-  color: #41444a;
+  color: #c4cde0;
   font-size: 13px;
   line-height: 1.55;
 }
@@ -544,7 +631,7 @@ a:focus-visible {
 .deep-research-check-state,
 .deep-research-check-evidence,
 .deep-research-check-note {
-  color: #41444a;
+  color: #c4cde0;
   font-size: 12px;
   line-height: 1.45;
 }
@@ -853,7 +940,7 @@ a:focus-visible {
 .competitor-list article > p {
   max-width: 760px;
   margin: 12px 0 0;
-  color: #41444a;
+  color: #c4cde0;
   line-height: 1.6;
 }
 
@@ -872,7 +959,7 @@ a:focus-visible {
   width: 100%;
   min-width: 620px;
   border-collapse: collapse;
-  color: #41444a;
+  color: #c4cde0;
   font-size: 12px;
   line-height: 1.5;
 }
@@ -963,7 +1050,7 @@ a:focus-visible {
 .risk-block ul {
   margin: 0;
   padding-left: 18px;
-  color: #41444a;
+  color: #c4cde0;
   line-height: 1.7;
 }
 
@@ -1382,7 +1469,7 @@ a:focus-visible {
 
 .agent-access-token-meta dd {
   margin: 0;
-  color: #41444a;
+  color: #c4cde0;
   font-size: 12px;
   overflow-wrap: anywhere;
 }
@@ -1469,7 +1556,7 @@ a:focus-visible {
 .usage-summary-metrics dd,
 .quota-reconciliation-details dd {
   margin: 0;
-  color: #41444a;
+  color: #c4cde0;
   font-size: 13px;
   line-height: 1.5;
   overflow-wrap: anywhere;
@@ -1497,7 +1584,7 @@ a:focus-visible {
   gap: 20px;
   padding: 10px 0;
   border-bottom: 1px solid var(--line-soft);
-  color: #41444a;
+  color: #c4cde0;
   font-size: 13px;
 }
 
@@ -1515,6 +1602,91 @@ a:focus-visible {
   max-width: 720px;
   margin-top: 22px;
   line-height: 1.55;
+}
+
+.audit-event-list {
+  display: grid;
+  gap: 18px;
+  margin: 28px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.audit-event-card {
+  padding: 24px;
+  border: 1px solid var(--line);
+  background: var(--surface);
+}
+
+.audit-event-heading {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 24px;
+}
+
+.audit-event-heading h3 {
+  margin: 12px 0 0;
+  font-size: 21px;
+  letter-spacing: -0.02em;
+}
+
+.audit-event-state {
+  flex: 0 0 auto;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.audit-event-details,
+.audit-event-metadata {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 18px 28px;
+  margin: 26px 0 0;
+}
+
+.audit-event-metadata {
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  padding-top: 20px;
+  border-top: 1px solid var(--line-soft);
+}
+
+.audit-event-details div,
+.audit-event-metadata div {
+  display: grid;
+  gap: 5px;
+  min-width: 0;
+}
+
+.audit-event-details dt,
+.audit-event-metadata dt {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.audit-event-details dd,
+.audit-event-metadata dd {
+  margin: 0;
+  color: #c4cde0;
+  font-size: 13px;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+
+.audit-event-code {
+  overflow-wrap: anywhere;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 12px;
+}
+
+.audit-next-link {
+  margin-top: 24px;
 }
 
 .workspace-opportunity-list {
@@ -1575,7 +1747,7 @@ a:focus-visible {
 .seed-review-list p {
   max-width: 720px;
   margin: 8px 0 0;
-  color: #41444a;
+  color: #c4cde0;
   line-height: 1.55;
 }
 
@@ -1654,7 +1826,7 @@ a:focus-visible {
 .source-coverage-notes ul {
   margin: 0;
   padding-left: 18px;
-  color: #41444a;
+  color: #c4cde0;
   line-height: 1.6;
 }
 
@@ -1847,7 +2019,7 @@ a:focus-visible {
   grid-template-columns: auto 1fr;
   align-items: flex-start;
   gap: 10px !important;
-  color: #41444a !important;
+  color: #c4cde0 !important;
   font-size: 13px !important;
   font-weight: 400 !important;
   letter-spacing: normal !important;
@@ -2233,7 +2405,7 @@ a:focus-visible {
 
 .account-session-meta dd {
   margin: 0;
-  color: #41444a;
+  color: #c4cde0;
   font-size: 12px;
   font-variant-numeric: tabular-nums;
 }
@@ -2274,7 +2446,7 @@ a:focus-visible {
   padding: 22px;
   border: 1px solid var(--line);
   background: var(--surface);
-  color: #41444a;
+  color: #c4cde0;
   font-size: 12px;
   line-height: 1.6;
   white-space: pre-wrap;
@@ -2299,40 +2471,97 @@ a:focus-visible {
   }
 
   .leaderboard-page {
-    padding-top: 58px;
+    padding-top: 48px;
+    text-align: left;
   }
 
   .leaderboard-page h1,
   .opportunity-heading h1 {
-    font-size: 42px;
+    font-size: 38px;
+  }
+
+  .leaderboard-kicker {
+    margin-bottom: 12px;
+    font-size: 10px;
+  }
+
+  .leaderboard-intro {
+    margin: 12px 0 0;
+    font-size: 14px;
   }
 
   .leaderboard {
-    margin-top: 42px;
+    margin-top: 32px;
+    overflow: visible;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
   }
 
   .leaderboard-row {
-    grid-template-columns: 42px minmax(0, 1fr) 70px 58px;
-    min-height: 66px;
+    grid-template-columns: 42px minmax(0, 1fr) 58px 74px;
+    min-height: 70px;
     column-gap: 8px;
+    padding: 0 12px;
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    background: linear-gradient(145deg, rgba(15, 24, 43, 0.9), rgba(7, 12, 24, 0.96));
+  }
+
+  .leaderboard-row + .leaderboard-row {
+    margin-top: 9px;
+  }
+
+  .leaderboard-row:last-child {
+    border-bottom: 1px solid var(--line);
   }
 
   .leaderboard-head {
-    min-height: 42px;
+    min-height: 32px;
+    padding: 0 0 8px;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    color: var(--muted);
     font-size: 9px;
     letter-spacing: 0.04em;
   }
 
+  .leaderboard-head + .leaderboard-entry {
+    margin-top: 0;
+  }
+
+  .rank-badge {
+    width: 32px;
+    height: 32px;
+    font-size: 13px;
+  }
+
   .opportunity-name {
-    overflow: hidden;
+    overflow: visible;
     font-size: 17px;
-    text-overflow: ellipsis;
-    white-space: nowrap;
+    line-height: 1.18;
+    white-space: normal;
   }
 
   .complaint-count,
   .score {
     font-size: 13px;
+  }
+
+  .score-cell {
+    grid-template-columns: 1fr;
+    gap: 4px;
+  }
+
+  .score {
+    justify-self: end;
+  }
+
+  .score-meter {
+    width: 68px;
+    height: 5px;
   }
 
   .opportunity-heading {
@@ -2343,6 +2572,7 @@ a:focus-visible {
     gap: 18px;
     margin-top: 38px;
     overflow-x: auto;
+    overflow-y: hidden;
   }
 
   .tab {
@@ -2424,7 +2654,8 @@ a:focus-visible {
   .agent-access-scope-list,
   .agent-access-token-meta,
   .usage-summary-metrics,
-  .quota-reconciliation-details {
+  .quota-reconciliation-details,
+  .audit-event-details {
     grid-template-columns: 1fr;
   }
 
@@ -2441,8 +2672,15 @@ a:focus-visible {
   }
 
   .usage-summary-card,
-  .quota-reconciliation-row {
+  .quota-reconciliation-row,
+  .audit-event-card {
     padding: 18px;
+  }
+
+  .audit-event-heading {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 8px;
   }
 
   .correction-control-grid,
@@ -2468,6 +2706,137 @@ a:focus-visible {
   .account-mfa-recovery ul {
     grid-template-columns: 1fr;
   }
+}
+
+/* Reference-system contrast layer: every product surface stays on the same
+   navy canvas; imported content remains text-only and cannot introduce styles. */
+.detail-grid p:not(.label),
+.detail-grid dd,
+.deep-research-checklist-intro,
+.deep-research-checklist .deep-research-check-state,
+.deep-research-checklist .deep-research-check-evidence,
+.deep-research-checklist .deep-research-check-note,
+.competitor-list article > p,
+.feature-matrix,
+.risk-block ul,
+.agent-access-token-meta dd,
+.quota-reconciliation-details dd,
+.usage-cost-types li,
+.audit-event-details dd,
+.audit-event-metadata dd,
+.seed-review-list p,
+.source-coverage-notes ul,
+.account-session-meta dd,
+.report-preview,
+.plan-file-preview {
+  color: #c4cde0;
+}
+
+.source-coverage-notes .muted-note,
+.account-session-meta dd,
+.report-preview,
+.plan-file-preview {
+  color: var(--muted);
+}
+
+.observation-state.confirmed {
+  color: var(--success);
+}
+
+.observation-state.rejected,
+.form-error {
+  color: var(--danger);
+}
+
+.form-success {
+  color: var(--success);
+}
+
+.workspace-purge-request-status {
+  background: rgba(20, 32, 57, 0.84);
+}
+
+.workspace-purge-request-status p,
+.quiet-metrics span,
+.usage-summary-metrics dd,
+.quota-reconciliation-details dd,
+.audit-event-details dd,
+.audit-event-metadata dd {
+  color: #c4cde0;
+}
+
+.feature-matrix th,
+.feature-matrix caption,
+.feature-matrix-provenance {
+  color: var(--muted);
+}
+
+.feature-matrix td:first-child,
+.workspace-purge-summary dd,
+.artifact-approval-state,
+.review-state,
+.correction-readonly {
+  color: var(--ink);
+}
+
+.quiet-button {
+  border-color: #4a5e88;
+  background: rgba(12, 20, 37, 0.72);
+  color: var(--ink);
+  box-shadow: inset 0 0 0 1px rgba(77, 168, 255, 0.08);
+}
+
+.quiet-button:hover {
+  border-color: var(--accent-cyan);
+  background: rgba(47, 62, 104, 0.56);
+}
+
+.auth-form button,
+.artifact-approval-actions .quiet-button:first-of-type,
+.audit-next-link .quiet-button {
+  border-color: var(--accent);
+  background: linear-gradient(135deg, #8a4dff, #477bff);
+  color: #fff;
+  box-shadow: 0 0 18px rgba(111, 77, 255, 0.28);
+}
+
+.auth-form input,
+.deep-research-check-controls select,
+.deep-research-check-controls input,
+.deep-research-check-controls textarea,
+.deep-research-review-notes textarea,
+.evidence-redaction-content select,
+.analysis-correction textarea,
+.analysis-correction input,
+.analysis-correction select,
+.analysis-correction-fields textarea,
+.workspace-seed-form-grid input,
+.workspace-seed-form-grid textarea,
+.campaign-form input,
+.campaign-form textarea,
+.campaign-form select {
+  border-color: var(--line);
+  background: rgba(8, 14, 27, 0.9);
+  color: var(--ink);
+}
+
+.auth-form input::placeholder,
+.deep-research-check-controls input::placeholder,
+.deep-research-check-controls textarea::placeholder,
+.analysis-correction textarea::placeholder {
+  color: #71809c;
+}
+
+.auth-form input:focus,
+.deep-research-check-controls select:focus,
+.deep-research-check-controls input:focus,
+.deep-research-check-controls textarea:focus,
+.deep-research-review-notes textarea:focus,
+.analysis-correction input:focus,
+.analysis-correction select:focus,
+.analysis-correction-fields textarea:focus {
+  border-color: var(--accent);
+  outline-color: rgba(155, 92, 255, 0.42);
 }
 
 @media (prefers-reduced-motion: reduce) {

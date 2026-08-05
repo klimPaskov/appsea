@@ -36,7 +36,8 @@ external secret storage, and monitoring remain open.
 Authenticated private members can also inspect the immutable audit ledger at
 `GET /api/workspaces/:workspaceId/audit-events` through a bounded time/id cursor
 and scalar metadata projection. It is not an export or retention/purge path;
-provider audit retention and backup deletion remain deployment gates.
+the private workspace Activity page now renders the same read-only projection.
+Provider audit retention and backup deletion remain deployment gates.
 Optional OIDC/provider identity
 linking and sign-in now have a disabled-by-default, explicit issuer/subject
 boundary plus a production DNS-resolution preflight for every provider request,

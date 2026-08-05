@@ -670,6 +670,10 @@ readiness blocker before an approval attempt. These controls are a client
 projection only; the existing same-origin API, step-up check, and database
 transition guards remain authoritative.
 
+The private workspace Activity page now exposes the existing immutable audit
+projection through a bounded cursor view. It is read-only, scalar-only, and
+membership-authorized; it does not create an export or retention/purge path.
+
 The report contract keeps retained observations and their derived analysis,
 deterministic score inference,
 contrary evidence, recommendation, source coverage, and coverage gaps separate.

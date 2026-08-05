@@ -32,6 +32,12 @@
 - Do not repeat the full research report on every screen.
 - Desktop and mobile use the same data contract even when presentation differs.
 
+## Dark reference system
+
+- The checked-in reference sources and the website share the near-black navy canvas, layered navy surfaces, cool blue-gray text, violet/cyan accents, and restrained glow treatment shown by the reviewed PNG references.
+- The public leaderboard keeps the product contract intentionally sparse: rank, opportunity name, complaint count, score, and a synthetic-fixture disclosure. Reference-only category, momentum, confidence, and decorative icon columns are not product fields and remain omitted.
+- The existing generated AppSea mark remains the only brand bitmap. No decorative icon asset is required for the leaderboard or private activity surface.
+
 ## Suggested components
 
 `AppHeader`, `PageHeading`, `Surface`, `ScoreBar`, `StatusBadge`, `SourceFilter`, `LeaderboardTable`, `LeaderboardCardList`, `ComplaintList`, `CompetitorTable`, `CompetitorCardList`, and `PlanSection`.

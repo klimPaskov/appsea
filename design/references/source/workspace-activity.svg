@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1440" height="1000" viewBox="0 0 1440 1000">
+<rect width="1440" height="1000" fill="#050711" />
+<line x1="0" y1="76" x2="1440" y2="76" stroke="#18243a" stroke-width="1" />
+<rect x="76" y="24" width="28" height="28" rx="8" fill="#9b5cff" />
+<text x="90" y="42.5" font-family="Arial, Helvetica, sans-serif" font-size="12" font-weight="700" fill="#ffffff" text-anchor="middle">A</text>
+<text x="114" y="43.5" font-family="Arial, Helvetica, sans-serif" font-size="15" font-weight="700" fill="#f5f7ff">AppSea</text>
+<text x="1364" y="43" font-family="Arial, Helvetica, sans-serif" font-size="13" font-weight="600" fill="#9ba8c3" text-anchor="end">Leaderboard</text>
+<text x="290" y="156" font-family="Arial, Helvetica, sans-serif" font-size="13" fill="#9ba8c3">Workspace / Activity</text>
+<text x="290" y="220" font-family="Arial, Helvetica, sans-serif" font-size="11" font-weight="700" fill="#9ba8c3" letter-spacing="1.1">PRIVATE RESEARCH WORKSPACE</text>
+<text x="290" y="276" font-family="Arial, Helvetica, sans-serif" font-size="58" font-weight="650" fill="#f5f7ff" letter-spacing="-2.6">Activity</text>
+<text x="290" y="322" font-family="Arial, Helvetica, sans-serif" font-size="16" fill="#9ba8c3">Inspect bounded workspace receipts for research and access changes.</text>
+<text x="290" y="348" font-family="Arial, Helvetica, sans-serif" font-size="16" fill="#9ba8c3">Imported source content and raw payloads never appear here.</text>
+<text x="290" y="408" font-family="Arial, Helvetica, sans-serif" font-size="10" font-weight="700" fill="#9ba8c3" letter-spacing="1.1">AUDIT HISTORY</text>
+<line x1="290" y1="428" x2="1150" y2="428" stroke="#f5f7ff" stroke-width="1" />
+<text x="290" y="460" font-family="Arial, Helvetica, sans-serif" font-size="13" fill="#9ba8c3">Newest receipts first · read-only</text>
+<rect x="290" y="492" width="860" height="214" rx="6" fill="#0b1220" stroke="#2a3854" />
+<text x="314" y="532" font-family="Arial, Helvetica, sans-serif" font-size="10" font-weight="700" fill="#9ba8c3" letter-spacing="1.0">AUGUST 5, 2026, 12:00 PM · USER ACTOR</text>
+<text x="314" y="574" font-family="Arial, Helvetica, sans-serif" font-size="24" font-weight="650" fill="#f5f7ff">Report Approved</text>
+<text x="1126" y="532" font-family="Arial, Helvetica, sans-serif" font-size="11" font-weight="700" fill="#9ba8c3" text-anchor="end" letter-spacing="0.6">READ-ONLY RECEIPT</text>
+<line x1="314" y1="600" x2="1126" y2="600" stroke="#18243a" stroke-width="1" />
+<text x="314" y="632" font-family="Arial, Helvetica, sans-serif" font-size="10" font-weight="700" fill="#9ba8c3" letter-spacing="0.6">TARGET</text>
+<text x="314" y="656" font-family="Arial, Helvetica, sans-serif" font-size="12" fill="#c4cde0">report · report:one</text>
+<text x="574" y="632" font-family="Arial, Helvetica, sans-serif" font-size="10" font-weight="700" fill="#9ba8c3" letter-spacing="0.6">ACTOR</text>
+<text x="574" y="656" font-family="Arial, Helvetica, sans-serif" font-size="12" fill="#c4cde0">user:owner</text>
+<text x="834" y="632" font-family="Arial, Helvetica, sans-serif" font-size="10" font-weight="700" fill="#9ba8c3" letter-spacing="0.6">CORRELATION</text>
+<text x="834" y="656" font-family="Arial, Helvetica, sans-serif" font-size="12" fill="#c4cde0">correlation:one</text>
+<text x="290" y="778" font-family="Arial, Helvetica, sans-serif" font-size="13" fill="#9ba8c3">Older receipts load through the bounded cursor.</text>
+<rect x="290" y="812" width="164" height="42" rx="5" fill="#f5f7ff" />
+<text x="372" y="838" font-family="Arial, Helvetica, sans-serif" font-size="12" font-weight="650" fill="#ffffff" text-anchor="middle">Load older receipts</text>
+</svg>
