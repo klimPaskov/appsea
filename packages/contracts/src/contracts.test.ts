@@ -41,6 +41,9 @@ import {
   sourceQuotaReconciliationResolveInputSchema,
   sourceQuotaReconciliationAlertInputSchema,
   sourceQuotaReconciliationAlertResultSchema,
+  sourceHealthAlertObservationSchema,
+  sourceHealthAlertInputSchema,
+  sourceHealthAlertResultSchema,
   productionAnalysisRecomputeAlertInputSchema,
   productionAnalysisRecomputeAlertObservationSchema,
   productionAnalysisRecomputeAlertResultSchema,
@@ -3379,6 +3382,84 @@ describe('contracts', () => {
         jobsObserved: 1,
         failedJobs: 2,
         oldestOpenJobAgeSeconds: 60,
+        alerted: true,
+        state: 'alert'
+      }).success
+    ).toBe(false)
+  })
+
+  it('keeps source-health alert counters bounded and state-consistent', () => {
+    const observation = {
+      sourceId: 'source:cfpb',
+      collectible: true,
+      healthState: 'degraded' as const,
+      healthLastAttemptAt: now,
+      freshnessState: 'stale' as const,
+      freshnessAgeHours: 30,
+      quotaState: 'exhausted' as const
+    }
+    expect(sourceHealthAlertObservationSchema.safeParse(observation).success).toBe(true)
+    expect(
+      sourceHealthAlertObservationSchema.safeParse({
+        ...observation,
+        freshnessAgeHours: -1
+      }).success
+    ).toBe(false)
+    const clear = {
+      observedAt: now,
+      alertAfterSeconds: 900,
+      workspacesScanned: 20,
+      sourcesObserved: 1,
+      collectibleSources: 1,
+      blockedSources: 0,
+      unknownSources: 0,
+      degradedSources: 0,
+      staleSources: 0,
+      exhaustedSources: 0,
+      oldestDegradedAgeSeconds: null,
+      alerted: false,
+      truncated: false,
+      state: 'clear' as const
+    }
+    expect(
+      sourceHealthAlertInputSchema.safeParse({
+        observedAt: now,
+        maxWorkspaces: 20,
+        maxSourcesPerWorkspace: 10,
+        alertAfterSeconds: 900
+      }).success
+    ).toBe(true)
+    expect(sourceHealthAlertResultSchema.safeParse(clear).success).toBe(true)
+    expect(
+      sourceHealthAlertResultSchema.safeParse({
+        ...clear,
+        degradedSources: 1,
+        oldestDegradedAgeSeconds: 901,
+        alerted: true,
+        state: 'alert'
+      }).success
+    ).toBe(true)
+    expect(
+      sourceHealthAlertResultSchema.safeParse({
+        ...clear,
+        staleSources: 1,
+        alerted: true,
+        state: 'alert'
+      }).success
+    ).toBe(true)
+    expect(
+      sourceHealthAlertResultSchema.safeParse({
+        ...clear,
+        truncated: true,
+        state: 'clear'
+      }).success
+    ).toBe(false)
+    expect(
+      sourceHealthAlertResultSchema.safeParse({
+        ...clear,
+        sourcesObserved: 1,
+        degradedSources: 2,
+        oldestDegradedAgeSeconds: 60,
         alerted: true,
         state: 'alert'
       }).success

@@ -13,8 +13,10 @@
   blocked; owner import is operationally on-demand but its legacy v2 policy has
   no SLA and remains unknown. Migration `0107` also exposes bounded shared
   current-minute quota headroom (limit/used/remaining/window) without
-  reservation rows or mutation capability. No scheduler, activation, quota
-  mutation, or absence inference crosses the read.
+  reservation rows or mutation capability. Migrations `0108`/`0109` add a
+  maintenance-only scalar source-health alert scan; stale, exhausted, or
+  aged-degraded signals alert and truncation stays incomplete. No scheduler,
+  activation, quota mutation, or absence inference crosses the read.
 - Production collection persists policy-bound evidence, gaps, cost, and
   lineage; private reads use `/workspace/:workspaceId/research/:runId`; outputs
   use object storage. Reports/plans preserve provenance, approvals, and gaps.

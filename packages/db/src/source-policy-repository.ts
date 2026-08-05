@@ -1,11 +1,13 @@
 import type { Pool, QueryResultRow } from 'pg'
 import {
   appseaIdentifierSchema,
+  sourceHealthAlertObservationSchema,
   sourcePolicyApprovalInputSchema,
   sourcePolicySchema,
   workspaceSourceReadModelSchema,
   type SourcePolicy,
   type SourcePolicyApprovalInput as SourcePolicyApprovalInputContract,
+  type SourceHealthAlertObservation,
   type WorkspaceSourceHealthReadModel
 } from '@appsea/contracts'
 import { contentHash } from './hash'
@@ -53,6 +55,16 @@ interface SourcePolicyRegistryRow extends SourcePolicyRow {
   quota_window_ends_at: Date | string | null
   quota_requests_used: number | string | null
   quota_requests_remaining: number | string | null
+}
+
+interface SourceHealthAlertObservationRow extends QueryResultRow {
+  source_id: string
+  collectible: boolean
+  health_state: string
+  health_last_attempt_at: Date | string | null
+  freshness_state: string
+  freshness_age_hours: number | string | null
+  quota_state: string
 }
 
 export interface SourcePolicyRecord {
@@ -469,6 +481,51 @@ export class PostgresSourcePolicyRepository {
             ORDER BY source.display_name, source.source_id`
         )
         return result.rows.map(mapWorkspaceSource)
+      },
+      { readOnly: true }
+    )
+  }
+
+  /**
+   * Read the maintenance-only scalar source-health projection. The SQL
+   * security-definer function owns the cross-workspace authorization boundary;
+   * this repository never selects source payloads, policy JSON, or complaint
+   * text for an alert scan.
+   */
+  async listSourceHealthAlertObservations(
+    workspaceId: string,
+    limit = 100
+  ): Promise<SourceHealthAlertObservation[]> {
+    const parsedWorkspaceId = appseaIdentifierSchema.parse(workspaceId)
+    if (!Number.isSafeInteger(limit) || limit < 1 || limit > 100) {
+      throw new Error('source health alert limit must be between 1 and 100')
+    }
+    return withDatabaseTransaction(
+      this.pool,
+      async (client) => {
+        const result = await client.query<SourceHealthAlertObservationRow>(
+          `SELECT source_id,
+                  collectible,
+                  health_state,
+                  health_last_attempt_at,
+                  freshness_state,
+                  freshness_age_hours,
+                  quota_state
+             FROM appsea.read_source_health_alert_observations($1, $2)`,
+          [parsedWorkspaceId, limit]
+        )
+        return result.rows.map((row) =>
+          sourceHealthAlertObservationSchema.parse({
+            sourceId: row.source_id,
+            collectible: row.collectible,
+            healthState: row.health_state,
+            healthLastAttemptAt: iso(row.health_last_attempt_at),
+            freshnessState: row.freshness_state,
+            freshnessAgeHours:
+              row.freshness_age_hours === null ? null : Number(row.freshness_age_hours),
+            quotaState: row.quota_state
+          })
+        )
       },
       { readOnly: true }
     )

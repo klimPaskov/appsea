@@ -34,6 +34,12 @@ log sink and alert on:
   `production_analysis_recompute_clear` events; alert on failed/blocked/stale
   counters, and never treat a truncated inspection as clear. The command is
   read-only and never dispatches or retries a repair;
+- `source_health_alert`, `source_health_alert_incomplete`, and
+  `source_health_clear` events from the reviewed source-health scan. Alert when
+  any collectible source is stale, quota-exhausted, or degraded beyond the
+  configured age; treat an incomplete scan as incomplete even when no alert was
+  observed. The scan is maintenance-only and never fetches, activates, retries,
+  or changes a source;
 - `operational_alert_delivery_finished` events and their bounded claimed,
   sent, failed, exhausted, and purged counters. Provider response bodies and
   exception text are never logged; delivery failures use the fixed
@@ -73,6 +79,18 @@ same lease-owned maintenance boundary for read-only inspection of deletion- or
 correction-triggered repairs. It emits only bounded counters, age, alert state,
 and truncation; alert/incomplete/failure outcomes use signed delivery while
 deployment owns scheduling and incident routing.
+
+The worker command `pnpm worker:source:health:alert` uses the same lease-owned
+boundary with `APPSEA_SOURCE_HEALTH_ALERT_MAX_WORKSPACES`,
+`APPSEA_SOURCE_HEALTH_ALERT_MAX_SOURCES_PER_WORKSPACE`, and
+`APPSEA_SOURCE_HEALTH_ALERT_AFTER_SECONDS` bounds. Migration `0108` exposes
+only the scalar maintenance projection and migration `0109` extends the
+released scheduler and operational-alert allowlists without editing history.
+The worker scans active workspaces through the service role, reads source
+health through the standalone `appsea_maintenance` role, emits bounded
+alert/incomplete/clear counters, and queues only alert/incomplete/failure
+events for durable signed delivery. It never reads source payloads or complaint
+text and never treats blocked or truncated coverage as a clean market signal.
 
 The worker command `pnpm worker:workspace:cost:alert` uses the same boundary to
 inspect exact micro-unit aggregates from the immutable cost ledger. Configure

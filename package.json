@@ -50,6 +50,7 @@
     "worker:auth:mfa:rotation:rewrap": "pnpm --filter @appsea/worker auth:mfa:rotation:rewrap",
     "worker:source:quota:reconcile": "pnpm --filter @appsea/worker source:quota:reconcile",
     "worker:source:quota:alert": "pnpm --filter @appsea/worker source:quota:alert",
+    "worker:source:health:alert": "pnpm --filter @appsea/worker source:health:alert",
     "worker:production:analysis:recompute:alert": "pnpm --filter @appsea/worker production:analysis:recompute:alert",
     "worker:workspace:cost:alert": "pnpm --filter @appsea/worker workspace:cost:alert",
     "worker:alerts:deliver": "pnpm --filter @appsea/worker alerts:deliver",

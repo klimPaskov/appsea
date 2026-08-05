@@ -23,6 +23,7 @@
     "production:preflight": "tsx src/production-preflight.ts",
     "source:quota:reconcile": "tsx src/source-quota-reconciliation-cli.ts",
     "source:quota:alert": "tsx src/source-quota-reconciliation-alert-cli.ts",
+    "source:health:alert": "tsx src/source-health-alert-cli.ts",
     "production:analysis:recompute:alert": "tsx src/production-analysis-recompute-alert-cli.ts",
     "workspace:cost:alert": "tsx src/workspace-cost-alert-cli.ts",
     "alerts:deliver": "tsx src/operational-alert-delivery-cli.ts",

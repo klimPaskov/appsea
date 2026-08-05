@@ -253,6 +253,52 @@ describe('source policy registry repository', () => {
     expect(source).not.toHaveProperty('failureSummary')
   })
 
+  it('reads only the maintenance source-health projection', async () => {
+    query.mockResolvedValue({
+      rows: [
+        {
+          source_id: 'cfpb-consumer-complaints',
+          collectible: true,
+          health_state: 'degraded',
+          health_last_attempt_at: '2026-08-06T10:00:00.000Z',
+          freshness_state: 'stale',
+          freshness_age_hours: '30',
+          quota_state: 'exhausted'
+        }
+      ]
+    })
+    const repository = new PostgresSourcePolicyRepository({} as Pool)
+
+    await expect(
+      repository.listSourceHealthAlertObservations('workspace:one', 25)
+    ).resolves.toEqual([
+      {
+        sourceId: 'cfpb-consumer-complaints',
+        collectible: true,
+        healthState: 'degraded',
+        healthLastAttemptAt: '2026-08-06T10:00:00.000Z',
+        freshnessState: 'stale',
+        freshnessAgeHours: 30,
+        quotaState: 'exhausted'
+      }
+    ])
+    expect(query.mock.calls[0]?.[0]).toContain('read_source_health_alert_observations')
+    expect(query.mock.calls[0]?.[1]).toEqual(['workspace:one', 25])
+    expect(transactionMocks.withDatabaseTransaction).toHaveBeenCalledWith(
+      {},
+      expect.any(Function),
+      { readOnly: true }
+    )
+  })
+
+  it('rejects an unbounded maintenance source-health limit', async () => {
+    const repository = new PostgresSourcePolicyRepository({} as Pool)
+    await expect(
+      repository.listSourceHealthAlertObservations('workspace:one', 101)
+    ).rejects.toThrow(/between 1 and 100/)
+    expect(query).not.toHaveBeenCalled()
+  })
+
   it('maps the current-minute quota window without exposing reservation rows', async () => {
     query.mockResolvedValue({
       rows: [

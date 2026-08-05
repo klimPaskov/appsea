@@ -120,7 +120,9 @@ describe('database foundation', () => {
       '0104',
       '0105',
       '0106',
-      '0107'
+      '0107',
+      '0108',
+      '0109'
     ])
     expect(migrations[0]?.checksum).toMatch(/^[a-f0-9]{64}$/)
     expect(migrations[0]?.sql).toContain('CREATE TABLE appsea.evidence_records')
@@ -146,6 +148,25 @@ describe('database foundation', () => {
       'GRANT EXECUTE ON FUNCTION appsea.read_source_quota_headroom(text, text) TO appsea_service'
     )
     expect(quotaHeadroomMigration?.sql).toContain('GRANT EXECUTE ON FUNCTION')
+    const sourceHealthAlertMigration = migrations.find((migration) => migration.version === '0108')
+    expect(sourceHealthAlertMigration?.sql).toContain(
+      'CREATE OR REPLACE FUNCTION appsea.read_source_health_alert_observations'
+    )
+    expect(sourceHealthAlertMigration?.sql).toContain(
+      'source health alert read requires the maintenance role'
+    )
+    expect(sourceHealthAlertMigration?.sql).toContain(
+      'GRANT EXECUTE ON FUNCTION appsea.read_source_health_alert_observations(text, integer)'
+    )
+    expect(sourceHealthAlertMigration?.sql).toContain('TO appsea_maintenance')
+    const sourceHealthAlertAllowlistMigration = migrations.find(
+      (migration) => migration.version === '0109'
+    )
+    expect(sourceHealthAlertAllowlistMigration?.sql).toContain('appsea-source-health-alerts-v1')
+    expect(sourceHealthAlertAllowlistMigration?.sql).toContain(
+      'CREATE OR REPLACE FUNCTION appsea.is_allowed_maintenance_scheduler_name'
+    )
+    expect(sourceHealthAlertAllowlistMigration?.sql).toContain('sourceHealthTruncated')
     const cancellationMigration = migrations.find((migration) => migration.version === '0070')
     expect(cancellationMigration?.sql).toContain('cancellation_requested_at')
     expect(cancellationMigration?.sql).toContain(

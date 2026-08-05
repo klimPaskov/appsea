@@ -37,6 +37,15 @@ export interface WorkerEvent {
   sourceQuotaReconciliationOpenCases?: number
   sourceQuotaReconciliationOldestAgeSeconds?: number
   sourceQuotaReconciliationTruncated?: boolean
+  sourceHealthSourcesObserved?: number
+  sourceHealthCollectibleSources?: number
+  sourceHealthBlockedSources?: number
+  sourceHealthUnknownSources?: number
+  sourceHealthDegradedSources?: number
+  sourceHealthStaleSources?: number
+  sourceHealthExhaustedSources?: number
+  sourceHealthOldestDegradedAgeSeconds?: number
+  sourceHealthTruncated?: boolean
   productionAnalysisRecomputeJobs?: number
   productionAnalysisRecomputeFailed?: number
   productionAnalysisRecomputeBlocked?: number
@@ -247,6 +256,37 @@ export function workerEventPayload(event: WorkerEvent): WorkerEventPayload {
       : {}),
     ...(event.sourceQuotaReconciliationTruncated !== undefined
       ? { sourceQuotaReconciliationTruncated: event.sourceQuotaReconciliationTruncated }
+      : {}),
+    ...(finiteInteger(event.sourceHealthSourcesObserved) !== undefined
+      ? { sourceHealthSourcesObserved: finiteInteger(event.sourceHealthSourcesObserved) }
+      : {}),
+    ...(finiteInteger(event.sourceHealthCollectibleSources) !== undefined
+      ? { sourceHealthCollectibleSources: finiteInteger(event.sourceHealthCollectibleSources) }
+      : {}),
+    ...(finiteInteger(event.sourceHealthBlockedSources) !== undefined
+      ? { sourceHealthBlockedSources: finiteInteger(event.sourceHealthBlockedSources) }
+      : {}),
+    ...(finiteInteger(event.sourceHealthUnknownSources) !== undefined
+      ? { sourceHealthUnknownSources: finiteInteger(event.sourceHealthUnknownSources) }
+      : {}),
+    ...(finiteInteger(event.sourceHealthDegradedSources) !== undefined
+      ? { sourceHealthDegradedSources: finiteInteger(event.sourceHealthDegradedSources) }
+      : {}),
+    ...(finiteInteger(event.sourceHealthStaleSources) !== undefined
+      ? { sourceHealthStaleSources: finiteInteger(event.sourceHealthStaleSources) }
+      : {}),
+    ...(finiteInteger(event.sourceHealthExhaustedSources) !== undefined
+      ? { sourceHealthExhaustedSources: finiteInteger(event.sourceHealthExhaustedSources) }
+      : {}),
+    ...(finiteInteger(event.sourceHealthOldestDegradedAgeSeconds) !== undefined
+      ? {
+          sourceHealthOldestDegradedAgeSeconds: finiteInteger(
+            event.sourceHealthOldestDegradedAgeSeconds
+          )
+        }
+      : {}),
+    ...(event.sourceHealthTruncated !== undefined
+      ? { sourceHealthTruncated: event.sourceHealthTruncated }
       : {}),
     ...(finiteInteger(event.productionAnalysisRecomputeJobs) !== undefined
       ? { productionAnalysisRecomputeJobs: finiteInteger(event.productionAnalysisRecomputeJobs) }

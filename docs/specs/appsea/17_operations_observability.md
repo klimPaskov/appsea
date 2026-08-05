@@ -58,6 +58,9 @@ subset of this dashboard: connector state, last attempt/success, retained
 observation age, reviewed freshness interval/delay when configured, active
 records, deletion backlog, fixed failure code, cost, and the shared
 current-minute quota limit/used/remaining projection added by migration `0107`.
+Migrations `0108` and `0109` add a maintenance-only scalar scan and forward
+allowlist for `pnpm worker:source:health:alert`; stale, exhausted, or aged-
+degraded collectible sources alert, while capped coverage remains incomplete.
 Legacy policies remain freshness-unknown, and on-demand sources do not receive
 a scheduled SLA. Provider-auth expiry, alert delivery, and deployment SLO
 ownership remain operational follow-up work; shared headroom is not a

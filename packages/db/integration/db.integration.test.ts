@@ -52,6 +52,7 @@ import {
   PostgresSourceCollectionLeaseRepository,
   PostgresSourceQuotaRepository,
   PostgresSourceSnapshotReconciliationRepository,
+  PostgresSourcePolicyRepository,
   PostgresManualImportRepository,
   consumeManualImportBatchInTransaction,
   ManualImportPermissionError,
@@ -548,7 +549,9 @@ describe.sequential('PostgreSQL fixture persistence lifecycle', () => {
       '0104',
       '0105',
       '0106',
-      '0107'
+      '0107',
+      '0108',
+      '0109'
     ])
     expect(secondMigrationResult.applied).toEqual([])
     expect(secondMigrationResult.alreadyApplied).toEqual([
@@ -658,7 +661,9 @@ describe.sequential('PostgreSQL fixture persistence lifecycle', () => {
       '0104',
       '0105',
       '0106',
-      '0107'
+      '0107',
+      '0108',
+      '0109'
     ])
   })
 
@@ -1692,6 +1697,129 @@ describe.sequential('PostgreSQL fixture persistence lifecycle', () => {
           workspaceId
         ])
         await client.query('DELETE FROM appsea.users WHERE user_id = $1', [userId])
+        await client.query('DELETE FROM appsea.source_policy_reviews WHERE source_id = $1', [
+          sourceId
+        ])
+        await client.query(
+          `UPDATE appsea.sources
+              SET lifecycle_state = 'retired', current_policy_version = NULL
+            WHERE source_id = $1`,
+          [sourceId]
+        )
+        await client.query('DELETE FROM appsea.source_policy_versions WHERE source_id = $1', [
+          sourceId
+        ])
+        await client.query('DELETE FROM appsea.sources WHERE source_id = $1', [sourceId])
+        await client.query('DELETE FROM appsea.workspaces WHERE workspace_id = $1', [workspaceId])
+      })
+    }
+  })
+
+  it('exposes scalar source health only through the maintenance function', async () => {
+    const workspaceId = 'workspace-source-health-alert'
+    const sourceId = 'source-health-alert'
+    const policyVersion = 'health-alert-v1'
+    const policyHash = 'd'.repeat(64)
+    await withOwnerClient(async (client) => {
+      await client.query(
+        `INSERT INTO appsea.workspaces
+           (workspace_id, slug, display_name, visibility, fixture_only, status, created_at, updated_at)
+         VALUES ($1, 'source-health-alert', 'Source health alert', 'private', false, 'active', $2, $2)`,
+        [workspaceId, fixedAt]
+      )
+      await client.query(
+        `INSERT INTO appsea.sources
+           (source_id, display_name, source_type, lifecycle_state, current_policy_version,
+            created_at, updated_at)
+         VALUES ($1, 'Source health alert', 'api', 'disabled_pending_review', NULL, $2, $2)`,
+        [sourceId, fixedAt]
+      )
+      await client.query(
+        `INSERT INTO appsea.source_policy_versions
+           (source_id, policy_version, policy_state, permitted_purposes, commercial_use,
+            access_method, retention_days, deletion_required, attribution_required,
+            display_mode, coverage_notes, policy_document_ref, reviewed_at, expires_at,
+            policy_payload, content_hash, created_at)
+         VALUES ($1, $2, 'approved', ARRAY['opportunity-research'], 'allowed', 'test route',
+                 30, true, true, 'excerpt', ARRAY['alert test policy'],
+                 'https://example.com/source-health-alert', $3, NULL,
+                 $4::jsonb, $5, $3)`,
+        [
+          sourceId,
+          policyVersion,
+          fixedAt,
+          JSON.stringify({
+            freshness: { mode: 'scheduled', expectedIntervalHours: 1, allowedDelayHours: 1 },
+            quota: { requestsPerMinute: 6 }
+          }),
+          policyHash
+        ]
+      )
+      await client.query(
+        `INSERT INTO appsea.source_policy_reviews
+           (review_id, source_id, policy_version, decision, reviewer,
+            reviewer_identity, reviewer_role, independence_attested,
+            approval_reference, notes, content_hash, reviewed_at, recorded_at)
+         VALUES ('review:source-health-alert', $1, $2, 'approved', 'integration-test',
+                 'integration-test', 'independent_operator', true,
+                 'approval:source-health-alert', ARRAY['test-only'], $3, $4, $4)`,
+        [sourceId, policyVersion, policyHash, fixedAt]
+      )
+      await client.query(
+        `UPDATE appsea.sources
+            SET lifecycle_state = 'active', current_policy_version = $2, updated_at = $3
+          WHERE source_id = $1`,
+        [sourceId, policyVersion, fixedAt]
+      )
+      await client.query(
+        `INSERT INTO appsea.source_items
+           (workspace_id, source_item_id, source_id, source_policy_version,
+            source_record_id, canonical_locator, query_route, content_hash,
+            captured_at, synthetic, collection_purpose, requested_display_mode, created_at)
+         VALUES ($1, 'source-item-health-alert', $2, $3, 'record-health-alert',
+                 'https://example.com/source-health-alert/record', 'test-route', repeat('e', 64),
+                 $4, false, 'opportunity-research', 'excerpt', $4)`,
+        [workspaceId, sourceId, policyVersion, fixedAt]
+      )
+      await client.query(
+        `INSERT INTO appsea.source_quota_windows
+           (source_id, policy_version, window_started_at, request_count, updated_at)
+         VALUES ($1, $2, date_trunc('minute', clock_timestamp()), 6, clock_timestamp())`,
+        [sourceId, policyVersion]
+      )
+    })
+
+    const repository = new PostgresSourcePolicyRepository(maintenancePool)
+    try {
+      await expect(repository.listSourceHealthAlertObservations(workspaceId, 10)).resolves.toEqual([
+        expect.objectContaining({
+          sourceId,
+          collectible: true,
+          healthState: 'healthy',
+          freshnessState: 'stale',
+          freshnessAgeHours: expect.any(Number),
+          quotaState: 'exhausted'
+        })
+      ])
+      await expect(
+        servicePool.query('SELECT * FROM appsea.read_source_health_alert_observations($1, $2)', [
+          workspaceId,
+          10
+        ])
+      ).rejects.toMatchObject({ code: '42501' })
+      await expect(
+        maintenancePool.query(
+          'SELECT * FROM appsea.read_source_health_alert_observations($1, $2)',
+          [workspaceId, 101]
+        )
+      ).rejects.toMatchObject({ code: '22023' })
+    } finally {
+      await withOwnerClient(async (client) => {
+        await client.query('DELETE FROM appsea.source_items WHERE workspace_id = $1', [workspaceId])
+        await client.query(
+          'DELETE FROM appsea.source_quota_windows WHERE source_id = $1 AND policy_version = $2',
+          [sourceId, policyVersion]
+        )
         await client.query('DELETE FROM appsea.source_policy_reviews WHERE source_id = $1', [
           sourceId
         ])

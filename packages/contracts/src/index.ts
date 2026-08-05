@@ -5322,6 +5322,15 @@ const operationalAlertAllowedKeys = new Set([
   'sourceQuotaReconciliationOpenCases',
   'sourceQuotaReconciliationOldestAgeSeconds',
   'sourceQuotaReconciliationTruncated',
+  'sourceHealthSourcesObserved',
+  'sourceHealthCollectibleSources',
+  'sourceHealthBlockedSources',
+  'sourceHealthUnknownSources',
+  'sourceHealthDegradedSources',
+  'sourceHealthStaleSources',
+  'sourceHealthExhaustedSources',
+  'sourceHealthOldestDegradedAgeSeconds',
+  'sourceHealthTruncated',
   'productionAnalysisRecomputeJobs',
   'productionAnalysisRecomputeFailed',
   'productionAnalysisRecomputeBlocked',
@@ -6910,6 +6919,153 @@ export const sourceQuotaReconciliationAlertResultSchema = z
   })
   .strict()
 
+/** Bounds for the read-only maintenance inspection of source health signals. */
+export const sourceHealthAlertLimits = {
+  maxWorkspaces: 10_000,
+  maxSourcesPerWorkspace: 100,
+  maxObservedSources: 1_000_000,
+  maxAlertAfterSeconds: 31_536_000,
+  maxAgeSeconds: 315_360_000,
+  defaultMaxWorkspaces: 1_000,
+  defaultMaxSourcesPerWorkspace: 100,
+  defaultAlertAfterSeconds: 900
+} as const
+
+/** Scalar source-health state read by the maintenance role; no source payloads cross this boundary. */
+export const sourceHealthAlertObservationSchema = z
+  .object({
+    sourceId: appseaIdentifierSchema,
+    collectible: z.boolean(),
+    healthState: sourceHealthStateSchema,
+    healthLastAttemptAt: z.string().datetime().nullable(),
+    freshnessState: sourceFreshnessStateSchema,
+    freshnessAgeHours: z.number().int().nonnegative().max(87_600).nullable(),
+    quotaState: sourceQuotaHeadroomStateSchema
+  })
+  .strict()
+
+export const sourceHealthAlertInputSchema = z
+  .object({
+    observedAt: z.string().datetime(),
+    maxWorkspaces: z.number().int().min(1).max(sourceHealthAlertLimits.maxWorkspaces),
+    maxSourcesPerWorkspace: z
+      .number()
+      .int()
+      .min(1)
+      .max(sourceHealthAlertLimits.maxSourcesPerWorkspace),
+    alertAfterSeconds: z.number().int().min(1).max(sourceHealthAlertLimits.maxAlertAfterSeconds)
+  })
+  .strict()
+
+export const sourceHealthAlertResultSchema = z
+  .object({
+    observedAt: z.string().datetime(),
+    alertAfterSeconds: z.number().int().min(1).max(sourceHealthAlertLimits.maxAlertAfterSeconds),
+    workspacesScanned: z.number().int().nonnegative().max(sourceHealthAlertLimits.maxWorkspaces),
+    sourcesObserved: z.number().int().nonnegative().max(sourceHealthAlertLimits.maxObservedSources),
+    collectibleSources: z
+      .number()
+      .int()
+      .nonnegative()
+      .max(sourceHealthAlertLimits.maxObservedSources),
+    blockedSources: z.number().int().nonnegative().max(sourceHealthAlertLimits.maxObservedSources),
+    unknownSources: z.number().int().nonnegative().max(sourceHealthAlertLimits.maxObservedSources),
+    degradedSources: z.number().int().nonnegative().max(sourceHealthAlertLimits.maxObservedSources),
+    staleSources: z.number().int().nonnegative().max(sourceHealthAlertLimits.maxObservedSources),
+    exhaustedSources: z
+      .number()
+      .int()
+      .nonnegative()
+      .max(sourceHealthAlertLimits.maxObservedSources),
+    oldestDegradedAgeSeconds: z
+      .number()
+      .int()
+      .nonnegative()
+      .max(sourceHealthAlertLimits.maxAgeSeconds)
+      .nullable(),
+    alerted: z.boolean(),
+    truncated: z.boolean(),
+    state: z.enum(['clear', 'alert', 'incomplete'])
+  })
+  .superRefine((value, context) => {
+    const counters = [
+      value.collectibleSources,
+      value.blockedSources,
+      value.unknownSources,
+      value.degradedSources,
+      value.staleSources,
+      value.exhaustedSources
+    ]
+    if (counters.some((counter) => counter > value.sourcesObserved)) {
+      context.addIssue({
+        code: 'custom',
+        path: ['sourcesObserved'],
+        message: 'Source-health counters cannot exceed observed sources'
+      })
+    }
+    if (value.collectibleSources + value.blockedSources > value.sourcesObserved) {
+      context.addIssue({
+        code: 'custom',
+        path: ['collectibleSources'],
+        message: 'Collectible and blocked source counters cannot exceed observations'
+      })
+    }
+    if (value.degradedSources > 0 && value.oldestDegradedAgeSeconds === null) {
+      context.addIssue({
+        code: 'custom',
+        path: ['oldestDegradedAgeSeconds'],
+        message: 'Degraded sources require an observed attempt age'
+      })
+    }
+    if (value.degradedSources === 0 && value.oldestDegradedAgeSeconds !== null) {
+      context.addIssue({
+        code: 'custom',
+        path: ['oldestDegradedAgeSeconds'],
+        message: 'An empty degraded scan cannot have an attempt age'
+      })
+    }
+    const agedDegraded =
+      value.oldestDegradedAgeSeconds !== null &&
+      value.oldestDegradedAgeSeconds >= value.alertAfterSeconds
+    const alerted = value.staleSources > 0 || value.exhaustedSources > 0 || agedDegraded
+    if (value.alerted !== alerted) {
+      context.addIssue({
+        code: 'custom',
+        path: ['alerted'],
+        message: 'Source-health alert state must match stale, exhausted, or aged degraded sources'
+      })
+    }
+    if (value.state === 'alert' && !value.alerted) {
+      context.addIssue({
+        code: 'custom',
+        path: ['state'],
+        message: 'Alert state requires a source-health alert'
+      })
+    }
+    if (value.alerted && value.state !== 'alert') {
+      context.addIssue({
+        code: 'custom',
+        path: ['state'],
+        message: 'Source-health alerts require alert state'
+      })
+    }
+    if (value.state === 'clear' && (value.alerted || value.truncated)) {
+      context.addIssue({
+        code: 'custom',
+        path: ['state'],
+        message: 'Clear state requires complete non-alerted source coverage'
+      })
+    }
+    if (value.state === 'incomplete' && !value.truncated) {
+      context.addIssue({
+        code: 'custom',
+        path: ['truncated'],
+        message: 'Incomplete state requires truncated source coverage'
+      })
+    }
+  })
+  .strict()
+
 /** Bounds for read-only production-analysis recomputation alert inspection. */
 export const productionAnalysisRecomputeAlertLimits = {
   maxWorkspaces: 10_000,
@@ -8111,6 +8267,9 @@ export type SourceQuotaReconciliationAlertInput = z.infer<
 export type SourceQuotaReconciliationAlertResult = z.infer<
   typeof sourceQuotaReconciliationAlertResultSchema
 >
+export type SourceHealthAlertObservation = z.infer<typeof sourceHealthAlertObservationSchema>
+export type SourceHealthAlertInput = z.infer<typeof sourceHealthAlertInputSchema>
+export type SourceHealthAlertResult = z.infer<typeof sourceHealthAlertResultSchema>
 export type ProductionAnalysisRecomputeAlertObservation = z.infer<
   typeof productionAnalysisRecomputeAlertObservationSchema
 >

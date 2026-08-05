@@ -25,7 +25,7 @@ Status: production-shaped foundation implemented and validated locally; producti
 
 Implemented:
 
-- PostgreSQL 18 schema and one hundred seven forward, checksummed migrations
+- PostgreSQL 18 schema and one hundred nine forward, checksummed migrations
 - normalized source, evidence, complaint, cluster, competitor, opportunity, score, report, plan, audit, cost, deletion, outbox, and lineage tables
 - no-login owner, separate migrator, and least-privilege runtime role contract
 - forced workspace RLS and transaction-scoped workspace context
@@ -35,7 +35,7 @@ Implemented:
 - populated upgrade, fresh install, privilege, RLS, provenance, policy, cross-wire, and replay tests
 - local runbook and CI persistence gate
 - isolated local PostgreSQL backup/restore runbook and CI gate; the drill
-  restores a disposable dump through all one hundred seven migrations and verifies
+  restores a disposable dump through all one hundred nine migrations and verifies
   forced workspace RLS plus runtime/maintenance privileges without accepting a
   remote URL
 - one-command loopback private-workspace stack with migration, worker, and web
@@ -765,6 +765,12 @@ workspace-context-required read of the shared current-minute source quota
 window. The private source registry exposes only bounded limit/used/remaining
 capacity and window timestamps; direct runtime access to the global window table,
 reservation IDs, and every quota mutation remains denied.
+Migrations `0108_source_health_alert_read.sql` and
+`0109_source_health_alert_allowlist.sql` add a maintenance-only scalar source
+health/freshness/quota projection and forward the released scheduler/outbox
+allowlist for `pnpm worker:source:health:alert`. The bounded worker emits
+alert/incomplete/clear counters without source payloads, complaint text, source
+activation, retries, or fetches; truncated scans remain incomplete.
 The source-policy repository also returns the immutable policy JSON verified by
 the database approval gate. Production connector constructors compare that
 payload with the effective snapshot before requests and fail closed when it is
@@ -791,6 +797,10 @@ rejected before source lease acquisition;
 `0107` adds an authenticated, read-only source quota headroom projection for
 the shared current-minute window; reservation and settlement remain worker-
 owned and provider/deployment alerting remains open;
+`0108` and `0109` add the maintenance-only scalar source-health scan and the
+forward scheduler/outbox allowlist for `pnpm worker:source:health:alert`;
+stale, exhausted, and aged-degraded signals alert, but capped coverage stays
+incomplete and the worker never fetches or activates a source;
 scheduled commands now share migration `0046`'s server-clock owner/token lease
 with renewal, stale takeover, migration `0052` transaction fencing for selected
 SQL mutations, and fixed lease-loss failures;

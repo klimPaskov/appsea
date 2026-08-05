@@ -379,13 +379,14 @@ is reviewed or confirmed.
 
 ## 2026-08-06: Keep source observability bounded and additive
 
-Health/freshness are private projections; stale or missing observations never
-imply absent complaints. Migration `0107` adds an authenticated read of shared
-current-minute quota capacity; reservation and mutation stay outside it.
+Health/freshness are private; stale/missing observations never imply absent
+complaints. `0107` adds quota capacity; `0108`/`0109` add a maintenance scalar
+health read and allowlists. The scan alerts on stale, exhausted, or aged-
+degraded signals, reports truncation incomplete, and cannot fetch, retry,
+or activate.
 
 ## 2026-08-06: Carry the reviewed policy payload into connector execution
 
 `readCollectible` returns hash-verified policy JSON with the activation snapshot.
-Production connectors compare immutable purpose/quota/retention/deletion/display
-fields before a request; missing snapshots fail closed. Activation remains
-database-owned; no source is activated autonomously.
+Connectors compare immutable policy fields before requests and fail closed when
+the payload is absent; activation remains database-owned.

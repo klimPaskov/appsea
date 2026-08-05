@@ -189,6 +189,15 @@ for that pre-context authorization lookup.
   The function never reserves, settles, releases, refunds, or exposes
   workspace-specific reservation rows, and pending/expired policies return no
   usable headroom.
+- Migrations `0108` and `0109` add the maintenance-only source-health alert
+  boundary. `read_source_health_alert_observations` is a security-definer
+  function guarded by `session_user = 'appsea_maintenance'`; it returns only
+  bounded source ID, collectibility, health/freshness/quota states, an attempt
+  timestamp, and freshness age for one active workspace at a time. The
+  scheduler and scalar operational-alert allowlists are extended by forward
+  migration, while source policy JSON, complaint text, provider payloads,
+  credentials, and activation/mutation capability remain inaccessible. A
+  truncated scan is reported as incomplete and cannot be interpreted as clear.
 - Research campaign creation is a separate private boundary. The web route
   requires an authenticated owner/editor and same-origin request; the
   repository repeats membership and private-workspace checks inside an RLS

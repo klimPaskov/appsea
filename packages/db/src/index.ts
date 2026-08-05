@@ -41,6 +41,7 @@ export {
   type SourceQuotaReconciliationResolveInput
 } from './source-quota-repository'
 export type { ProductionAnalysisRecomputeAlertObservation } from '@appsea/contracts'
+export type { SourceHealthAlertObservation } from '@appsea/contracts'
 export type { WorkspaceCostAlertObservation } from '@appsea/contracts'
 export type {
   AuthMfaKeyRotationRewrapInput,
