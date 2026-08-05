@@ -379,9 +379,13 @@ is reviewed or confirmed.
 
 ## 2026-08-06: Keep source observability bounded and additive
 
-Source health/freshness remain private projections from retained jobs,
-observations, and optional reviewed schedule metadata; legacy hashes stay
-readable and no stale state implies absent complaints. Migration `0107` adds an
-authenticated workspace-context security-definer read of shared current-minute
-quota limit/used/remaining capacity. Reservation rows and all quota mutation,
-activation, scheduler, retry, and settlement controls remain outside the read.
+Health/freshness are private projections; stale or missing observations never
+imply absent complaints. Migration `0107` adds an authenticated read of shared
+current-minute quota capacity; reservation and mutation stay outside it.
+
+## 2026-08-06: Carry the reviewed policy payload into connector execution
+
+`readCollectible` returns hash-verified policy JSON with the activation snapshot.
+Production connectors compare immutable purpose/quota/retention/deletion/display
+fields before a request; missing snapshots fail closed. Activation remains
+database-owned; no source is activated autonomously.

@@ -43,6 +43,11 @@ AppSea is an opportunity intelligence system for software products. It turns per
   quota headroom projection. It reports only shared current-minute limit/used/
   remaining capacity and window timestamps; direct runtime access to global
   quota windows and reservation rows remains denied.
+- The source-policy repository returns the hash-verified immutable policy JSON
+  alongside the effective activation snapshot. Production connector
+  constructors compare immutable purpose/quota/retention/deletion/display
+  metadata and fail closed when the reviewed payload is absent; activation
+  fields remain database-owned.
 - `apps/worker` also owns the bounded `auth:recovery` outbox runner. It decrypts a reset token only in memory, sends a signed/idempotent fragment-link request with redirect blocking, and records fixed-code retries without logging provider responses or raw errors.
 - `apps/worker` provides an explicit CFPB policy-review wrapper and a
   PostgreSQL-idempotent approved-source collection checkpoint. It never activates

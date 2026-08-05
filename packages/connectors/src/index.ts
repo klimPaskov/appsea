@@ -149,6 +149,58 @@ function freezePolicy(policy: SourcePolicy): SourcePolicy {
   return Object.freeze(policy) as SourcePolicy
 }
 
+/**
+ * The database approval gate owns the mutable activation fields (`enabled`,
+ * `policyState`, `reviewedAt`, and `expiresAt`). All other policy metadata is
+ * the reviewed connector contract. A worker must not replace a quota,
+ * purpose, retention, deletion, or display rule by passing a mutated policy
+ * object into a connector constructor.
+ */
+function stablePolicyJson(value: unknown): string {
+  if (Array.isArray(value)) return `[${value.map((entry) => stablePolicyJson(entry)).join(',')}]`
+  if (value !== null && typeof value === 'object') {
+    return `{${Object.entries(value as Record<string, unknown>)
+      .sort(([left], [right]) => left.localeCompare(right))
+      .map(([key, entry]) => `${JSON.stringify(key)}:${stablePolicyJson(entry)}`)
+      .join(',')}}`
+  }
+  return JSON.stringify(value)
+}
+
+function reviewedPolicyContract(policy: SourcePolicy): unknown {
+  return {
+    sourceId: policy.sourceId,
+    displayName: policy.displayName,
+    sourceType: policy.sourceType,
+    permittedPurposes: policy.permittedPurposes,
+    commercialUse: policy.commercialUse,
+    accessMethod: policy.accessMethod,
+    retentionDays: policy.retentionDays,
+    deletionRequired: policy.deletionRequired,
+    attributionRequired: policy.attributionRequired,
+    displayMode: policy.displayMode,
+    coverageNotes: policy.coverageNotes,
+    policyOwner: policy.policyOwner,
+    policyDocumentRef: policy.policyDocumentRef,
+    freshness: policy.freshness ?? null,
+    quota: policy.quota,
+    deletion: policy.deletion
+  }
+}
+
+export function assertReviewedPolicyContract(
+  policy: SourcePolicy,
+  reviewedPolicy: SourcePolicy,
+  connectorName: string
+): void {
+  if (
+    stablePolicyJson(reviewedPolicyContract(policy)) !==
+    stablePolicyJson(reviewedPolicyContract(reviewedPolicy))
+  ) {
+    throw new Error(`${connectorName} connector policy does not match the reviewed source contract`)
+  }
+}
+
 export const fixtureSourcePolicy = freezePolicy(
   sourcePolicySchema.parse({
     sourceId: 'fixture-community-feed',
@@ -633,6 +685,8 @@ export interface StackExchangeConnectorOptions {
   fetchImpl?: typeof fetch
   baseUrl?: string
   policy?: SourcePolicy
+  /** Raw policy payload returned by the database approval gate. */
+  reviewedPolicy?: SourcePolicy
   now?: () => string
   quotaLedger?: SourceQuotaLedger
   /** Optional API key supplied by a deployment secret; never persisted or logged. */
@@ -667,6 +721,11 @@ export class StackExchangeConnector implements SourceConnector {
       policy.displayMode !== stackExchangeSourcePolicy.displayMode
     ) {
       throw new Error('Stack Exchange connector policy identity does not match the reviewed source')
+    }
+    if (options.reviewedPolicy) {
+      assertReviewedPolicyContract(policy, options.reviewedPolicy, 'Stack Exchange')
+    } else if (process.env.NODE_ENV !== 'test') {
+      throw new Error('Stack Exchange connector requires the reviewed policy snapshot')
     }
     if (process.env.NODE_ENV !== 'test' && !options.quotaLedger) {
       throw new Error('Stack Exchange connector requires a durable quota ledger outside tests')
@@ -1107,6 +1166,8 @@ export interface CfpbConnectorOptions {
   fetchImpl?: typeof fetch
   baseUrl?: string
   policy?: SourcePolicy
+  /** Raw policy payload returned by the database approval gate. */
+  reviewedPolicy?: SourcePolicy
   now?: () => string
   quotaLedger?: SourceQuotaLedger
 }
@@ -1136,6 +1197,11 @@ export class CfpbConnector implements SourceConnector {
       policy.displayMode !== cfpbSourcePolicy.displayMode
     ) {
       throw new Error('CFPB connector policy identity does not match the reviewed source')
+    }
+    if (options.reviewedPolicy) {
+      assertReviewedPolicyContract(policy, options.reviewedPolicy, 'CFPB')
+    } else if (process.env.NODE_ENV !== 'test') {
+      throw new Error('CFPB connector requires the reviewed policy snapshot')
     }
     if (process.env.NODE_ENV !== 'test' && !options.quotaLedger) {
       throw new Error('CFPB connector requires a durable quota ledger outside tests')

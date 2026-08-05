@@ -113,6 +113,16 @@ Blocked flows:
 
 Approval gates cover source activation, dependency installation, permissions, authentication, retention, migrations, deployment, and security-sensitive skill activation.
 
+The production source-policy repository also returns the immutable reviewed JSON
+payload alongside the effective activation snapshot. CFPB, Stack Exchange, and
+owner-import connector constructors compare immutable fields (purpose, quota,
+retention, deletion, attribution, display, and coverage metadata) before any
+source request. `enabled`, `policyState`, `reviewedAt`, and `expiresAt` remain
+database-owned activation fields. A production constructor without the reviewed
+payload fails closed; test-only connector fixtures may omit it. This prevents a
+caller from replacing a reviewed quota or deletion rule in memory after the
+PostgreSQL approval gate.
+
 The dormant runtime skill registry now enforces this gate in code. Registry
 transitions record a proposer, distinct evaluator identities, an independent
 approver, and HMAC evidence over the immutable requested-permission set and

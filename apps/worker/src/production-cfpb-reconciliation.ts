@@ -270,6 +270,7 @@ export async function runProductionCfpbSnapshotReconciliation(
       dependencies.connectorFactory?.(collectible.policy, stableObservedAt, dependencies.quota) ??
       new CfpbConnector({
         policy: collectible.policy,
+        reviewedPolicy: collectible.reviewedPolicy,
         quotaLedger: dependencies.quota,
         now: () => stableObservedAt
       })

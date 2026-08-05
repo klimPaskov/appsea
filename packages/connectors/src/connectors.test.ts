@@ -9,6 +9,7 @@ import {
   SourceQuotaReservationReplayError,
   SourceResponseTooLargeError,
   StackExchangeConnector,
+  assertReviewedPolicyContract,
   type SourceQuotaLedger,
   assertPolicyAllowsCollection,
   cfpbSourcePolicy,
@@ -253,12 +254,53 @@ describe('connector policy gate', () => {
     ).toThrow(/policy identity/)
   })
 
+  it('rejects mutated immutable policy metadata for every production connector', () => {
+    const cfpbWithDifferentQuota = sourcePolicySchema.parse({
+      ...approvedCfpbPolicy,
+      quota: { ...approvedCfpbPolicy.quota, maxRecordsPerRequest: 999 }
+    })
+    expect(() =>
+      assertReviewedPolicyContract(cfpbWithDifferentQuota, approvedCfpbPolicy, 'CFPB')
+    ).toThrow(/does not match the reviewed source contract/)
+
+    const stackExchangeWithDifferentPurpose = sourcePolicySchema.parse({
+      ...approvedStackExchangePolicy,
+      permittedPurposes: [...approvedStackExchangePolicy.permittedPurposes, 'opportunity-research']
+    })
+    expect(() =>
+      assertReviewedPolicyContract(
+        stackExchangeWithDifferentPurpose,
+        approvedStackExchangePolicy,
+        'Stack Exchange'
+      )
+    ).toThrow(/does not match the reviewed source contract/)
+
+    const manualWithDifferentRetention = sourcePolicySchema.parse({
+      ...manualOwnerImportSourcePolicy,
+      retentionDays: 365,
+      expiresAt: null
+    })
+    expect(() =>
+      assertReviewedPolicyContract(
+        manualWithDifferentRetention,
+        manualOwnerImportSourcePolicy,
+        'Manual import'
+      )
+    ).toThrow(/does not match the reviewed source contract/)
+  })
+
   it('requires a durable quota ledger for approved runtime policies', () => {
     vi.stubEnv('NODE_ENV', 'production')
     try {
       expect(() => new CfpbConnector({ policy: approvedCfpbPolicy })).toThrow(
-        /durable quota ledger/
+        /reviewed policy snapshot/
       )
+      expect(() => new StackExchangeConnector({ policy: approvedStackExchangePolicy })).toThrow(
+        /reviewed policy snapshot/
+      )
+      expect(
+        () => new CfpbConnector({ policy: approvedCfpbPolicy, reviewedPolicy: cfpbSourcePolicy })
+      ).toThrow(/durable quota ledger/)
     } finally {
       vi.unstubAllEnvs()
     }
@@ -271,6 +313,18 @@ describe('connector policy gate', () => {
         () =>
           new ManualImportConnector({
             policy: { ...manualOwnerImportSourcePolicy, expiresAt: null },
+            batchReader: {
+              async readForCollection() {
+                return { records: [], warnings: [] }
+              }
+            }
+          })
+      ).toThrow(/reviewed policy snapshot/)
+      expect(
+        () =>
+          new ManualImportConnector({
+            policy: { ...manualOwnerImportSourcePolicy, expiresAt: null },
+            reviewedPolicy: manualOwnerImportSourcePolicy,
             batchReader: {
               async readForCollection() {
                 return { records: [], warnings: [] }

@@ -38,6 +38,7 @@ export class ProductionCollectionPolicyDeniedError extends Error {
 
 interface ProductionConnectorOptions {
   policy: SourcePolicy
+  reviewedPolicy: SourcePolicy
   quotaLedger: SourceQuotaLedger
   now: () => string
   manualImportBatchReader?: ManualImportBatchReader
@@ -283,6 +284,7 @@ export async function runProductionCollection(
     }
     const connectorOptions = {
       policy: collectible.policy,
+      reviewedPolicy: collectible.reviewedPolicy,
       quotaLedger: new PostgresSourceQuotaRepository(pool),
       now: () => stableObservedAt,
       ...(options.manualImportBatchReader

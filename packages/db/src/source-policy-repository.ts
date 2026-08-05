@@ -250,6 +250,7 @@ export class PostgresSourcePolicyRepository {
     policyVersionValue?: string
   ): Promise<{
     policy: SourcePolicy
+    reviewedPolicy: SourcePolicy
     policyVersion: string
     contentHash: string
   } | null> {
@@ -305,6 +306,10 @@ export class PostgresSourcePolicyRepository {
         })
         return {
           policy: effective,
+          // Keep the immutable JSON payload available to the worker boundary.
+          // Activation fields on `effective` are database-owned and may differ
+          // from the reviewed payload without changing its contract.
+          reviewedPolicy: record.policy,
           policyVersion: record.policyVersion,
           contentHash: record.contentHash
         }

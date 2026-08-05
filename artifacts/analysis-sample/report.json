@@ -4,7 +4,7 @@
   "synthetic": false,
   "testOnly": true,
   "transport": "offline-sample",
-  "artifactId": "analysis:5f7aabfd0d2f8b40fa9f903bb6625169",
+  "artifactId": "analysis:fd4d476c280e6b292a5577fbecd3a594",
   "generatedAt": "2026-07-26T00:00:00.000Z",
   "opportunity": {
     "id": "opportunity:cfpb-offline-sample",

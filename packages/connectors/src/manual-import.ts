@@ -9,6 +9,7 @@ import {
   type SourcePolicy
 } from '@appsea/contracts'
 import {
+  assertReviewedPolicyContract,
   assertPolicyAllowsCollection,
   SourceCollectionPreflightDeniedError,
   SourceQuotaExceededError,
@@ -58,6 +59,8 @@ export interface ManualImportBatchReader {
 
 export interface ManualImportConnectorOptions {
   policy?: SourcePolicy
+  /** Raw policy payload returned by the database approval gate. */
+  reviewedPolicy?: SourcePolicy
   batchReader: ManualImportBatchReader
   quotaLedger?: SourceQuotaLedger
   now?: () => string
@@ -429,6 +432,11 @@ export class ManualImportConnector implements SourceConnector {
       policy.displayMode !== 'excerpt'
     ) {
       throw new Error('Manual import connector policy identity does not match the reviewed source')
+    }
+    if (options.reviewedPolicy) {
+      assertReviewedPolicyContract(policy, options.reviewedPolicy, 'Manual import')
+    } else if (process.env.NODE_ENV !== 'test') {
+      throw new Error('Manual import connector requires the reviewed policy snapshot')
     }
     if (process.env.NODE_ENV !== 'test' && !options.quotaLedger) {
       throw new Error('Manual import connector requires a durable quota ledger outside tests')

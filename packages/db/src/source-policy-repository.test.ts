@@ -96,6 +96,7 @@ describe('source policy repository', () => {
     expect(result?.policy.enabled).toBe(true)
     expect(result?.policy.policyState).toBe('approved')
     expect(result?.policy.displayName).toBe(draft.displayName)
+    expect(result?.reviewedPolicy).toEqual(draft)
     expect(result?.policyVersion).toBe('cfpb-v1')
     expect(result?.contentHash).toBe(contentHash(draft))
   })

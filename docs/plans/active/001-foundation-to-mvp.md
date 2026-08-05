@@ -765,6 +765,10 @@ workspace-context-required read of the shared current-minute source quota
 window. The private source registry exposes only bounded limit/used/remaining
 capacity and window timestamps; direct runtime access to the global window table,
 reservation IDs, and every quota mutation remains denied.
+The source-policy repository also returns the immutable policy JSON verified by
+the database approval gate. Production connector constructors compare that
+payload with the effective snapshot before requests and fail closed when it is
+absent; activation state and expiry remain database-owned.
 The shared production seed contract now requires the six-file coding-package
 manifest at new writes and analysis admission; legacy portable-path rows remain
 readable for inspection but are blocked from analysis until replaced.

@@ -55,6 +55,14 @@ full-snapshot deletion reconciliation is a separate durable maintenance job;
 see [`source-reconciliation.md`](source-reconciliation.md). A
 repeated request with a different input is an idempotency conflict.
 
+The worker carries the immutable policy JSON payload returned by the database
+approval read into the connector constructor. The connector compares the
+purpose, quota, retention, deletion, attribution, display, and coverage fields
+against the effective activation snapshot; missing payloads fail closed outside
+tests. Activation state and expiry remain database-owned, so a policy can be
+approved or revoked without treating those mutable fields as a new connector
+contract.
+
 The connector invokes a worker-owned lease preflight immediately before each
 CFPB HTTP request. If the policy has been revoked or the lease has expired, the
 request fails closed without contacting CFPB and the durable quota reservation

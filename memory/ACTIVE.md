@@ -81,6 +81,13 @@ credentials, reviewer identities, reservation rows, scheduler/retry controls,
 activation, settlement, and public-coverage claims remain outside the boundary.
 Legacy owner-import freshness stays unknown until a new reviewed policy version.
 
+The 2026-08-06 connector-policy handoff tranche now carries the immutable
+reviewed JSON payload from `readCollectible` into CFPB, Stack Exchange, and
+owner-import constructors. Immutable purpose/quota/retention/deletion/display
+metadata is compared before collection; production construction fails closed
+without that payload. Database-owned activation fields remain mutable. This is
+handoff integrity, not third-party approval or activation.
+
 ## Validated commands
 
 Repository tests, type checks, builds, fixture/plan generation, and web smoke

@@ -150,6 +150,7 @@ function makeDependencies(
             policyState: 'approved',
             expiresAt: null
           }),
+          reviewedPolicy: cfpbSourcePolicy,
           policyVersion: input.policyVersion,
           contentHash: 'd'.repeat(64)
         }

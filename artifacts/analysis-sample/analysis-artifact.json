@@ -1,5 +1,5 @@
 {
-  "id": "analysis:5f7aabfd0d2f8b40fa9f903bb6625169",
+  "id": "analysis:fd4d476c280e6b292a5577fbecd3a594",
   "mode": "production",
   "createdAt": "2026-07-26T00:00:00.000Z",
   "sourcePolicies": [
@@ -33,6 +33,11 @@
       "policyOwner": "offline analysis sample; no connector activation",
       "policyDocumentRef": "https://www.consumerfinance.gov/complaint/data-use/",
       "expiresAt": "2026-10-24T00:00:00.000Z",
+      "freshness": {
+        "mode": "scheduled",
+        "expectedIntervalHours": 24,
+        "allowedDelayHours": 24
+      },
       "quota": {
         "requestsPerMinute": 6,
         "maxRecordsPerRequest": 1000,
@@ -651,6 +656,11 @@
       "policyOwner": "offline analysis sample; no connector activation",
       "policyDocumentRef": "https://www.consumerfinance.gov/complaint/data-use/",
       "expiresAt": "2026-10-24T00:00:00.000Z",
+      "freshness": {
+        "mode": "scheduled",
+        "expectedIntervalHours": 24,
+        "allowedDelayHours": 24
+      },
       "quota": {
         "requestsPerMinute": 6,
         "maxRecordsPerRequest": 1000,
