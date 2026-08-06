@@ -68,6 +68,7 @@
     "security:audit": "pnpm audit --prod --audit-level=high",
     "ui:references": "node scripts/run_python.mjs scripts/render_references.py",
     "ui:capture": "node scripts/capture_ui_reference.mjs",
+    "ui:capture:private": "node scripts/capture_ui_reference.mjs --private --persist",
     "manifest": "node scripts/run_python.mjs scripts/generate_manifest.py",
     "setup": "pnpm agents:sync && pnpm memory:check && pnpm docs:check",
     "clean": "node scripts/clean.mjs",

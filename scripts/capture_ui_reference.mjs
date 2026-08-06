@@ -1,5 +1,6 @@
 import { spawn } from 'node:child_process'
-import { access, mkdir, mkdtemp, rm } from 'node:fs/promises'
+import { access, mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises'
+import net from 'node:net'
 import os from 'node:os'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -24,6 +25,18 @@ export const captureViewports = [
   { id: 'desktop-1024', width: 1024, height: 768 },
   { id: 'desktop-768', width: 768, height: 900 },
   { id: 'mobile-480', width: 480, height: 900 }
+]
+
+export const privateCaptureRoutes = [
+  { id: 'workspace-sources', path: (workspaceId) => `/workspace/${workspaceId}/sources` },
+  { id: 'workspace-campaigns', path: (workspaceId) => `/workspace/${workspaceId}/campaigns` },
+  { id: 'workspace-imports', path: (workspaceId) => `/workspace/${workspaceId}/imports` },
+  { id: 'workspace-seed-reviews', path: (workspaceId) => `/workspace/${workspaceId}/seed-reviews` },
+  { id: 'workspace-members', path: (workspaceId) => `/workspace/${workspaceId}/members` },
+  { id: 'workspace-agent-access', path: (workspaceId) => `/workspace/${workspaceId}/agent-access` },
+  { id: 'workspace-activity', path: (workspaceId) => `/workspace/${workspaceId}/activity` },
+  { id: 'workspace-usage', path: (workspaceId) => `/workspace/${workspaceId}/usage` },
+  { id: 'account-security', path: () => '/account/security' }
 ]
 
 function run(command, args, options = {}) {
@@ -61,6 +74,227 @@ function run(command, args, options = {}) {
       )
     })
   })
+}
+
+function findFreePort() {
+  return new Promise((resolve, reject) => {
+    const server = net.createServer()
+    server.once('error', reject)
+    server.listen(0, '127.0.0.1', () => {
+      const address = server.address()
+      if (!address || typeof address === 'string') {
+        server.close()
+        reject(new Error('unable to allocate a local browser debugging port'))
+        return
+      }
+      const port = address.port
+      server.close((error) => (error ? reject(error) : resolve(port)))
+    })
+  })
+}
+
+async function waitForJson(url, timeoutMs = 15_000) {
+  const deadline = Date.now() + timeoutMs
+  let lastError = 'no response'
+  while (Date.now() < deadline) {
+    try {
+      const response = await fetch(url)
+      if (response.ok) return await response.json()
+      lastError = `HTTP ${response.status}`
+    } catch (error) {
+      lastError = error instanceof Error ? error.message : String(error)
+    }
+    await new Promise((resolve) => setTimeout(resolve, 100))
+  }
+  throw new Error(`local browser endpoint ${url} was not ready: ${lastError}`)
+}
+
+function connectWebSocket(url) {
+  return new Promise((resolve, reject) => {
+    const socket = new WebSocket(url)
+    const onError = (event) => reject(new Error(`browser debugging connection failed: ${event}`))
+    socket.addEventListener('error', onError, { once: true })
+    socket.addEventListener(
+      'open',
+      () => {
+        socket.removeEventListener('error', onError)
+        resolve(socket)
+      },
+      { once: true }
+    )
+  })
+}
+
+async function startCdpPage(chrome, userDataDirectory) {
+  const port = await findFreePort()
+  const args = [
+    '--headless=new',
+    '--disable-gpu',
+    '--disable-extensions',
+    '--disable-background-networking',
+    '--disable-default-apps',
+    '--disable-sync',
+    '--hide-scrollbars',
+    '--no-first-run',
+    '--no-default-browser-check',
+    `--remote-debugging-port=${port}`,
+    `--user-data-dir=${userDataDirectory}`,
+    'about:blank'
+  ]
+  if (process.platform !== 'win32') args.unshift('--no-sandbox')
+  const browser = spawn(chrome, args, { stdio: 'ignore' })
+  const version = await waitForJson(`http://127.0.0.1:${port}/json/version`)
+  const targets = await waitForJson(`http://127.0.0.1:${port}/json/list`)
+  const target = targets.find((entry) => entry.type === 'page' && entry.webSocketDebuggerUrl)
+  if (!target) {
+    await stop(browser)
+    throw new Error('headless browser did not expose a page target')
+  }
+  const socket = await connectWebSocket(target.webSocketDebuggerUrl)
+  let nextCommandId = 1
+  const pending = new Map()
+  const eventWaiters = new Map()
+  socket.addEventListener('message', (event) => {
+    const raw =
+      typeof event.data === 'string' ? event.data : Buffer.from(event.data).toString('utf8')
+    const message = JSON.parse(raw)
+    if (message.id !== undefined) {
+      const resolver = pending.get(message.id)
+      if (!resolver) return
+      pending.delete(message.id)
+      if (message.error) resolver.reject(new Error(message.error.message ?? 'CDP command failed'))
+      else resolver.resolve(message.result ?? {})
+      return
+    }
+    const waiters = eventWaiters.get(message.method)
+    const waiter = waiters?.shift()
+    if (waiter) {
+      if (waiters.length === 0) eventWaiters.delete(message.method)
+      waiter.resolve(message.params ?? {})
+    }
+  })
+  const command = (method, params = {}) =>
+    new Promise((resolve, reject) => {
+      const id = nextCommandId++
+      pending.set(id, { resolve, reject })
+      socket.send(JSON.stringify({ id, method, params }))
+    })
+  const waitForEvent = (method, timeoutMs = 15_000) =>
+    new Promise((resolve, reject) => {
+      const entry = {
+        resolve: (value) => {
+          clearTimeout(timer)
+          resolve(value)
+        },
+        reject
+      }
+      const timer = setTimeout(() => {
+        const waiters = eventWaiters.get(method) ?? []
+        const index = waiters.indexOf(entry)
+        if (index >= 0) waiters.splice(index, 1)
+        reject(new Error(`browser event ${method} was not observed`))
+      }, timeoutMs)
+      const waiters = eventWaiters.get(method) ?? []
+      waiters.push(entry)
+      eventWaiters.set(method, waiters)
+    })
+  const close = async () => {
+    try {
+      socket.close()
+    } catch {
+      // The browser may already have closed the debugging socket.
+    }
+    await stop(browser)
+  }
+  return { command, waitForEvent, close, version }
+}
+
+async function waitForBaseUrl(url, timeoutMs = 45_000) {
+  const deadline = Date.now() + timeoutMs
+  let lastError = 'no response'
+  while (Date.now() < deadline) {
+    try {
+      const response = await fetch(`${url}/api/health/live`)
+      if (response.status === 200) return
+      lastError = `HTTP ${response.status}`
+    } catch (error) {
+      lastError = error instanceof Error ? error.message : String(error)
+    }
+    await new Promise((resolve) => setTimeout(resolve, 250))
+  }
+  throw new Error(`local web server ${url} did not become ready: ${lastError}`)
+}
+
+async function disableNextDevIndicator(url) {
+  const response = await fetch(`${url}/__nextjs_disable_dev_indicator`, { method: 'POST' })
+  if (response.status !== 204 && response.status !== 404) {
+    throw new Error(`local web server dev-indicator control returned HTTP ${response.status}`)
+  }
+}
+
+async function removeCaptureProfile(directory) {
+  for (let attempt = 0; attempt < 5; attempt += 1) {
+    try {
+      await rm(directory, { recursive: true, force: true })
+      return
+    } catch {
+      await new Promise((resolve) => setTimeout(resolve, 250))
+    }
+  }
+}
+
+function sessionCookieFrom(response) {
+  const cookies =
+    typeof response.headers.getSetCookie === 'function'
+      ? response.headers.getSetCookie()
+      : [response.headers.get('set-cookie') ?? '']
+  const cookie = cookies.find((value) => /(?:^|;\s*)(?:__Host-)?appsea_session=/.test(value))
+  const pair = cookie?.split(';', 1)[0]
+  if (!pair) throw new Error('local capture signup did not return a session cookie')
+  const separator = pair.indexOf('=')
+  if (separator <= 0) throw new Error('local capture session cookie was malformed')
+  return {
+    name: pair.slice(0, separator),
+    value: pair.slice(separator + 1),
+    header: pair
+  }
+}
+
+async function createCaptureSession(baseUrl) {
+  const nonce = `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`
+  const originHeaders = {
+    origin: baseUrl,
+    'x-forwarded-for': `ui-capture-${nonce}`
+  }
+  const signup = await fetch(`${baseUrl}/api/auth/signup`, {
+    method: 'POST',
+    headers: { ...originHeaders, 'content-type': 'application/json' },
+    body: JSON.stringify({
+      email: `appsea-ui-capture-${nonce}@example.test`,
+      password: 'local-ui-capture-password-2026',
+      displayName: 'Local UI capture owner',
+      workspaceName: 'Local UI capture workspace'
+    })
+  })
+  if (signup.status !== 201) {
+    throw new Error(`local capture signup returned HTTP ${signup.status}`)
+  }
+  const sessionCookie = sessionCookieFrom(signup)
+  const workspaceResponse = await fetch(`${baseUrl}/api/workspaces`, {
+    headers: { cookie: sessionCookie.header }
+  })
+  if (!workspaceResponse.ok) {
+    throw new Error(`local capture workspace read returned HTTP ${workspaceResponse.status}`)
+  }
+  const workspacePayload = await workspaceResponse.json()
+  const workspace = workspacePayload?.data?.find(
+    (candidate) =>
+      candidate?.visibility === 'private' &&
+      candidate?.fixtureOnly === false &&
+      candidate?.role === 'owner'
+  )
+  if (!workspace?.workspaceId) throw new Error('local capture signup returned no private workspace')
+  return { sessionCookie, workspaceId: workspace.workspaceId }
 }
 
 async function exists(candidate) {
@@ -148,17 +382,7 @@ function nextStartCommand() {
 }
 
 async function waitForServer() {
-  const deadline = Date.now() + 45_000
-  while (Date.now() < deadline) {
-    try {
-      const response = await fetch(`${baseUrl}/leaderboard`)
-      if (response.status === 200) return
-    } catch {
-      // The Next.js server is still starting.
-    }
-    await new Promise((resolve) => setTimeout(resolve, 250))
-  }
-  throw new Error('local web server did not become ready within 45 seconds')
+  await waitForBaseUrl(baseUrl)
 }
 
 async function stop(processHandle) {
@@ -229,11 +453,83 @@ export async function captureLocalUi({ output = defaultOutput } = {}) {
     }
   } finally {
     await stop(server)
-    await rm(userDataDirectory, { recursive: true, force: true })
+    await removeCaptureProfile(userDataDirectory)
+  }
+}
+
+export async function captureAuthenticatedLocalUi({
+  baseUrl: privateBaseUrl = 'http://localhost:3000',
+  output = defaultOutput
+} = {}) {
+  await waitForBaseUrl(privateBaseUrl)
+  await disableNextDevIndicator(privateBaseUrl)
+  const chrome = await findChrome()
+  await mkdir(output, { recursive: true })
+  const userDataDirectory = await mkdtemp(path.join(os.tmpdir(), 'appsea-private-ui-chrome-'))
+  let cdp
+  const captures = []
+  try {
+    const session = await createCaptureSession(privateBaseUrl)
+    cdp = await startCdpPage(chrome, userDataDirectory)
+    await cdp.command('Page.enable')
+    await cdp.command('Network.enable')
+    await cdp.command('Network.setCookie', {
+      name: session.sessionCookie.name,
+      value: session.sessionCookie.value,
+      url: `${privateBaseUrl}/`,
+      path: '/',
+      httpOnly: true,
+      secure: privateBaseUrl.startsWith('https:'),
+      sameSite: 'Lax'
+    })
+    for (const route of privateCaptureRoutes) {
+      for (const viewport of captureViewports) {
+        await cdp.command('Emulation.setDeviceMetricsOverride', {
+          width: viewport.width,
+          height: viewport.height,
+          deviceScaleFactor: 1,
+          mobile: false
+        })
+        const load = cdp.waitForEvent('Page.loadEventFired')
+        await cdp.command('Page.navigate', {
+          url: `${privateBaseUrl}${route.path(encodeURIComponent(session.workspaceId))}`
+        })
+        await load
+        await new Promise((resolve) => setTimeout(resolve, 500))
+        const screenshot = await cdp.command('Page.captureScreenshot', {
+          format: 'png',
+          captureBeyondViewport: false
+        })
+        const filename = `${route.id}-${viewport.id}.png`
+        await writeFile(path.join(output, filename), Buffer.from(screenshot.data, 'base64'))
+        captures.push({
+          filename,
+          route: route.path('<workspaceId>'),
+          viewport
+        })
+      }
+    }
+    const manifest = {
+      generatedAt: new Date().toISOString(),
+      baseUrl: privateBaseUrl,
+      output,
+      captures,
+      privateWorkspace: true
+    }
+    await writeFile(
+      path.join(output, 'private-capture-manifest.json'),
+      `${JSON.stringify(manifest, null, 2)}\n`,
+      'utf8'
+    )
+    return manifest
+  } finally {
+    if (cdp) await cdp.close()
+    await removeCaptureProfile(userDataDirectory)
   }
 }
 
 async function main() {
+  const privateMode = process.argv.includes('--private')
   const persist = process.argv.includes('--persist')
   const output = persist
     ? path.join(
@@ -243,7 +539,9 @@ async function main() {
         new Date().toISOString().slice(0, 10)
       )
     : defaultOutput
-  const manifest = await captureLocalUi({ output })
+  const manifest = privateMode
+    ? await captureAuthenticatedLocalUi({ output })
+    : await captureLocalUi({ output })
   console.log(JSON.stringify(manifest, null, 2))
 }
 

@@ -1,0 +1,332 @@
+{
+  "generatedAt": "2026-08-06T04:35:07.754Z",
+  "baseUrl": "http://localhost:3000",
+  "output": "C:\\Users\\klimp\\Documents\\Projects\\appsea\\artifacts\\ui-reference-loop\\2026-08-06",
+  "captures": [
+    {
+      "filename": "workspace-sources-desktop-1280.png",
+      "route": "/workspace/<workspaceId>/sources",
+      "viewport": {
+        "id": "desktop-1280",
+        "width": 1280,
+        "height": 900
+      }
+    },
+    {
+      "filename": "workspace-sources-desktop-1024.png",
+      "route": "/workspace/<workspaceId>/sources",
+      "viewport": {
+        "id": "desktop-1024",
+        "width": 1024,
+        "height": 768
+      }
+    },
+    {
+      "filename": "workspace-sources-desktop-768.png",
+      "route": "/workspace/<workspaceId>/sources",
+      "viewport": {
+        "id": "desktop-768",
+        "width": 768,
+        "height": 900
+      }
+    },
+    {
+      "filename": "workspace-sources-mobile-480.png",
+      "route": "/workspace/<workspaceId>/sources",
+      "viewport": {
+        "id": "mobile-480",
+        "width": 480,
+        "height": 900
+      }
+    },
+    {
+      "filename": "workspace-campaigns-desktop-1280.png",
+      "route": "/workspace/<workspaceId>/campaigns",
+      "viewport": {
+        "id": "desktop-1280",
+        "width": 1280,
+        "height": 900
+      }
+    },
+    {
+      "filename": "workspace-campaigns-desktop-1024.png",
+      "route": "/workspace/<workspaceId>/campaigns",
+      "viewport": {
+        "id": "desktop-1024",
+        "width": 1024,
+        "height": 768
+      }
+    },
+    {
+      "filename": "workspace-campaigns-desktop-768.png",
+      "route": "/workspace/<workspaceId>/campaigns",
+      "viewport": {
+        "id": "desktop-768",
+        "width": 768,
+        "height": 900
+      }
+    },
+    {
+      "filename": "workspace-campaigns-mobile-480.png",
+      "route": "/workspace/<workspaceId>/campaigns",
+      "viewport": {
+        "id": "mobile-480",
+        "width": 480,
+        "height": 900
+      }
+    },
+    {
+      "filename": "workspace-imports-desktop-1280.png",
+      "route": "/workspace/<workspaceId>/imports",
+      "viewport": {
+        "id": "desktop-1280",
+        "width": 1280,
+        "height": 900
+      }
+    },
+    {
+      "filename": "workspace-imports-desktop-1024.png",
+      "route": "/workspace/<workspaceId>/imports",
+      "viewport": {
+        "id": "desktop-1024",
+        "width": 1024,
+        "height": 768
+      }
+    },
+    {
+      "filename": "workspace-imports-desktop-768.png",
+      "route": "/workspace/<workspaceId>/imports",
+      "viewport": {
+        "id": "desktop-768",
+        "width": 768,
+        "height": 900
+      }
+    },
+    {
+      "filename": "workspace-imports-mobile-480.png",
+      "route": "/workspace/<workspaceId>/imports",
+      "viewport": {
+        "id": "mobile-480",
+        "width": 480,
+        "height": 900
+      }
+    },
+    {
+      "filename": "workspace-seed-reviews-desktop-1280.png",
+      "route": "/workspace/<workspaceId>/seed-reviews",
+      "viewport": {
+        "id": "desktop-1280",
+        "width": 1280,
+        "height": 900
+      }
+    },
+    {
+      "filename": "workspace-seed-reviews-desktop-1024.png",
+      "route": "/workspace/<workspaceId>/seed-reviews",
+      "viewport": {
+        "id": "desktop-1024",
+        "width": 1024,
+        "height": 768
+      }
+    },
+    {
+      "filename": "workspace-seed-reviews-desktop-768.png",
+      "route": "/workspace/<workspaceId>/seed-reviews",
+      "viewport": {
+        "id": "desktop-768",
+        "width": 768,
+        "height": 900
+      }
+    },
+    {
+      "filename": "workspace-seed-reviews-mobile-480.png",
+      "route": "/workspace/<workspaceId>/seed-reviews",
+      "viewport": {
+        "id": "mobile-480",
+        "width": 480,
+        "height": 900
+      }
+    },
+    {
+      "filename": "workspace-members-desktop-1280.png",
+      "route": "/workspace/<workspaceId>/members",
+      "viewport": {
+        "id": "desktop-1280",
+        "width": 1280,
+        "height": 900
+      }
+    },
+    {
+      "filename": "workspace-members-desktop-1024.png",
+      "route": "/workspace/<workspaceId>/members",
+      "viewport": {
+        "id": "desktop-1024",
+        "width": 1024,
+        "height": 768
+      }
+    },
+    {
+      "filename": "workspace-members-desktop-768.png",
+      "route": "/workspace/<workspaceId>/members",
+      "viewport": {
+        "id": "desktop-768",
+        "width": 768,
+        "height": 900
+      }
+    },
+    {
+      "filename": "workspace-members-mobile-480.png",
+      "route": "/workspace/<workspaceId>/members",
+      "viewport": {
+        "id": "mobile-480",
+        "width": 480,
+        "height": 900
+      }
+    },
+    {
+      "filename": "workspace-agent-access-desktop-1280.png",
+      "route": "/workspace/<workspaceId>/agent-access",
+      "viewport": {
+        "id": "desktop-1280",
+        "width": 1280,
+        "height": 900
+      }
+    },
+    {
+      "filename": "workspace-agent-access-desktop-1024.png",
+      "route": "/workspace/<workspaceId>/agent-access",
+      "viewport": {
+        "id": "desktop-1024",
+        "width": 1024,
+        "height": 768
+      }
+    },
+    {
+      "filename": "workspace-agent-access-desktop-768.png",
+      "route": "/workspace/<workspaceId>/agent-access",
+      "viewport": {
+        "id": "desktop-768",
+        "width": 768,
+        "height": 900
+      }
+    },
+    {
+      "filename": "workspace-agent-access-mobile-480.png",
+      "route": "/workspace/<workspaceId>/agent-access",
+      "viewport": {
+        "id": "mobile-480",
+        "width": 480,
+        "height": 900
+      }
+    },
+    {
+      "filename": "workspace-activity-desktop-1280.png",
+      "route": "/workspace/<workspaceId>/activity",
+      "viewport": {
+        "id": "desktop-1280",
+        "width": 1280,
+        "height": 900
+      }
+    },
+    {
+      "filename": "workspace-activity-desktop-1024.png",
+      "route": "/workspace/<workspaceId>/activity",
+      "viewport": {
+        "id": "desktop-1024",
+        "width": 1024,
+        "height": 768
+      }
+    },
+    {
+      "filename": "workspace-activity-desktop-768.png",
+      "route": "/workspace/<workspaceId>/activity",
+      "viewport": {
+        "id": "desktop-768",
+        "width": 768,
+        "height": 900
+      }
+    },
+    {
+      "filename": "workspace-activity-mobile-480.png",
+      "route": "/workspace/<workspaceId>/activity",
+      "viewport": {
+        "id": "mobile-480",
+        "width": 480,
+        "height": 900
+      }
+    },
+    {
+      "filename": "workspace-usage-desktop-1280.png",
+      "route": "/workspace/<workspaceId>/usage",
+      "viewport": {
+        "id": "desktop-1280",
+        "width": 1280,
+        "height": 900
+      }
+    },
+    {
+      "filename": "workspace-usage-desktop-1024.png",
+      "route": "/workspace/<workspaceId>/usage",
+      "viewport": {
+        "id": "desktop-1024",
+        "width": 1024,
+        "height": 768
+      }
+    },
+    {
+      "filename": "workspace-usage-desktop-768.png",
+      "route": "/workspace/<workspaceId>/usage",
+      "viewport": {
+        "id": "desktop-768",
+        "width": 768,
+        "height": 900
+      }
+    },
+    {
+      "filename": "workspace-usage-mobile-480.png",
+      "route": "/workspace/<workspaceId>/usage",
+      "viewport": {
+        "id": "mobile-480",
+        "width": 480,
+        "height": 900
+      }
+    },
+    {
+      "filename": "account-security-desktop-1280.png",
+      "route": "/account/security",
+      "viewport": {
+        "id": "desktop-1280",
+        "width": 1280,
+        "height": 900
+      }
+    },
+    {
+      "filename": "account-security-desktop-1024.png",
+      "route": "/account/security",
+      "viewport": {
+        "id": "desktop-1024",
+        "width": 1024,
+        "height": 768
+      }
+    },
+    {
+      "filename": "account-security-desktop-768.png",
+      "route": "/account/security",
+      "viewport": {
+        "id": "desktop-768",
+        "width": 768,
+        "height": 900
+      }
+    },
+    {
+      "filename": "account-security-mobile-480.png",
+      "route": "/account/security",
+      "viewport": {
+        "id": "mobile-480",
+        "width": 480,
+        "height": 900
+      }
+    }
+  ],
+  "privateWorkspace": true
+}

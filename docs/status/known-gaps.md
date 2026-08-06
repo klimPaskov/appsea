@@ -422,8 +422,9 @@ The public leaderboard is canonical at `/leaderboard` with `/` retained as an
 alias, and the local headless capture workflow covers the public opportunity
 routes at 1280, 1024, 768, and 480 pixels. The 480 header keeps the sign-in
 action accessible without clipping; desktop captures retain the desktop
-layout. The local stack smoke now exercises authenticated private pages over
-HTTP; authenticated screenshot/compare artifacts remain open. Signed desktop
+layout. The local stack smoke and `pnpm ui:capture:private` now exercise the
+authenticated private pages over HTTP and headless Chrome, with checked-in
+desktop/responsive PNGs and a secret-free placeholder manifest. Signed desktop
 installers, hosted-origin review, updater trust, and platform installation
 evidence remain open.
 

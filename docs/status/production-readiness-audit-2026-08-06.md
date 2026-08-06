@@ -42,7 +42,7 @@ and security-sensitive self-merges are prohibited.
 | Complaint analysis and scoring              | Deterministic normalization, deduplication, classification/entity snapshots, narrow clustering, cluster review, competitor/contrary fields, versioned v0.2/v1 scoring, correction invalidation, recomputation, factor provenance, and synthetic quality gates are tested.                                                                                                                                                                                                                                                                                                            | Semantic near-duplicate/entity/author handling, live calibration, broad permitted competitor/contrary research, and source-backed observations.                                                                                                                                                    |
 | Reports and coding-agent packages           | Provenance-aware reports, visible coverage gaps, approval/export governance, object references, six-file plan manifests, private reads, and idempotent identifier-only `report.exported`/`plan.exported` Activity receipts after successful hydration are implemented.                                                                                                                                                                                                                                                                                                               | Encrypted cloud object storage, lifecycle/versioning, export/workspace purge, backup deletion verification, and deployed controls.                                                                                                                                                                 |
 | Authentication and private workspaces       | Password sessions, membership/RLS, step-up, TOTP/recovery-code MFA, session/account controls, invitations/recovery kill switches, archival, scoped read-only MCP, governance approvals, and disabled-by-default OIDC are implemented.                                                                                                                                                                                                                                                                                                                                                | Provider identity/delivery/DPA/retention/revocation approval, DNS/egress enforcement, provider-backed step-up, live key rotation, and production identity operations.                                                                                                                              |
-| Website and desktop boundary                | Sparse dark fixture-disclosed leaderboard, canonical `/leaderboard` plus root alias, private opportunity/research/report/plan/source routes, and a bounded Tauri web boundary exist. Local HTTP checks return 200 for the public and opportunity routes; the local headless capture command covers 1280/1024/768/480 and checked-in public captures include the mobile header overflow fix; `pnpm verify:local-stack` now exercises authenticated private pages and report/plan readback on the real local stack.                                                                    | Authenticated screenshot/compare artifacts remain to be captured against the stack. Signed installers, updater trust, notarization, hosted-origin review, platform installation tests, and release runbook remain open.                                                                            |
+| Website and desktop boundary                | Sparse dark fixture-disclosed leaderboard, canonical `/leaderboard` plus root alias, private opportunity/research/report/plan/source routes, and a bounded Tauri web boundary exist. Local HTTP checks return 200 for the public and opportunity routes; the local headless capture command covers 1280/1024/768/480, and checked-in public plus authenticated private captures include the mobile header overflow and password step-up fixes; `pnpm verify:local-stack` exercises authenticated private pages and report/plan readback on the real local stack.                     | Signed installers, updater trust, notarization, hosted-origin review, platform installation tests, and release runbook remain open.                                                                                                                                                                |
 | Observability, cost, security, and recovery | Health/readiness, server-clock leases, maintenance metrics, quota/recompute/cost/source-health alerts, signed bounded delivery, the sequential six-child `alerts:loop` supervisor, scalar-only outbox status inspection, hardened Compose service, security audit, retention/tombstone flows, backup/restore helper, and worker replacement proof are implemented. Local `pnpm verify:worker:recovery` and `pnpm verify:local-stack` pass with real PostgreSQL/Temporal/MinIO.                                                                                                       | Operated scheduler/alert endpoint ownership, provider billing/recovery/incident routing, multi-instance drills, hosted deployment proof, and the GitHub CI payment gate.                                                                                                                           |
 | Guidance, memory, and provenance            | `AGENTS.md`, active plan, docs, memory, native skills, source policies, tests, and completion reports preserve synthetic disclosure, visible coverage gaps, and the untrusted-import boundary.                                                                                                                                                                                                                                                                                                                                                                                       | Continue guidance checkpoints; no completion claim is justified while external gates and capture proof remain open.                                                                                                                                                                                |
 
@@ -83,6 +83,12 @@ The current repository proof includes:
   480 pixels. The 480 capture was inspected after fixing the clipped sign-in
   action; desktop captures retain the desktop layout. Public review captures
   are checked in under `artifacts/ui-reference-loop/2026-08-06/`.
+- `pnpm ui:capture:private` passing against the disposable local stack,
+  producing nine authenticated workspace/account routes at the same four
+  viewport sizes. The capture found and fixed the read-only PostgreSQL lock
+  mismatch in the account-security route and the mobile password step-up grid;
+  private review PNGs and a secret-free placeholder manifest are checked in
+  under `artifacts/ui-reference-loop/2026-08-06/`.
 - The export repository tests prove approved report/plan paths record only
   scalar audit metadata after object hydration and that an unapproved plan
   exits before the audit insert. The PostgreSQL integration lifecycle now
@@ -121,16 +127,16 @@ container, or desktop execution evidence.
 - The research-quality benchmark is synthetic regression evidence only; it is
   not live calibration, market evidence, or a public-demand estimate.
 - UI validation in this environment uses direct local HTTP, static contract
-  tests, local headless public captures, and the real-stack authenticated HTTP
-  smoke. Authenticated screenshot/compare artifacts are still a release-loop
-  follow-up; no user-browser inspection or browser debugging was used.
+  tests, local headless public and authenticated captures, and the real-stack
+  authenticated HTTP smoke. No user-browser inspection or browser debugging
+  was used.
 - Signed Windows/macOS installers, updater trust, notarization, hosted origin
   review, and platform installation validation remain open.
 
 This audit is completion evidence for the repository tranches through `0111`,
 including the operational-alert supervisor, status-inspection, CFPB
-policy-manifest handoff, local public UI reference-loop tranche, the repaired
-manual-import connector policy handoff, and fresh local persistence/stack
-proof.
+policy-manifest handoff, local public and authenticated UI reference-loop
+tranche, the repaired manual-import connector policy handoff, and fresh local
+persistence/stack proof.
 It is not a claim that AppSea is production-ready or that real market research
 is available.

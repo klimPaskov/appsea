@@ -2052,7 +2052,7 @@ export class PostgresAuthRepository {
     return withDatabaseTransaction(
       this.pool,
       async (client) => {
-        const current = await this.currentMfaSessionUser(client, parsedToken.data)
+        const current = await this.currentMfaSessionUser(client, parsedToken.data, false)
         if (!current) throw new AuthenticationError()
         const result = await client.query<AuthExternalIdentityRow>(
           `SELECT identity_id, user_id, provider, issuer, subject, email, linked_at,
@@ -2224,7 +2224,8 @@ export class PostgresAuthRepository {
 
   private async currentMfaSessionUser(
     client: PoolClient,
-    token: string
+    token: string,
+    lock = true
   ): Promise<MfaSessionUserRow | null> {
     const result = await client.query<MfaSessionUserRow>(
       `SELECT session.user_id, app_user.email
@@ -2234,8 +2235,7 @@ export class PostgresAuthRepository {
           AND app_user.account_state = 'active'
         WHERE session.token_hash = $1
           AND session.revoked_at IS NULL
-          AND session.expires_at > clock_timestamp()
-        FOR KEY SHARE OF session`,
+          AND session.expires_at > clock_timestamp()${lock ? '\n        FOR KEY SHARE OF session' : ''}`,
       [sha256(token)]
     )
     return result.rows[0] ?? null

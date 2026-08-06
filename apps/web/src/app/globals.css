@@ -2983,7 +2983,6 @@ a:focus-visible {
   }
 
   .workspace-actions,
-  .workspace-step-up,
   .workspace-invitation-form,
   .workspace-seed-form-grid,
   .campaign-source-option,
@@ -2993,6 +2992,11 @@ a:focus-visible {
   .account-session-list li {
     align-items: flex-start;
     flex-direction: column;
+  }
+
+  .workspace-step-up {
+    grid-template-columns: 1fr;
+    align-items: stretch;
   }
 
   .agent-access-scope-list,

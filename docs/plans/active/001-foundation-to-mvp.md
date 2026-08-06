@@ -898,8 +898,8 @@ notarization, platform installation tests, and desktop-specific release review.
 
 ### 10. Website reference loop
 
-Status: public route and local capture evidence implemented; authenticated
-workspace capture remains stack-dependent.
+Status: public and authenticated local capture evidence implemented; the
+remaining website gap is release/deployment evidence.
 
 Implemented:
 
@@ -911,7 +911,11 @@ Implemented:
   coding-plan routes at 1280, 1024, 768, and 480 pixels;
 - responsive header fix verified at 480 pixels without changing desktop
   layout or adding research detail to the leaderboard.
+- `pnpm ui:capture:private` creates a disposable local owner session, captures
+  the nine private workspace/account routes at the same four viewports, and
+  records only a placeholder workspace ID in the checked-in manifest. The
+  loop also verifies the account-security route through the read-only
+  PostgreSQL transaction boundary and keeps the password step-up form usable at
+  the responsive width.
 
-Remaining: run the same capture/compare loop against authenticated workspace
-routes when the disposable PostgreSQL/Temporal/MinIO stack is available, then
-complete signed desktop release evidence.
+Remaining: complete signed desktop release evidence and hosted-origin review.

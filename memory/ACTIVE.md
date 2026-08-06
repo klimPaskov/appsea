@@ -4,17 +4,19 @@
 
 Audit: `docs/status/production-readiness-audit-2026-08-06.md`.
 `pnpm verify` passes; fresh PostgreSQL, backup/restore, worker-replacement, and
-real local-stack proofs passed on 2026-08-06. Authenticated private screenshot
-captures remain open. `/leaderboard` and `/` share sparse view;
+real local-stack proofs passed on 2026-08-06. Authenticated private captures
+pass against the disposable local stack and are checked in.
+`/leaderboard` and `/` share sparse view;
 `pnpm ui:capture` checks public 1280/1024/768/480 captures under
-`artifacts/ui-reference-loop/2026-08-06/`. Production claim open.
+`artifacts/ui-reference-loop/2026-08-06/`; `pnpm ui:capture:private` covers
+nine private routes at those viewports. Production claim open.
 
-AppSea remains a validated fixture-first product with production-shaped
-PostgreSQL, Temporal, source-policy, private-workspace, report/plan, and
-maintenance boundaries. The public leaderboard is intentionally synthetic and
-sparse; no third-party public source is enabled. A reviewed internal
-`manual-owner-import-v2` policy now supports tenant-private owner-authorized
-CSV/JSON intake without claiming public market coverage; v1 remains historical.
+AppSea remains fixture-first with production-shaped PostgreSQL, Temporal,
+source-policy, private-workspace, report/plan, and maintenance boundaries. The
+public leaderboard is synthetic and sparse; no third-party public source is
+enabled. Reviewed `manual-owner-import-v2` supports tenant-private
+owner-authorized CSV/JSON without claiming public market coverage; v1 is
+historical.
 
 Migrations `0027`-`0111` cover policy, deletion/leases, orchestration,
 analysis/report/plan governance, cost/alerts, object refs, archival/purge

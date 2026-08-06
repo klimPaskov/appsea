@@ -2023,6 +2023,7 @@ describe.sequential('PostgreSQL fixture persistence lifecycle', () => {
     const activeSessions = await authRepository.listActiveSessions(created.token)
     expect(activeSessions.map((session) => session.current)).toEqual([true, false])
     expect(activeSessions.map((session) => session.id)).toContain(secondSession.session.sessionId)
+    await expect(authRepository.listExternalIdentities(created.token)).resolves.toEqual([])
     await authRepository.revokeSessionById(created.token, secondSession.session.sessionId)
     await expect(authRepository.readSession(secondSession.token)).resolves.toBeNull()
     await expect(

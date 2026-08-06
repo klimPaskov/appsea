@@ -12,7 +12,11 @@ the public leaderboard and opportunity detail routes at 1280, 1024, 768, and
 uses the responsive layout. A narrow-header overflow found in the 480 capture
 was fixed by constraining the mobile navigation and presenting the sign-in
 action as an accessible compact icon while retaining its text label in the
-HTML.
+HTML. The authenticated capture workflow now uses the disposable local
+PostgreSQL/Temporal/MinIO stack, creates an isolated owner session, and captures
+the private workspace and account-security routes without using the user's
+browser. A read-only transaction lock bug found by that capture was fixed, and
+the mobile password step-up form now collapses to one column.
 
 ## Evidence
 
@@ -22,8 +26,15 @@ HTML.
 - `artifacts/ui-reference-loop/2026-08-06/leaderboard-mobile.png`
 - `pnpm ui:capture` generated the full five-route × four-viewport set under
   `.appsea/ui-reference-loop/` during this review.
+- `pnpm ui:capture:private` generated the nine-route × four-viewport private set
+  under `artifacts/ui-reference-loop/2026-08-06/` against the local stack. The
+  manifest uses a `<workspaceId>` placeholder and contains no session cookie or
+  real workspace identifier.
 - `pnpm exec vitest run scripts/capture_ui_reference.test.mjs` passed the
   route and viewport contract checks.
+- `pnpm --filter @appsea/db test -- auth-repository.test.ts` passed after adding
+  the read-only external-identity regression coverage; the local private
+  capture passed all routes and viewports without a Next runtime error.
 - `pnpm smoke:web` now checks both `/` and `/leaderboard` plus the existing
   opportunity, complaint, competitor, and plan routes.
 
@@ -41,8 +52,7 @@ HTML.
 
 ## Remaining gap
 
-The 2026-08-06 local stack smoke exercises the authenticated private pages over
-HTTP. This public capture command still emits only database-free public PNGs, so
-authenticated screenshot/compare artifacts remain a follow-up. It reports that
-limitation rather than inspecting a user browser or presenting public fixture
-content as private research.
+The local authenticated screenshot/compare loop is complete for the current
+website routes. Signed Windows/macOS installers, hosted-origin review, and
+provider-backed deployment evidence remain separate release gates; this local
+capture does not claim those controls or public market research coverage.

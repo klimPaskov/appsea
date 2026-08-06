@@ -29,11 +29,22 @@ and writes disposable PNGs under `.appsea/ui-reference-loop/`. Set
 `artifacts/ui-reference-loop/<date>/`.
 
 The 480-pixel captures intentionally use the responsive layout. Desktop
-captures never use the mobile layout. The public command remains database-free;
-authenticated workspace captures require `pnpm dev:local` and the
-PostgreSQL/Temporal/MinIO stack. When those services are unavailable the
-command reports that private capture evidence is missing instead of inspecting
-a user browser or treating the public fixture as private research.
-`pnpm verify:local-stack` now provides authenticated HTTP smoke proof on the
-disposable stack; add authenticated PNG captures and compare them against the
-matching references before treating the full UI loop as complete.
+captures never use the mobile layout. The public command remains database-free.
+For authenticated workspace evidence, start the disposable local stack and
+run:
+
+```bash
+pnpm dev:local
+pnpm ui:capture:private
+```
+
+The private command creates a random local owner in PostgreSQL, injects only
+that short-lived session into an isolated headless Chrome profile, and captures
+the nine private workspace/account routes at the same four viewport sizes. It
+never uses the user's browser, writes session identifiers or cookies to the
+manifest, or treats owner-import content as public market research. The Next
+development indicator is disabled for the capture window so review PNGs contain
+only the AppSea surface. Run it only against the disposable local stack, never
+against production. The checked-in evidence lives under
+`artifacts/ui-reference-loop/<date>/`; `pnpm verify:local-stack` remains the
+authenticated HTTP and workflow proof.
