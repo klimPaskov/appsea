@@ -41,8 +41,8 @@ HTML.
 
 ## Remaining gap
 
-Authenticated workspace captures still require the disposable PostgreSQL,
-Temporal, and MinIO stack. Docker Desktop's Linux engine is unavailable on the
-current host, so this report does not claim private-route screenshot proof.
-The capture command reports that limitation rather than inspecting a user
-browser or presenting public fixture content as private research.
+The 2026-08-06 local stack smoke exercises the authenticated private pages over
+HTTP. This public capture command still emits only database-free public PNGs, so
+authenticated screenshot/compare artifacts remain a follow-up. It reports that
+limitation rather than inspecting a user browser or presenting public fixture
+content as private research.

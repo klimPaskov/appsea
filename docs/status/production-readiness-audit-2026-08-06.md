@@ -19,8 +19,10 @@ Classification used in this audit:
   authentication, website/desktop boundary, and observability are implemented
   as production-shaped seams but still need deployment or external controls.
 - **Blocked:** public complaint-source activation is blocked by independent
-  legal/privacy/security/commercial review; cloud/provider operation and
-  authenticated private UI capture proof are also blocked in this environment.
+  legal/privacy/security/commercial review; cloud/provider operation and signed
+  desktop release evidence remain external gates. Local dependency-backed
+  persistence, recovery, and authenticated private-workspace HTTP smoke now
+  pass on this host.
 - **Missing from the production claim:** no model gateway, live calibration,
   broad competitor/contrary search, signed desktop release, hosted dependency
   proof, or provider-backed purge/incident operation is represented as done.
@@ -34,14 +36,14 @@ and security-sensitive self-merges are prohibited.
 
 | Requirement                                 | Evidence in this repository                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          | Remaining gate                                                                                                                                                                                                                                                                                     |
 | ------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| PostgreSQL persistence and migrations       | One hundred eleven checksummed forward migrations, forced-RLS repositories, source/evidence/complaint/cluster/competitor/opportunity/score/report/plan/workflow lineage, auth/MFA/OIDC boundaries, audit history, purge intent, maintenance-only source-health projections, and the scalar operational-alert outbox status reader.                                                                                                                                                                                                                                                   | Docker-backed fresh/upgrade/backup proof is unavailable on this host because the Docker Desktop Linux engine pipe is down. Provider role provisioning, encrypted backups, HA/PITR, restore/failover drills, production credentials, and approved key rotation remain deployment work.              |
+| PostgreSQL persistence and migrations       | One hundred eleven checksummed forward migrations, forced-RLS repositories, source/evidence/complaint/cluster/competitor/opportunity/score/report/plan/workflow lineage, auth/MFA/OIDC boundaries, audit history, purge intent, maintenance-only source-health projections, and the scalar operational-alert outbox status reader. Local fresh-install, populated-upgrade, role/RLS, and backup/restore proofs pass on 2026-08-06.                                                                                                                                                   | Provider role provisioning, encrypted backups, HA/PITR, restore/failover drills, production credentials, and approved key rotation remain deployment work.                                                                                                                                         |
 | Durable workflows and idempotent jobs       | Fixture, collection, analysis, campaign refresh, recomputation, maintenance, cancellation, leases, bounded retries, sanitized histories, graceful shutdown, and worker-replacement boundaries are implemented and covered by local/CI checks.                                                                                                                                                                                                                                                                                                                                        | Authenticated Temporal namespace/task-queue ACLs, deployed scheduler ownership, HA/restore drills, and legacy-history retention operation.                                                                                                                                                         |
 | Approved complaint sources                  | Tenant-private `manual-owner-import-v2` is the only active non-fixture path. CFPB and Stack Exchange have typed policy, quota, provenance, deletion, and fixture boundaries; immutable reviewed policy payloads now cross into connector construction, and the deterministic CFPB review manifest packages first-party evidence without activation. Both third-party sources remain disabled. Stack Exchange's draft records the current first-party AUP blocker, unknown commercial permission, and a policy-declared permission-evidence requirement enforced by migration `0111`. | Independent legal/privacy/security/commercial-use/retention approval and activation evidence for public research, plus express written consent or a commercial exception for Stack Exchange's intended automated use recorded in the immutable approval row. No public market coverage is claimed. |
 | Complaint analysis and scoring              | Deterministic normalization, deduplication, classification/entity snapshots, narrow clustering, cluster review, competitor/contrary fields, versioned v0.2/v1 scoring, correction invalidation, recomputation, factor provenance, and synthetic quality gates are tested.                                                                                                                                                                                                                                                                                                            | Semantic near-duplicate/entity/author handling, live calibration, broad permitted competitor/contrary research, and source-backed observations.                                                                                                                                                    |
 | Reports and coding-agent packages           | Provenance-aware reports, visible coverage gaps, approval/export governance, object references, six-file plan manifests, private reads, and idempotent identifier-only `report.exported`/`plan.exported` Activity receipts after successful hydration are implemented.                                                                                                                                                                                                                                                                                                               | Encrypted cloud object storage, lifecycle/versioning, export/workspace purge, backup deletion verification, and deployed controls.                                                                                                                                                                 |
 | Authentication and private workspaces       | Password sessions, membership/RLS, step-up, TOTP/recovery-code MFA, session/account controls, invitations/recovery kill switches, archival, scoped read-only MCP, governance approvals, and disabled-by-default OIDC are implemented.                                                                                                                                                                                                                                                                                                                                                | Provider identity/delivery/DPA/retention/revocation approval, DNS/egress enforcement, provider-backed step-up, live key rotation, and production identity operations.                                                                                                                              |
-| Website and desktop boundary                | Sparse dark fixture-disclosed leaderboard, canonical `/leaderboard` plus root alias, private opportunity/research/report/plan/source routes, and a bounded Tauri web boundary exist. Local HTTP checks return 200 for the public and opportunity routes; the local headless capture command covers 1280/1024/768/480 and checked-in public captures include the mobile header overflow fix; readiness correctly fails closed without PostgreSQL.                                                                                                                                     | Authenticated private captures still require the local PostgreSQL/Temporal/MinIO stack. Signed installers, updater trust, notarization, hosted-origin review, platform installation tests, and release runbook remain open.                                                                        |
-| Observability, cost, security, and recovery | Health/readiness, server-clock leases, maintenance metrics, quota/recompute/cost/source-health alerts, signed bounded delivery, the sequential six-child `alerts:loop` supervisor, scalar-only outbox status inspection, hardened Compose service, security audit, retention/tombstone flows, backup/restore helper, and worker replacement proof are implemented.                                                                                                                                                                                                                   | Docker-backed recovery execution, operated scheduler/alert endpoint ownership, provider billing/recovery/incident routing, multi-instance drills, hosted deployment proof, and the GitHub CI payment gate.                                                                                         |
+| Website and desktop boundary                | Sparse dark fixture-disclosed leaderboard, canonical `/leaderboard` plus root alias, private opportunity/research/report/plan/source routes, and a bounded Tauri web boundary exist. Local HTTP checks return 200 for the public and opportunity routes; the local headless capture command covers 1280/1024/768/480 and checked-in public captures include the mobile header overflow fix; `pnpm verify:local-stack` now exercises authenticated private pages and report/plan readback on the real local stack.                                                                    | Authenticated screenshot/compare artifacts remain to be captured against the stack. Signed installers, updater trust, notarization, hosted-origin review, platform installation tests, and release runbook remain open.                                                                            |
+| Observability, cost, security, and recovery | Health/readiness, server-clock leases, maintenance metrics, quota/recompute/cost/source-health alerts, signed bounded delivery, the sequential six-child `alerts:loop` supervisor, scalar-only outbox status inspection, hardened Compose service, security audit, retention/tombstone flows, backup/restore helper, and worker replacement proof are implemented. Local `pnpm verify:worker:recovery` and `pnpm verify:local-stack` pass with real PostgreSQL/Temporal/MinIO.                                                                                                       | Operated scheduler/alert endpoint ownership, provider billing/recovery/incident routing, multi-instance drills, hosted deployment proof, and the GitHub CI payment gate.                                                                                                                           |
 | Guidance, memory, and provenance            | `AGENTS.md`, active plan, docs, memory, native skills, source policies, tests, and completion reports preserve synthetic disclosure, visible coverage gaps, and the untrusted-import boundary.                                                                                                                                                                                                                                                                                                                                                                                       | Continue guidance checkpoints; no completion claim is justified while external gates and capture proof remain open.                                                                                                                                                                                |
 
 ## Validation evidence
@@ -62,6 +64,16 @@ The current repository proof includes:
   Compose service.
 - `pnpm security:audit`, `pnpm memory:check`, `pnpm format:check`, and
   `pnpm repo:check` passing.
+- `pnpm verify:persistence` and `pnpm verify:persistence:fresh` passing: the
+  PostgreSQL lifecycle now passes all 54 integration tests after the source
+  health projection and fixture deduplication repair.
+- `pnpm verify:backup-restore` passing: all 111 migrations restore into a
+  disposable database and forced-RLS/runtime privilege checks pass.
+- `pnpm verify:worker:recovery` passing: a real worker replacement completes
+  the fixture effect once and preserves sanitized Temporal history.
+- `pnpm verify:local-stack` passing: loopback PostgreSQL, Temporal, and MinIO
+  readiness, authenticated owner import, durable collection, production-shaped
+  analysis, private report/plan pages, and cleanup all pass.
 - Direct local HTTP checks returning `200` for `/`, the public opportunity
   routes, and `/api/health/live`; `/api/health/ready` returns `503` when the
   local PostgreSQL dependency is absent, which is the intended fail-closed
@@ -75,23 +87,13 @@ The current repository proof includes:
   scalar audit metadata after object hydration and that an unapproved plan
   exits before the audit insert. The PostgreSQL integration lifecycle now
   asserts report and plan export receipts, actor attribution, and manifest
-  metadata; Docker remains required to execute that proof here.
+  metadata; the local fresh run executed that proof successfully.
 
 The root `pnpm verify` command does not replace the supplemental persistence,
 backup, local-stack, or worker-replacement gates. Those commands remain
-separate repository/CI evidence; the fresh persistence and backup gates were
-attempted here and stopped at the unavailable Docker engine, while the direct
-local-web checks above were used instead of browser inspection.
-
-The following checks were not executed to completion because the host lacks
-the Docker Desktop Linux engine pipe:
-
-- `pnpm verify:persistence:fresh`
-- `pnpm verify:backup-restore`
-
-The SQL integration suites and backup/restore drill remain present in the
-repository and must be rerun when Docker is available. Hosted GitHub runs are
-also payment-gated.
+separate repository/CI evidence; all four supplemental gates passed locally on
+2026-08-06 after Docker Desktop was started. Hosted GitHub runs remain
+payment-gated and still provide no current hosted deployment evidence.
 
 The latest private `main` push run (`31065010546`, commit `48ec38d`) confirms
 the hosted gate: every job was rejected before startup with GitHub's
@@ -119,14 +121,16 @@ container, or desktop execution evidence.
 - The research-quality benchmark is synthetic regression evidence only; it is
   not live calibration, market evidence, or a public-demand estimate.
 - UI validation in this environment uses direct local HTTP, static contract
-  tests, and local headless public captures. The authenticated screenshot/
-  compare loop remains a documented release gap because Docker is unavailable;
-  no browser-debugging or user-browser inspection was used.
+  tests, local headless public captures, and the real-stack authenticated HTTP
+  smoke. Authenticated screenshot/compare artifacts are still a release-loop
+  follow-up; no user-browser inspection or browser debugging was used.
 - Signed Windows/macOS installers, updater trust, notarization, hosted origin
   review, and platform installation validation remain open.
 
 This audit is completion evidence for the repository tranches through `0111`,
 including the operational-alert supervisor, status-inspection, CFPB
-policy-manifest handoff, and local public UI reference-loop tranches.
+policy-manifest handoff, local public UI reference-loop tranche, the repaired
+manual-import connector policy handoff, and fresh local persistence/stack
+proof.
 It is not a claim that AppSea is production-ready or that real market research
 is available.

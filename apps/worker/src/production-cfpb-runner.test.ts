@@ -86,7 +86,9 @@ vi.mock('@appsea/connectors', () => {
 
   return {
     isProductionConnectorSourceId: (sourceId: string) =>
-      sourceId === 'cfpb-consumer-complaints' || sourceId === 'stackexchange-stackoverflow',
+      sourceId === 'cfpb-consumer-complaints' ||
+      sourceId === 'stackexchange-stackoverflow' ||
+      sourceId === 'manual-owner-import',
     CfpbConnector: class extends MockConnector {
       constructor(options: { now: () => string }) {
         super(options, 'cfpb')
@@ -95,6 +97,12 @@ vi.mock('@appsea/connectors', () => {
     StackExchangeConnector: class extends MockConnector {
       constructor(options: { now: () => string }) {
         super(options, 'stackexchange')
+      }
+    },
+    ManualImportConnector: class extends MockConnector {
+      constructor(options: { now: () => string; reviewedPolicy?: unknown }) {
+        if (!options.reviewedPolicy) throw new Error('manual reviewed policy snapshot missing')
+        super(options, 'manual')
       }
     },
     SourceQuotaReservationReplayError: class extends Error {},
@@ -166,13 +174,19 @@ vi.mock('@appsea/db', () => ({
             costPerRequestMicros: state.policyCostMicros
           }
         },
+        reviewedPolicy: { sourceId: state.policySourceId },
         policyVersion:
-          state.policySourceId === 'stackexchange-stackoverflow' ? 'stack-v1' : 'cfpb-v1',
+          state.policySourceId === 'stackexchange-stackoverflow'
+            ? 'stack-v1'
+            : state.policySourceId === 'manual-owner-import'
+              ? 'manual-owner-import-v2'
+              : 'cfpb-v1',
         contentHash: 'b'.repeat(64)
       }
     }
   },
   PostgresSourceQuotaRepository: class {},
+  PostgresManualImportRepository: class {},
   PostgresSourceCollectionLeaseRepository: class {
     async acquire(input: unknown) {
       state.acquireInput = input
@@ -469,6 +483,34 @@ describe('production CFPB runner lease lifecycle', () => {
 
     expect(state.connectorKind).toBe('stackexchange')
     expect(state.connectorRequest).toMatchObject({ purpose: 'competitor-research' })
+    state.policySourceId = 'cfpb-consumer-complaints'
+  })
+
+  it('passes the reviewed policy snapshot into the active manual-import connector', async () => {
+    state.policySourceId = 'manual-owner-import'
+    state.connectorKind = undefined
+    state.lease = {
+      decision: 'acquired',
+      replayed: false,
+      observedAt: '2026-07-10T00:00:00.000Z',
+      expiresAt: '2026-07-10T00:30:00.000Z'
+    }
+
+    await runProductionCollection(
+      {} as never,
+      {
+        ...request,
+        sourceId: 'manual-owner-import',
+        policyVersion: 'manual-owner-import-v2',
+        manualImportBatchId: 'batch:manual-runner-test'
+      },
+      { observedAt: '2026-07-10T00:00:00.000Z' }
+    )
+
+    expect(state.connectorKind).toBe('manual')
+    expect(state.connectorRequest).toMatchObject({
+      manualImportBatchId: 'batch:manual-runner-test'
+    })
     state.policySourceId = 'cfpb-consumer-complaints'
   })
 

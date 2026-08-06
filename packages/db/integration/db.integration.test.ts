@@ -12,7 +12,7 @@ import {
   type WorkflowExecutionMetadata
 } from '@appsea/contracts'
 import { generatePlanPackage } from '@appsea/reports'
-import { buildFixtureResearchArtifact } from '@appsea/research'
+import { buildFixtureResearchArtifact, deduplicateComplaintSet } from '@appsea/research'
 import { InvalidScoreSnapshotError } from '@appsea/scoring'
 import { SkillRegistry } from '@appsea/skill-registry'
 import { totpCodeAt } from '../src/auth-mfa'
@@ -1900,16 +1900,26 @@ describe.sequential('PostgreSQL fixture persistence lifecycle', () => {
 
     const repository = new PostgresSourcePolicyRepository(maintenancePool)
     try {
-      await expect(repository.listSourceHealthAlertObservations(workspaceId, 10)).resolves.toEqual([
-        expect.objectContaining({
-          sourceId,
-          collectible: true,
-          healthState: 'healthy',
-          freshnessState: 'stale',
-          freshnessAgeHours: expect.any(Number),
-          quotaState: 'exhausted'
-        })
-      ])
+      await expect(repository.listSourceHealthAlertObservations(workspaceId, 10)).resolves.toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            sourceId,
+            collectible: true,
+            healthState: 'healthy',
+            freshnessState: 'stale',
+            freshnessAgeHours: expect.any(Number),
+            quotaState: 'exhausted'
+          }),
+          expect.objectContaining({
+            sourceId: 'manual-owner-import',
+            collectible: true,
+            healthState: 'unknown',
+            freshnessState: 'unknown',
+            freshnessAgeHours: null,
+            quotaState: 'unknown'
+          })
+        ])
+      )
       await expect(
         servicePool.query('SELECT * FROM appsea.read_source_health_alert_observations($1, $2)', [
           workspaceId,
@@ -4262,6 +4272,7 @@ describe.sequential('PostgreSQL fixture persistence lifecycle', () => {
       (cluster) => cluster.complaintIds
     )
     input.artifact.opportunity.competitors = input.artifact.opportunity.competitors.slice(0, 2)
+    input.artifact.deduplication = deduplicateComplaintSet(input.artifact.complaints).decisions
     input.planPackage = generatePlanPackage(input.artifact, latestAt)
 
     const refreshed = await repository.persist(input)
@@ -4298,6 +4309,9 @@ describe.sequential('PostgreSQL fixture persistence lifecycle', () => {
     original.artifact.complaints.forEach((complaint) => {
       complaint.sourceId = sourceId
     })
+    original.artifact.deduplication = deduplicateComplaintSet(
+      original.artifact.complaints
+    ).decisions
     await repository.persist(original)
 
     const input = await fixtureInput(
@@ -4312,6 +4326,7 @@ describe.sequential('PostgreSQL fixture persistence lifecycle', () => {
     input.artifact.complaints.forEach((complaint) => {
       complaint.sourceId = sourceId
     })
+    input.artifact.deduplication = deduplicateComplaintSet(input.artifact.complaints).decisions
     input.artifact.sourcePolicies[0]!.coverageNotes.push('Second reviewed fixture policy version')
     input.artifact.sourcePolicies[0]!.reviewedAt = latestAt
     await repository.persist(input)

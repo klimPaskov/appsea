@@ -45,9 +45,9 @@ plan package. The forced-RLS lineage retains observation and evidence hashes;
 rejected or deleted consumed provenance makes active analysis/opportunity reads
 unavailable, and metadata-only or aggregate-only observations have their claim
 text withheld. This is still a manual, tenant-private rerun boundary: no review
-action or policy change starts a new analysis automatically, and Docker-backed
-fresh-schema/deletion integration proof remains unavailable in the current
-environment.
+action or policy change starts a new analysis automatically. Fresh-schema and
+deletion integration proof now pass locally through migration `0111`; provider
+and hosted execution remain separate evidence.
 
 Generated report and coding-plan pages now expose the existing approval
 governance in the browser: editors can mark artifacts reviewed and owners can
@@ -349,8 +349,9 @@ ships an `alerts:loop` supervisor and a hardened Compose `alerts` service that
 runs six bounded inspection/delivery/status commands sequentially, continues after
 one child failure, and uses bounded backoff and signal-safe shutdown. Deployment
 still lacks operated scheduler ownership, alert endpoint operation/incident
-response, provider pricing/billing controls, per-scheduler maintenance
-credentials, and a fresh Docker-backed recovery proof. The current
+response, provider pricing/billing controls, and per-scheduler maintenance
+credentials. Local worker-replacement and stack recovery proofs pass; operated
+provider recovery remains open. The current
 `appsea_maintenance` coordinator is trusted across
 the allowlisted names; production data-work role separation and optional
 per-scheduler isolation remain release gates. Migration `0110` and
@@ -408,7 +409,8 @@ in-memory/filesystem adapters plus a signed S3-compatible adapter wired through
 the shared environment factory. Migration `0043` adds the durable
 invalidated-output purge queue. Provider encryption, lifecycle/versioning,
 least-privilege credential deployment, destructive workspace/object/backup
-purge, and fresh Docker-backed proof remain open. Owner workspace archival and
+purge remain open. Local backup/restore proof passes through `0111`; provider
+encryption, lifecycle, and restore evidence remain open. Owner workspace archival and
 the non-destructive purge intent are implemented separately and retain the
 referenced data.
 
@@ -420,10 +422,10 @@ The public leaderboard is canonical at `/leaderboard` with `/` retained as an
 alias, and the local headless capture workflow covers the public opportunity
 routes at 1280, 1024, 768, and 480 pixels. The 480 header keeps the sign-in
 action accessible without clipping; desktop captures retain the desktop
-layout. Authenticated workspace captures still require the disposable
-PostgreSQL/Temporal/MinIO stack and are not claimed while Docker is
-unavailable. Signed desktop installers, hosted-origin review, updater trust,
-and platform installation evidence remain open.
+layout. The local stack smoke now exercises authenticated private pages over
+HTTP; authenticated screenshot/compare artifacts remain open. Signed desktop
+installers, hosted-origin review, updater trust, and platform installation
+evidence remain open.
 
 The private source registry at `/workspace/:workspaceId/sources` and its
 no-store API make current policy readiness, quotas, retention/deletion duties,
@@ -559,7 +561,7 @@ caller/idempotency metadata. Terminal or expired leases are bounded by source
 maintenance. This closes the repository-level policy read/fetch and
 assert-to-persist races, but the database assertion and provider socket call
 are not one atomic transaction; production still needs lease-revocation drills,
-scheduler ownership, Temporal namespace authorization, and Docker-backed
+scheduler ownership, Temporal namespace authorization, and deployment-level
 crash/retry evidence. A quota settled without
 a persisted result now creates a durable operator-reconciliation case; the
 worker does not release or re-fetch optimistically. The repository-level alert

@@ -224,10 +224,9 @@ other lease columns remain maintenance-only.
 Migration `0096_opportunity_score_v1_envelope.sql` adds nullable, range-checked
 balanced v1 score fields, reviewed evidence/coverage/freshness references, and
 a private ranking index. Legacy score rows remain readable and keep `score` as
-their raw-score compatibility field. During the `0096` tranche, the local
-backup/restore drill passed through that migration; the current `0111` drill is
-blocked before execution when Docker Desktop's Linux engine is unavailable.
-Provider backup, HA, retention, and production restore remain deployment work.
+their raw-score compatibility field. The 2026-08-06 local fresh migration and
+backup/restore drills pass through `0111`; provider backup, HA, retention, and
+production restore remain deployment work.
 
 Migration `0097_mcp_agent_access_admission.sql` rechecks workspace membership
 for bearer authentication and adds a forced-RLS request-lease projection. The
@@ -411,8 +410,9 @@ alert delivery covers bounded outcomes; deployed scheduler ownership and
 production Temporal remain open; repository-level campaign refresh and multi-source dispatch are
 implemented locally. Draft campaign forms now select from the private source
 registry while retaining visible pending-policy states. Deployed Temporal and
-scheduler crash/retry proof, live source-policy approval, and Docker-backed
-integration remain release gates.
+scheduler crash/retry proof, live source-policy approval, and hosted/provider
+integration remain release gates; local worker-replacement and stack
+integration now pass.
 
 The source coverage tranche adds a strict `workspaceSourceReadModel` and an
 authenticated read-only registry at `/workspace/:workspaceId/sources` plus

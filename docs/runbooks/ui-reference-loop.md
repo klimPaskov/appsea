@@ -29,8 +29,11 @@ and writes disposable PNGs under `.appsea/ui-reference-loop/`. Set
 `artifacts/ui-reference-loop/<date>/`.
 
 The 480-pixel captures intentionally use the responsive layout. Desktop
-captures never use the mobile layout. Authenticated workspace captures require
-`pnpm dev:local` and the PostgreSQL/Temporal/MinIO stack; when those services
-are unavailable the command reports that private capture evidence is missing
-instead of inspecting a user browser or treating the public fixture as private
-research.
+captures never use the mobile layout. The public command remains database-free;
+authenticated workspace captures require `pnpm dev:local` and the
+PostgreSQL/Temporal/MinIO stack. When those services are unavailable the
+command reports that private capture evidence is missing instead of inspecting
+a user browser or treating the public fixture as private research.
+`pnpm verify:local-stack` now provides authenticated HTTP smoke proof on the
+disposable stack; add authenticated PNG captures and compare them against the
+matching references before treating the full UI loop as complete.

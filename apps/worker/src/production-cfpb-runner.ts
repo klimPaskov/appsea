@@ -60,6 +60,7 @@ function createProductionConnector(
       }
       return new ManualImportConnector({
         policy: options.policy,
+        reviewedPolicy: options.reviewedPolicy,
         quotaLedger: options.quotaLedger,
         now: options.now,
         batchReader: options.manualImportBatchReader

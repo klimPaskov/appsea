@@ -3,8 +3,9 @@
 ## State
 
 Audit: `docs/status/production-readiness-audit-2026-08-06.md`.
-`pnpm verify` passes; Docker fresh/backup proof and authenticated private UI
-captures remain blocked. `/leaderboard` and `/` share sparse view;
+`pnpm verify` passes; fresh PostgreSQL, backup/restore, worker-replacement, and
+real local-stack proofs passed on 2026-08-06. Authenticated private screenshot
+captures remain open. `/leaderboard` and `/` share sparse view;
 `pnpm ui:capture` checks public 1280/1024/768/480 captures under
 `artifacts/ui-reference-loop/2026-08-06/`. Production claim open.
 
@@ -92,9 +93,9 @@ remains disabled pending actual independent permission review.
 
 ## Validated commands
 
-Repository tests, type checks, builds, fixture/plan generation, and web smoke
-pass. Docker backup/restore and hosted provisioning/deployment evidence remain
-open.
+Repository tests, type checks, builds, fixture/plan generation, web smoke, and
+local persistence/recovery gates pass. Hosted provisioning/deployment evidence
+remains open.
 
 ## Next production tranche
 
@@ -118,11 +119,9 @@ open.
 - No third-party public source is active; fixture rankings and owner-import
   evidence are not public market research.
 - GitHub CI run `31065010546` for `48ec38d` was payment-gated before startup;
-  Docker's stopped `com.docker.service` also blocks fresh PostgreSQL/Temporal/
-  backup proof.
-- Competitive lineage/report enrichment is locally unit-tested, but fresh
-  PostgreSQL RLS, rejection-trigger, and deletion-propagation execution still
-  await Docker or hosted CI; the workflow remains manual-rerun and tenant-private.
+  hosted reruns remain external.
+- Competitive lineage/report enrichment is locally integration-tested through
+  `0111`; the workflow remains manual-rerun and tenant-private.
 - Production DB/Temporal, role separation, HA, backups, scheduler/endpoint
   operations, provider recovery, alerting, billing, and deployment validation
   remain; the repository outbox/drain is not an external transaction.

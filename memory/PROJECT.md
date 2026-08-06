@@ -15,12 +15,15 @@ AppSea is an opportunity intelligence system for software products. It turns per
 - `packages/db` owns PostgreSQL 18 migrations, transaction-scoped workspace RLS, and persistence repositories.
 - Local and CI PostgreSQL use a no-login owner, separate migrator, and non-owner runtime role. Production provisioning remains external and unimplemented.
 - `scripts/run_db_backup_restore.mjs` provides a local 111-migration dump/restore drill with forced RLS and least-privilege checks; it is not provider HA or production restore evidence.
-- `packages/workflows` owns Temporal orchestration and client hashing; `apps/worker` owns activity adapters/startup; `packages/db` owns RLS-protected fixture and production-collection projections/checkpoints. Production workflow security, HA, object-store/backups purge, deployment, and Docker-backed integration proof remain external.
+- `packages/workflows` owns Temporal/client hashing; `apps/worker` owns
+  activities/startup; `packages/db` owns RLS persistence. Local proof passes
+  through `0111`; workflow security, HA, object-store purge, and deployment
+  remain external.
 - Campaign cancellation is a durable control boundary: migrations `0070`/`0071` store owner/editor intent before Temporal for multi-source and one-source runs; the worker retries external cancellation, while each workflow owns safe reconciliation.
 - Private campaign history uses strict bounded cursor pages ordered by request timestamp plus stable identifier; only the validated boundary crosses private APIs. The public leaderboard is unaffected.
 - Public `/leaderboard` and `/` share a database-free view. `pnpm ui:capture`
-  covers 1280/1024/768/480 with headless Chrome; authenticated captures depend
-  on disposable stack.
+  covers 1280/1024/768/480; local-stack smoke covers authenticated HTTP pages,
+  while authenticated screenshots remain a follow-up.
 - Migration `0068` and `PostgresResearchCampaignOrchestrationRepository` own the durable multi-source campaign parent/child queue. The existing service admission and one-source Temporal workflow remain the child execution boundary; the lease-backed maintenance worker rechecks approved policy and reconciles child projections into private parent/campaign state. The slice is production-shaped but live source activation, deployed scheduler/Temporal ownership, and crash/retry proof remain external.
 - Migrations `0069` and `0081` plus `PostgresAgentAccessTokenRepository` own expiring, hash-only, forced-RLS agent tokens. `/api/mcp` is read-only, workspace-bound, scope-filtered, and reuses private projections; non-synthetic reports/plans require approval. Password-gated mutations require recent password step-up plus a fresh MFA marker when MFA is enabled; provider identity, secret/rate-limit deployment, and mutations without step-up remain external. Migration `0080` owns browser TOTP.
 - The post-collection production analysis workflow is `production-analysis-v2`: Temporal carries only identifiers and immutable digests, and `apps/worker` reconstructs the reviewed artifact from workspace-bound rows inside the persistence activity. New starts carry a strict history-safety memo; `apps/worker` provides a visibility-only checker and reviewed manifest for legacy v1 histories, while archive/retention remains deployment-owned.
