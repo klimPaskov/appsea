@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest'
-import { captureRoutes, captureViewports, privateCaptureRoutes } from './capture_ui_reference.mjs'
+import {
+  captureRoutes,
+  captureViewports,
+  privateCaptureRoutes,
+  summarizeUiAudit
+} from './capture_ui_reference.mjs'
 
 describe('local UI reference capture contract', () => {
   it('captures the canonical public route and every focused opportunity surface', () => {
@@ -38,5 +43,40 @@ describe('local UI reference capture contract', () => {
       '/workspace/workspace%3Aexample/sources'
     )
     expect(privateCaptureRoutes[8].path('ignored')).toBe('/account/security')
+  })
+
+  it('fails closed on runtime errors, missing content, and horizontal overflow', () => {
+    expect(
+      summarizeUiAudit({
+        title: 'AppSea',
+        innerWidth: 480,
+        scrollWidth: 480,
+        hasMain: true,
+        hasRuntimeError: false
+      })
+    ).toEqual({
+      status: 'ok',
+      failures: [],
+      hasRuntimeError: false,
+      hasMain: true,
+      innerWidth: 480,
+      scrollWidth: 480
+    })
+
+    expect(
+      summarizeUiAudit({
+        title: 'AppSea',
+        innerWidth: 480,
+        scrollWidth: 512,
+        hasMain: true,
+        hasRuntimeError: true
+      })
+    ).toMatchObject({
+      status: 'failed',
+      failures: ['runtime-error', 'horizontal-overflow']
+    })
+    expect(
+      summarizeUiAudit({ title: '', innerWidth: 1280, scrollWidth: 1280, hasMain: false })
+    ).toMatchObject({ status: 'failed', failures: ['missing-main', 'missing-title'] })
   })
 })

@@ -426,7 +426,9 @@ layout. The local stack smoke and `pnpm ui:capture:private` now exercise the
 authenticated private pages over HTTP and headless Chrome, with checked-in
 desktop/responsive PNGs and a secret-free placeholder manifest. Signed desktop
 installers, hosted-origin review, updater trust, and platform installation
-evidence remain open.
+evidence remain open. The private capture now fails closed on scalar runtime
+errors, missing title/`<main>`, or horizontal overflow; this proves local route
+layout health only and does not replace hosted or signed-release evidence.
 
 The private source registry at `/workspace/:workspaceId/sources` and its
 no-store API make current policy readiness, quotas, retention/deletion duties,

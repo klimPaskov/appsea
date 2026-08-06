@@ -44,7 +44,10 @@ the nine private workspace/account routes at the same four viewport sizes. It
 never uses the user's browser, writes session identifiers or cookies to the
 manifest, or treats owner-import content as public market research. The Next
 development indicator is disabled for the capture window so review PNGs contain
-only the AppSea surface. Run it only against the disposable local stack, never
-against production. The checked-in evidence lives under
+only the AppSea surface. Each capture also runs a scalar-only browser audit that
+fails on an explicit Next/runtime error page, missing title or `<main>` content,
+or horizontal overflow; it records only the viewport and pass/fail metrics. Run it
+only against the disposable local stack, never against production. The
+checked-in evidence lives under
 `artifacts/ui-reference-loop/<date>/`; `pnpm verify:local-stack` remains the
 authenticated HTTP and workflow proof.

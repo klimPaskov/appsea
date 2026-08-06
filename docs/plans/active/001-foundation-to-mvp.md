@@ -917,5 +917,8 @@ Implemented:
   loop also verifies the account-security route through the read-only
   PostgreSQL transaction boundary and keeps the password step-up form usable at
   the responsive width.
+- Each authenticated capture now runs a scalar browser audit that fails on an
+  explicit runtime-error page, missing title/`<main>`, or horizontal overflow;
+  the manifest records only pass/fail metrics and viewport dimensions.
 
 Remaining: complete signed desktop release evidence and hosted-origin review.

@@ -29,7 +29,9 @@ the mobile password step-up form now collapses to one column.
 - `pnpm ui:capture:private` generated the nine-route × four-viewport private set
   under `artifacts/ui-reference-loop/2026-08-06/` against the local stack. The
   manifest uses a `<workspaceId>` placeholder and contains no session cookie or
-  real workspace identifier.
+  real workspace identifier. Every capture passed the scalar browser audit:
+  no explicit runtime-error page, missing title/`<main>`, or horizontal overflow
+  at 1280, 1024, 768, or 480 pixels.
 - `pnpm exec vitest run scripts/capture_ui_reference.test.mjs` passed the
   route and viewport contract checks.
 - `pnpm --filter @appsea/db test -- auth-repository.test.ts` passed after adding
@@ -37,6 +39,11 @@ the mobile password step-up form now collapses to one column.
   capture passed all routes and viewports without a Next runtime error.
 - `pnpm smoke:web` now checks both `/` and `/leaderboard` plus the existing
   opportunity, complaint, competitor, and plan routes.
+
+The first audit implementation was corrected after a local run showed that a
+hidden Next development portal is present on healthy pages. The final guard
+matches only the error dialog or explicit error-page text, so it does not treat
+the normal development portal as a failure.
 
 ## Contract and accessibility decisions
 

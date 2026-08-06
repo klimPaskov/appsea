@@ -9,7 +9,8 @@ pass against the disposable local stack and are checked in.
 `/leaderboard` and `/` share sparse view;
 `pnpm ui:capture` checks public 1280/1024/768/480 captures under
 `artifacts/ui-reference-loop/2026-08-06/`; `pnpm ui:capture:private` covers
-nine private routes at those viewports. Production claim open.
+nine private routes; audit fails on runtime error, missing main, or overflow.
+Claim open.
 
 AppSea remains fixture-first with production-shaped PostgreSQL, Temporal,
 source-policy, private-workspace, report/plan, and maintenance boundaries. The

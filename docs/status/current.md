@@ -29,6 +29,11 @@
   risk-adjusted, ranking, and confidence fields survive durable analysis and
   private readback. GitHub CI runs it on every change. The intake row and seed
   are smoke-only and never market evidence.
+- Local UI proof: `pnpm ui:capture:private` now runs a scalar browser audit on
+  all nine authenticated routes at desktop 1280/1024/768 and responsive 480
+  widths. It fails on an explicit runtime-error page, missing title/`<main>`, or
+  horizontal overflow; the checked-in manifest records only those scalar
+  results and placeholder routes.
 - Release boundary: `pnpm verify:release` checks the provider-neutral Compose
   topology, non-root/read-only image defaults, secret-free production example,
   disabled identity/delivery defaults, and fail-closed production preflight;

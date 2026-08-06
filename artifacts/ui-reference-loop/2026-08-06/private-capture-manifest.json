@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-06T04:35:07.754Z",
+  "generatedAt": "2026-08-06T04:51:52.781Z",
   "baseUrl": "http://localhost:3000",
   "output": "C:\\Users\\klimp\\Documents\\Projects\\appsea\\artifacts\\ui-reference-loop\\2026-08-06",
   "captures": [
@@ -10,6 +10,14 @@
         "id": "desktop-1280",
         "width": 1280,
         "height": 900
+      },
+      "audit": {
+        "status": "ok",
+        "failures": [],
+        "hasRuntimeError": false,
+        "hasMain": true,
+        "innerWidth": 1280,
+        "scrollWidth": 1280
       }
     },
     {
@@ -19,6 +27,14 @@
         "id": "desktop-1024",
         "width": 1024,
         "height": 768
+      },
+      "audit": {
+        "status": "ok",
+        "failures": [],
+        "hasRuntimeError": false,
+        "hasMain": true,
+        "innerWidth": 1024,
+        "scrollWidth": 1024
       }
     },
     {
@@ -28,6 +44,14 @@
         "id": "desktop-768",
         "width": 768,
         "height": 900
+      },
+      "audit": {
+        "status": "ok",
+        "failures": [],
+        "hasRuntimeError": false,
+        "hasMain": true,
+        "innerWidth": 768,
+        "scrollWidth": 768
       }
     },
     {
@@ -37,6 +61,14 @@
         "id": "mobile-480",
         "width": 480,
         "height": 900
+      },
+      "audit": {
+        "status": "ok",
+        "failures": [],
+        "hasRuntimeError": false,
+        "hasMain": true,
+        "innerWidth": 480,
+        "scrollWidth": 480
       }
     },
     {
@@ -46,6 +78,14 @@
         "id": "desktop-1280",
         "width": 1280,
         "height": 900
+      },
+      "audit": {
+        "status": "ok",
+        "failures": [],
+        "hasRuntimeError": false,
+        "hasMain": true,
+        "innerWidth": 1280,
+        "scrollWidth": 1280
       }
     },
     {
@@ -55,6 +95,14 @@
         "id": "desktop-1024",
         "width": 1024,
         "height": 768
+      },
+      "audit": {
+        "status": "ok",
+        "failures": [],
+        "hasRuntimeError": false,
+        "hasMain": true,
+        "innerWidth": 1024,
+        "scrollWidth": 1024
       }
     },
     {
@@ -64,6 +112,14 @@
         "id": "desktop-768",
         "width": 768,
         "height": 900
+      },
+      "audit": {
+        "status": "ok",
+        "failures": [],
+        "hasRuntimeError": false,
+        "hasMain": true,
+        "innerWidth": 768,
+        "scrollWidth": 768
       }
     },
     {
@@ -73,6 +129,14 @@
         "id": "mobile-480",
         "width": 480,
         "height": 900
+      },
+      "audit": {
+        "status": "ok",
+        "failures": [],
+        "hasRuntimeError": false,
+        "hasMain": true,
+        "innerWidth": 480,
+        "scrollWidth": 480
       }
     },
     {
@@ -82,6 +146,14 @@
         "id": "desktop-1280",
         "width": 1280,
         "height": 900
+      },
+      "audit": {
+        "status": "ok",
+        "failures": [],
+        "hasRuntimeError": false,
+        "hasMain": true,
+        "innerWidth": 1280,
+        "scrollWidth": 1280
       }
     },
     {
@@ -91,6 +163,14 @@
         "id": "desktop-1024",
         "width": 1024,
         "height": 768
+      },
+      "audit": {
+        "status": "ok",
+        "failures": [],
+        "hasRuntimeError": false,
+        "hasMain": true,
+        "innerWidth": 1024,
+        "scrollWidth": 1024
       }
     },
     {
@@ -100,6 +180,14 @@
         "id": "desktop-768",
         "width": 768,
         "height": 900
+      },
+      "audit": {
+        "status": "ok",
+        "failures": [],
+        "hasRuntimeError": false,
+        "hasMain": true,
+        "innerWidth": 768,
+        "scrollWidth": 768
       }
     },
     {
@@ -109,6 +197,14 @@
         "id": "mobile-480",
         "width": 480,
         "height": 900
+      },
+      "audit": {
+        "status": "ok",
+        "failures": [],
+        "hasRuntimeError": false,
+        "hasMain": true,
+        "innerWidth": 480,
+        "scrollWidth": 480
       }
     },
     {
@@ -118,6 +214,14 @@
         "id": "desktop-1280",
         "width": 1280,
         "height": 900
+      },
+      "audit": {
+        "status": "ok",
+        "failures": [],
+        "hasRuntimeError": false,
+        "hasMain": true,
+        "innerWidth": 1280,
+        "scrollWidth": 1280
       }
     },
     {
@@ -127,6 +231,14 @@
         "id": "desktop-1024",
         "width": 1024,
         "height": 768
+      },
+      "audit": {
+        "status": "ok",
+        "failures": [],
+        "hasRuntimeError": false,
+        "hasMain": true,
+        "innerWidth": 1024,
+        "scrollWidth": 1024
       }
     },
     {
@@ -136,6 +248,14 @@
         "id": "desktop-768",
         "width": 768,
         "height": 900
+      },
+      "audit": {
+        "status": "ok",
+        "failures": [],
+        "hasRuntimeError": false,
+        "hasMain": true,
+        "innerWidth": 768,
+        "scrollWidth": 768
       }
     },
     {
@@ -145,6 +265,14 @@
         "id": "mobile-480",
         "width": 480,
         "height": 900
+      },
+      "audit": {
+        "status": "ok",
+        "failures": [],
+        "hasRuntimeError": false,
+        "hasMain": true,
+        "innerWidth": 480,
+        "scrollWidth": 480
       }
     },
     {
@@ -154,6 +282,14 @@
         "id": "desktop-1280",
         "width": 1280,
         "height": 900
+      },
+      "audit": {
+        "status": "ok",
+        "failures": [],
+        "hasRuntimeError": false,
+        "hasMain": true,
+        "innerWidth": 1280,
+        "scrollWidth": 1280
       }
     },
     {
@@ -163,6 +299,14 @@
         "id": "desktop-1024",
         "width": 1024,
         "height": 768
+      },
+      "audit": {
+        "status": "ok",
+        "failures": [],
+        "hasRuntimeError": false,
+        "hasMain": true,
+        "innerWidth": 1024,
+        "scrollWidth": 1024
       }
     },
     {
@@ -172,6 +316,14 @@
         "id": "desktop-768",
         "width": 768,
         "height": 900
+      },
+      "audit": {
+        "status": "ok",
+        "failures": [],
+        "hasRuntimeError": false,
+        "hasMain": true,
+        "innerWidth": 768,
+        "scrollWidth": 768
       }
     },
     {
@@ -181,6 +333,14 @@
         "id": "mobile-480",
         "width": 480,
         "height": 900
+      },
+      "audit": {
+        "status": "ok",
+        "failures": [],
+        "hasRuntimeError": false,
+        "hasMain": true,
+        "innerWidth": 480,
+        "scrollWidth": 480
       }
     },
     {
@@ -190,6 +350,14 @@
         "id": "desktop-1280",
         "width": 1280,
         "height": 900
+      },
+      "audit": {
+        "status": "ok",
+        "failures": [],
+        "hasRuntimeError": false,
+        "hasMain": true,
+        "innerWidth": 1280,
+        "scrollWidth": 1280
       }
     },
     {
@@ -199,6 +367,14 @@
         "id": "desktop-1024",
         "width": 1024,
         "height": 768
+      },
+      "audit": {
+        "status": "ok",
+        "failures": [],
+        "hasRuntimeError": false,
+        "hasMain": true,
+        "innerWidth": 1024,
+        "scrollWidth": 1024
       }
     },
     {
@@ -208,6 +384,14 @@
         "id": "desktop-768",
         "width": 768,
         "height": 900
+      },
+      "audit": {
+        "status": "ok",
+        "failures": [],
+        "hasRuntimeError": false,
+        "hasMain": true,
+        "innerWidth": 768,
+        "scrollWidth": 768
       }
     },
     {
@@ -217,6 +401,14 @@
         "id": "mobile-480",
         "width": 480,
         "height": 900
+      },
+      "audit": {
+        "status": "ok",
+        "failures": [],
+        "hasRuntimeError": false,
+        "hasMain": true,
+        "innerWidth": 480,
+        "scrollWidth": 480
       }
     },
     {
@@ -226,6 +418,14 @@
         "id": "desktop-1280",
         "width": 1280,
         "height": 900
+      },
+      "audit": {
+        "status": "ok",
+        "failures": [],
+        "hasRuntimeError": false,
+        "hasMain": true,
+        "innerWidth": 1280,
+        "scrollWidth": 1280
       }
     },
     {
@@ -235,6 +435,14 @@
         "id": "desktop-1024",
         "width": 1024,
         "height": 768
+      },
+      "audit": {
+        "status": "ok",
+        "failures": [],
+        "hasRuntimeError": false,
+        "hasMain": true,
+        "innerWidth": 1024,
+        "scrollWidth": 1024
       }
     },
     {
@@ -244,6 +452,14 @@
         "id": "desktop-768",
         "width": 768,
         "height": 900
+      },
+      "audit": {
+        "status": "ok",
+        "failures": [],
+        "hasRuntimeError": false,
+        "hasMain": true,
+        "innerWidth": 768,
+        "scrollWidth": 768
       }
     },
     {
@@ -253,6 +469,14 @@
         "id": "mobile-480",
         "width": 480,
         "height": 900
+      },
+      "audit": {
+        "status": "ok",
+        "failures": [],
+        "hasRuntimeError": false,
+        "hasMain": true,
+        "innerWidth": 480,
+        "scrollWidth": 480
       }
     },
     {
@@ -262,6 +486,14 @@
         "id": "desktop-1280",
         "width": 1280,
         "height": 900
+      },
+      "audit": {
+        "status": "ok",
+        "failures": [],
+        "hasRuntimeError": false,
+        "hasMain": true,
+        "innerWidth": 1280,
+        "scrollWidth": 1280
       }
     },
     {
@@ -271,6 +503,14 @@
         "id": "desktop-1024",
         "width": 1024,
         "height": 768
+      },
+      "audit": {
+        "status": "ok",
+        "failures": [],
+        "hasRuntimeError": false,
+        "hasMain": true,
+        "innerWidth": 1024,
+        "scrollWidth": 1024
       }
     },
     {
@@ -280,6 +520,14 @@
         "id": "desktop-768",
         "width": 768,
         "height": 900
+      },
+      "audit": {
+        "status": "ok",
+        "failures": [],
+        "hasRuntimeError": false,
+        "hasMain": true,
+        "innerWidth": 768,
+        "scrollWidth": 768
       }
     },
     {
@@ -289,6 +537,14 @@
         "id": "mobile-480",
         "width": 480,
         "height": 900
+      },
+      "audit": {
+        "status": "ok",
+        "failures": [],
+        "hasRuntimeError": false,
+        "hasMain": true,
+        "innerWidth": 480,
+        "scrollWidth": 480
       }
     },
     {
@@ -298,6 +554,14 @@
         "id": "desktop-1280",
         "width": 1280,
         "height": 900
+      },
+      "audit": {
+        "status": "ok",
+        "failures": [],
+        "hasRuntimeError": false,
+        "hasMain": true,
+        "innerWidth": 1280,
+        "scrollWidth": 1280
       }
     },
     {
@@ -307,6 +571,14 @@
         "id": "desktop-1024",
         "width": 1024,
         "height": 768
+      },
+      "audit": {
+        "status": "ok",
+        "failures": [],
+        "hasRuntimeError": false,
+        "hasMain": true,
+        "innerWidth": 1024,
+        "scrollWidth": 1024
       }
     },
     {
@@ -316,6 +588,14 @@
         "id": "desktop-768",
         "width": 768,
         "height": 900
+      },
+      "audit": {
+        "status": "ok",
+        "failures": [],
+        "hasRuntimeError": false,
+        "hasMain": true,
+        "innerWidth": 768,
+        "scrollWidth": 768
       }
     },
     {
@@ -325,6 +605,14 @@
         "id": "mobile-480",
         "width": 480,
         "height": 900
+      },
+      "audit": {
+        "status": "ok",
+        "failures": [],
+        "hasRuntimeError": false,
+        "hasMain": true,
+        "innerWidth": 480,
+        "scrollWidth": 480
       }
     }
   ],

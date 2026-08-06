@@ -39,6 +39,63 @@ export const privateCaptureRoutes = [
   { id: 'account-security', path: () => '/account/security' }
 ]
 
+const runtimeErrorPatterns = [
+  /Application error: a client-side exception has occurred/i,
+  /Unhandled Runtime Error/i,
+  /Internal Server Error/i
+]
+
+export function summarizeUiAudit({
+  title = '',
+  innerWidth = 0,
+  scrollWidth = 0,
+  hasMain = false,
+  hasRuntimeError = false
+} = {}) {
+  const failures = []
+  if (hasRuntimeError) failures.push('runtime-error')
+  if (!hasMain) failures.push('missing-main')
+  if (!title.trim()) failures.push('missing-title')
+  if (scrollWidth > innerWidth + 1) failures.push('horizontal-overflow')
+  return {
+    status: failures.length === 0 ? 'ok' : 'failed',
+    failures,
+    hasRuntimeError,
+    hasMain,
+    innerWidth,
+    scrollWidth
+  }
+}
+
+async function collectUiAudit(cdp) {
+  const evaluation = await cdp.command('Runtime.evaluate', {
+    expression: `(() => {
+      const bodyText = document.body?.innerText ?? '';
+      const hasRuntimeError = Boolean(
+        document.querySelector('[data-nextjs-dialog]') ||
+        ${runtimeErrorPatterns.map((pattern) => pattern.toString()).join('.test(bodyText) || ')}.test(bodyText)
+      );
+      return {
+        title: document.title ?? '',
+        innerWidth: window.innerWidth,
+        scrollWidth: Math.max(
+          document.documentElement?.scrollWidth ?? 0,
+          document.body?.scrollWidth ?? 0
+        ),
+        hasMain: Boolean(document.querySelector('main')),
+        hasRuntimeError
+      };
+    })()`,
+    returnByValue: true,
+    awaitPromise: false
+  })
+  const value = evaluation.result?.value
+  if (!value || typeof value !== 'object') {
+    throw new Error('local UI audit did not return a page summary')
+  }
+  return summarizeUiAudit(value)
+}
+
 function run(command, args, options = {}) {
   return new Promise((resolve, reject) => {
     const child = spawn(command, args, {
@@ -473,6 +530,7 @@ export async function captureAuthenticatedLocalUi({
     cdp = await startCdpPage(chrome, userDataDirectory)
     await cdp.command('Page.enable')
     await cdp.command('Network.enable')
+    await cdp.command('Runtime.enable')
     await cdp.command('Network.setCookie', {
       name: session.sessionCookie.name,
       value: session.sessionCookie.value,
@@ -496,6 +554,12 @@ export async function captureAuthenticatedLocalUi({
         })
         await load
         await new Promise((resolve) => setTimeout(resolve, 500))
+        const audit = await collectUiAudit(cdp)
+        if (audit.status !== 'ok') {
+          throw new Error(
+            `${route.id} at ${viewport.id} failed local UI audit: ${audit.failures.join(', ')}`
+          )
+        }
         const screenshot = await cdp.command('Page.captureScreenshot', {
           format: 'png',
           captureBeyondViewport: false
@@ -505,7 +569,8 @@ export async function captureAuthenticatedLocalUi({
         captures.push({
           filename,
           route: route.path('<workspaceId>'),
-          viewport
+          viewport,
+          audit
         })
       }
     }
