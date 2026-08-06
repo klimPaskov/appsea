@@ -8,6 +8,8 @@ package-level proofs now pass through migration `0118`. Public and private local
 captures pass against the disposable stack at `http://localhost:3000`; no user
 browser was inspected or debugged. Desktop captures retain the desktop layout;
 responsive captures are isolated to the 480-pixel viewport.
+The local private-stack smoke caught and fixed PostgreSQL `42803` source-coverage
+aggregation; grouping policy eligibility columns restores private readback.
 `/leaderboard` and `/` share sparse view;
 `pnpm ui:capture` audits public 1280/1024/768/480 captures under
 `artifacts/ui-reference-loop/2026-08-06/`; `pnpm ui:capture:private` covers

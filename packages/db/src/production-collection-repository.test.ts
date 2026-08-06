@@ -216,6 +216,28 @@ describe('production collection read model', () => {
     expect(readModel?.analysisHandoff).toBeNull()
   })
 
+  it('groups every policy field used by source coverage eligibility', async () => {
+    mocks.queryLog = []
+    mocks.handoffRows = []
+    const { PostgresProductionCollectionRepository } =
+      await import('./production-collection-repository')
+
+    await new PostgresProductionCollectionRepository({} as never).readForUser(
+      'user:one',
+      'workspace:one',
+      'run:production:one'
+    )
+
+    const sourceCoverageQuery = mocks.queryLog.find((query) =>
+      query.includes('FROM appsea.research_run_source_policies')
+    )
+    expect(sourceCoverageQuery).toContain('policy.source_id')
+    expect(sourceCoverageQuery).toContain('source.current_policy_version')
+    expect(sourceCoverageQuery).toContain('policy.policy_version')
+    expect(sourceCoverageQuery).toContain('policy.commercial_use')
+    expect(sourceCoverageQuery).toContain('policy.content_hash')
+  })
+
   it('locks and rechecks the source lease inside the persistence transaction', async () => {
     mocks.leaseAssertions = 0
     run.input_hash = contentHash(persistenceInput)

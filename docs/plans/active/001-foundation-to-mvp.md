@@ -871,6 +871,11 @@ legacy rows, and makes complete-role collectibility a shared runtime helper;
 `source:policy:status` operator command; `0118` closes direct activation, lease
 replay/assertion, stale reconciliation claims, and production-lineage paths on
 the same helper. Neither tranche activates a third-party source.
+Follow-up gap: existing active production outputs still retain their reviewed
+policy snapshot when a current policy later expires, is revoked, or loses
+collectibility; a scheduled impact/decay gate must visibly stale or block those
+outputs before ranking, readback, export, or reactivation, without mutating
+immutable lineage or auto-reactivating after reapproval.
 scheduled commands now share migration `0046`'s server-clock owner/token lease
 with renewal, stale takeover, migration `0052` transaction fencing for selected
 SQL mutations, and fixed lease-loss failures;

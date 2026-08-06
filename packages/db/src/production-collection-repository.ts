@@ -1553,11 +1553,13 @@ export class PostgresProductionCollectionRepository {
                ON source_item.workspace_id = run_item.workspace_id
               AND source_item.source_item_id = run_item.source_item_id
               AND source_item.deletion_state = 'active'
-            WHERE run_policy.workspace_id = $1 AND run_policy.run_id = $2
-            GROUP BY source.source_id, source.display_name, source.source_type,
-                     source.lifecycle_state, policy.policy_state, policy.display_mode,
-                     policy.coverage_notes, policy.reviewed_at, policy.expires_at
-            ORDER BY source.source_id`,
+             WHERE run_policy.workspace_id = $1 AND run_policy.run_id = $2
+             GROUP BY source.source_id, source.display_name, source.source_type,
+                      source.lifecycle_state, source.current_policy_version,
+                      policy.source_id, policy.policy_version, policy.policy_state, policy.commercial_use,
+                      policy.content_hash, policy.display_mode, policy.coverage_notes,
+                      policy.reviewed_at, policy.expires_at
+             ORDER BY source.source_id`,
       [workspaceId, runId]
     )
     const analysisHandoff = await client.query<AnalysisHandoffRow>(

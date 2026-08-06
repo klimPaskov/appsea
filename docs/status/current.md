@@ -27,8 +27,11 @@
   disclosure, visible public-market coverage gaps, and container cleanup; it
   now submits a reviewed balanced v1 score envelope and asserts raw,
   risk-adjusted, ranking, and confidence fields survive durable analysis and
-  private readback. GitHub CI runs it on every change. The intake row and seed
-  are smoke-only and never market evidence.
+  private readback. A PostgreSQL `42803` regression in the source-coverage
+  aggregate was caught by this smoke and fixed by grouping every policy
+  eligibility column; the corrected path now passes again. GitHub CI runs it on
+  every change. The intake row and seed are smoke-only and never market
+  evidence.
 - Local UI proof: `pnpm ui:capture:private` now runs a scalar browser audit on
   all nine authenticated routes at desktop 1280/1024/768 and responsive 480
   widths. It fails on an explicit runtime-error page, missing title/`<main>`, or
@@ -123,6 +126,7 @@
   bindings and seed-review checks for reviewed assumptions. See the
   [`research-quality-regression-gate-completion-report-2026-08-05.md`](research-quality-regression-gate-completion-report-2026-08-05.md).
 - PostgreSQL persistence: one hundred eighteen forward, checksummed migrations plus least-privilege repositories and the existing auth, RLS, provenance, workflow, source-policy, quota, retention, analysis, reporting, and maintenance boundaries. Migrations `0114` and `0115` reject undeclared or incomplete reviewer roles; `0116` rejects reviewer-identity reuse and centralizes the complete-review collectibility gate; `0117` adds an operator-only scalar approval-progress read; `0118` closes direct activation, lease replay/assertion, reconciliation-claim, and production-lineage gates on that invariant. These migrations neither activate a third-party source nor grant the worker skill access.
+- Policy-change impact remains an explicit next slice: a completed output is still bound to its reviewed policy snapshot, so a later current-policy expiry, revocation, or collectibility demotion needs a scheduled stale/block projection before ranking, readback, or export. Historical lineage must remain immutable, and reapproval must require an explicit reviewed analysis rather than auto-reactivation.
 - Production coding-package manifest: the shared contracts define the six
   deterministic package paths. New seed writes, user admission, worker handoff,
   and production artifacts reject missing, duplicate, or unsupported paths;
