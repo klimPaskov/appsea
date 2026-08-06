@@ -71,12 +71,10 @@ pre-provenance rows.
 `pnpm verify:release` checks Compose, hardened images, and fail-closed
 preflight; remote namespace/task-queue authorization remains external.
 
-The public leaderboard is regression-tested as sparse with fixture disclosure;
-private opportunity tabs, decision/cluster review, step-up, idempotency, and
-lineage checks remain server/database-owned. Fixtures and MCP stay read-only;
-auth JSON mutations cap streaming bodies at 32 KiB and return `413` before
-parsing oversized requests. Migrations `0105`/`0106` provide append-only
-decision and cluster review ledgers with stale/hash/redaction-safe gates.
+The sparse public leaderboard and private opportunity/review routes are
+regression-tested; fixtures and MCP stay read-only, while mutations and
+decision/cluster ledgers remain server/database-owned with stale/hash/redaction
+gates.
 
 Source-registry tranches add bounded health/freshness, quota headroom, and
 maintenance-only alert inspection; `pnpm worker:alerts:status` adds a separate
@@ -89,6 +87,9 @@ The 2026-08-06 policy handoff carries immutable reviewed JSON from
 The deterministic CFPB review manifest adds the policy hash, first-party
 evidence, bounded coverage/quota/deletion metadata, and independent-review
 fields without contacting CFPB, changing the registry, or activating it.
+The matching Stack Exchange review manifest adds first-party API/AUP/
+attribution/licensing evidence plus the required written-consent or
+commercial-exception reference, while remaining unregistered and disabled.
 Migration `0111` now carries a policy-declared permission requirement into a
 dedicated immutable review reference; the Stack Exchange approval CLI requires
 that reference and all collectibility reads fail closed without it. The source

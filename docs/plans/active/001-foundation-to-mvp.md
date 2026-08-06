@@ -599,6 +599,9 @@ Implemented:
   immutable engineering policy hash, first-party API/privacy references, and
   explicit independent-review checklist; this command never fetches or
   activates the source
+- deterministic `pnpm worker:source:policy:stackexchange:manifest` handoff
+  with first-party API, AUP, attribution, licensing, and written-permission
+  evidence; this command never registers or activates the connector
 
 Remaining: assign legal/privacy/security owners, confirm intended commercial use
 and retention/display terms, approve a policy version, then activate only through
@@ -637,7 +640,8 @@ authorize a production source activation. Stack Exchange remains unregistered
 and pending independent attribution, privacy, deletion, and commercial-use
 review plus the first-party AUP written-consent/exception gate; its connector
 is fixture-tested and registry-selected in the worker, but no source-policy row
-is registered or active in this repository.
+is registered or active in this repository. The deterministic review manifest
+is a handoff artifact only and does not change that state.
 
 ### 4. Workspaces and authentication
 

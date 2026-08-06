@@ -60,6 +60,7 @@
     "worker:source:policy:cfpb": "pnpm --filter @appsea/worker source:policy:cfpb",
     "worker:source:policy:cfpb:manifest": "pnpm --filter @appsea/worker source:policy:cfpb:manifest",
     "worker:source:policy:stackexchange": "pnpm --filter @appsea/worker source:policy:stackexchange",
+    "worker:source:policy:stackexchange:manifest": "pnpm --filter @appsea/worker source:policy:stackexchange:manifest",
     "worker:workflow:fixture": "pnpm --filter @appsea/worker workflow:fixture",
     "worker:workflow:analysis:history:check": "pnpm --filter @appsea/worker workflow:analysis:history:check",
     "plan:sample": "pnpm --filter @appsea/worker plan:sample",

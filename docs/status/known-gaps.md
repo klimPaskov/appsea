@@ -467,9 +467,12 @@ records zero source cost because the reviewed policy declares zero API cost;
 
 The deterministic `pnpm worker:source:policy:cfpb:manifest` handoff now
 packages the policy content hash and first-party API/privacy references without
-contacting CFPB or changing registry state. It improves review reproducibility
-but is not independent legal approval, commercial-use authorization, or public
-market coverage.
+contacting CFPB or changing registry state. The matching
+`pnpm worker:source:policy:stackexchange:manifest` packet records the API,
+AUP, attribution, licensing, and written-permission evidence for the disabled
+Stack Exchange candidate. Both improve review reproducibility but are not
+independent legal approval, commercial-use authorization, or public market
+coverage.
 
 non-zero billing adapters, provider pricing, and deployment threshold selection
 are not implemented. Migration `0065` adds repository-level cost-threshold
@@ -543,6 +546,9 @@ emits no deletion tombstones and cannot be used to infer absence.
 The draft now declares `permissionEvidenceRequired: true`; migration `0111`
 and the Stack Exchange review CLI require a durable
 `permission_evidence_reference` before any approval could activate it.
+The review manifest at
+`docs/status/stackexchange-source-policy-evidence-handoff-2026-08-06.md` is a
+secret-free handoff only and does not register or activate the source.
 Migration `0067_field_level_evidence_redaction.sql` now adds a separate,
 editor/owner-only field-redaction boundary. It records an immutable receipt,
 retains source identifiers, capture/policy metadata, and the original content

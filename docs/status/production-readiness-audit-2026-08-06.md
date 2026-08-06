@@ -1,7 +1,8 @@
 # Production-readiness audit — 2026-08-06
 
 Status: not production-ready. This audit supersedes the 2026-08-04 audit and
-records the source-policy handoff, deterministic CFPB review-manifest,
+records the source-policy handoffs, deterministic CFPB and Stack Exchange
+review manifests,
 quota-headroom, source-freshness, source-health alert, and
 operational-alert-status and source-policy permission-evidence tranches through
 migration `0111`.
@@ -38,7 +39,7 @@ and security-sensitive self-merges are prohibited.
 | ------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | PostgreSQL persistence and migrations       | One hundred eleven checksummed forward migrations, forced-RLS repositories, source/evidence/complaint/cluster/competitor/opportunity/score/report/plan/workflow lineage, auth/MFA/OIDC boundaries, audit history, purge intent, maintenance-only source-health projections, and the scalar operational-alert outbox status reader. Local fresh-install, populated-upgrade, role/RLS, and backup/restore proofs pass on 2026-08-06.                                                                                                                                                                                                                                                   | Provider role provisioning, encrypted backups, HA/PITR, restore/failover drills, production credentials, and approved key rotation remain deployment work.                                                                                                                                         |
 | Durable workflows and idempotent jobs       | Fixture, collection, analysis, campaign refresh, recomputation, maintenance, cancellation, leases, bounded retries, sanitized histories, graceful shutdown, and worker-replacement boundaries are implemented and covered by local/CI checks.                                                                                                                                                                                                                                                                                                                                                                                                                                        | Authenticated Temporal namespace/task-queue ACLs, deployed scheduler ownership, HA/restore drills, and legacy-history retention operation.                                                                                                                                                         |
-| Approved complaint sources                  | Tenant-private `manual-owner-import-v2` is the only active non-fixture path. CFPB and Stack Exchange have typed policy, quota, provenance, deletion, and fixture boundaries; immutable reviewed policy payloads now cross into connector construction, and the deterministic CFPB review manifest packages first-party evidence without activation. Both third-party sources remain disabled. Stack Exchange's draft records the current first-party AUP blocker, unknown commercial permission, and a policy-declared permission-evidence requirement enforced by migration `0111`.                                                                                                 | Independent legal/privacy/security/commercial-use/retention approval and activation evidence for public research, plus express written consent or a commercial exception for Stack Exchange's intended automated use recorded in the immutable approval row. No public market coverage is claimed. |
+| Approved complaint sources                  | Tenant-private `manual-owner-import-v2` is the only active non-fixture path. CFPB and Stack Exchange have typed policy, quota, provenance, deletion, and fixture boundaries; immutable reviewed policy payloads now cross into connector construction, and deterministic review manifests package first-party evidence without activation. Both third-party sources remain disabled. Stack Exchange's draft records the current first-party AUP blocker, unknown commercial permission, and a policy-declared permission-evidence requirement enforced by migration `0111`.                                                                                                          | Independent legal/privacy/security/commercial-use/retention approval and activation evidence for public research, plus express written consent or a commercial exception for Stack Exchange's intended automated use recorded in the immutable approval row. No public market coverage is claimed. |
 | Complaint analysis and scoring              | Deterministic normalization, deduplication, classification/entity snapshots, narrow clustering, cluster review, competitor/contrary fields, versioned v0.2/v1 scoring, correction invalidation, recomputation, factor provenance, and synthetic quality gates are tested.                                                                                                                                                                                                                                                                                                                                                                                                            | Semantic near-duplicate/entity/author handling, live calibration, broad permitted competitor/contrary research, and source-backed observations.                                                                                                                                                    |
 | Reports and coding-agent packages           | Provenance-aware reports, visible coverage gaps, approval/export governance, object references, six-file plan manifests, private reads, and idempotent identifier-only `report.exported`/`plan.exported` Activity receipts after successful hydration are implemented.                                                                                                                                                                                                                                                                                                                                                                                                               | Encrypted cloud object storage, lifecycle/versioning, export/workspace purge, backup deletion verification, and deployed controls.                                                                                                                                                                 |
 | Authentication and private workspaces       | Password sessions, membership/RLS, step-up, TOTP/recovery-code MFA, session/account controls, invitations/recovery kill switches, archival, scoped read-only MCP, governance approvals, and disabled-by-default OIDC are implemented.                                                                                                                                                                                                                                                                                                                                                                                                                                                | Provider identity/delivery/DPA/retention/revocation approval, DNS/egress enforcement, provider-backed step-up, live key rotation, and production identity operations.                                                                                                                              |
@@ -54,12 +55,12 @@ The current repository proof includes:
   typecheck, test, build, fixture/plan/analysis generation, research-quality,
   web smoke, release-static, and repository checks.
 - Affected contracts, database, and worker package tests passing after the
-  source-health, outbox-status, and CFPB policy-manifest tranches (112, 181,
-  and 137 worker
-  tests respectively; the focused contract and database suites also pass).
+  source-health, outbox-status, and source-policy-manifest tranches (112, 181,
+  and 141 worker tests respectively; the focused contract and database suites
+  also pass).
 - The worker suite now includes the alert-supervisor order, continue-after-failure,
-  bounded-backoff, shutdown, environment-bound, outbox-status, and CFPB
-  policy-manifest tests (137 tests passing),
+  bounded-backoff, shutdown, environment-bound, outbox-status, CFPB, and Stack
+  Exchange policy-manifest tests (141 tests passing),
   and `pnpm verify:release -- --static` passes with the required `alerts`
   Compose service.
 - `pnpm security:audit`, `pnpm memory:check`, `pnpm format:check`, and
@@ -109,10 +110,11 @@ container, or desktop execution evidence.
 ## Deliberate simplifications and blockers
 
 - No third-party source is activated. The CFPB and Stack Exchange policy
-  drafts remain pending independent review; the CFPB manifest is a review
-  handoff, not legal approval. Stack Exchange additionally requires a first-
-  party written-consent/commercial-exception record because of its current AUP;
-  owner import is tenant-private and cannot establish public market coverage.
+  drafts remain pending independent review; their manifests are review
+  handoffs, not legal approvals. Stack Exchange additionally requires a
+  first-party written-consent/commercial-exception record because of its
+  current AUP; owner import is tenant-private and cannot establish public
+  market coverage.
 - Complaint classification, entity resolution, deduplication, and ranking are
   deterministic reviewed code; no model gateway, semantic author estimation,
   or live calibration is claimed.
@@ -134,8 +136,8 @@ container, or desktop execution evidence.
   review, and platform installation validation remain open.
 
 This audit is completion evidence for the repository tranches through `0111`,
-including the operational-alert supervisor, status-inspection, CFPB
-policy-manifest handoff, local public and authenticated UI reference-loop
+including the operational-alert supervisor, status-inspection, CFPB and Stack
+Exchange policy-manifest handoffs, local public and authenticated UI reference-loop
 tranche, the repaired manual-import connector policy handoff, and fresh local
 persistence/stack proof.
 It is not a claim that AppSea is production-ready or that real market research
