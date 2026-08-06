@@ -886,13 +886,15 @@ Implemented:
   runtime boundary.
 - `infra/production/compose.yaml` gates web, worker, maintenance, and alerts on the
   one-shot production preflight, keeps migrations behind an explicit profile,
-  binds web to loopback by default, and drops capabilities on long-lived
-  services.
+  binds web to loopback by default, maps the bounded
+  `APPSEA_WORKER_DRAIN_TIMEOUT_SECONDS` setting to the worker stop grace
+  period, and drops capabilities on long-lived services.
 - GitHub CI validates the Compose model, builds both images, smoke-tests web
   liveness/health, and checks fail-closed worker preflight.
 - `pnpm verify:release` adds a provider-neutral release boundary check for
-  Compose topology, hardened image defaults, secret-free configuration, and
-  fail-closed empty-environment preflight; CI runs its dynamic mode.
+  Compose topology, hardened image defaults, secret-free configuration,
+  bounded drain-window wiring, and fail-closed empty-environment preflight;
+  CI runs its dynamic mode.
 
 Remaining: push signed images through an approved registry, provision the
 role-separated external services and secrets, run deployment/restore/crash

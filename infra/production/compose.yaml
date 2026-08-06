@@ -66,6 +66,7 @@ services:
     depends_on:
       preflight:
         condition: service_completed_successfully
+    stop_grace_period: '${APPSEA_WORKER_DRAIN_TIMEOUT_SECONDS:-120}s'
     init: true
     read_only: true
     tmpfs:

@@ -42,7 +42,8 @@ Copy `infra/production/production.env.example` to
 the three role-separated database URLs, authenticated Temporal endpoint,
 pinned CA/API key/namespace and the exact `appsea-research-v1` task queue,
 signed S3-compatible object store, public HTTPS origin, MFA key, scheduler
-identity, cost thresholds, and HTTPS alert endpoint.
+identity, bounded `APPSEA_WORKER_DRAIN_TIMEOUT_SECONDS` window (30–900
+seconds), cost thresholds, and HTTPS alert endpoint.
 Keep recovery and invitation delivery disabled until their provider and DPA
 review is complete. Never commit `production.env`.
 
@@ -51,7 +52,7 @@ review is complete. Never commit `production.env`.
 Run the one-shot preflight before any service can start:
 
 ```bash
-docker compose --file infra/production/compose.yaml run --rm preflight
+docker compose --env-file infra/production/production.env --file infra/production/compose.yaml run --rm preflight
 ```
 
 The Compose `preflight` dependency also gates `web`, `worker`, `maintenance`,
@@ -66,7 +67,7 @@ release; the repository preflight cannot prove a remote provider's ACL.
 Run the forward-only migration as a separately reviewed release step:
 
 ```bash
-docker compose --file infra/production/compose.yaml --profile migrate run --rm migrate
+docker compose --env-file infra/production/production.env --file infra/production/compose.yaml --profile migrate run --rm migrate
 ```
 
 Use the dedicated `appsea_migrator` URL. Do not run migrations from the web or
@@ -75,7 +76,7 @@ worker runtime role, and do not make a down migration part of rollback.
 ## Start and verify
 
 ```bash
-docker compose --file infra/production/compose.yaml up -d web worker maintenance alerts
+docker compose --env-file infra/production/production.env --file infra/production/compose.yaml up -d web worker maintenance alerts
 curl --fail https://<approved-origin>/api/health/live
 curl --fail https://<approved-origin>/api/health/ready
 ```
@@ -83,7 +84,9 @@ curl --fail https://<approved-origin>/api/health/ready
 Route load-balancer admission through `/api/health/ready`; use `/api/health/live`
 for process liveness. Confirm the worker heartbeat, maintenance metrics, and
 alerts-loop events through the deployment's approved log/metric sink. The
-`alerts` service runs six lease-owned alert/delivery/status commands
+`worker` service receives the configured Compose `stop_grace_period` from
+`APPSEA_WORKER_DRAIN_TIMEOUT_SECONDS`; do not send a forced kill before that
+window expires. The `alerts` service runs six lease-owned alert/delivery/status commands
 sequentially; each child retains its own PostgreSQL scheduler lease, while the
 loop only supervises ordering, bounded backoff, and shutdown. The readiness
 route does not run migrations, start workflows, or test object bodies.

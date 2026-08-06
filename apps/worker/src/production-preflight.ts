@@ -28,6 +28,11 @@ export interface ProductionPreflightReport {
   checks: readonly ProductionPreflightCheck[]
 }
 
+const productionWorkerDrainTimeoutLimits = {
+  minSeconds: 30,
+  maxSeconds: 900
+} as const
+
 export class ProductionPreflightConfigurationError extends Error {
   constructor() {
     super('Production deployment configuration is invalid')
@@ -304,6 +309,19 @@ function assertProductionMaintenance(environment: NodeJS.ProcessEnv): void {
   maintenanceSchedulerMetricsPurgeBatchSizeFromEnv(environment)
 }
 
+function assertProductionWorkerDrain(environment: NodeJS.ProcessEnv): void {
+  const raw = environment.APPSEA_WORKER_DRAIN_TIMEOUT_SECONDS?.trim()
+  if (!raw || !/^\d+$/.test(raw)) throw new ProductionPreflightConfigurationError()
+  const seconds = Number(raw)
+  if (
+    !Number.isSafeInteger(seconds) ||
+    seconds < productionWorkerDrainTimeoutLimits.minSeconds ||
+    seconds > productionWorkerDrainTimeoutLimits.maxSeconds
+  ) {
+    throw new ProductionPreflightConfigurationError()
+  }
+}
+
 function assertProductionTemporal(environment: NodeJS.ProcessEnv): void {
   const config = temporalClientConfigFromEnv(environment)
   if (config.localUnauthenticated || isLoopbackHost(new URL(`http://${config.address}`).hostname)) {
@@ -381,6 +399,9 @@ export function validateProductionEnvironment(
     ),
     check('maintenanceScheduler', 'APPSEA_PREFLIGHT_MAINTENANCE', () =>
       assertProductionMaintenance(environment)
+    ),
+    check('workerDrainWindow', 'APPSEA_PREFLIGHT_WORKER_DRAIN', () =>
+      assertProductionWorkerDrain(environment)
     ),
     check('temporal', 'APPSEA_PREFLIGHT_TEMPORAL', () => assertProductionTemporal(environment)),
     check('objectStore', 'APPSEA_PREFLIGHT_OBJECT_STORE', () =>

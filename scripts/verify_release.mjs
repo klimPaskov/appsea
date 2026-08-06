@@ -18,7 +18,10 @@ const requiredEnvironmentNames = [
   'APPSEA_ALERT_ROUTING_URL',
   'APPSEA_ALERT_ROUTING_SECRET'
 ]
-const requiredPlainEnvironmentNames = ['APPSEA_TEMPORAL_TASK_QUEUE']
+const requiredPlainEnvironmentNames = [
+  'APPSEA_TEMPORAL_TASK_QUEUE',
+  'APPSEA_WORKER_DRAIN_TIMEOUT_SECONDS'
+]
 const secretEnvironmentNames = [
   'APPSEA_TEMPORAL_API_KEY',
   'APPSEA_TEMPORAL_TLS_CA',
@@ -112,6 +115,14 @@ export function releaseBoundaryFindings({
     findings.push('web must default to a loopback bind address')
   }
 
+  const worker = section(compose, 'worker')
+  if (
+    worker &&
+    !/stop_grace_period:\s*['"]?\$\{APPSEA_WORKER_DRAIN_TIMEOUT_SECONDS:-120\}s['"]?/.test(worker)
+  ) {
+    findings.push('worker must use the configured bounded drain window as its stop grace period')
+  }
+
   if (!/^NODE_ENV=production$/m.test(envExample)) {
     findings.push('production environment example must set NODE_ENV=production')
   }
@@ -127,6 +138,11 @@ export function releaseBoundaryFindings({
     if (value === null) findings.push(`production environment example is missing ${name}`)
     else if (name === 'APPSEA_TEMPORAL_TASK_QUEUE' && value !== 'appsea-research-v1') {
       findings.push(`${name} must equal the reviewed appsea-research-v1 task queue`)
+    } else if (
+      name === 'APPSEA_WORKER_DRAIN_TIMEOUT_SECONDS' &&
+      !/^(?:3[0-9]|[4-9][0-9]|[1-8][0-9]{2}|900)$/.test(value)
+    ) {
+      findings.push(`${name} must be an integer between 30 and 900 seconds`)
     }
   }
   for (const name of secretEnvironmentNames) {

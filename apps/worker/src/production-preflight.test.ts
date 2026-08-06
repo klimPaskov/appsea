@@ -32,6 +32,7 @@ function baseEnvironment(): NodeJS.ProcessEnv {
     APPSEA_ALERT_ROUTING_URL: 'https://alerts.internal/appsea',
     APPSEA_ALERT_ROUTING_SECRET: Buffer.alloc(32, 9).toString('base64url'),
     APPSEA_SCHEDULER_OWNER_ID: 'scheduler:production:one',
+    APPSEA_WORKER_DRAIN_TIMEOUT_SECONDS: '120',
     APPSEA_COST_ALERT_CURRENCY: 'USD',
     APPSEA_COST_ALERT_ACTUAL_THRESHOLD_MICROS: '1000000',
     APPSEA_COST_ALERT_ESTIMATED_THRESHOLD_MICROS: '2000000'
@@ -206,6 +207,28 @@ describe('production deployment configuration preflight', () => {
 
     environment.APPSEA_TEMPORAL_TASK_QUEUE = 'appsea-research-v1'
     expect(check(validateProductionEnvironment(environment), 'temporal').status).toBe('ok')
+  })
+
+  it('requires a bounded worker drain window for graceful replacement', () => {
+    const environment = baseEnvironment()
+    delete environment.APPSEA_WORKER_DRAIN_TIMEOUT_SECONDS
+    expect(check(validateProductionEnvironment(environment), 'workerDrainWindow')).toMatchObject({
+      status: 'failed',
+      failureCode: 'APPSEA_PREFLIGHT_WORKER_DRAIN'
+    })
+
+    for (const value of ['29', '901', '1.5', 'forever']) {
+      environment.APPSEA_WORKER_DRAIN_TIMEOUT_SECONDS = value
+      expect(check(validateProductionEnvironment(environment), 'workerDrainWindow')).toMatchObject({
+        status: 'failed',
+        failureCode: 'APPSEA_PREFLIGHT_WORKER_DRAIN'
+      })
+    }
+
+    environment.APPSEA_WORKER_DRAIN_TIMEOUT_SECONDS = '30'
+    expect(check(validateProductionEnvironment(environment), 'workerDrainWindow').status).toBe('ok')
+    environment.APPSEA_WORKER_DRAIN_TIMEOUT_SECONDS = '900'
+    expect(check(validateProductionEnvironment(environment), 'workerDrainWindow').status).toBe('ok')
   })
 
   it('rejects role confusion, invalid flags, and malformed trusted proxy secrets', () => {

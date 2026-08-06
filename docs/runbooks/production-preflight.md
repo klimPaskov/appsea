@@ -37,6 +37,10 @@ shape passed; a non-zero exit means the deployment must not proceed.
 - `APPSEA_PUBLIC_ORIGIN` must be an HTTPS, non-loopback origin. The scheduler
   owner, maintenance database, lease bounds, and metrics bounds must be
   present and valid.
+- `APPSEA_WORKER_DRAIN_TIMEOUT_SECONDS` must be an explicit integer from 30 to
+  900 seconds. The production Compose worker uses this value as its
+  `stop_grace_period`, giving Temporal activities and dispatch scans a bounded
+  window to reach their safe point before a forced kill is permitted.
 - Cost inspection thresholds must be configured before scheduling
   `pnpm worker:workspace:cost:alert`: set `APPSEA_COST_ALERT_CURRENCY`,
   `APPSEA_COST_ALERT_ACTUAL_THRESHOLD_MICROS`, and
@@ -89,4 +93,6 @@ failure codes in the release evidence. A failed check is configuration work,
 not a reason to weaken a role, TLS, source-policy, retention, or kill-switch
 boundary. After configuration passes, use the migration runbook with the
 dedicated migrator connection, then verify `/api/health/ready` and the worker
-heartbeat before admitting private research jobs.
+heartbeat before admitting private research jobs. Invoke Compose with
+`--env-file infra/production/production.env` so interpolation uses the same
+drain value that the preflight container validates.

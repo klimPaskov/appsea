@@ -292,8 +292,10 @@ the singleton maintenance loop.
 
 `infra/production/compose.yaml` gates web, worker, and maintenance startup on
 the one-shot `pnpm production:preflight` service, keeps the migration service
-behind an explicit `migrate` profile, defaults web binding to loopback, and
-uses read-only filesystems, dropped capabilities, and `no-new-privileges`.
+behind an explicit `migrate` profile, defaults web binding to loopback, maps
+the bounded `APPSEA_WORKER_DRAIN_TIMEOUT_SECONDS` contract to the worker's
+`stop_grace_period`, and uses read-only filesystems, dropped capabilities, and
+`no-new-privileges`.
 The profile connects to externally operated PostgreSQL, Temporal, object
 storage, identity/delivery, and alert providers; it is a packaging and process
 topology contract, not provider provisioning or source activation proof.

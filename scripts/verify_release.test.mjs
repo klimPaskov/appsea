@@ -58,6 +58,35 @@ test('the release boundary requires the reviewed Temporal task queue', async () 
   )
 })
 
+test('the release boundary requires a bounded worker drain window and wiring', async () => {
+  const current = await inputs()
+  const invalidEnv = releaseBoundaryFindings({
+    ...current,
+    envExample: current.envExample.replace(
+      'APPSEA_WORKER_DRAIN_TIMEOUT_SECONDS=120',
+      'APPSEA_WORKER_DRAIN_TIMEOUT_SECONDS=901'
+    )
+  })
+  assert.ok(
+    invalidEnv.includes(
+      'APPSEA_WORKER_DRAIN_TIMEOUT_SECONDS must be an integer between 30 and 900 seconds'
+    )
+  )
+
+  const invalidCompose = releaseBoundaryFindings({
+    ...current,
+    compose: current.compose.replace(
+      "stop_grace_period: '${APPSEA_WORKER_DRAIN_TIMEOUT_SECONDS:-120}s'",
+      'stop_grace_period: 120s'
+    )
+  })
+  assert.ok(
+    invalidCompose.includes(
+      'worker must use the configured bounded drain window as its stop grace period'
+    )
+  )
+})
+
 test('the release boundary rejects a service that can bypass preflight', async () => {
   const current = await inputs()
   const weakened = current.compose.replace(

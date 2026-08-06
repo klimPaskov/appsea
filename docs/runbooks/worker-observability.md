@@ -63,9 +63,12 @@ stops new handoff/recomputation scans, shuts down the Temporal worker so active
 activities can reach their configured safe point, stops the heartbeat, waits
 for the scan loop to drain, emits the bounded `worker_stopped` event, and only
 then closes PostgreSQL and Temporal connections. A repeated signal does not
-run cleanup twice. Deployments should allow this drain window before sending a
-forced kill; a forced kill remains a crash-recovery event and must be followed
-by the normal workflow/checkpoint inspection.
+run cleanup twice. Production preflight requires
+`APPSEA_WORKER_DRAIN_TIMEOUT_SECONDS` between 30 and 900 seconds, and the
+production Compose worker maps that value to `stop_grace_period`. Deployments
+must allow this window before sending a forced kill; a forced kill remains a
+crash-recovery event and must be followed by the normal workflow/checkpoint
+inspection.
 
 The source and authentication maintenance commands parse bounded contracts
 before opening repository work. Their default job IDs use a UTC-minute bucket;

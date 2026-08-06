@@ -16,6 +16,9 @@ does not hold credentials, provider state, migrations, or source activation.
   deployment contract change.
 - Keep long-lived services non-root, read-only, capability-dropped, and
   loopback-bound by default unless a deployment review documents the change.
+- Keep `APPSEA_WORKER_DRAIN_TIMEOUT_SECONDS` explicit and bounded (30–900
+  seconds); invoke Compose with the production env file so the preflight value
+  and worker `stop_grace_period` cannot drift.
 - The `alerts` service is a supervisor only: it must invoke the existing
   lease-owned alert scans and delivery drain in a fixed bounded order and must
   not replace their PostgreSQL leases with an in-memory lock.

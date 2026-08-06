@@ -69,7 +69,10 @@ remain regression evidence only. Every v1 factor binds to retained evidence or
 the immutable seed-review prefix; strict new writes and analysis reject legacy
 pre-provenance rows.
 `pnpm verify:release` checks Compose, hardened images, and fail-closed
-preflight; remote namespace/task-queue authorization remains external.
+preflight; the production gate also requires a bounded
+`APPSEA_WORKER_DRAIN_TIMEOUT_SECONDS` (30–900 seconds) and Compose maps it to
+the worker stop-grace window. Remote namespace/task-queue authorization and
+hosted replacement/crash evidence remain external.
 
 The sparse public leaderboard and private opportunity/review routes are
 regression-tested; fixtures and MCP stay read-only, while mutations and
