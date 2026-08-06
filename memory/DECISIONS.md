@@ -32,11 +32,9 @@ and recomputation remain separate.
 
 ## 2026-07-24: Review before report export
 
-Keep report governance private: editors/owners review, owners approve or
-withdraw, and a database trigger repeats the role/order check with
-identifier-only receipts. Export only a schema-validated approved read model
-and manifest hash; fixture export is proven, non-fixture storage/retention is
-not.
+Keep report governance private: editors/owners review, owners approve/withdraw,
+and a database trigger repeats role/order checks. Export only a schema-validated
+approved read model and manifest hash; non-fixture storage/retention is open.
 
 ## 2026-07-24: Explicit session inventory and revocation
 
@@ -74,25 +72,20 @@ export, object-store, or backup deletion.
 
 ## 2026-07-25: Policy-gated production collection checkpoint
 
-Keep the complete fixture artifact contract unchanged while adding an additive
-collection contract. Migration `0027` stores immutable source-policy review
-evidence and keeps activation in the migration-operator boundary; runtime
-workers can only read an active approved snapshot. The first CFPB checkpoint
-persists policy-allowed non-synthetic items, redacted evidence, unreviewed
-complaints, tombstones, coverage gaps, and idempotent identifier-only receipts.
-It is not a full research run: clustering, competitors, scoring, reports, plans,
-Temporal orchestration, legal approval, and market completeness remain separate.
+Keep the fixture artifact contract unchanged while adding collection. Migration
+`0027` stores immutable source-policy review evidence; workers read only an
+active approved snapshot. The CFPB checkpoint persists allowed non-synthetic
+items, redacted evidence, complaints, tombstones, gaps, and identifier receipts;
+clustering, scoring, reports, plans, orchestration, and legal approval remain
+separate.
 
 ## 2026-07-25: Production collection workflow boundary
 
-Keep the production collection Temporal workflow additive to the fixture
-workflow. Migrations `0028`/`0029` store RLS job/checkpoint state,
-policy-derived retention, budgets, terminal guards, hashed idempotency, and
-immutable user/service attribution. PostgreSQL is the non-cancellable
-persistence authority; a settled quota without a result stops for operator
-reconciliation. This proves the contract locally without claiming production
-Temporal, live-source approval, purge, aggregate recomputation, or downstream
-analysis.
+Keep production collection Temporal additive to fixtures. Migrations
+`0028`/`0029` store RLS checkpoints, policy retention, budgets, terminal guards,
+hashed idempotency, and attribution. PostgreSQL is non-cancellable authority;
+settled quota without a result stops for reconciliation. This is local proof,
+not production Temporal/live-source/purge/downstream analysis.
 
 ## 2026-07-25: Policy-derived source retention
 
@@ -170,12 +163,10 @@ reviewed seed, and never accepts caller-supplied complaint payloads.
 ## 2026-07-26: Persist and approve opportunity seeds before analysis
 
 Opportunity product, competitor, contrary-signal, and score assumptions are
-workspace-owned input, not inferred evidence. Migration `0033` stores each
-validated seed as immutable content-hashed JSON. Editors may mark a record
-reviewed; only owners may approve or withdraw it. Both the private analysis
-start route and the production persistence repository require the approved
-stored seed identifier, version, and hash, so a retry or direct worker caller
-cannot substitute an unreviewed envelope.
+workspace-owned input, not inferred evidence. Migration `0033` stores immutable
+content-hashed seeds; editors review and owners approve/withdraw. Private start
+and persistence require the approved seed ID/version/hash, preventing retries
+or direct workers from substituting an unreviewed envelope.
 
 ## 2026-07-26: Queue optional post-collection analysis durably
 
@@ -390,3 +381,12 @@ or activate.
 `readCollectible` returns hash-verified policy JSON with the activation snapshot.
 Connectors compare immutable policy fields before requests and fail closed when
 the payload is absent; activation remains database-owned.
+
+## 2026-08-06: Audit approved report and plan exports in the same transaction
+
+Approved report and plan exports record one deterministic `report.exported` or
+`plan.exported` receipt per workspace/artifact version/actor after validated
+object hydration and redaction. The receipt reads the actor from the
+transaction-local authentication GUC and stores only the target identifier,
+manifest hash, and JSON representation. It is idempotent accountability, not
+provider-side retention, download revocation, or purge authority.

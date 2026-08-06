@@ -684,7 +684,7 @@ durable but require scheduled cleanup and distributed deployment validation.
 
 Status: private evidence inspection, source-policy coverage, complaint curation, immutable seed review/approval, reviewed analysis-start, deterministic report
 generation, stored report/plan reads, report approval governance, approved JSON
-export, a separate approved-source collection evidence view, durable production
+export with identifier-only audit receipts, a separate approved-source collection evidence view, durable production
 analysis/object references, active-output private reads, and a
 production-shaped report/package composition checkpoint, and a persisted
 versioned complaint classification/entity-resolution checkpoint and derived
@@ -703,7 +703,10 @@ transition guards remain authoritative.
 
 The private workspace Activity page now exposes the existing immutable audit
 projection through a bounded cursor view. It is read-only, scalar-only, and
-membership-authorized; it does not create an export or retention/purge path.
+membership-authorized. Successful approved report and plan JSON exports now
+append idempotent `report.exported`/`plan.exported` receipts after object
+hydration and redaction; the receipt contains only the target, manifest hash,
+and representation. It does not create an export-retention or purge path.
 
 The report contract keeps retained observations and their derived analysis,
 deterministic score inference,

@@ -12,15 +12,11 @@ PostgreSQL, Temporal, source-policy, private-workspace, report/plan, and
 maintenance boundaries. The public leaderboard is intentionally synthetic and
 sparse; no third-party public source is enabled. A reviewed internal
 `manual-owner-import-v2` policy now supports tenant-private owner-authorized
-CSV/JSON intake without claiming public market coverage; v1 is retained only
-for historical batches. Private competitor/contrary purposes can create
-evidence-linked observations that remain unreviewed until human review.
+CSV/JSON intake without claiming public market coverage; v1 remains historical.
 
-Migrations `0027`-`0109` cover policy, deletion/leases/admissions, campaign
-orchestration/cancellation, source reconciliation, analysis/report/plan
-governance, cost/alerts, object refs, workspace archival/purge intent,
-evidence redaction, agent tokens, and TOTP MFA. OIDC and read-only MCP remain
-provider/deployment-gated.
+Migrations `0027`-`0109` cover policy, deletion/leases, orchestration,
+analysis/report/plan governance, cost/alerts, object refs, archival/purge
+intent, redaction, agent tokens, and TOTP MFA. OIDC/MCP remain gated.
 
 Fixture is the persisted path. Production collection and
 analysis v2 are policy-gated/replay-safe; CFPB and Stack Exchange remain
@@ -35,6 +31,10 @@ synthetic. Gaps remain visible after pass. Competitors exposes checklist review:
 editors submit; owners promote/withdraw. API owns evidence/snapshot/membership/
 step-up; UI never activates sources.
 Report/plan approval is editor/owner-gated; readiness is server-owned.
+Approved report/plan JSON exports now append deterministic, identifier-only
+`report.exported`/`plan.exported` receipts after object hydration/redaction;
+private Activity exposes the scalar receipt. Provider retention, revocation, and
+purge remain external.
 
 `pnpm verify:worker:recovery` proves worker replacement with one-time effects
 and sanitized history; hosted restore/failover/topology remain open.
@@ -67,8 +67,6 @@ explanations. Synthetic quality benchmarks and the versioned regression gate
 remain regression evidence only. Every v1 factor binds to retained evidence or
 the immutable seed-review prefix; strict new writes and analysis reject legacy
 pre-provenance rows.
-Backup/restore targets through `0109`; Docker proof is blocked.
-
 `pnpm verify:release` checks Compose, hardened images, and fail-closed
 preflight; remote namespace/task-queue authorization remains external.
 
@@ -79,26 +77,20 @@ auth JSON mutations cap streaming bodies at 32 KiB and return `413` before
 parsing oversized requests. Migrations `0105`/`0106` provide append-only
 decision and cluster review ledgers with stale/hash/redaction-safe gates.
 
-Recent source-registry tranches add bounded connector health, optional reviewed
-freshness (scheduled/on-demand), migration `0107` authenticated shared
-current-minute quota headroom, and migrations `0108`/`0109` maintenance-only
-source-health alert inspection. All are private/read-only projections: raw failures, payloads,
-credentials, reviewer identities, reservation rows, scheduler/retry controls,
-activation, settlement, and public-coverage claims remain outside the boundary.
-Legacy owner-import freshness stays unknown until a new reviewed policy version.
+Source-registry tranches add bounded health/freshness, quota headroom, and
+maintenance-only alert inspection. They are private/read-only projections;
+payloads, credentials, reservations, activation, settlement, and public
+coverage remain outside the boundary. Owner-import freshness stays unknown.
 
-The 2026-08-06 policy handoff tranche carries the immutable
-reviewed JSON payload from `readCollectible` into CFPB, Stack Exchange, and
-owner-import constructors. Immutable purpose/quota/retention/deletion/display
-metadata before collection; production construction fails closed without that
-payload. Database-owned activation fields remain mutable.
+The 2026-08-06 policy handoff carries immutable reviewed JSON from
+`readCollectible` into source constructors; collection fails closed without it.
+Database-owned activation fields remain mutable.
 
 ## Validated commands
 
 Repository tests, type checks, builds, fixture/plan generation, and web smoke
-pass. Backup/restore is local-only and currently blocked before execution by
-the unavailable Docker Desktop engine; hosted provisioning, signing, updater,
-notarization, and deployment evidence remain open.
+pass. Docker backup/restore and hosted provisioning/deployment evidence remain
+open.
 
 ## Next production tranche
 

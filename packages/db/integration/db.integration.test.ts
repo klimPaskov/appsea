@@ -32,6 +32,7 @@ import {
   WorkspaceMembershipManagementError,
   WorkspacePurgeManifestPermissionError,
   WorkspaceReportNotApprovedError,
+  WorkspacePlanNotApprovedError,
   PostgresFixtureResearchRepository,
   PostgresAuthRepository,
   PostgresDeletionPropagationRepository,
@@ -3014,8 +3015,83 @@ describe.sequential('PostgreSQL fixture persistence lifecycle', () => {
     )
     expect(reportReceipts).toEqual([
       { action: 'report.approved', receipts: '1' },
+      { action: 'report.exported', receipts: '1' },
       { action: 'report.reviewed', receipts: '1' }
     ])
+    const reportExportReceipt = await withWorkspaceTransaction(
+      servicePool,
+      input.workspaceId,
+      async (client) => {
+        const result = await client.query<{
+          actor_type: string
+          actor_id: string
+          metadata: { manifestHash?: string; representation?: string }
+        }>(
+          `SELECT actor_type, actor_id, metadata
+             FROM appsea.audit_events
+            WHERE workspace_id = $1
+              AND action = 'report.exported'
+              AND target_id = $2`,
+          [input.workspaceId, reportId]
+        )
+        return result.rows[0]
+      },
+      { readOnly: true }
+    )
+    expect(reportExportReceipt).toEqual({
+      actor_type: 'user',
+      actor_id: reportReaderId,
+      metadata: { manifestHash: exported.manifestHash, representation: 'json' }
+    })
+    const planId = privateDetail?.plan?.id
+    if (!planId) throw new Error('Fixture plan was not persisted')
+    await expect(
+      authRepository.exportWorkspacePlan(reportReaderId, input.workspaceId, planId)
+    ).rejects.toBeInstanceOf(WorkspacePlanNotApprovedError)
+    const reviewedPlan = await authRepository.updateWorkspacePlanApproval(
+      reportReaderId,
+      input.workspaceId,
+      planId,
+      { action: 'reviewed' }
+    )
+    expect(reviewedPlan.approvalState).toBe('reviewed')
+    const approvedPlan = await authRepository.updateWorkspacePlanApproval(
+      reportReaderId,
+      input.workspaceId,
+      planId,
+      { action: 'approved' }
+    )
+    expect(approvedPlan.approvalState).toBe('approved')
+    const exportedPlan = await authRepository.exportWorkspacePlan(
+      reportReaderId,
+      input.workspaceId,
+      planId
+    )
+    const planExportReceipt = await withWorkspaceTransaction(
+      servicePool,
+      input.workspaceId,
+      async (client) => {
+        const result = await client.query<{
+          actor_type: string
+          actor_id: string
+          metadata: { manifestHash?: string; representation?: string }
+        }>(
+          `SELECT actor_type, actor_id, metadata
+             FROM appsea.audit_events
+            WHERE workspace_id = $1
+              AND action = 'plan.exported'
+              AND target_id = $2`,
+          [input.workspaceId, planId]
+        )
+        return result.rows[0]
+      },
+      { readOnly: true }
+    )
+    expect(planExportReceipt).toEqual({
+      actor_type: 'user',
+      actor_id: reportReaderId,
+      metadata: { manifestHash: exportedPlan.manifestHash, representation: 'json' }
+    })
     await withOwnerClient((client) =>
       client.query('DELETE FROM appsea.users WHERE user_id = $1', [reportReaderId])
     )

@@ -167,6 +167,50 @@ const mfaChallengeLifetimeMs = 10 * 60 * 1_000
 const mfaChallengeMaxAttempts = 5
 const mfaChallengeLockMs = 10 * 60 * 1_000
 
+function exportAuditEventId(input: {
+  workspaceId: string
+  artifactId: string
+  action: 'report.exported' | 'plan.exported'
+  manifestHash: string
+  actorId: string
+}): string {
+  // One receipt is retained per workspace/artifact version/actor. Replays of
+  // the same approved export therefore do not create duplicate audit rows.
+  return `audit:${contentHash(input).slice(0, 32)}`
+}
+
+async function recordWorkspaceExportAudit(
+  client: PoolClient,
+  input: {
+    workspaceId: string
+    artifactId: string
+    targetType: 'report' | 'plan_package'
+    action: 'report.exported' | 'plan.exported'
+    manifestHash: string
+    actorId: string
+  }
+): Promise<void> {
+  const auditEventId = exportAuditEventId(input)
+  // The actor is deliberately read from the transaction-local auth GUC. The
+  // caller-supplied id participates only in the deterministic idempotency key.
+  await client.query(
+    `INSERT INTO appsea.audit_events
+       (workspace_id, audit_event_id, actor_type, actor_id, action, target_type,
+        target_id, correlation_id, metadata, occurred_at)
+     VALUES ($1, $2, 'user', NULLIF(current_setting('appsea.auth_user_id', true), ''),
+             $3, $4, $5, $2, $6::jsonb, clock_timestamp())
+     ON CONFLICT DO NOTHING`,
+    [
+      input.workspaceId,
+      auditEventId,
+      input.action,
+      input.targetType,
+      input.artifactId,
+      JSON.stringify({ manifestHash: input.manifestHash, representation: 'json' })
+    ]
+  )
+}
+
 export class AuthenticationError extends Error {
   constructor() {
     super('Invalid email or password')
@@ -3772,12 +3816,22 @@ export class PostgresAuthRepository {
           row.analysis_run_id,
           row.collection_run_id
         )
-        return workspaceReportExportReadModelSchema.parse({
+        const exported = workspaceReportExportReadModelSchema.parse({
           report: await mapWorkspaceReport(row, parsedWorkspaceId, this.objectStore, masks),
           manifestHash: row.manifest_hash
         })
+
+        await recordWorkspaceExportAudit(client, {
+          workspaceId: parsedWorkspaceId,
+          artifactId: parsedReportId,
+          targetType: 'report',
+          action: 'report.exported',
+          manifestHash: exported.manifestHash,
+          actorId: parsedUserId
+        })
+        return exported
       },
-      { readOnly: true }
+      { isolationLevel: 'SERIALIZABLE' }
     )
   }
 
@@ -3918,12 +3972,22 @@ export class PostgresAuthRepository {
           row.analysis_run_id,
           row.collection_run_id
         )
-        return workspacePlanExportReadModelSchema.parse({
+        const exported = workspacePlanExportReadModelSchema.parse({
           plan: await mapWorkspacePlan(row, parsedWorkspaceId, this.objectStore, masks),
           manifestHash: row.manifest_hash
         })
+
+        await recordWorkspaceExportAudit(client, {
+          workspaceId: parsedWorkspaceId,
+          artifactId: parsedPlanPackageId,
+          targetType: 'plan_package',
+          action: 'plan.exported',
+          manifestHash: exported.manifestHash,
+          actorId: parsedUserId
+        })
+        return exported
       },
-      { readOnly: true }
+      { isolationLevel: 'SERIALIZABLE' }
     )
   }
 

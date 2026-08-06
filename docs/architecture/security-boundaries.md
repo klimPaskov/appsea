@@ -524,7 +524,13 @@ for that pre-context authorization lookup.
   owners/editors can review drafts, only owners can approve or withdraw, and
   migration `0022` repeats the transition check in PostgreSQL while recording
   identifier-only audit/outbox receipts. Export returns only an approved,
-  schema-validated report read model and never raw source payloads.
+  schema-validated report read model and never raw source payloads. After
+  successful object hydration and redaction, the authenticated export
+  transaction records an idempotent `report.exported` or `plan.exported` audit
+  row using the transaction-local user identity. The row contains only the
+  target identifier, manifest hash, and `json` representation; it excludes
+  report/plan content and object URIs. This is an accountability receipt, not a
+  provider-side retention or deletion mechanism.
 - Production role provisioning and migrations require reviewed infrastructure and explicit approval; the local bootstrap is not a deployment recipe.
 - The current local/CI web and research paths still use `appsea_service`, while
   scheduled maintenance lease calls use the separate, non-inheriting

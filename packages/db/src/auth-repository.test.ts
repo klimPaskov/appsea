@@ -270,9 +270,16 @@ function externalIdentityPool(
   return { pool: { connect: async () => client } as unknown as Pool, statements }
 }
 
-function objectBackedReportPool(reference: { uri: string; contentHash: string }): Pool {
+type RecordedStatement = { text: string; values: unknown[] }
+
+function objectBackedReportPool(reference: {
+  uri: string
+  contentHash: string
+}): Pool & { statements: RecordedStatement[] } {
+  const statements: RecordedStatement[] = []
   const client = {
-    query: async (text: string) => {
+    query: async (text: string, values: unknown[] = []) => {
+      statements.push({ text, values })
       if (text.startsWith('BEGIN') || text === 'COMMIT') return { rows: [], rowCount: 0 }
       if (text.includes('set_config')) return { rows: [], rowCount: 0 }
       if (text.includes('FROM appsea.workspace_memberships')) {
@@ -316,15 +323,17 @@ function objectBackedReportPool(reference: { uri: string; contentHash: string })
     },
     release: () => undefined
   } as unknown as PoolClient
-  return { connect: async () => client } as unknown as Pool
+  return Object.assign({ connect: async () => client } as unknown as Pool, { statements })
 }
 
 function objectBackedPlanPool(
   reference: { uri: string; contentHash: string },
   approvalState: 'unreviewed' | 'reviewed' | 'approved' = 'approved'
-): Pool {
+): Pool & { statements: RecordedStatement[] } {
+  const statements: RecordedStatement[] = []
   const client = {
-    query: async (text: string) => {
+    query: async (text: string, values: unknown[] = []) => {
+      statements.push({ text, values })
       if (text.startsWith('BEGIN') || text === 'COMMIT') return { rows: [], rowCount: 0 }
       if (text.includes('set_config')) return { rows: [], rowCount: 0 }
       if (text.includes('FROM appsea.workspace_memberships')) {
@@ -371,7 +380,7 @@ function objectBackedPlanPool(
     },
     release: () => undefined
   } as unknown as PoolClient
-  return { connect: async () => client } as unknown as Pool
+  return Object.assign({ connect: async () => client } as unknown as Pool, { statements })
 }
 
 function membershipAdminPool(
@@ -1749,12 +1758,25 @@ describe('PostgresAuthRepository', () => {
       createdAt: '2026-07-24T00:00:00.000Z',
       report
     })
-    const exported = await new PostgresAuthRepository(
-      objectBackedReportPool(stored),
-      objectStore
-    ).exportWorkspaceReport('user:one', 'workspace:one', 'report:production')
+    const pool = objectBackedReportPool(stored)
+    const exported = await new PostgresAuthRepository(pool, objectStore).exportWorkspaceReport(
+      'user:one',
+      'workspace:one',
+      'report:production'
+    )
     expect(exported.report.structuredReport).toEqual(report)
     expect(exported.report.approvalState).toBe('approved')
+    const audit = pool.statements.find((entry) =>
+      entry.text.includes('INSERT INTO appsea.audit_events')
+    )
+    expect(audit?.values).toEqual([
+      'workspace:one',
+      expect.stringMatching(/^audit:[a-f0-9]{32}$/),
+      'report.exported',
+      'report',
+      'report:production',
+      JSON.stringify({ manifestHash: stored.contentHash, representation: 'json' })
+    ])
   })
 
   it('hydrates object-backed production plans before approved export', async () => {
@@ -1768,12 +1790,25 @@ describe('PostgresAuthRepository', () => {
         files: [{ path: 'README.md', content: 'Reviewed plan' }]
       }
     })
-    const exported = await new PostgresAuthRepository(
-      objectBackedPlanPool(stored),
-      objectStore
-    ).exportWorkspacePlan('user:one', 'workspace:one', 'plan:production')
+    const pool = objectBackedPlanPool(stored)
+    const exported = await new PostgresAuthRepository(pool, objectStore).exportWorkspacePlan(
+      'user:one',
+      'workspace:one',
+      'plan:production'
+    )
     expect(exported.plan.files).toEqual([{ path: 'README.md', content: 'Reviewed plan' }])
     expect(exported.plan.approvalState).toBe('approved')
+    const audit = pool.statements.find((entry) =>
+      entry.text.includes('INSERT INTO appsea.audit_events')
+    )
+    expect(audit?.values).toEqual([
+      'workspace:one',
+      expect.stringMatching(/^audit:[a-f0-9]{32}$/),
+      'plan.exported',
+      'plan_package',
+      'plan:production',
+      JSON.stringify({ manifestHash: stored.contentHash, representation: 'json' })
+    ])
   })
 
   it('blocks plan export until owner approval', async () => {
@@ -1787,11 +1822,16 @@ describe('PostgresAuthRepository', () => {
         files: [{ path: 'README.md', content: 'Reviewed plan' }]
       }
     })
+    const pool = objectBackedPlanPool(stored, 'reviewed')
     await expect(
-      new PostgresAuthRepository(
-        objectBackedPlanPool(stored, 'reviewed'),
-        objectStore
-      ).exportWorkspacePlan('user:one', 'workspace:one', 'plan:production')
+      new PostgresAuthRepository(pool, objectStore).exportWorkspacePlan(
+        'user:one',
+        'workspace:one',
+        'plan:production'
+      )
     ).rejects.toBeInstanceOf(WorkspacePlanNotApprovedError)
+    expect(
+      pool.statements.some((entry) => entry.text.includes('INSERT INTO appsea.audit_events'))
+    ).toBe(false)
   })
 })

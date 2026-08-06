@@ -549,7 +549,11 @@ approval/export governance. The production contract carries policy-review hashes
 analysis-run identity, evidence/source-item mappings, and a reviewed seed
 envelope. Report approval transitions are role-checked in the private
 workspace API and database, and exports are authorized only for approved,
-validated report JSON. Migration `0033` adds a first-class workspace
+validated report JSON. Successful approved report and plan exports now also
+write idempotent, identifier-only `report.exported`/`plan.exported` audit
+receipts containing the manifest hash and representation, so the private
+Activity view can account for the export without exposing content. Migration
+`0033` adds a first-class workspace
 seed-review registry, private list/read/create/transition routes, and a seed
 review page; the analysis-start boundary now accepts only an approved
 `seedReviewId`. Production analysis persistence, opt-in post-collection
@@ -557,6 +561,8 @@ handoff orchestration, private active-output reads, and source-deletion
 invalidation are implemented, with editor/owner complaint review transitions
 on the private collection surface. Cloud object storage, external retention/
 backup propagation, destructive workspace closure, and export purge remain open.
+Export receipts do not implement provider-side retention, download revocation,
+or destructive export purge.
 Plan packages now have a separate owner/editor
 approval boundary and approved JSON export; both report and plan routes hydrate
 validated object-backed payloads before export. Source-item retention enqueue is
