@@ -76,12 +76,6 @@ regression-tested; fixtures and MCP stay read-only, while mutations and
 decision/cluster ledgers remain server/database-owned with stale/hash/redaction
 gates.
 
-Source-registry tranches add bounded health/freshness, quota headroom, and
-maintenance-only alert inspection; `pnpm worker:alerts:status` adds a separate
-bounded outbox status read. They are private/read-only projections;
-payloads, credentials, reservations, activation, settlement, and public
-coverage remain outside the boundary. Owner-import freshness stays unknown.
-
 The 2026-08-06 policy handoff carries immutable reviewed JSON from
 `readCollectible` into source constructors; collection fails closed without it.
 The deterministic CFPB review manifest adds the policy hash, first-party
@@ -95,11 +89,11 @@ dedicated immutable review reference; the Stack Exchange approval CLI requires
 that reference and all collectibility reads fail closed without it. The source
 remains disabled pending actual independent permission review.
 
-## Validated commands
-
-Repository tests, type checks, builds, fixture/plan generation, web smoke, and
-local persistence/recovery gates pass. Hosted provisioning/deployment evidence
-remains open.
+The owner-import web ingress now reserves the existing workspace-scoped,
+idempotent production workflow admission before persisting normalized batch
+rows. Rate/concurrency-rejected requests therefore do not leave staged payloads;
+the server-owned five-minute reservation TTL bounds failures between admission,
+staging, and Temporal startup. Route tests cover the fail-closed ordering.
 
 ## Next production tranche
 

@@ -195,6 +195,10 @@ market coverage, does not fetch imported URLs, and does not activate CFPB,
 Stack Exchange, or any other third-party source. See
 [`manual-import-source-policy.md`](../../product/manual-import-source-policy.md)
 and [`manual-import.md`](../../runbooks/manual-import.md).
+The authenticated import ingress now commits the existing workspace-scoped
+production workflow admission before persisting normalized rows, so rejected
+rate/concurrency attempts cannot accumulate staged payloads; the server-owned
+five-minute reservation TTL bounds failures before staging or Temporal startup.
 The private `/workspace/:workspaceId/imports` screen provides the owner upload,
 metadata-only batch history, collection follow-up, and deletion action while
 leaving the public leaderboard unchanged.

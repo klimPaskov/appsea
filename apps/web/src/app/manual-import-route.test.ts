@@ -247,4 +247,21 @@ describe('manual import route', () => {
     expect(mocks.createBatch).not.toHaveBeenCalled()
     expect(mocks.start).not.toHaveBeenCalled()
   })
+
+  it('does not persist a staged payload when workflow admission fails', async () => {
+    mocks.admit.mockRejectedValueOnce(
+      new (class extends Error {
+        override name = 'ProductionWorkflowRateLimitError'
+      })('admission unavailable')
+    )
+
+    const response = await POST(request(validBody()), {
+      params: Promise.resolve({ workspaceId: 'workspace:private' })
+    })
+
+    expect(response.status).toBe(503)
+    expect(mocks.admit).toHaveBeenCalled()
+    expect(mocks.createBatch).not.toHaveBeenCalled()
+    expect(mocks.start).not.toHaveBeenCalled()
+  })
 })

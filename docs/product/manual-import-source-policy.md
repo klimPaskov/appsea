@@ -11,6 +11,7 @@ This policy is not approval of CFPB, Stack Exchange, social media, review sites,
 - AppSea maps a fixed set of fields (`source_record_id`, locator, capture/published times, query, product, company, feature, category, text, and language). Unknown fields are ignored.
 - Text-like fields are whitespace-normalized and scrub common email, phone, payment-number, and secret/token patterns before persistence. Raw upload bytes are not retained.
 - HTTP(S) locators may be retained for attribution and inspection, but AppSea never fetches a URL from an import.
+- The route reserves the workspace-scoped production workflow admission before persisting normalized rows; rejected rate/concurrency attempts do not write staged payloads. A reservation that cannot reach staging or Temporal expires through the server-owned five-minute TTL.
 - Temporal receives only an identifier-only `manualImportBatchId`; complaint payloads remain in the private PostgreSQL staging boundary.
 - The private workspace screen at `/workspace/{workspaceId}/imports` exposes the same owner staging and deletion boundary without displaying raw staged rows; members can inspect batch metadata and follow completed collection runs.
 

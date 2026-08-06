@@ -268,28 +268,10 @@ export async function POST(
     attestedAt: requestedAt,
     createdAt: requestedAt
   })
-  let batch
-  try {
-    batch = await new PostgresManualImportRepository(pool).createForUser(
-      session.user.userId,
-      batchInput
-    )
-  } catch (error) {
-    if (error instanceof ManualImportPermissionError) return forbiddenResponse()
-    if (error instanceof ManualImportConflictError) {
-      return Response.json(
-        { error: 'Import idempotency or campaign configuration conflicts with an existing batch' },
-        { status: 409, headers: privateResponseHeaders }
-      )
-    }
-    console.error('AppSea manual import staging failed', {
-      name: error instanceof Error ? error.name : 'unknown'
-    })
-    return Response.json(
-      { error: 'Unable to stage the private import' },
-      { status: 503, headers: privateResponseHeaders }
-    )
-  }
+  // Reserve the durable start before persisting the normalized payload. This
+  // keeps rejected rate/concurrency attempts from filling the database with
+  // staged records. A reservation that cannot reach Temporal or staging
+  // expires through the server-owned five-minute admission TTL.
   try {
     await new PostgresProductionWorkflowAdmissionRepository(pool).admitForUser({
       workspaceId: parsedWorkspaceId.data,
@@ -325,6 +307,28 @@ export async function POST(
     })
     return Response.json(
       { error: 'Unable to admit import workflow' },
+      { status: 503, headers: privateResponseHeaders }
+    )
+  }
+  let batch
+  try {
+    batch = await new PostgresManualImportRepository(pool).createForUser(
+      session.user.userId,
+      batchInput
+    )
+  } catch (error) {
+    if (error instanceof ManualImportPermissionError) return forbiddenResponse()
+    if (error instanceof ManualImportConflictError) {
+      return Response.json(
+        { error: 'Import idempotency or campaign configuration conflicts with an existing batch' },
+        { status: 409, headers: privateResponseHeaders }
+      )
+    }
+    console.error('AppSea manual import staging failed after admission', {
+      name: error instanceof Error ? error.name : 'unknown'
+    })
+    return Response.json(
+      { error: 'Unable to stage the private import' },
       { status: 503, headers: privateResponseHeaders }
     )
   }
