@@ -56,6 +56,10 @@ export {
   type SourcePolicyRecord
 } from './source-policy-repository'
 export {
+  PostgresSourcePolicyImpactRepository,
+  type SourcePolicyImpactResult
+} from './source-policy-impact-repository'
+export {
   PostgresProductionCollectionRepository,
   ProductionCollectionLeaseAssertionError,
   ProductionCollectionAnalysisUnavailableError,

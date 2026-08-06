@@ -128,6 +128,9 @@ describe('maintenance runners', () => {
       productionWorkflowAdmissionsPurged: 0,
       productionAnalysisAdmissionsPurged: 0,
       sourceCollectionLeasesPurged: 0,
+      policyImpactRunsExpired: 0,
+      policyImpactOpportunitiesInvalidated: 0,
+      policyImpactOpportunitiesRepointed: 0,
       productionAnalysisObjectsPurged: 0,
       sourceSnapshotReconciliationsProcessed: 0,
       sourceSnapshotReconciliationsCompleted: 0,
@@ -260,6 +263,62 @@ describe('maintenance runners', () => {
     expect(result.campaignOrchestrationClaims).toBe(1)
     expect(result.campaignOrchestrationDispatched).toBe(1)
     expect(result.campaignOrchestrationReconciled).toBe(1)
+  })
+
+  it('runs policy-impact decay after deletion work with its own bounded budget', async () => {
+    const calls: string[] = []
+    const result = await runSourceMaintenance(
+      {
+        jobId: 'maintenance:source:policy-impact',
+        occurredAt,
+        quotaBatchSize: 1,
+        deletionBatchSize: 1,
+        retentionBatchSize: 1,
+        snapshotReconciliationBatchSize: 0,
+        policyImpactBatchSize: 2,
+        quotaRetentionDays: 7,
+        workspaceId: null
+      },
+      {
+        quota: {
+          async listActiveWorkspaceIds() {
+            return []
+          },
+          async expireStale() {
+            return 0
+          },
+          async purgeSettled() {
+            return 0
+          }
+        },
+        deletion: {
+          async listActiveWorkspaceIds() {
+            return ['workspace:b', 'workspace:a']
+          },
+          async enqueueExpired() {
+            return 0
+          },
+          async processNext() {
+            return null
+          }
+        },
+        policyImpact: {
+          async expireImpactedOutputs(workspaceId, batchSize) {
+            calls.push(`${workspaceId}:${batchSize}`)
+            return {
+              analysisRunsExpired: batchSize === 2 ? 1 : 1,
+              opportunitiesInvalidated: 1,
+              opportunitiesRepointed: 0
+            }
+          }
+        }
+      }
+    )
+
+    expect(calls).toEqual(['workspace:a:2', 'workspace:b:1'])
+    expect(result.policyImpactRunsExpired).toBe(2)
+    expect(result.policyImpactOpportunitiesInvalidated).toBe(2)
+    expect(result.policyImpactOpportunitiesRepointed).toBe(0)
   })
 
   it('resumes one due snapshot per sorted workspace within its independent budget', async () => {

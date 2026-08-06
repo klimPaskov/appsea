@@ -5639,6 +5639,8 @@ export const sourceMaintenanceInputSchema = z
     campaignOrchestrationBatchSize: z.number().int().min(0).max(100).default(0),
     /** Maximum number of one-source workflow cancellation intents to retry. */
     productionWorkflowCancellationBatchSize: z.number().int().min(0).max(100).default(1),
+    /** Maximum number of completed analyses to decay for current policy changes. */
+    policyImpactBatchSize: z.number().int().min(0).max(1_000).default(100),
     quotaRetentionDays: z.number().int().min(1).max(3_650),
     workspaceId: appseaIdentifierSchema.nullable()
   })
@@ -5655,6 +5657,9 @@ export const sourceMaintenanceResultSchema = z
     productionWorkflowAdmissionsPurged: z.number().int().nonnegative().max(10_000),
     productionAnalysisAdmissionsPurged: z.number().int().nonnegative().max(10_000),
     sourceCollectionLeasesPurged: z.number().int().nonnegative().max(10_000),
+    policyImpactRunsExpired: z.number().int().nonnegative().max(1_000).default(0),
+    policyImpactOpportunitiesInvalidated: z.number().int().nonnegative().max(1_000).default(0),
+    policyImpactOpportunitiesRepointed: z.number().int().nonnegative().max(1_000).default(0),
     productionAnalysisObjectsPurged: z.number().int().nonnegative().max(10_000),
     sourceSnapshotReconciliationsProcessed: z.number().int().nonnegative().max(100),
     sourceSnapshotReconciliationsCompleted: z.number().int().nonnegative().max(100),

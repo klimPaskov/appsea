@@ -114,6 +114,23 @@ export async function readPrivateProductionAnalysisStatus(input: {
           parsedWorkspaceId,
           parsedAnalysisRunId
         )
+        // Temporal can retain a completed/active projection after the
+        // database maintenance pass has decayed the output for a current
+        // source-policy change. The database availability state is the
+        // authoritative read/export gate, while Temporal remains authoritative
+        // for in-flight execution progress.
+        if (stored && stored.availabilityState !== 'active') {
+          return {
+            ...mapped,
+            availabilityState: stored.availabilityState,
+            opportunityId: stored.opportunityId,
+            opportunitySlug: stored.opportunitySlug,
+            failureCode: stored.failureCode,
+            failureSummary: stored.failureSummary,
+            completedAt: stored.completedAt,
+            activityAttemptHistory: stored.activityAttemptHistory
+          }
+        }
         if (stored && stored.activityAttemptHistory.length > 0) {
           return { ...mapped, activityAttemptHistory: stored.activityAttemptHistory }
         }

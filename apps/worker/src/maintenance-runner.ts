@@ -16,6 +16,7 @@ import type {
   PostgresDeletionPropagationRepository,
   PostgresProductionAnalysisAdmissionRepository,
   PostgresProductionAnalysisObjectPurgeRepository,
+  PostgresSourcePolicyImpactRepository,
   PostgresProductionWorkflowAdmissionRepository,
   PostgresSourceCollectionLeaseRepository,
   PostgresSourceQuotaRepository,
@@ -48,6 +49,8 @@ export interface SourceMaintenanceDependencies {
   manualImports?: Pick<PostgresManualImportRepository, 'purgeExpired'>
   /** Production entry points provide this; legacy fixture test doubles may omit it. */
   objectPurge?: Pick<PostgresProductionAnalysisObjectPurgeRepository, 'processNext'>
+  /** Decay completed outputs whose immutable source policy is no longer collectible. */
+  policyImpact?: Pick<PostgresSourcePolicyImpactRepository, 'expireImpactedOutputs'>
   /**
    * Resume one due identifier-only source snapshot for a workspace. The
    * callback owns policy, lease, quota, checkpoint, and retry semantics.
@@ -150,6 +153,9 @@ export async function runSourceMaintenance(
   let sourceCollectionLeasesPurged = 0
   let manualImportBatchesPurged = 0
   let productionAnalysisObjectsPurged = 0
+  let policyImpactRunsExpired = 0
+  let policyImpactOpportunitiesInvalidated = 0
+  let policyImpactOpportunitiesRepointed = 0
   let sourceSnapshotReconciliationsProcessed = 0
   let sourceSnapshotReconciliationsCompleted = 0
   let sourceSnapshotReconciliationsIncomplete = 0
@@ -315,6 +321,34 @@ export async function runSourceMaintenance(
     }
   }
 
+  if (dependencies.policyImpact && parsed.policyImpactBatchSize > 0) {
+    for (const workspaceId of deletionWorkspaceIds) {
+      if (policyImpactRunsExpired >= parsed.policyImpactBatchSize) break
+      const remaining = parsed.policyImpactBatchSize - policyImpactRunsExpired
+      await assertLease()
+      const impact = await dependencies.policyImpact.expireImpactedOutputs(
+        workspaceId,
+        remaining,
+        dependencies.fence
+      )
+      policyImpactRunsExpired += countWithin(
+        impact.analysisRunsExpired,
+        'policyImpactRunsExpired',
+        remaining
+      )
+      policyImpactOpportunitiesInvalidated += countWithin(
+        impact.opportunitiesInvalidated,
+        'policyImpactOpportunitiesInvalidated',
+        maximumAffectedObjects - policyImpactOpportunitiesInvalidated
+      )
+      policyImpactOpportunitiesRepointed += countWithin(
+        impact.opportunitiesRepointed,
+        'policyImpactOpportunitiesRepointed',
+        maximumAffectedObjects - policyImpactOpportunitiesRepointed
+      )
+    }
+  }
+
   if (dependencies.campaignRefresh && parsed.campaignRefreshBatchSize > 0) {
     await assertLease()
     const refresh = await dependencies.campaignRefresh()
@@ -395,6 +429,9 @@ export async function runSourceMaintenance(
     productionWorkflowAdmissionsPurged,
     productionAnalysisAdmissionsPurged,
     sourceCollectionLeasesPurged,
+    policyImpactRunsExpired,
+    policyImpactOpportunitiesInvalidated,
+    policyImpactOpportunitiesRepointed,
     productionAnalysisObjectsPurged,
     sourceSnapshotReconciliationsProcessed,
     sourceSnapshotReconciliationsCompleted,

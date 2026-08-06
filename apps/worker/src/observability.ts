@@ -63,6 +63,9 @@ export interface WorkerEvent {
   productionWorkflowAdmissionsPurged?: number
   productionAnalysisAdmissionsPurged?: number
   sourceCollectionLeasesPurged?: number
+  policyImpactRunsExpired?: number
+  policyImpactOpportunitiesInvalidated?: number
+  policyImpactOpportunitiesRepointed?: number
   productionAnalysisObjectsPurged?: number
   sourceSnapshotReconciliationsProcessed?: number
   sourceSnapshotReconciliationsCompleted?: number
@@ -372,6 +375,23 @@ export function workerEventPayload(event: WorkerEvent): WorkerEventPayload {
       : {}),
     ...(finiteInteger(event.sourceCollectionLeasesPurged) !== undefined
       ? { sourceCollectionLeasesPurged: finiteInteger(event.sourceCollectionLeasesPurged) }
+      : {}),
+    ...(finiteInteger(event.policyImpactRunsExpired) !== undefined
+      ? { policyImpactRunsExpired: finiteInteger(event.policyImpactRunsExpired) }
+      : {}),
+    ...(finiteInteger(event.policyImpactOpportunitiesInvalidated) !== undefined
+      ? {
+          policyImpactOpportunitiesInvalidated: finiteInteger(
+            event.policyImpactOpportunitiesInvalidated
+          )
+        }
+      : {}),
+    ...(finiteInteger(event.policyImpactOpportunitiesRepointed) !== undefined
+      ? {
+          policyImpactOpportunitiesRepointed: finiteInteger(
+            event.policyImpactOpportunitiesRepointed
+          )
+        }
       : {}),
     ...(finiteInteger(event.productionAnalysisObjectsPurged) !== undefined
       ? { productionAnalysisObjectsPurged: finiteInteger(event.productionAnalysisObjectsPurged) }

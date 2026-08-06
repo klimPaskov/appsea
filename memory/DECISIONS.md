@@ -308,20 +308,17 @@ remain blocked for operator inspection.
 
 ## 2026-08-02: Keep evidence redaction as a provenance-preserving projection
 
-Migration `0067` adds an editor/owner-only, run-bound field-redaction receipt.
-The database function retains source identifiers, capture/policy lineage,
-original content hashes, and immutable analysis snapshots while replacing only
-selected current display fields. Private collection, opportunity/leaderboard,
-analysis, report, coding-plan, and export mappers apply persisted masks; stored
-derived objects are not rewritten. Text masking is rejected while a raw source
-object reference exists. Receipt replay is idempotent and conflicts on reuse.
+Migration `0067` adds an editor/owner-only, run-bound redaction receipt. It
+retains source/policy lineage, hashes, and immutable analysis snapshots while
+masking selected current display fields across private reads/exports; derived
+objects are not rewritten. Text masking requires prior raw-object deletion;
+receipts replay idempotently and conflict on reuse.
 
 ## 2026-08-03: Persist purge intent without authorizing deletion
 
-Migration `0073` records an owner-confirmed database-ready snapshot as an
-`awaiting_external_controls` intent with identifier-only receipts; it never
-authorizes cloud/object/export/backup deletion, and replay/cancellation remain
-explicit.
+Migration `0073` records an owner-confirmed `awaiting_external_controls`
+snapshot with identifier-only receipts; it never authorizes cloud/object/
+export/backup deletion, and replay/cancellation remain explicit.
 
 ## 2026-08-04: Keep purge manifests metadata-only and provider-neutral
 
@@ -383,10 +380,17 @@ imported text cannot execute or write repository controls.
 
 ## 2026-08-06: Enforce complete policy-declared reviewer sets
 
-`0114` rejects undeclared roles; `0115` requires one approval per declared role
-for the same hash before activation. CFPB/Stack Exchange require
-legal/privacy/security; manual omission preserves independent_operator.
-`0116` rejects identity reuse and centralizes complete collectibility in
-`appsea.source_policy_has_complete_reviews`; `0117` adds scalar operator
-progress without identities or activation; `0118` closes direct activation,
-lease/reconciliation replay, and production-lineage paths on the same helper.
+`0114`/`0115` require one approval per role/hash;
+CFPB/Stack Exchange require legal/privacy/security while manual policies keep
+independent_operator. `0116` rejects identity reuse and centralizes
+`appsea.source_policy_has_complete_reviews`; `0117` adds scalar progress;
+`0118` closes direct activation, lease/reconciliation replay, and lineage paths.
+
+## 2026-08-06: Decay completed outputs when source policy loses collectibility
+
+`0119` adds fenced policy-impact expiry. Non-collectible
+completed analyses become non-destructive `expired`; active opportunity
+pointers are repaired or cleared; private reads/exports fail closed against
+policy. Lineage and objects remain for review; later source
+deletion uses destructive invalidation/purge, and reapproval never
+auto-reactivates an expired output.

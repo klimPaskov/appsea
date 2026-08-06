@@ -25,7 +25,7 @@ Status: production-shaped foundation implemented and validated locally; producti
 
 Implemented:
 
-- PostgreSQL 18 schema and one hundred eighteen forward, checksummed migrations
+- PostgreSQL 18 schema and one hundred nineteen forward, checksummed migrations
 - normalized source, evidence, complaint, cluster, competitor, opportunity, score, report, plan, audit, cost, deletion, outbox, and lineage tables
 - no-login owner, separate migrator, and least-privilege runtime role contract
 - forced workspace RLS and transaction-scoped workspace context
@@ -35,7 +35,7 @@ Implemented:
 - populated upgrade, fresh install, privilege, RLS, provenance, policy, cross-wire, and replay tests
 - local runbook and CI persistence gate
 - isolated local PostgreSQL backup/restore runbook and CI gate; the drill
-  restores a disposable dump through all one hundred eighteen migrations and verifies
+  restores a disposable dump through all one hundred nineteen migrations and verifies
   forced workspace RLS plus runtime/maintenance privileges without accepting a
   remote URL
 - one-command loopback private-workspace stack with migration, worker, and web
@@ -234,7 +234,7 @@ Migration `0096_opportunity_score_v1_envelope.sql` adds nullable, range-checked
 balanced v1 score fields, reviewed evidence/coverage/freshness references, and
 a private ranking index. Legacy score rows remain readable and keep `score` as
 their raw-score compatibility field. The 2026-08-06 local fresh migration and
-backup/restore drills pass through `0118`; provider backup, HA, retention, and
+backup/restore drills pass through `0119`; provider backup, HA, retention, and
 production restore remain deployment work.
 
 Migration `0097_mcp_agent_access_admission.sql` rechecks workspace membership
@@ -870,12 +870,16 @@ legacy rows, and makes complete-role collectibility a shared runtime helper;
 `0117` adds a migration/maintenance-only scalar approval-progress read and the
 `source:policy:status` operator command; `0118` closes direct activation, lease
 replay/assertion, stale reconciliation claims, and production-lineage paths on
-the same helper. Neither tranche activates a third-party source.
-Follow-up gap: existing active production outputs still retain their reviewed
-policy snapshot when a current policy later expires, is revoked, or loses
-collectibility; a scheduled impact/decay gate must visibly stale or block those
-outputs before ranking, readback, export, or reactivation, without mutating
-immutable lineage or auto-reactivating after reapproval.
+the same helper. `0119` adds the bounded, fenced policy-impact projection:
+completed production analyses whose current source policy is no longer
+collectible move to the non-destructive `expired` state, active opportunity
+pointers are repointed when a valid completed output remains, otherwise the
+opportunity is invalidated and its pointers cleared. Private report, plan,
+opportunity, export, and analysis reads also fail closed against a current
+policy mismatch before maintenance runs. Policy-only decay retains immutable
+objects and lineage; a later source deletion still uses the destructive
+invalidation/purge path. Reapproval never auto-reactivates an expired output.
+Neither tranche activates a third-party source.
 scheduled commands now share migration `0046`'s server-clock owner/token lease
 with renewal, stale takeover, migration `0052` transaction fencing for selected
 SQL mutations, and fixed lease-loss failures;

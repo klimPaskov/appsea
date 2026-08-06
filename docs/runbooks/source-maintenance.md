@@ -80,6 +80,18 @@ batches are not candidates, tombstones use the existing unique identity, and
 deletion propagation remains the single redaction path. The result exposes
 `manualImportBatchesPurged`; a missing fence is a hard failure rather than an
 unfenced cleanup.
+Migration `0119` adds the policy-impact pass. It rechecks completed production
+analysis lineage against the current source policy, marks non-collectible rows
+`expired`, and records identifier-only audit/outbox receipts. The pass repairs
+an active opportunity to the newest still-collectible output or invalidates it
+and clears its pointers when no replacement exists. This is deliberately
+non-destructive: retained analysis/report/plan objects are not purged by policy
+decay. Private reads apply the same current-policy gate while the pass is
+queued; a later source deletion still uses the existing `invalidated` object
+purge path. Reapproval never auto-reactivates an expired output. The result
+exposes `policyImpactRunsExpired`,
+`policyImpactOpportunitiesInvalidated`, and
+`policyImpactOpportunitiesRepointed`.
 Migrations `0037` and `0062` insert one durable recomputation job per
 invalidated opportunity/tombstone or complaint correction when prior analysis
 lineage provides a seed review. The durable worker claims due jobs with
@@ -245,6 +257,7 @@ Configuration is bounded by the command:
 - `APPSEA_CAMPAIGN_REFRESH_BATCH_SIZE` (0-100, default 1)
 - `APPSEA_CAMPAIGN_ORCHESTRATION_BATCH_SIZE` (0-100, default 1)
 - `APPSEA_PRODUCTION_WORKFLOW_CANCELLATION_BATCH_SIZE` (0-100, default 1)
+- `APPSEA_POLICY_IMPACT_BATCH_SIZE` (0-1,000, default 100)
 - `APPSEA_SOURCE_QUOTA_RETENTION_DAYS` (1-3,650, default 30)
 - `APPSEA_DELETION_WORKSPACE_ID` (optional persistence-safe workspace ID)
 - `APPSEA_OBJECT_STORE_ROOT` (required absolute object-store adapter root)

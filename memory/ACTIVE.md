@@ -3,18 +3,17 @@
 ## State
 
 Audit: `docs/status/production-readiness-audit-2026-08-06.md`.
-`pnpm verify` passes at the last clean checkpoint; fresh PostgreSQL and
-package-level proofs now pass through migration `0118`. Public and private local
+`pnpm verify` passes at the last clean checkpoint; PostgreSQL and
+package-level proofs now pass through migration `0119`. Public and private local
 captures pass against the disposable stack at `http://localhost:3000`; no user
 browser was inspected or debugged. Desktop captures retain the desktop layout;
 responsive captures are isolated to the 480-pixel viewport.
 The local private-stack smoke caught and fixed PostgreSQL `42803` source-coverage
 aggregation; grouping policy eligibility columns restores private readback.
-`/leaderboard` and `/` share sparse view;
-`pnpm ui:capture` audits public 1280/1024/768/480 captures under
+`/leaderboard` and `/` share sparse view; `pnpm ui:capture` audits public
+1280/1024/768/480 captures under
 `artifacts/ui-reference-loop/2026-08-06/`; `pnpm ui:capture:private` covers
 nine private routes; audit fails on runtime error, missing main, or overflow.
-Claim open.
 
 AppSea remains fixture-first with production-shaped PostgreSQL, Temporal,
 source-policy, private-workspace, report/plan, and maintenance boundaries. The
@@ -23,7 +22,7 @@ enabled. Reviewed `manual-owner-import-v2` supports tenant-private
 owner-authorized CSV/JSON without claiming public market coverage; v1 is
 historical.
 
-Migrations `0027`-`0118` cover policy, deletion/leases, orchestration,
+Migrations `0027`-`0119` cover policy, deletion/leases, orchestration,
 analysis/report/plan governance, cost/alerts, object refs, archival/purge
 intent, redaction, agent tokens, TOTP MFA, complete reviewer-role approval,
 reviewer-identity independence, shared collectibility, and operator-only
@@ -67,12 +66,10 @@ preflight; the production gate also requires a bounded
 the worker stop-grace window. Remote namespace/task-queue authorization and
 hosted replacement/crash evidence remain external.
 
-The owner-import web ingress now reserves the existing workspace-scoped,
-idempotent production workflow admission before persisting normalized batch
-rows. Rate/concurrency-rejected requests therefore do not leave staged payloads;
-fresh reservations are released when staging fails, while the server-owned
-five-minute reservation TTL bounds failures before Temporal startup. Route and
-repository tests cover the fail-closed ordering.
+Owner-import ingress reserves the workspace-scoped production admission before
+persisting rows; rejected requests leave no staged payloads, and a server-owned
+five-minute TTL bounds uncertain Temporal starts. Route/repository tests cover
+the fail-closed ordering.
 
 Migration `0113` closes the owner-import staging-retention gap through a
 fenced, policy-snapshot-driven purge with audit and exact source-item
@@ -81,9 +78,11 @@ CFPB/Stack legal/privacy/security set while preserving manual
 independent_operator compatibility. `0116` rejects reviewer-identity reuse and
 applies the complete-review helper across runtime gates; `0117` adds an
 operator-only scalar approval-progress CLI; `0118` closes direct activation,
-lease/reconciliation replay, and production lineage gates. Fresh integration
-proof passes through `0118`; provider scheduler ownership and external
-retention/deletion operations remain release gates.
+lease/reconciliation replay, and production lineage gates; `0119` adds bounded
+policy-impact expiry, pointer repair, durable receipts, and current-policy
+private read/export gates. Fresh integration proof passes through `0119`; policy
+decay retains objects until a later source deletion, and provider scheduler
+ownership plus external retention/deletion operations remain release gates.
 
 The campaign `dateRange` contract is enforced across web admission, refresh,
 Temporal input, worker reconstruction, snapshots, and source-appropriate

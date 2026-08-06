@@ -7,6 +7,7 @@ import {
   PostgresDeletionPropagationRepository,
   PostgresProductionAnalysisAdmissionRepository,
   PostgresProductionAnalysisObjectPurgeRepository,
+  PostgresSourcePolicyImpactRepository,
   PostgresProductionCollectionWorkflowRepository,
   PostgresProductionWorkflowAdmissionRepository,
   PostgresResearchCampaignRepository,
@@ -57,6 +58,7 @@ const campaignOrchestrationBatchSize = Number(
 const productionWorkflowCancellationBatchSize = Number(
   process.env.APPSEA_PRODUCTION_WORKFLOW_CANCELLATION_BATCH_SIZE ?? '1'
 )
+const policyImpactBatchSize = Number(process.env.APPSEA_POLICY_IMPACT_BATCH_SIZE ?? '100')
 const quotaRetentionDays = Number(process.env.APPSEA_SOURCE_QUOTA_RETENTION_DAYS ?? '30')
 const input = {
   jobId:
@@ -70,6 +72,7 @@ const input = {
   campaignRefreshBatchSize,
   campaignOrchestrationBatchSize,
   productionWorkflowCancellationBatchSize,
+  policyImpactBatchSize,
   quotaRetentionDays,
   workspaceId: process.env.APPSEA_DELETION_WORKSPACE_ID ?? null
 }
@@ -108,6 +111,9 @@ try {
           productionWorkflowAdmissionsPurged: result.productionWorkflowAdmissionsPurged,
           productionAnalysisAdmissionsPurged: result.productionAnalysisAdmissionsPurged,
           sourceCollectionLeasesPurged: result.sourceCollectionLeasesPurged,
+          policyImpactRunsExpired: result.policyImpactRunsExpired,
+          policyImpactOpportunitiesInvalidated: result.policyImpactOpportunitiesInvalidated,
+          policyImpactOpportunitiesRepointed: result.policyImpactOpportunitiesRepointed,
           productionAnalysisObjectsPurged: result.productionAnalysisObjectsPurged,
           sourceSnapshotReconciliationsProcessed: result.sourceSnapshotReconciliationsProcessed,
           sourceSnapshotReconciliationsCompleted: result.sourceSnapshotReconciliationsCompleted,
@@ -153,6 +159,7 @@ try {
         pool,
         objectStore
       )
+      const policyImpactRepository = new PostgresSourcePolicyImpactRepository(pool)
       const leaseRepository = new PostgresSourceCollectionLeaseRepository(pool)
       const snapshotDependencies = defaultSourceSnapshotReconciliationDependencies(pool)
       await assertLease()
@@ -164,6 +171,7 @@ try {
         leases: leaseRepository,
         manualImports: manualImportRepository,
         objectPurge: objectPurgeRepository,
+        policyImpact: policyImpactRepository,
         fence,
         snapshotReconciliation: async (workspaceId) => {
           await assertLease()
@@ -283,6 +291,9 @@ try {
       productionWorkflowAdmissionsPurged: result.productionWorkflowAdmissionsPurged,
       productionAnalysisAdmissionsPurged: result.productionAnalysisAdmissionsPurged,
       sourceCollectionLeasesPurged: result.sourceCollectionLeasesPurged,
+      policyImpactRunsExpired: result.policyImpactRunsExpired,
+      policyImpactOpportunitiesInvalidated: result.policyImpactOpportunitiesInvalidated,
+      policyImpactOpportunitiesRepointed: result.policyImpactOpportunitiesRepointed,
       campaignRefreshClaims: result.campaignRefreshClaims,
       campaignRefreshDispatched: result.campaignRefreshDispatched,
       campaignRefreshFailed: result.campaignRefreshFailed,
@@ -365,6 +376,16 @@ try {
         productionAnalysisObjectsPurged: result.productionAnalysisObjectsPurged
       })
     }
+    if (result.policyImpactRunsExpired > 0) {
+      emitWorkerEvent({
+        event: 'source_policy_output_decay_finished',
+        taskQueue,
+        jobId: result.jobId,
+        policyImpactRunsExpired: result.policyImpactRunsExpired,
+        policyImpactOpportunitiesInvalidated: result.policyImpactOpportunitiesInvalidated,
+        policyImpactOpportunitiesRepointed: result.policyImpactOpportunitiesRepointed
+      })
+    }
     if (result.deletionTombstonesProcessed > 0) {
       emitWorkerEvent({
         event: 'deletion_propagation_batch_finished',
@@ -387,6 +408,9 @@ try {
       productionWorkflowAdmissionsPurged: result.productionWorkflowAdmissionsPurged,
       productionAnalysisAdmissionsPurged: result.productionAnalysisAdmissionsPurged,
       sourceCollectionLeasesPurged: result.sourceCollectionLeasesPurged,
+      policyImpactRunsExpired: result.policyImpactRunsExpired,
+      policyImpactOpportunitiesInvalidated: result.policyImpactOpportunitiesInvalidated,
+      policyImpactOpportunitiesRepointed: result.policyImpactOpportunitiesRepointed,
       productionAnalysisObjectsPurged: result.productionAnalysisObjectsPurged,
       sourceSnapshotReconciliationsProcessed: result.sourceSnapshotReconciliationsProcessed,
       sourceSnapshotReconciliationsCompleted: result.sourceSnapshotReconciliationsCompleted,

@@ -131,7 +131,8 @@ describe('database foundation', () => {
       '0115',
       '0116',
       '0117',
-      '0118'
+      '0118',
+      '0119'
     ])
     expect(migrations[0]?.checksum).toMatch(/^[a-f0-9]{64}$/)
     expect(migrations[0]?.sql).toContain('CREATE TABLE appsea.evidence_records')
@@ -394,6 +395,15 @@ describe('database foundation', () => {
     expect(sourceCollectibilityGuardsMigration?.sql).toContain(
       'complete_analysis_competitor_lineage_guard'
     )
+    const sourcePolicyImpactMigration = migrations.find((migration) => migration.version === '0119')
+    expect(sourcePolicyImpactMigration?.sql).toContain(
+      'CREATE OR REPLACE FUNCTION appsea.production_analysis_policies_collectible'
+    )
+    expect(sourcePolicyImpactMigration?.sql).toContain(
+      'CREATE OR REPLACE FUNCTION appsea.expire_source_policy_impacted_outputs'
+    )
+    expect(sourcePolicyImpactMigration?.sql).toContain("availability_state = 'expired'")
+    expect(sourcePolicyImpactMigration?.sql).toContain('never purges objects')
     const productionAdmissionReleaseMigration = migrations.find(
       (migration) => migration.version === '0112'
     )

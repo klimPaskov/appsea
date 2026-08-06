@@ -14,10 +14,10 @@ AppSea is an opportunity intelligence system for software products. It turns per
 - A future Tauri shell will reuse the website contract.
 - `packages/db` owns PostgreSQL 18 migrations, transaction-scoped workspace RLS, and persistence repositories.
 - Local and CI PostgreSQL use a no-login owner, separate migrator, and non-owner runtime role. Production provisioning remains external and unimplemented.
-- `scripts/run_db_backup_restore.mjs` provides a local 118-migration dump/restore drill with forced RLS and least-privilege checks; it is not provider HA or production restore evidence.
+- `scripts/run_db_backup_restore.mjs` provides a local 119-migration dump/restore drill with forced RLS and least-privilege checks; it is not provider HA or production restore evidence.
 - `packages/workflows` owns Temporal/client hashing; `apps/worker` owns
   activities/startup; `packages/db` owns RLS persistence. Local proof passes
-  through `0118`; workflow security, HA, object-store purge, and deployment
+  through `0119`; workflow security, HA, object-store purge, and deployment
   remain external.
 - Campaign cancellation is a durable control boundary: migrations `0070`/`0071` store owner/editor intent before Temporal for multi-source and one-source runs; the worker retries external cancellation, while each workflow owns safe reconciliation.
 - Private campaign history uses strict bounded cursor pages ordered by request timestamp plus stable identifier; only the validated boundary crosses private APIs. The public leaderboard is unaffected.
@@ -55,7 +55,8 @@ AppSea is an opportunity intelligence system for software products. It turns per
   capability and capped coverage remains incomplete. Migrations `0116` and
   `0117` add shared complete-review collectibility and an operator-only scalar
   approval-progress read; `0118` closes direct activation, lease/reconciliation
-  replay, and production-lineage gates.
+  replay, and production-lineage gates; `0119` adds policy-impact expiry and
+  current-policy private read/export gates.
 - The source-policy repository returns the hash-verified immutable policy JSON
   alongside the effective activation snapshot. Production connector
   constructors compare immutable purpose/quota/retention/deletion/display

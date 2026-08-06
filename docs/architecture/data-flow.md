@@ -161,6 +161,16 @@ before either status source is queried.
     source-backed competitive coverage and the current owner-reviewed gate is
     passed; coverage gaps remain visible after promotion and the public
     leaderboard remains fixture-only.
+25. Source-policy maintenance rechecks each completed production analysis
+    against its immutable policy lineage and the current source/policy review.
+    A non-collectible output is marked `expired` in a bounded, fenced pass,
+    without purging its retained objects or rewriting lineage. The pass repairs
+    active opportunity pointers to the newest still-collectible output, or
+    invalidates the opportunity when none remains, and records identifier-only
+    audit/outbox receipts. Private analysis, opportunity, report, plan, and
+    export reads apply the same current-policy gate before maintenance catches
+    up. Later source deletion remains the separate destructive path that moves
+    retained expired outputs to `invalidated` and enqueues object purge.
 
 Every workspace table uses forced row-level security. Authentication must authorize a workspace before application code sets the transaction-local workspace context. Source policy state remains global and cannot be changed directly by the runtime role.
 

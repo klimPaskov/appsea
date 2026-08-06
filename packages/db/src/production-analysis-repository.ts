@@ -83,6 +83,7 @@ interface AnalysisRunRow extends QueryResultRow {
   completed_at: Date | string | null
   invalidated_at: Date | string | null
   invalidation_reason: string | null
+  policy_collectible?: boolean
 }
 
 interface AnalysisStatusRow extends QueryResultRow {
@@ -498,7 +499,10 @@ async function readRun(
               WHERE plan.workspace_id = analysis.workspace_id
                 AND plan.plan_package_id = analysis.plan_package_id) AS plan_approval_state,
             requested_by_actor_type, requested_by_actor_id,
-            completed_at, invalidated_at, invalidation_reason
+            completed_at, invalidated_at, invalidation_reason,
+            appsea.production_analysis_policies_collectible(
+              analysis.workspace_id, analysis.analysis_run_id
+            ) AS policy_collectible
        FROM appsea.production_analysis_runs analysis
       WHERE analysis.workspace_id = $1 AND analysis.analysis_run_id = $2
       ${forUpdate ? 'FOR UPDATE' : ''}`,
@@ -2180,7 +2184,13 @@ export class PostgresProductionAnalysisRepository {
     row: AnalysisRunRow,
     userId?: string
   ): Promise<ProductionAnalysisReadModel | undefined> {
-    if (row.state !== 'completed' || row.availability_state !== 'active') return undefined
+    if (
+      row.state !== 'completed' ||
+      row.availability_state !== 'active' ||
+      row.policy_collectible === false
+    ) {
+      return undefined
+    }
     const result = rowResult(row, false)
     const [artifactStored, reportStored, planStored] = await Promise.all([
       this.objectStore.get(row.workspace_id, result.artifactObjectRef),
@@ -2336,6 +2346,9 @@ export class PostgresProductionAnalysisRepository {
                       AND plan.plan_package_id = analysis.plan_package_id) AS plan_approval_state,
                   analysis.requested_by_actor_type, analysis.requested_by_actor_id,
                   analysis.completed_at,
+                  appsea.production_analysis_policies_collectible(
+                    analysis.workspace_id, analysis.analysis_run_id
+                  ) AS policy_collectible,
                   analysis.invalidated_at, analysis.invalidation_reason
              FROM appsea.production_analysis_runs analysis
              JOIN appsea.opportunities opportunity
@@ -2345,6 +2358,9 @@ export class PostgresProductionAnalysisRepository {
               AND opportunity.slug = $2
               AND analysis.state = 'completed'
               AND analysis.availability_state = 'active'
+              AND appsea.production_analysis_policies_collectible(
+                analysis.workspace_id, analysis.analysis_run_id
+              )
             ORDER BY analysis.completed_at DESC, analysis.analysis_run_id DESC
             LIMIT 1`,
           [workspaceId, slug]

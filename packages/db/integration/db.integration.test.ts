@@ -54,6 +54,7 @@ import {
   PostgresSourceQuotaRepository,
   PostgresSourceSnapshotReconciliationRepository,
   PostgresSourcePolicyRepository,
+  PostgresSourcePolicyImpactRepository,
   PostgresManualImportRepository,
   consumeManualImportBatchInTransaction,
   ManualImportPermissionError,
@@ -664,7 +665,8 @@ describe.sequential('PostgreSQL fixture persistence lifecycle', () => {
       '0115',
       '0116',
       '0117',
-      '0118'
+      '0118',
+      '0119'
     ])
     expect(secondMigrationResult.applied).toEqual([])
     expect(secondMigrationResult.alreadyApplied).toEqual([
@@ -785,7 +787,8 @@ describe.sequential('PostgreSQL fixture persistence lifecycle', () => {
       '0115',
       '0116',
       '0117',
-      '0118'
+      '0118',
+      '0119'
     ])
   })
 
@@ -3710,6 +3713,319 @@ describe.sequential('PostgreSQL fixture persistence lifecycle', () => {
             workspaceId
           ])
           await client.query('DELETE FROM appsea.workspaces WHERE workspace_id = $1', [workspaceId])
+          await client.query('COMMIT')
+        } catch (error) {
+          await client.query('ROLLBACK')
+          throw error
+        }
+      })
+    }
+  })
+
+  it('decays policy-impacted production outputs without purging retained objects', async () => {
+    const workspaceId = 'workspace-policy-impact'
+    const userId = 'user-policy-impact'
+    const sourceId = 'source-policy-impact'
+    const policyVersion = 'policy-impact-v1'
+    const campaignId = 'campaign-policy-impact'
+    const runId = 'run-policy-impact'
+    const analysisRunId = 'analysis-run-policy-impact'
+    const reviewId = 'review-policy-impact'
+    const opportunityId = 'opportunity-policy-impact'
+    const policyHash = 'a'.repeat(64)
+    const impactRepository = new PostgresSourcePolicyImpactRepository(servicePool)
+    const auth = new PostgresAuthRepository(servicePool)
+
+    try {
+      await withOwnerClient(async (client) => {
+        await client.query('BEGIN')
+        try {
+          await client.query(
+            `INSERT INTO appsea.users
+               (user_id, email, display_name, password_hash, created_at, updated_at)
+             VALUES ($1, $2, 'Policy impact user', repeat('x', 64), $3, $3)`,
+            [userId, `${userId}@example.test`, fixedAt]
+          )
+          await client.query(
+            `INSERT INTO appsea.workspaces
+               (workspace_id, slug, display_name, visibility, fixture_only, status, created_at, updated_at)
+             VALUES ($1, $1, 'Policy impact workspace', 'private', false, 'active', $2, $2)`,
+            [workspaceId, fixedAt]
+          )
+          await client.query(
+            `INSERT INTO appsea.workspace_memberships
+               (workspace_id, user_id, role, created_at, updated_at)
+             VALUES ($1, $2, 'owner', $3, $3)`,
+            [workspaceId, userId, fixedAt]
+          )
+          await client.query(
+            `INSERT INTO appsea.sources
+               (source_id, display_name, source_type, lifecycle_state, current_policy_version,
+                created_at, updated_at)
+             VALUES ($1, 'Policy impact source', 'api', 'disabled_pending_review', NULL, $2, $2)`,
+            [sourceId, fixedAt]
+          )
+          await client.query(
+            `INSERT INTO appsea.source_policy_versions
+               (source_id, policy_version, policy_state, permitted_purposes, commercial_use,
+                access_method, retention_days, deletion_required, attribution_required,
+                display_mode, coverage_notes, reviewed_at, policy_payload, content_hash, created_at)
+             VALUES ($1, $2, 'approved', ARRAY['opportunity-research'], 'allowed', 'test route',
+                     30, false, false, 'metadata-only', ARRAY['test-only'], $3,
+                     '{"requiredReviewerRoles":["independent_operator"]}'::jsonb, $4, $3)`,
+            [sourceId, policyVersion, fixedAt, policyHash]
+          )
+          await client.query(
+            `INSERT INTO appsea.source_policy_reviews
+               (review_id, source_id, policy_version, decision, reviewer, reviewer_identity,
+                reviewer_role, independence_attested, approval_reference, notes, content_hash,
+                reviewed_at, recorded_at)
+             VALUES ($1, $2, $3, 'approved', 'Policy impact reviewer', 'policy-impact-reviewer',
+                     'independent_operator', true, 'approval:policy-impact', ARRAY['test-only'],
+                     $4, $5, $5)`,
+            [reviewId, sourceId, policyVersion, policyHash, fixedAt]
+          )
+          await client.query(
+            `UPDATE appsea.sources
+                SET lifecycle_state = 'active', current_policy_version = $2, updated_at = $3
+              WHERE source_id = $1`,
+            [sourceId, policyVersion, fixedAt]
+          )
+          await client.query(
+            `INSERT INTO appsea.research_campaigns
+               (workspace_id, campaign_id, name, purpose, state, configuration, budget, synthetic,
+                created_at, updated_at)
+             VALUES ($1, $2, 'Policy impact campaign', 'opportunity-research', 'completed',
+                     '{}'::jsonb, '{}'::jsonb, false, $3, $3)`,
+            [workspaceId, campaignId, fixedAt]
+          )
+          await client.query(
+            `INSERT INTO appsea.research_runs
+               (workspace_id, run_id, campaign_id, idempotency_key, mode, state, artifact_id,
+                input_hash, artifact_snapshot, requested_at, started_at, completed_at)
+             VALUES ($1, $2, $3, 'policy-impact-collection-key', 'production', 'completed',
+                     'artifact-policy-impact-collection', repeat('b', 64), '{}'::jsonb, $4, $4, $4)`,
+            [workspaceId, runId, campaignId, fixedAt]
+          )
+          await client.query(
+            `INSERT INTO appsea.research_run_source_policies
+               (workspace_id, run_id, source_id, policy_version, linked_at)
+             VALUES ($1, $2, $3, $4, $5)`,
+            [workspaceId, runId, sourceId, policyVersion, fixedAt]
+          )
+          await client.query(
+            `INSERT INTO appsea.opportunities
+               (workspace_id, opportunity_id, slug, name, one_line, thesis, audience, first_wedge,
+                complaint_count, synthetic, state, source_run_id, created_at, updated_at)
+             VALUES ($1, $2, 'policy-impact-opportunity', 'Policy impact opportunity',
+                     'Policy impact fixture', 'Policy impact thesis', 'Test users', 'Test wedge',
+                     1, false, 'researched', $3, $4, $4)`,
+            [workspaceId, opportunityId, runId, fixedAt]
+          )
+          await client.query(
+            `INSERT INTO appsea.research_run_opportunities
+               (workspace_id, run_id, opportunity_id, linked_at)
+             VALUES ($1, $2, $3, $4)`,
+            [workspaceId, runId, opportunityId, fixedAt]
+          )
+          await client.query(
+            `INSERT INTO appsea.production_analysis_runs
+               (workspace_id, analysis_run_id, collection_run_id, idempotency_key,
+                analysis_version, input_hash, artifact_id, artifact_snapshot,
+                artifact_object_ref, report_object_ref, plan_object_ref, state,
+                availability_state, opportunity_id, score_snapshot_id, report_id, plan_package_id,
+                seed_review_id, seed_content_hash, requested_at, started_at, completed_at)
+             VALUES ($1, $2, $3, 'policy-impact-analysis-key', 'production-analysis-v1', repeat('c', 64),
+                     'artifact-policy-impact-analysis', '{}'::jsonb,
+                     jsonb_build_object('workspaceId', $1::text, 'kind', 'workflow-artifact',
+                                        'uri', 'appsea-object://' || $1::text || '/workflow-artifact/' || repeat('d', 64)),
+                     jsonb_build_object('workspaceId', $1::text, 'kind', 'report-json',
+                                        'uri', 'appsea-object://' || $1::text || '/report-json/' || repeat('e', 64)),
+                     jsonb_build_object('workspaceId', $1::text, 'kind', 'plan-package',
+                                        'uri', 'appsea-object://' || $1::text || '/plan-package/' || repeat('f', 64)),
+                     'completed', 'active', $4, 'score-policy-impact', 'report-policy-impact',
+                     'plan-policy-impact', 'seed-policy-impact', repeat('1', 64), $5, $5, $5)`,
+            [workspaceId, analysisRunId, runId, opportunityId, fixedAt]
+          )
+          await client.query(
+            `INSERT INTO appsea.research_analysis_run_source_policies
+               (workspace_id, analysis_run_id, source_id, policy_version,
+                policy_content_hash, approval_review_id, linked_at)
+             VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+            [workspaceId, analysisRunId, sourceId, policyVersion, policyHash, reviewId, fixedAt]
+          )
+          await client.query('COMMIT')
+        } catch (error) {
+          await client.query('ROLLBACK')
+          throw error
+        }
+      })
+
+      const before = await withWorkspaceTransaction(
+        servicePool,
+        workspaceId,
+        (client) =>
+          client.query<{ collectible: boolean }>(
+            `SELECT appsea.production_analysis_policies_collectible($1, $2) AS collectible`,
+            [workspaceId, analysisRunId]
+          ),
+        { readOnly: true }
+      )
+      expect(before.rows[0]?.collectible).toBe(true)
+      await expect(auth.listWorkspaceOpportunities(userId, workspaceId)).resolves.toHaveLength(1)
+
+      await withOwnerClient((client) =>
+        client.query(
+          `UPDATE appsea.source_policy_versions
+              SET policy_state = 'revoked'
+            WHERE source_id = $1 AND policy_version = $2`,
+          [sourceId, policyVersion]
+        )
+      )
+
+      const afterPolicyChange = await withWorkspaceTransaction(
+        servicePool,
+        workspaceId,
+        (client) =>
+          client.query<{ collectible: boolean }>(
+            `SELECT appsea.production_analysis_policies_collectible($1, $2) AS collectible`,
+            [workspaceId, analysisRunId]
+          ),
+        { readOnly: true }
+      )
+      expect(afterPolicyChange.rows[0]?.collectible).toBe(false)
+
+      await expect(impactRepository.expireImpactedOutputs(workspaceId, 10)).resolves.toEqual({
+        analysisRunsExpired: 1,
+        opportunitiesInvalidated: 1,
+        opportunitiesRepointed: 0
+      })
+      await expect(impactRepository.expireImpactedOutputs(workspaceId, 10)).resolves.toEqual({
+        analysisRunsExpired: 0,
+        opportunitiesInvalidated: 0,
+        opportunitiesRepointed: 0
+      })
+      await expect(auth.listWorkspaceOpportunities(userId, workspaceId)).resolves.toEqual([])
+
+      const stored = await withWorkspaceTransaction(
+        servicePool,
+        workspaceId,
+        (client) =>
+          client.query<{
+            availability_state: string
+            invalidation_reason: string
+            current_score_snapshot_id: string | null
+            current_plan_package_id: string | null
+          }>(
+            `SELECT analysis.availability_state, analysis.invalidation_reason,
+                    opportunity.current_score_snapshot_id, opportunity.current_plan_package_id
+               FROM appsea.production_analysis_runs analysis
+               JOIN appsea.opportunities opportunity
+                 ON opportunity.workspace_id = analysis.workspace_id
+                AND opportunity.opportunity_id = analysis.opportunity_id
+              WHERE analysis.workspace_id = $1 AND analysis.analysis_run_id = $2`,
+            [workspaceId, analysisRunId]
+          ),
+        { readOnly: true }
+      )
+      expect(stored.rows[0]).toEqual({
+        availability_state: 'expired',
+        invalidation_reason: 'policy-impact:source_policy_state_revoked',
+        current_score_snapshot_id: null,
+        current_plan_package_id: null
+      })
+
+      const durableEvents = await withWorkspaceTransaction(
+        servicePool,
+        workspaceId,
+        (client) =>
+          client.query<{ audit_count: string; outbox_count: string; purge_count: string }>(
+            `SELECT
+               (SELECT count(*) FROM appsea.audit_events
+                 WHERE workspace_id = $1 AND action = 'research.analysis.policy_expired') AS audit_count,
+               (SELECT count(*) FROM appsea.outbox_events
+                 WHERE workspace_id = $1 AND event_type = 'research.analysis.policy_expired') AS outbox_count,
+               (SELECT count(*) FROM appsea.production_analysis_object_purge_jobs
+                 WHERE workspace_id = $1) AS purge_count`,
+            [workspaceId]
+          ),
+        { readOnly: true }
+      )
+      expect(durableEvents.rows[0]).toEqual({
+        audit_count: '1',
+        outbox_count: '1',
+        purge_count: '0'
+      })
+
+      await withOwnerClient((client) =>
+        client.query(
+          `UPDATE appsea.source_policy_versions
+              SET policy_state = 'approved', reviewed_at = $3
+            WHERE source_id = $1 AND policy_version = $2`,
+          [sourceId, policyVersion, fixedAt]
+        )
+      )
+      await expect(impactRepository.expireImpactedOutputs(workspaceId, 10)).resolves.toEqual({
+        analysisRunsExpired: 0,
+        opportunitiesInvalidated: 0,
+        opportunitiesRepointed: 0
+      })
+      const retained = await withWorkspaceTransaction(
+        servicePool,
+        workspaceId,
+        (client) =>
+          client.query<{ availability_state: string }>(
+            `SELECT availability_state
+               FROM appsea.production_analysis_runs
+              WHERE workspace_id = $1 AND analysis_run_id = $2`,
+            [workspaceId, analysisRunId]
+          ),
+        { readOnly: true }
+      )
+      expect(retained.rows[0]?.availability_state).toBe('expired')
+    } finally {
+      await withOwnerClient(async (client) => {
+        await client.query('BEGIN')
+        try {
+          await client.query('DELETE FROM appsea.audit_events WHERE workspace_id = $1', [
+            workspaceId
+          ])
+          await client.query('DELETE FROM appsea.outbox_events WHERE workspace_id = $1', [
+            workspaceId
+          ])
+          await client.query(
+            'DELETE FROM appsea.production_analysis_runs WHERE workspace_id = $1',
+            [workspaceId]
+          )
+          await client.query(
+            'DELETE FROM appsea.research_run_opportunities WHERE workspace_id = $1',
+            [workspaceId]
+          )
+          await client.query('DELETE FROM appsea.opportunities WHERE workspace_id = $1', [
+            workspaceId
+          ])
+          await client.query(
+            'DELETE FROM appsea.research_run_source_policies WHERE workspace_id = $1',
+            [workspaceId]
+          )
+          await client.query('DELETE FROM appsea.research_runs WHERE workspace_id = $1', [
+            workspaceId
+          ])
+          await client.query('DELETE FROM appsea.research_campaigns WHERE workspace_id = $1', [
+            workspaceId
+          ])
+          await client.query('DELETE FROM appsea.workspace_memberships WHERE workspace_id = $1', [
+            workspaceId
+          ])
+          await client.query('DELETE FROM appsea.workspaces WHERE workspace_id = $1', [workspaceId])
+          await client.query('DELETE FROM appsea.source_policy_reviews WHERE source_id = $1', [
+            sourceId
+          ])
+          await client.query('DELETE FROM appsea.source_policy_versions WHERE source_id = $1', [
+            sourceId
+          ])
+          await client.query('DELETE FROM appsea.sources WHERE source_id = $1', [sourceId])
+          await client.query('DELETE FROM appsea.users WHERE user_id = $1', [userId])
           await client.query('COMMIT')
         } catch (error) {
           await client.query('ROLLBACK')

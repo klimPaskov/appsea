@@ -521,7 +521,11 @@ export class PostgresDeletionPropagationRepository {
               invalidated_at = clock_timestamp(),
               invalidation_reason = 'Source deletion tombstone ' || $4
         WHERE analysis.workspace_id = $1
-          AND analysis.availability_state = 'active'
+          -- Policy-decayed analyses retain their objects until an explicit
+          -- source deletion arrives. That destructive path must still move
+          -- them through invalidation so the existing object-purge trigger
+          -- can enqueue the retained references.
+          AND analysis.availability_state IN ('active', 'expired')
           AND EXISTS (
             SELECT 1
               FROM (

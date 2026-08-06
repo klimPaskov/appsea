@@ -3727,7 +3727,15 @@ export class PostgresAuthRepository {
           const result = await client.query<WorkspaceReportRow>(
             `${workspaceReportSelect}
      WHERE report.workspace_id = $1 AND report.report_id = $2
-       AND (analysis.analysis_run_id IS NULL OR analysis.availability_state = 'active')
+       AND (
+         analysis.analysis_run_id IS NULL
+         OR (
+           analysis.availability_state = 'active'
+           AND appsea.production_analysis_policies_collectible(
+             analysis.workspace_id, analysis.analysis_run_id
+           )
+         )
+       )
      FOR UPDATE OF report`,
             [parsedWorkspaceId, parsedReportId]
           )
@@ -3764,7 +3772,15 @@ export class PostgresAuthRepository {
           const refreshed = await client.query<WorkspaceReportRow>(
             `${workspaceReportSelect}
        WHERE report.workspace_id = $1 AND report.report_id = $2
-         AND (analysis.analysis_run_id IS NULL OR analysis.availability_state = 'active')`,
+         AND (
+           analysis.analysis_run_id IS NULL
+           OR (
+             analysis.availability_state = 'active'
+             AND appsea.production_analysis_policies_collectible(
+               analysis.workspace_id, analysis.analysis_run_id
+             )
+           )
+         )`,
             [parsedWorkspaceId, parsedReportId]
           )
           const refreshedRow = refreshed.rows[0]
@@ -3804,7 +3820,15 @@ export class PostgresAuthRepository {
           WHERE report.workspace_id = $1
             AND report.report_id = $2
             AND report.deletion_state = 'active'
-            AND (analysis.analysis_run_id IS NULL OR analysis.availability_state = 'active')`,
+            AND (
+              analysis.analysis_run_id IS NULL
+              OR (
+                analysis.availability_state = 'active'
+                AND appsea.production_analysis_policies_collectible(
+                  analysis.workspace_id, analysis.analysis_run_id
+                )
+              )
+            )`,
           [parsedWorkspaceId, parsedReportId]
         )
         const row = result.rows[0]
@@ -3870,7 +3894,15 @@ export class PostgresAuthRepository {
           const result = await client.query<WorkspacePlanRow>(
             `${workspacePlanSelect}
      WHERE plan.workspace_id = $1 AND plan.plan_package_id = $2
-       AND (analysis.analysis_run_id IS NULL OR analysis.availability_state = 'active')
+       AND (
+         analysis.analysis_run_id IS NULL
+         OR (
+           analysis.availability_state = 'active'
+           AND appsea.production_analysis_policies_collectible(
+             analysis.workspace_id, analysis.analysis_run_id
+           )
+         )
+       )
      FOR UPDATE OF plan`,
             [parsedWorkspaceId, parsedPlanPackageId]
           )
@@ -3920,7 +3952,15 @@ export class PostgresAuthRepository {
           const refreshed = await client.query<WorkspacePlanRow>(
             `${workspacePlanSelect}
        WHERE plan.workspace_id = $1 AND plan.plan_package_id = $2
-         AND (analysis.analysis_run_id IS NULL OR analysis.availability_state = 'active')`,
+         AND (
+           analysis.analysis_run_id IS NULL
+           OR (
+             analysis.availability_state = 'active'
+             AND appsea.production_analysis_policies_collectible(
+               analysis.workspace_id, analysis.analysis_run_id
+             )
+           )
+         )`,
             [parsedWorkspaceId, parsedPlanPackageId]
           )
           const refreshedRow = refreshed.rows[0]
@@ -3960,7 +4000,15 @@ export class PostgresAuthRepository {
           WHERE plan.workspace_id = $1
             AND plan.plan_package_id = $2
             AND plan.deletion_state = 'active'
-            AND (analysis.analysis_run_id IS NULL OR analysis.availability_state = 'active')`,
+            AND (
+              analysis.analysis_run_id IS NULL
+              OR (
+                analysis.availability_state = 'active'
+                AND appsea.production_analysis_policies_collectible(
+                  analysis.workspace_id, analysis.analysis_run_id
+                )
+              )
+            )`,
           [parsedWorkspaceId, parsedPlanPackageId]
         )
         const row = result.rows[0]
@@ -4018,11 +4066,25 @@ export class PostgresAuthRepository {
               AND score.opportunity_id = opportunity.opportunity_id
               AND score.score_snapshot_id = opportunity.current_score_snapshot_id
              LEFT JOIN LATERAL (
-                SELECT report_id FROM appsea.report_versions report
+                SELECT report.report_id
+                  FROM appsea.report_versions report
+                  LEFT JOIN appsea.production_analysis_runs report_analysis
+                    ON report_analysis.workspace_id = report.workspace_id
+                   AND report_analysis.report_id = report.report_id
                  WHERE report.workspace_id = opportunity.workspace_id
                    AND report.opportunity_id = opportunity.opportunity_id
                    AND report.approval_state <> 'withdrawn'
                    AND report.deletion_state = 'active'
+                   AND (
+                     report_analysis.analysis_run_id IS NULL
+                     OR (
+                       report_analysis.state = 'completed'
+                       AND report_analysis.availability_state = 'active'
+                       AND appsea.production_analysis_policies_collectible(
+                         report_analysis.workspace_id, report_analysis.analysis_run_id
+                       )
+                     )
+                   )
                  ORDER BY report.generated_at DESC LIMIT 1
               ) report ON true
              LEFT JOIN LATERAL (
@@ -4038,6 +4100,9 @@ export class PostgresAuthRepository {
                         AND analysis.collection_run_id = opportunity.source_run_id
                         AND analysis.state = 'completed'
                         AND analysis.availability_state = 'active'
+                        AND appsea.production_analysis_policies_collectible(
+                          analysis.workspace_id, analysis.analysis_run_id
+                        )
                       ORDER BY analysis.completed_at DESC, analysis.analysis_run_id DESC
                       LIMIT 1
                    )
@@ -4080,6 +4145,36 @@ export class PostgresAuthRepository {
               ) deep_gate ON true
              WHERE opportunity.workspace_id = $1
                AND opportunity.availability_state = 'active'
+               AND (
+                 opportunity.synthetic
+                 OR NOT EXISTS (
+                   SELECT 1
+                     FROM appsea.research_analysis_run_outputs active_output
+                     JOIN appsea.production_analysis_runs active_analysis
+                       ON active_analysis.workspace_id = active_output.workspace_id
+                      AND active_analysis.analysis_run_id = active_output.analysis_run_id
+                    WHERE active_output.workspace_id = opportunity.workspace_id
+                      AND active_output.opportunity_id = opportunity.opportunity_id
+                      AND active_analysis.state = 'completed'
+                      AND active_analysis.availability_state = 'active'
+                 )
+                 OR EXISTS (
+                   SELECT 1
+                     FROM appsea.research_analysis_run_outputs valid_output
+                     JOIN appsea.production_analysis_runs valid_analysis
+                       ON valid_analysis.workspace_id = valid_output.workspace_id
+                      AND valid_analysis.analysis_run_id = valid_output.analysis_run_id
+                    WHERE valid_output.workspace_id = opportunity.workspace_id
+                      AND valid_output.opportunity_id = opportunity.opportunity_id
+                      AND valid_analysis.state = 'completed'
+                      AND valid_analysis.availability_state = 'active'
+                      AND valid_output.score_snapshot_id = opportunity.current_score_snapshot_id
+                      AND valid_output.plan_package_id = opportunity.current_plan_package_id
+                      AND appsea.production_analysis_policies_collectible(
+                        valid_analysis.workspace_id, valid_analysis.analysis_run_id
+                      )
+                 )
+               )
               ORDER BY COALESCE(score.ranking_score, score.score) DESC NULLS LAST,
                      opportunity.complaint_count DESC,
                      opportunity.slug`,
@@ -4130,11 +4225,25 @@ export class PostgresAuthRepository {
               AND score.opportunity_id = opportunity.opportunity_id
               AND score.score_snapshot_id = opportunity.current_score_snapshot_id
              LEFT JOIN LATERAL (
-                SELECT report_id FROM appsea.report_versions report
+                SELECT report.report_id
+                  FROM appsea.report_versions report
+                  LEFT JOIN appsea.production_analysis_runs report_analysis
+                    ON report_analysis.workspace_id = report.workspace_id
+                   AND report_analysis.report_id = report.report_id
                  WHERE report.workspace_id = opportunity.workspace_id
                    AND report.opportunity_id = opportunity.opportunity_id
                    AND report.approval_state <> 'withdrawn'
                    AND report.deletion_state = 'active'
+                   AND (
+                     report_analysis.analysis_run_id IS NULL
+                     OR (
+                       report_analysis.state = 'completed'
+                       AND report_analysis.availability_state = 'active'
+                       AND appsea.production_analysis_policies_collectible(
+                         report_analysis.workspace_id, report_analysis.analysis_run_id
+                       )
+                     )
+                   )
                  ORDER BY report.generated_at DESC LIMIT 1
               ) report ON true
              LEFT JOIN LATERAL (
@@ -4150,6 +4259,9 @@ export class PostgresAuthRepository {
                         AND analysis.collection_run_id = opportunity.source_run_id
                         AND analysis.state = 'completed'
                         AND analysis.availability_state = 'active'
+                        AND appsea.production_analysis_policies_collectible(
+                          analysis.workspace_id, analysis.analysis_run_id
+                        )
                       ORDER BY analysis.completed_at DESC, analysis.analysis_run_id DESC
                       LIMIT 1
                    )
@@ -4192,7 +4304,37 @@ export class PostgresAuthRepository {
               ) deep_gate ON true
              WHERE opportunity.workspace_id = $1
                AND opportunity.slug = $2
-               AND opportunity.availability_state = 'active'`,
+               AND opportunity.availability_state = 'active'
+               AND (
+                 opportunity.synthetic
+                 OR NOT EXISTS (
+                   SELECT 1
+                     FROM appsea.research_analysis_run_outputs active_output
+                     JOIN appsea.production_analysis_runs active_analysis
+                       ON active_analysis.workspace_id = active_output.workspace_id
+                      AND active_analysis.analysis_run_id = active_output.analysis_run_id
+                    WHERE active_output.workspace_id = opportunity.workspace_id
+                      AND active_output.opportunity_id = opportunity.opportunity_id
+                      AND active_analysis.state = 'completed'
+                      AND active_analysis.availability_state = 'active'
+                 )
+                 OR EXISTS (
+                   SELECT 1
+                     FROM appsea.research_analysis_run_outputs valid_output
+                     JOIN appsea.production_analysis_runs valid_analysis
+                       ON valid_analysis.workspace_id = valid_output.workspace_id
+                      AND valid_analysis.analysis_run_id = valid_output.analysis_run_id
+                    WHERE valid_output.workspace_id = opportunity.workspace_id
+                      AND valid_output.opportunity_id = opportunity.opportunity_id
+                      AND valid_analysis.state = 'completed'
+                      AND valid_analysis.availability_state = 'active'
+                      AND valid_output.score_snapshot_id = opportunity.current_score_snapshot_id
+                      AND valid_output.plan_package_id = opportunity.current_plan_package_id
+                      AND appsea.production_analysis_policies_collectible(
+                        valid_analysis.workspace_id, valid_analysis.analysis_run_id
+                      )
+                 )
+               )`,
           [workspaceId, slug]
         )
         const row = result.rows[0]
@@ -4382,7 +4524,15 @@ export class PostgresAuthRepository {
        WHERE report.workspace_id = $1 AND report.opportunity_id = $2
          AND report.approval_state <> 'withdrawn'
          AND report.deletion_state = 'active'
-         AND (analysis.analysis_run_id IS NULL OR analysis.availability_state = 'active')
+         AND (
+           analysis.analysis_run_id IS NULL
+           OR (
+             analysis.availability_state = 'active'
+             AND appsea.production_analysis_policies_collectible(
+               analysis.workspace_id, analysis.analysis_run_id
+             )
+           )
+         )
        ORDER BY report.generated_at DESC LIMIT 1`,
       [workspaceId, opportunityId]
     )
@@ -4400,7 +4550,15 @@ export class PostgresAuthRepository {
       `${workspacePlanSelect}
        WHERE plan.workspace_id = $1 AND plan.opportunity_id = $2
          AND plan.deletion_state = 'active'
-         AND (analysis.analysis_run_id IS NULL OR analysis.availability_state = 'active')
+         AND (
+           analysis.analysis_run_id IS NULL
+           OR (
+             analysis.availability_state = 'active'
+             AND appsea.production_analysis_policies_collectible(
+               analysis.workspace_id, analysis.analysis_run_id
+             )
+           )
+         )
        ORDER BY plan.generated_at DESC LIMIT 1`,
       [workspaceId, opportunityId]
     )

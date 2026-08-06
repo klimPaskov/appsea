@@ -19,6 +19,7 @@
     "./research-campaign": "./src/research-campaign-repository.ts",
     "./research-campaign-orchestration": "./src/research-campaign-orchestration.ts",
     "./source-policy": "./src/source-policy.ts",
+    "./source-policy-impact": "./src/source-policy-impact-repository.ts",
     "./competitive-research": "./src/competitive-research.ts",
     "./deep-research-gate": "./src/deep-research-gate-repository.ts",
     "./opportunity-decision": "./src/opportunity-decision-repository.ts",

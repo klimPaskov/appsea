@@ -266,11 +266,21 @@ Refresh jobs detect:
 - discontinued products
 - pricing changes
 - source access changes
+- current policy review expiry, revocation, version drift, or collectibility loss
 - deleted evidence
 - reduced source coverage
 - plan staleness
 
 An opportunity can move up, down, or into archive.
+
+Policy decay is a separate, non-destructive maintenance projection. Completed
+production outputs whose current source-policy lineage is no longer collectible
+move to `expired`; the immutable analysis, evidence, and policy lineage remains
+retained for review. Active opportunity pointers are repaired to a newer valid
+output when one exists, otherwise the opportunity is invalidated. Private reads
+and exports apply the current-policy gate before the bounded job runs. A later
+source deletion follows the destructive invalidation/object-purge path, and
+policy reapproval never auto-reactivates an expired output.
 
 ## Workflow orchestration
 

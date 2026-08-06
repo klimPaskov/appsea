@@ -34,6 +34,13 @@ read gates. `0117` provides migration/maintenance roles a scalar approval
 progress read without identities, notes, or permission references; it cannot
 activate a source. `0118` applies the same helper to direct activation, lease
 replay, reconciliation claims, and production lineage.
+`0119` applies the helper again to completed production outputs: a bounded,
+fenced maintenance function marks non-collectible analyses `expired`, repairs
+or clears active opportunity pointers, and emits identifier-only audit/outbox
+receipts. It deliberately does not purge retained objects; only the later
+source-deletion path can transition an expired output to destructive
+`invalidated` handling. Private analysis/report/plan/opportunity/export reads
+repeat the helper so a stale output is not exposed while maintenance is queued.
 The v2 `competitor-research` and `contrary-evidence` purposes only enable a
 private observation write linked to retained evidence. Observation claims are
 unreviewed by default and require editor/owner review; they never bypass the
