@@ -11,6 +11,7 @@ import {
   PostgresProductionWorkflowAdmissionRepository,
   PostgresResearchCampaignRepository,
   PostgresResearchCampaignOrchestrationRepository,
+  PostgresManualImportRepository,
   PostgresSourcePolicyRepository,
   PostgresMaintenanceSchedulerLeaseRepository,
   PostgresMaintenanceSchedulerRunRepository,
@@ -103,6 +104,7 @@ try {
           deletionWorkspacesScanned: result.deletionWorkspacesScanned,
           quotaReservationsExpired: result.quotaReservationsExpired,
           quotaReservationsPurged: result.quotaReservationsPurged,
+          manualImportBatchesPurged: result.manualImportBatchesPurged,
           productionWorkflowAdmissionsPurged: result.productionWorkflowAdmissionsPurged,
           productionAnalysisAdmissionsPurged: result.productionAnalysisAdmissionsPurged,
           sourceCollectionLeasesPurged: result.sourceCollectionLeasesPurged,
@@ -146,6 +148,7 @@ try {
       )
       const policyRepository = new PostgresSourcePolicyRepository(pool)
       const analysisAdmissionRepository = new PostgresProductionAnalysisAdmissionRepository(pool)
+      const manualImportRepository = new PostgresManualImportRepository(pool)
       const objectPurgeRepository = new PostgresProductionAnalysisObjectPurgeRepository(
         pool,
         objectStore
@@ -159,6 +162,7 @@ try {
         admission: admissionRepository,
         analysisAdmission: analysisAdmissionRepository,
         leases: leaseRepository,
+        manualImports: manualImportRepository,
         objectPurge: objectPurgeRepository,
         fence,
         snapshotReconciliation: async (workspaceId) => {
@@ -275,6 +279,7 @@ try {
       jobId: result.jobId,
       quotaReservationsExpired: result.quotaReservationsExpired,
       quotaReservationsPurged: result.quotaReservationsPurged,
+      manualImportBatchesPurged: result.manualImportBatchesPurged,
       productionWorkflowAdmissionsPurged: result.productionWorkflowAdmissionsPurged,
       productionAnalysisAdmissionsPurged: result.productionAnalysisAdmissionsPurged,
       sourceCollectionLeasesPurged: result.sourceCollectionLeasesPurged,
@@ -378,6 +383,7 @@ try {
       workspacesScanned: result.quotaWorkspacesScanned + result.deletionWorkspacesScanned,
       quotaReservationsExpired: result.quotaReservationsExpired,
       quotaReservationsPurged: result.quotaReservationsPurged,
+      manualImportBatchesPurged: result.manualImportBatchesPurged,
       productionWorkflowAdmissionsPurged: result.productionWorkflowAdmissionsPurged,
       productionAnalysisAdmissionsPurged: result.productionAnalysisAdmissionsPurged,
       sourceCollectionLeasesPurged: result.sourceCollectionLeasesPurged,

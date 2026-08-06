@@ -18,7 +18,8 @@ import type {
   PostgresProductionAnalysisObjectPurgeRepository,
   PostgresProductionWorkflowAdmissionRepository,
   PostgresSourceCollectionLeaseRepository,
-  PostgresSourceQuotaRepository
+  PostgresSourceQuotaRepository,
+  PostgresManualImportRepository
 } from '@appsea/db'
 import type { CampaignRefreshResult } from './campaign-refresh-runner'
 import type { CampaignOrchestrationResult } from './campaign-orchestration-runner'
@@ -43,6 +44,8 @@ export interface SourceMaintenanceDependencies {
   analysisAdmission?: Pick<PostgresProductionAnalysisAdmissionRepository, 'purge'>
   /** Production entry points provide this; legacy fixture test doubles may omit it. */
   leases?: Pick<PostgresSourceCollectionLeaseRepository, 'purge'>
+  /** Purge owner-import staging through the fenced source-policy retention path. */
+  manualImports?: Pick<PostgresManualImportRepository, 'purgeExpired'>
   /** Production entry points provide this; legacy fixture test doubles may omit it. */
   objectPurge?: Pick<PostgresProductionAnalysisObjectPurgeRepository, 'processNext'>
   /**
@@ -145,6 +148,7 @@ export async function runSourceMaintenance(
   let productionWorkflowAdmissionsPurged = 0
   let productionAnalysisAdmissionsPurged = 0
   let sourceCollectionLeasesPurged = 0
+  let manualImportBatchesPurged = 0
   let productionAnalysisObjectsPurged = 0
   let sourceSnapshotReconciliationsProcessed = 0
   let sourceSnapshotReconciliationsCompleted = 0
@@ -208,6 +212,27 @@ export async function runSourceMaintenance(
         remaining
       )
       sourceCollectionLeasesPurged += purged
+    }
+  }
+  if (dependencies.manualImports) {
+    if (!dependencies.fence) {
+      throw new Error('manual import retention requires a maintenance scheduler fence')
+    }
+    for (const workspaceId of deletionWorkspaceIds) {
+      if (manualImportBatchesPurged >= parsed.retentionBatchSize) break
+      const remaining = parsed.retentionBatchSize - manualImportBatchesPurged
+      await assertLease()
+      const purged = countWithin(
+        await dependencies.manualImports.purgeExpired(
+          workspaceId,
+          parsed.occurredAt,
+          remaining,
+          dependencies.fence
+        ),
+        'manualImportBatchesPurged',
+        remaining
+      )
+      manualImportBatchesPurged += purged
     }
   }
   if (dependencies.snapshotReconciliation) {
@@ -366,6 +391,7 @@ export async function runSourceMaintenance(
     deletionWorkspacesScanned: deletionWorkspaceIds.length,
     quotaReservationsExpired,
     quotaReservationsPurged,
+    manualImportBatchesPurged,
     productionWorkflowAdmissionsPurged,
     productionAnalysisAdmissionsPurged,
     sourceCollectionLeasesPurged,

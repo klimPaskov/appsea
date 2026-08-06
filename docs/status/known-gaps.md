@@ -46,7 +46,7 @@ rejected or deleted consumed provenance makes active analysis/opportunity reads
 unavailable, and metadata-only or aggregate-only observations have their claim
 text withheld. This is still a manual, tenant-private rerun boundary: no review
 action or policy change starts a new analysis automatically. Fresh-schema and
-deletion integration proof now pass locally through migration `0112`; provider
+deletion integration proof now pass locally through migration `0113`; provider
 and hosted execution remain separate evidence.
 
 Generated report and coding-plan pages now expose the existing approval
@@ -409,7 +409,7 @@ in-memory/filesystem adapters plus a signed S3-compatible adapter wired through
 the shared environment factory. Migration `0043` adds the durable
 invalidated-output purge queue. Provider encryption, lifecycle/versioning,
 least-privilege credential deployment, destructive workspace/object/backup
-purge remain open. Local backup/restore proof passes through `0112`; provider
+purge remain open. Local backup/restore proof passes through `0113`; provider
 encryption, lifecycle, and restore evidence remain open. Owner workspace archival and
 the non-destructive purge intent are implemented separately and retain the
 referenced data.

@@ -555,7 +555,8 @@ describe.sequential('PostgreSQL fixture persistence lifecycle', () => {
       '0109',
       '0110',
       '0111',
-      '0112'
+      '0112',
+      '0113'
     ])
     expect(secondMigrationResult.applied).toEqual([])
     expect(secondMigrationResult.alreadyApplied).toEqual([
@@ -670,7 +671,8 @@ describe.sequential('PostgreSQL fixture persistence lifecycle', () => {
       '0109',
       '0110',
       '0111',
-      '0112'
+      '0112',
+      '0113'
     ])
   })
 
@@ -5740,6 +5742,79 @@ describe.sequential('PostgreSQL fixture persistence lifecycle', () => {
         payload_present: false,
         tombstones: '1'
       })
+
+      const expiredBatchId = 'batch:manual-import-expired'
+      await expect(
+        manualImports.createForUser(userId, {
+          workspaceId,
+          batchId: expiredBatchId,
+          campaignId,
+          sourceId: 'manual-owner-import',
+          policyVersion: 'manual-owner-import-v2',
+          purpose: 'opportunity-research',
+          requestedDisplayMode: 'excerpt',
+          idempotencyDigest: 'e'.repeat(64),
+          inputHash: 'f'.repeat(64),
+          format: 'json',
+          filename: 'expired-authorized-export.json',
+          records: [record],
+          warnings: [],
+          authorizationAttested: true,
+          attestedBy: userId,
+          attestedAt: '2026-05-01T00:00:00.000Z',
+          createdAt: '2026-05-01T00:00:00.000Z'
+        })
+      ).resolves.toMatchObject({ batchId: expiredBatchId, state: 'staged' })
+
+      const maintenanceLeases = new PostgresMaintenanceSchedulerLeaseRepository(maintenancePool)
+      const schedulerName = 'appsea-source-maintenance-v1'
+      const maintenanceOwner = 'worker:integration:manual-retention'
+      const maintenanceToken = 'token:integration:manual-retention'
+      await expect(
+        maintenanceLeases.acquire(schedulerName, maintenanceOwner, maintenanceToken, 30)
+      ).resolves.toMatchObject({ acquired: true })
+      try {
+        await expect(
+          manualImports.purgeExpired(workspaceId, latestAt, 1, {
+            schedulerName,
+            ownerId: maintenanceOwner,
+            leaseToken: 'token:integration:stale'
+          })
+        ).rejects.toMatchObject({ name: 'MaintenanceSchedulerFenceError' })
+        await expect(
+          manualImports.purgeExpired(workspaceId, latestAt, 1, {
+            schedulerName,
+            ownerId: maintenanceOwner,
+            leaseToken: maintenanceToken
+          })
+        ).resolves.toBe(1)
+      } finally {
+        await expect(
+          maintenanceLeases.release(schedulerName, maintenanceOwner, maintenanceToken)
+        ).resolves.toEqual({ released: true })
+      }
+      await expect(
+        manualImports.readForUser(userId, workspaceId, expiredBatchId)
+      ).resolves.toMatchObject({ state: 'deleted' })
+      const expiredPayloadState = await withWorkspaceTransaction(
+        servicePool,
+        workspaceId,
+        async (client) => {
+          const result = await client.query<{ payload_present: boolean; audit_rows: string }>(
+            `SELECT record.record_payload IS NOT NULL AS payload_present,
+                    (SELECT count(*)::text FROM appsea.audit_events
+                      WHERE workspace_id = $1
+                        AND action = 'research.manual_import.retention_expired'
+                        AND target_id = $2) AS audit_rows
+               FROM appsea.manual_import_records record
+              WHERE record.workspace_id = $1 AND record.batch_id = $2`,
+            [workspaceId, expiredBatchId]
+          )
+          return result.rows[0]
+        },
+        { readOnly: true }
+      )
+      expect(expiredPayloadState).toEqual({ payload_present: false, audit_rows: '1' })
     } finally {
       await withOwnerClient(async (client) => {
         await client.query('BEGIN')

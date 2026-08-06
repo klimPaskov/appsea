@@ -124,6 +124,7 @@ describe('maintenance runners', () => {
       deletionWorkspacesScanned: 2,
       quotaReservationsExpired: 2,
       quotaReservationsPurged: 2,
+      manualImportBatchesPurged: 0,
       productionWorkflowAdmissionsPurged: 0,
       productionAnalysisAdmissionsPurged: 0,
       sourceCollectionLeasesPurged: 0,
@@ -362,6 +363,61 @@ describe('maintenance runners', () => {
 
     expect(result.productionWorkflowAdmissionsPurged).toBe(2)
     expect(calls).toEqual(['workspace:a:2026-07-03T00:00:00.000Z:2'])
+  })
+
+  it('purges expired owner-import batches only through the scheduler fence', async () => {
+    const fence: MaintenanceSchedulerFence = {
+      schedulerName: 'appsea-source-maintenance-v1',
+      ownerId: 'worker:maintenance:test',
+      leaseToken: 'token:maintenance:test-012345'
+    }
+    const calls: string[] = []
+    const result = await runSourceMaintenance(
+      {
+        jobId: 'maintenance:source:manual-retention',
+        occurredAt,
+        quotaBatchSize: 1,
+        deletionBatchSize: 1,
+        retentionBatchSize: 2,
+        snapshotReconciliationBatchSize: 0,
+        quotaRetentionDays: 7,
+        workspaceId: 'workspace:a'
+      },
+      {
+        fence,
+        quota: {
+          async listActiveWorkspaceIds() {
+            return []
+          },
+          async expireStale() {
+            return 0
+          },
+          async purgeSettled() {
+            return 0
+          }
+        },
+        deletion: {
+          async listActiveWorkspaceIds() {
+            return ['workspace:a']
+          },
+          async enqueueExpired() {
+            return 0
+          },
+          async processNext() {
+            return null
+          }
+        },
+        manualImports: {
+          async purgeExpired(workspaceId, at, batchSize, receivedFence) {
+            calls.push(`${workspaceId}:${at}:${batchSize}:${receivedFence.leaseToken}`)
+            return 1
+          }
+        }
+      }
+    )
+
+    expect(result.manualImportBatchesPurged).toBe(1)
+    expect(calls).toEqual([`workspace:a:${occurredAt}:2:${fence.leaseToken}`])
   })
 
   it('purges terminal source collection leases with the retention budget', async () => {

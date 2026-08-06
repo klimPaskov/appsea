@@ -125,7 +125,8 @@ describe('database foundation', () => {
       '0109',
       '0110',
       '0111',
-      '0112'
+      '0112',
+      '0113'
     ])
     expect(migrations[0]?.checksum).toMatch(/^[a-f0-9]{64}$/)
     expect(migrations[0]?.sql).toContain('CREATE TABLE appsea.evidence_records')
@@ -348,6 +349,14 @@ describe('database foundation', () => {
     expect(productionAdmissionReleaseMigration?.sql).toContain(
       'GRANT EXECUTE ON FUNCTION appsea.release_production_collection_workflow_admission'
     )
+    const manualImportRetentionMigration = migrations.find(
+      (migration) => migration.version === '0113'
+    )
+    expect(manualImportRetentionMigration?.sql).toContain(
+      'CREATE OR REPLACE FUNCTION appsea.purge_expired_manual_import_batches'
+    )
+    expect(manualImportRetentionMigration?.sql).toContain('owner-import-retention-expired')
+    expect(manualImportRetentionMigration?.sql).toContain('appsea.maintenance_fence_asserted')
     const workspacePurgeManifestMigration = migrations.find(
       (migration) => migration.version === '0083'
     )

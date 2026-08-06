@@ -59,6 +59,7 @@ export interface WorkerEvent {
   workspaceCostAlertWorkspacesOverActual?: number
   workspaceCostAlertWorkspacesOverEstimated?: number
   workspaceCostAlertTruncated?: boolean
+  manualImportBatchesPurged?: number
   productionWorkflowAdmissionsPurged?: number
   productionAnalysisAdmissionsPurged?: number
   sourceCollectionLeasesPurged?: number
@@ -351,6 +352,9 @@ export function workerEventPayload(event: WorkerEvent): WorkerEventPayload {
       : {}),
     ...(event.workspaceCostAlertTruncated !== undefined
       ? { workspaceCostAlertTruncated: event.workspaceCostAlertTruncated }
+      : {}),
+    ...(finiteInteger(event.manualImportBatchesPurged) !== undefined
+      ? { manualImportBatchesPurged: finiteInteger(event.manualImportBatchesPurged) }
       : {}),
     ...(finiteInteger(event.productionWorkflowAdmissionsPurged) !== undefined
       ? {

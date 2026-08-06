@@ -66,6 +66,20 @@ row/advisory lock through commit, so a stale process cannot commit quota,
 deletion, admission, source-lease, or object-purge state after takeover.
 Snapshot reconciliation remains a separate checkpoint flow because its source
 request and persistence work are not one atomic transaction.
+
+Migration `0113` adds the owner-import retention pass. For each active
+workspace, the worker selects a bounded number of staged or consumed
+`manual-owner-import` batches whose `created_at` is older than the exact
+retention window recorded on that batch's immutable policy snapshot. The
+security-definer function requires the same scheduler fence, clears normalized
+staging payloads, writes a fixed `research.manual_import.retention_expired`
+audit event, marks the batch deleted, and queues tombstones for source items
+linked to the batch's completed run snapshot. It does not infer lineage from a
+prefix or fetch an imported URL. A later pass is safe to replay: deleted
+batches are not candidates, tombstones use the existing unique identity, and
+deletion propagation remains the single redaction path. The result exposes
+`manualImportBatchesPurged`; a missing fence is a hard failure rather than an
+unfenced cleanup.
 Migrations `0037` and `0062` insert one durable recomputation job per
 invalidated opportunity/tombstone or complaint correction when prior analysis
 lineage provides a seed review. The durable worker claims due jobs with

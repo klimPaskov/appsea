@@ -5598,6 +5598,7 @@ export const sourceMaintenanceResultSchema = z
     deletionWorkspacesScanned: z.number().int().nonnegative().max(10_000),
     quotaReservationsExpired: z.number().int().nonnegative().max(10_000),
     quotaReservationsPurged: z.number().int().nonnegative().max(10_000),
+    manualImportBatchesPurged: z.number().int().nonnegative().max(10_000).default(0),
     productionWorkflowAdmissionsPurged: z.number().int().nonnegative().max(10_000),
     productionAnalysisAdmissionsPurged: z.number().int().nonnegative().max(10_000),
     sourceCollectionLeasesPurged: z.number().int().nonnegative().max(10_000),

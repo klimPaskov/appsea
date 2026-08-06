@@ -7,6 +7,7 @@ import {
   manualImportRecordSchema,
   manualImportDeletionResultSchema,
   researchCampaignConfigurationSchema,
+  type MaintenanceSchedulerFence,
   type ManualImportBatchCreateInput,
   type ManualImportBatchReadModel,
   type ManualImportDeletionResult,
@@ -15,6 +16,7 @@ import {
 import { contentHash } from './hash'
 import {
   withAuthenticatedWorkspaceTransaction,
+  withWorkspaceTransaction,
   withServiceWorkspaceTransaction
 } from './transaction'
 
@@ -234,6 +236,43 @@ export async function consumeManualImportBatchInTransaction(
 export class PostgresManualImportRepository {
   constructor(private readonly pool: Pool) {}
 
+  /** Purge batches whose immutable source policy retention window has elapsed. */
+  async purgeExpired(
+    workspaceId: string,
+    occurredAt: string,
+    batchSize: number,
+    maintenanceFence: MaintenanceSchedulerFence
+  ): Promise<number> {
+    const parsedWorkspaceId = appseaIdentifierSchema.parse(workspaceId)
+    if (!Number.isFinite(Date.parse(occurredAt))) {
+      throw new Error('occurredAt must be a valid timestamp')
+    }
+    if (!Number.isSafeInteger(batchSize) || batchSize < 1 || batchSize > 1_000) {
+      throw new Error('batchSize must be an integer between 1 and 1000')
+    }
+    return withWorkspaceTransaction(
+      this.pool,
+      parsedWorkspaceId,
+      async (client) => {
+        const result = await client.query<{ purged_count: number | string }>(
+          `SELECT appsea.purge_expired_manual_import_batches(
+             $1, $2::timestamptz, $3, $4, $5, $6
+           ) AS purged_count`,
+          [
+            parsedWorkspaceId,
+            occurredAt,
+            batchSize,
+            maintenanceFence.schedulerName,
+            maintenanceFence.ownerId,
+            maintenanceFence.leaseToken
+          ]
+        )
+        return Number(result.rows[0]?.purged_count ?? 0)
+      },
+      { isolationLevel: 'READ COMMITTED', maintenanceFence }
+    )
+  }
+
   async createForUser(
     userId: string,
     input: ManualImportBatchCreateInput
@@ -445,8 +484,9 @@ export class PostgresManualImportRepository {
       if (batch.state === 'deleted') {
         const count = await client.query<{ count: string }>(
           `SELECT count(*)::text AS count
-               FROM appsea.deletion_tombstones
-              WHERE workspace_id = $1 AND reason = 'owner-import-batch-deleted'
+             FROM appsea.deletion_tombstones
+              WHERE workspace_id = $1
+                AND reason IN ('owner-import-batch-deleted', 'owner-import-retention-expired')
                 AND source_id = 'manual-owner-import'
                 AND source_record_id LIKE $2`,
           [workspaceId, `manual:${validatedBatchId}:%`]

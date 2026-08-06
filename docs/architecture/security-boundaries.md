@@ -11,7 +11,10 @@ copied into code, skills, instructions, permissions, or repository memory.
 The workflow history carries only a batch identifier. HTTP(S) locators are
 validated for storage but are never fetched by the server. Owner deletion
 clears staged payloads and records tombstones in the same authenticated
-transaction; downstream redaction remains the existing service-worker path.
+transaction; migration `0113` adds a second fenced path that expires staged or
+consumed batches from their immutable policy snapshot, records a fixed system
+audit receipt, and queues exact source-item tombstones from the completed run
+snapshot. Downstream redaction remains the existing service-worker path.
 The v2 `competitor-research` and `contrary-evidence` purposes only enable a
 private observation write linked to retained evidence. Observation claims are
 unreviewed by default and require editor/owner review; they never bypass the
@@ -338,6 +341,15 @@ for that pre-context authorization lookup.
   remains covered by the original server-owned TTL and purge path. Execution
   is granted only to `appsea_service` through the repository's authenticated
   workspace transaction.
+- Migration `0113` adds a separate `appsea_service` security-definer retention
+  function for owner-import staging. It requires the source-maintenance
+  server-clock fence and a matching workspace GUC, sets a transaction-local
+  maintenance principal, and lets the batch/record triggers accept only the
+  exact staged-or-consumed-to-deleted transition. The function clears payloads
+  before changing batch state, records a bounded system audit event, and links
+  tombstones through the immutable completed-run snapshot rather than parsing
+  a potentially ambiguous batch-ID prefix. It is bounded, skip-locked, and
+  replay-safe; no owner-import URL is fetched and no source policy is changed.
 - Migration `0051` extends that same function for the direct CFPB command. The
   command must establish the transaction-local `appsea-worker` principal on
   the `appsea_service` runtime role and target an active private non-fixture

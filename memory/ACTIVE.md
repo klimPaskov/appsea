@@ -19,7 +19,7 @@ enabled. Reviewed `manual-owner-import-v2` supports tenant-private
 owner-authorized CSV/JSON without claiming public market coverage; v1 is
 historical.
 
-Migrations `0027`-`0112` cover policy, deletion/leases, orchestration,
+Migrations `0027`-`0113` cover policy, deletion/leases, orchestration,
 analysis/report/plan governance, cost/alerts, object refs, archival/purge
 intent, redaction, agent tokens, and TOTP MFA. OIDC/MCP remain gated.
 
@@ -76,18 +76,9 @@ regression-tested; fixtures and MCP stay read-only, while mutations and
 decision/cluster ledgers remain server/database-owned with stale/hash/redaction
 gates.
 
-The 2026-08-06 policy handoff carries immutable reviewed JSON from
-`readCollectible` into source constructors; collection fails closed without it.
-The deterministic CFPB review manifest adds the policy hash, first-party
-evidence, bounded coverage/quota/deletion metadata, and independent-review
-fields without contacting CFPB, changing the registry, or activating it.
-The matching Stack Exchange review manifest adds first-party API/AUP/
-attribution/licensing evidence plus the required written-consent or
-commercial-exception reference, while remaining unregistered and disabled.
-Migration `0111` now carries a policy-declared permission requirement into a
-dedicated immutable review reference; the Stack Exchange approval CLI requires
-that reference and all collectibility reads fail closed without it. The source
-remains disabled pending actual independent permission review.
+The CFPB and Stack Exchange review manifests carry immutable policy/evidence
+metadata, but both sources remain disabled; `0111` requires permission evidence
+before any future activation and all collectibility reads fail closed without it.
 
 The owner-import web ingress now reserves the existing workspace-scoped,
 idempotent production workflow admission before persisting normalized batch
@@ -95,6 +86,15 @@ rows. Rate/concurrency-rejected requests therefore do not leave staged payloads;
 fresh reservations are released when staging fails, while the server-owned
 five-minute reservation TTL bounds failures before Temporal startup. Route and
 repository tests cover the fail-closed ordering.
+
+Migration `0113` closes the owner-import staging-retention gap. The leased
+source-maintenance pass now uses the immutable batch policy snapshot and a
+fenced security-definer function to purge expired staged/consumed normalized
+payloads, write a fixed audit receipt, mark the batch deleted, and queue exact
+source-item tombstones from the completed run snapshot. `manualImportBatchesPurged`
+is bounded and observable; fresh integration and backup/restore proofs pass
+through `0113`. Provider scheduler ownership and external retention/deletion
+operations remain release gates.
 
 ## Next production tranche
 
