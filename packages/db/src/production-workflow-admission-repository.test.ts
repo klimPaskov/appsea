@@ -61,6 +61,9 @@ function fakePool(
       if (text.includes('consume_production_collection_workflow_admission')) {
         return { rows: [{ consumed: true }], rowCount: 1 }
       }
+      if (text.includes('release_production_collection_workflow_admission')) {
+        return { rows: [{ released: true }], rowCount: 1 }
+      }
       if (text.includes('purge_production_collection_workflow_admissions')) {
         return { rows: [{ purged_count: '3' }], rowCount: 1 }
       }
@@ -160,6 +163,24 @@ describe('production workflow admission repository', () => {
       'requires an active admission reservation'
     )
     expect(() => assertProductionWorkflowAdmissionConsumed(true)).not.toThrow()
+  })
+
+  it('releases a staging reservation through the authenticated security-definer function', async () => {
+    const { pool, statements } = fakePool()
+    const repository = new PostgresProductionWorkflowAdmissionRepository(pool)
+
+    await expect(
+      repository.releaseForUser(
+        common.userId,
+        common.workspaceId,
+        common.idempotencyDigest,
+        common.inputHash
+      )
+    ).resolves.toBe(true)
+    expect(
+      statements.some((text) => text.includes('release_production_collection_workflow_admission'))
+    ).toBe(true)
+    expect(statements.some((text) => text.includes("set_config('appsea.auth_user_id'"))).toBe(true)
   })
 
   it('rejects malformed digests before opening a database transaction', async () => {

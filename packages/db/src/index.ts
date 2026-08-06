@@ -125,6 +125,7 @@ export {
   ProductionWorkflowRateLimitError,
   productionWorkflowAdmissionLimits,
   consumeProductionWorkflowAdmissionInTransaction,
+  releaseProductionWorkflowAdmissionInTransaction,
   assertProductionWorkflowAdmissionConsumed,
   type ProductionWorkflowAdmissionDecision,
   type ProductionWorkflowAdmissionInput,

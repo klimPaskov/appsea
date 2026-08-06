@@ -270,10 +270,13 @@ export async function POST(
   })
   // Reserve the durable start before persisting the normalized payload. This
   // keeps rejected rate/concurrency attempts from filling the database with
-  // staged records. A reservation that cannot reach Temporal or staging
-  // expires through the server-owned five-minute admission TTL.
+  // staged records. A reservation that cannot reach Temporal remains protected
+  // by the server-owned five-minute admission TTL; a fresh reservation can be
+  // released if staging itself fails before a workflow start is attempted.
+  const admissionRepository = new PostgresProductionWorkflowAdmissionRepository(pool)
+  let admission: Awaited<ReturnType<typeof admissionRepository.admitForUser>>
   try {
-    await new PostgresProductionWorkflowAdmissionRepository(pool).admitForUser({
+    admission = await admissionRepository.admitForUser({
       workspaceId: parsedWorkspaceId.data,
       userId: session.user.userId,
       idempotencyDigest: prepared.input.idempotencyDigest,
@@ -310,6 +313,26 @@ export async function POST(
       { status: 503, headers: privateResponseHeaders }
     )
   }
+  const releaseStagingAdmission = async (): Promise<void> => {
+    if (admission.replayed) return
+    try {
+      const released = await admissionRepository.releaseForUser(
+        session.user.userId,
+        parsedWorkspaceId.data,
+        prepared.input.idempotencyDigest,
+        prepared.input.inputHash
+      )
+      if (!released) {
+        console.warn('AppSea manual import staging admission was not released', {
+          reason: 'reservation_not_releasable'
+        })
+      }
+    } catch (releaseError) {
+      console.error('AppSea manual import staging admission release failed', {
+        name: releaseError instanceof Error ? releaseError.name : 'unknown'
+      })
+    }
+  }
   let batch
   try {
     batch = await new PostgresManualImportRepository(pool).createForUser(
@@ -317,6 +340,7 @@ export async function POST(
       batchInput
     )
   } catch (error) {
+    await releaseStagingAdmission()
     if (error instanceof ManualImportPermissionError) return forbiddenResponse()
     if (error instanceof ManualImportConflictError) {
       return Response.json(

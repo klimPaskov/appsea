@@ -19,7 +19,7 @@ enabled. Reviewed `manual-owner-import-v2` supports tenant-private
 owner-authorized CSV/JSON without claiming public market coverage; v1 is
 historical.
 
-Migrations `0027`-`0111` cover policy, deletion/leases, orchestration,
+Migrations `0027`-`0112` cover policy, deletion/leases, orchestration,
 analysis/report/plan governance, cost/alerts, object refs, archival/purge
 intent, redaction, agent tokens, and TOTP MFA. OIDC/MCP remain gated.
 
@@ -92,8 +92,9 @@ remains disabled pending actual independent permission review.
 The owner-import web ingress now reserves the existing workspace-scoped,
 idempotent production workflow admission before persisting normalized batch
 rows. Rate/concurrency-rejected requests therefore do not leave staged payloads;
-the server-owned five-minute reservation TTL bounds failures between admission,
-staging, and Temporal startup. Route tests cover the fail-closed ordering.
+fresh reservations are released when staging fails, while the server-owned
+five-minute reservation TTL bounds failures before Temporal startup. Route and
+repository tests cover the fail-closed ordering.
 
 ## Next production tranche
 
@@ -119,7 +120,7 @@ staging, and Temporal startup. Route tests cover the fail-closed ordering.
 - GitHub CI run `31065010546` for `48ec38d` was payment-gated before startup;
   hosted reruns remain external.
 - Competitive lineage/report enrichment is locally integration-tested through
-  `0111`; the workflow remains manual-rerun and tenant-private.
+  `0112`; the workflow remains manual-rerun and tenant-private.
 - Production DB/Temporal, role separation, HA, backups, scheduler/endpoint
   operations, provider recovery, alerting, billing, and deployment validation
   remain; the repository outbox/drain is not an external transaction.

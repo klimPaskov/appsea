@@ -83,7 +83,10 @@ workspace's five-start/15-minute and two-active-job limits, returns a replay
 for an already admitted digest, and lets workflow initialization consume the
 reservation. The bounded maintenance pass also purges consumed, released, or
 expired admissions older than the retention cutoff; it never deletes workflow
-jobs or research evidence.
+jobs or research evidence. Migration `0112` lets the owner-import route release
+only a fresh, actor-bound reservation when pre-workflow staging fails. It never
+releases consumed or expired rows, so an uncertain Temporal start remains
+covered by the existing TTL/purge path.
 
 Migration `0042` adds a separate downstream-analysis admission ledger. The
 private manual analysis route binds the session user and reserves only the

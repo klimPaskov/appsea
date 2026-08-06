@@ -124,7 +124,8 @@ describe('database foundation', () => {
       '0108',
       '0109',
       '0110',
-      '0111'
+      '0111',
+      '0112'
     ])
     expect(migrations[0]?.checksum).toMatch(/^[a-f0-9]{64}$/)
     expect(migrations[0]?.sql).toContain('CREATE TABLE appsea.evidence_records')
@@ -332,6 +333,21 @@ describe('database foundation', () => {
       'source policy approval requires a permission evidence reference'
     )
     expect(sourcePermissionEvidenceMigration?.sql).toContain('permissionEvidenceRequired')
+    const productionAdmissionReleaseMigration = migrations.find(
+      (migration) => migration.version === '0112'
+    )
+    expect(productionAdmissionReleaseMigration?.sql).toContain(
+      'CREATE OR REPLACE FUNCTION appsea.release_production_collection_workflow_admission'
+    )
+    expect(productionAdmissionReleaseMigration?.sql).toContain(
+      "current_setting('appsea.auth_user_id'"
+    )
+    expect(productionAdmissionReleaseMigration?.sql).toContain(
+      "admission.state <> 'reserved' OR admission.reservation_expires_at <= now_at"
+    )
+    expect(productionAdmissionReleaseMigration?.sql).toContain(
+      'GRANT EXECUTE ON FUNCTION appsea.release_production_collection_workflow_admission'
+    )
     const workspacePurgeManifestMigration = migrations.find(
       (migration) => migration.version === '0083'
     )

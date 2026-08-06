@@ -7,6 +7,7 @@ const mocks = vi.hoisted(() => ({
   readCollectible: vi.fn(),
   createBatch: vi.fn(),
   admit: vi.fn(),
+  release: vi.fn(),
   prepare: vi.fn(),
   start: vi.fn(),
   getTemporalWorkflowClient: vi.fn()
@@ -78,6 +79,7 @@ vi.mock('@appsea/db', () => {
     },
     PostgresProductionWorkflowAdmissionRepository: class {
       admitForUser = mocks.admit
+      releaseForUser = mocks.release
     }
   }
 })
@@ -178,6 +180,13 @@ describe('manual import route', () => {
     mocks.prepare.mockReturnValue({
       input: { idempotencyDigest: 'a'.repeat(64), inputHash: 'b'.repeat(64) }
     })
+    mocks.admit.mockResolvedValue({
+      decision: 'admitted',
+      replayed: false,
+      retryAfterSeconds: 0,
+      reservationExpiresAt: '2026-08-03T00:05:00.000Z'
+    })
+    mocks.release.mockResolvedValue(true)
     mocks.start.mockResolvedValue({ workflowId: 'workflow:production:manual-import' })
     mocks.getTemporalWorkflowClient.mockResolvedValue({})
   })
@@ -263,5 +272,39 @@ describe('manual import route', () => {
     expect(mocks.admit).toHaveBeenCalled()
     expect(mocks.createBatch).not.toHaveBeenCalled()
     expect(mocks.start).not.toHaveBeenCalled()
+  })
+
+  it('releases a fresh admission when staging fails before workflow start', async () => {
+    mocks.createBatch.mockRejectedValueOnce(new Error('database unavailable'))
+
+    const response = await POST(request(validBody()), {
+      params: Promise.resolve({ workspaceId: 'workspace:private' })
+    })
+
+    expect(response.status).toBe(503)
+    expect(mocks.release).toHaveBeenCalledWith(
+      'user:owner',
+      'workspace:private',
+      'a'.repeat(64),
+      'b'.repeat(64)
+    )
+    expect(mocks.start).not.toHaveBeenCalled()
+  })
+
+  it('does not release an idempotent replay when its staged payload is unavailable', async () => {
+    mocks.admit.mockResolvedValueOnce({
+      decision: 'replayed',
+      replayed: true,
+      retryAfterSeconds: 0,
+      reservationExpiresAt: '2026-08-03T00:05:00.000Z'
+    })
+    mocks.createBatch.mockRejectedValueOnce(new Error('database unavailable'))
+
+    const response = await POST(request(validBody()), {
+      params: Promise.resolve({ workspaceId: 'workspace:private' })
+    })
+
+    expect(response.status).toBe(503)
+    expect(mocks.release).not.toHaveBeenCalled()
   })
 })

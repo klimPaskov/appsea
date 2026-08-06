@@ -554,7 +554,8 @@ describe.sequential('PostgreSQL fixture persistence lifecycle', () => {
       '0108',
       '0109',
       '0110',
-      '0111'
+      '0111',
+      '0112'
     ])
     expect(secondMigrationResult.applied).toEqual([])
     expect(secondMigrationResult.alreadyApplied).toEqual([
@@ -668,7 +669,8 @@ describe.sequential('PostgreSQL fixture persistence lifecycle', () => {
       '0108',
       '0109',
       '0110',
-      '0111'
+      '0111',
+      '0112'
     ])
   })
 
@@ -1433,6 +1435,78 @@ describe.sequential('PostgreSQL fixture persistence lifecycle', () => {
           [workspaceId]
         )
         await client.query('DELETE FROM appsea.workspaces WHERE workspace_id = $1', [workspaceId])
+      })
+    }
+  })
+
+  it('releases only an unconsumed authenticated production admission', async () => {
+    const workspaceId = 'workspace-admission-release'
+    const userId = 'user-admission-release'
+    const digest = 'a'.repeat(64)
+    const inputHash = 'b'.repeat(64)
+    await withOwnerClient(async (client) => {
+      await client.query(
+        `INSERT INTO appsea.users
+           (user_id, email, display_name, password_hash, created_at, updated_at)
+         VALUES ($1, 'admission-release@example.test', 'Admission Release Owner', repeat('x', 64), $2, $2)`,
+        [userId, fixedAt]
+      )
+      await client.query(
+        `INSERT INTO appsea.workspaces
+           (workspace_id, slug, display_name, visibility, fixture_only, status, created_at, updated_at)
+         VALUES ($1, 'admission-release-workspace', 'Admission Release Workspace', 'private', false, 'active', $2, $2)`,
+        [workspaceId, fixedAt]
+      )
+      await client.query(
+        `INSERT INTO appsea.workspace_memberships
+           (workspace_id, user_id, role, created_at, updated_at)
+         VALUES ($1, $2, 'owner', $3, $3)`,
+        [workspaceId, userId, fixedAt]
+      )
+    })
+    const admissionRepository = new PostgresProductionWorkflowAdmissionRepository(servicePool)
+    try {
+      await expect(
+        admissionRepository.admitForUser({
+          workspaceId,
+          userId,
+          idempotencyDigest: digest,
+          inputHash
+        })
+      ).resolves.toMatchObject({ decision: 'admitted', replayed: false })
+      await expect(
+        admissionRepository.releaseForUser(userId, workspaceId, digest, inputHash)
+      ).resolves.toBe(true)
+      await expect(
+        admissionRepository.releaseForUser(userId, workspaceId, digest, inputHash)
+      ).resolves.toBe(true)
+      await expect(
+        admissionRepository.admitForUser({
+          workspaceId,
+          userId,
+          idempotencyDigest: digest,
+          inputHash
+        })
+      ).resolves.toMatchObject({ decision: 'admitted', replayed: false })
+      await expect(admissionRepository.consume(workspaceId, digest, inputHash)).resolves.toBe(true)
+      await expect(
+        admissionRepository.releaseForUser(userId, workspaceId, digest, inputHash)
+      ).resolves.toBe(false)
+    } finally {
+      await withOwnerClient(async (client) => {
+        await client.query(
+          'DELETE FROM appsea.production_collection_workflow_admissions WHERE workspace_id = $1',
+          [workspaceId]
+        )
+        await client.query(
+          'DELETE FROM appsea.production_collection_workflow_start_buckets WHERE workspace_id = $1',
+          [workspaceId]
+        )
+        await client.query('DELETE FROM appsea.workspace_memberships WHERE workspace_id = $1', [
+          workspaceId
+        ])
+        await client.query('DELETE FROM appsea.workspaces WHERE workspace_id = $1', [workspaceId])
+        await client.query('DELETE FROM appsea.users WHERE user_id = $1', [userId])
       })
     }
   })

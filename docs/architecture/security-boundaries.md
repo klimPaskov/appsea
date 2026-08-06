@@ -330,6 +330,14 @@ for that pre-context authorization lookup.
   closed and rolls back if the reservation cannot be consumed on either the
   existing-job or insert path. The limits are fixed in the reviewed migration
   rather than accepted from request input.
+- Migration `0112` adds a separate authenticated release function for the
+  owner-import pre-staging boundary. It locks the admission row and releases
+  only a matching, unexpired `reserved` row for an owner/editor in the same
+  active private non-fixture workspace. Replayed, consumed, expired, or
+  missing rows are not released optimistically; an uncertain Temporal start
+  remains covered by the original server-owned TTL and purge path. Execution
+  is granted only to `appsea_service` through the repository's authenticated
+  workspace transaction.
 - Migration `0051` extends that same function for the direct CFPB command. The
   command must establish the transaction-local `appsea-worker` principal on
   the `appsea_service` runtime role and target an active private non-fixture

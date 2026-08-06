@@ -71,6 +71,31 @@ export function assertProductionWorkflowAdmissionConsumed(consumed: boolean): vo
   if (!consumed) throw new ProductionWorkflowAdmissionRequiredError()
 }
 
+/** Release a fresh reservation after pre-workflow staging fails. */
+export async function releaseProductionWorkflowAdmissionInTransaction(
+  client: PoolClient,
+  workspaceId: string,
+  idempotencyDigest: string,
+  inputHash: string
+): Promise<boolean> {
+  const parsedWorkspaceId = appseaIdentifierSchema.parse(workspaceId)
+  const parsedDigest = validateDigest(idempotencyDigest, 'idempotencyDigest')
+  const parsedInputHash = validateDigest(inputHash, 'inputHash')
+  try {
+    const result = await client.query<{ released: boolean }>(
+      `SELECT appsea.release_production_collection_workflow_admission($1, $2, $3)
+         AS released`,
+      [parsedWorkspaceId, parsedDigest, parsedInputHash]
+    )
+    return Boolean(result.rows[0]?.released)
+  } catch (error) {
+    if (isDatabaseError(error, '23505', 'production workflow admission')) {
+      throw new ProductionWorkflowAdmissionConflictError()
+    }
+    throw error
+  }
+}
+
 export class ProductionWorkflowRateLimitError extends Error {
   readonly retryAfterSeconds: number
 
@@ -301,6 +326,39 @@ export class PostgresProductionWorkflowAdmissionRepository {
         parsedWorkspaceId,
         (client) =>
           consumeProductionWorkflowAdmissionInTransaction(
+            client,
+            parsedWorkspaceId,
+            parsedDigest,
+            parsedInputHash
+          ),
+        { isolationLevel: 'SERIALIZABLE' }
+      )
+    } catch (error) {
+      if (isDatabaseError(error, '23505', 'production workflow admission')) {
+        throw new ProductionWorkflowAdmissionConflictError()
+      }
+      throw error
+    }
+  }
+
+  /** Release only a still-reserved user admission after staging fails. */
+  async releaseForUser(
+    userId: string,
+    workspaceId: string,
+    idempotencyDigest: string,
+    inputHash: string
+  ): Promise<boolean> {
+    const parsedUserId = appseaIdentifierSchema.parse(userId)
+    const parsedWorkspaceId = appseaIdentifierSchema.parse(workspaceId)
+    const parsedDigest = validateDigest(idempotencyDigest, 'idempotencyDigest')
+    const parsedInputHash = validateDigest(inputHash, 'inputHash')
+    try {
+      return await withAuthenticatedWorkspaceTransaction(
+        this.pool,
+        parsedUserId,
+        parsedWorkspaceId,
+        (client) =>
+          releaseProductionWorkflowAdmissionInTransaction(
             client,
             parsedWorkspaceId,
             parsedDigest,

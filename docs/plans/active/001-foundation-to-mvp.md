@@ -25,7 +25,7 @@ Status: production-shaped foundation implemented and validated locally; producti
 
 Implemented:
 
-- PostgreSQL 18 schema and one hundred eleven forward, checksummed migrations
+- PostgreSQL 18 schema and one hundred twelve forward, checksummed migrations
 - normalized source, evidence, complaint, cluster, competitor, opportunity, score, report, plan, audit, cost, deletion, outbox, and lineage tables
 - no-login owner, separate migrator, and least-privilege runtime role contract
 - forced workspace RLS and transaction-scoped workspace context
@@ -35,7 +35,7 @@ Implemented:
 - populated upgrade, fresh install, privilege, RLS, provenance, policy, cross-wire, and replay tests
 - local runbook and CI persistence gate
 - isolated local PostgreSQL backup/restore runbook and CI gate; the drill
-  restores a disposable dump through all one hundred eleven migrations and verifies
+  restores a disposable dump through all one hundred twelve migrations and verifies
   forced workspace RLS plus runtime/maintenance privileges without accepting a
   remote URL
 - one-command loopback private-workspace stack with migration, worker, and web
@@ -229,7 +229,7 @@ Migration `0096_opportunity_score_v1_envelope.sql` adds nullable, range-checked
 balanced v1 score fields, reviewed evidence/coverage/freshness references, and
 a private ranking index. Legacy score rows remain readable and keep `score` as
 their raw-score compatibility field. The 2026-08-06 local fresh migration and
-backup/restore drills pass through `0111`; provider backup, HA, retention, and
+backup/restore drills pass through `0112`; provider backup, HA, retention, and
 production restore remain deployment work.
 
 Migration `0097_mcp_agent_access_admission.sql` rechecks workspace membership
@@ -828,6 +828,9 @@ remains explicit and operated scheduler/endpoint ownership remains open;
 external consent/exception reference on immutable source-policy reviews; the
 Stack Exchange candidate remains disabled until that evidence and independent
 review exist;
+`0112` adds an authenticated, actor-bound release function for a still-reserved
+owner-import admission when bounded staging fails; consumed or expired
+reservations are never released optimistically.
 scheduled commands now share migration `0046`'s server-clock owner/token lease
 with renewal, stale takeover, migration `0052` transaction fencing for selected
 SQL mutations, and fixed lease-loss failures;
