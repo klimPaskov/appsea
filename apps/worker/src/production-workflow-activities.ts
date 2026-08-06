@@ -178,6 +178,7 @@ export function productionCollectionRequestFromActivityInput(
     sourceId: input.sourceId,
     policyVersion: input.policyVersion,
     query: input.query,
+    ...(input.dateRange ? { dateRange: input.dateRange } : {}),
     limit: input.limit,
     purpose: input.purpose,
     requestedDisplayMode: input.requestedDisplayMode,

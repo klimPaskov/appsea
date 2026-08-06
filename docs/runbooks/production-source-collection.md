@@ -24,6 +24,8 @@ $env:APPSEA_PRODUCTION_IDEMPOTENCY_KEY = 'cfpb-2026-07-01-query-v1'
 $env:APPSEA_PRODUCTION_REQUESTED_AT = '2026-07-25T00:00:00.000Z'
 $env:APPSEA_PRODUCTION_CFPB_POLICY_VERSION = 'cfpb-2026-07-v1'
 $env:APPSEA_PRODUCTION_CFPB_QUERY = 'credit card'
+$env:APPSEA_PRODUCTION_CFPB_DATE_FROM = '2026-07-01T00:00:00.000Z'
+$env:APPSEA_PRODUCTION_CFPB_DATE_TO = '2026-07-31T23:59:59.000Z'
 $env:APPSEA_PRODUCTION_CFPB_LIMIT = '100'
 $env:APPSEA_PRODUCTION_CFPB_MAX_SOURCE_ITEMS = '100'
 pnpm worker:source:cfpb
@@ -54,6 +56,14 @@ does not emit deletion events;
 full-snapshot deletion reconciliation is a separate durable maintenance job;
 see [`source-reconciliation.md`](source-reconciliation.md). A
 repeated request with a different input is an idempotency conflict.
+
+The optional CFPB date variables are inclusive campaign bounds. The connector
+maps them to CFPB's `date_received_min`/`date_received_max` calendar filters;
+they describe intake time, not `publishedAt`. The bounds are part of the
+workflow input hash and collection snapshot, so changing the window is a new
+request rather than an ambiguous replay. Records outside a filtered window are
+not evidence of absence, and an exact tombstone re-collection reports that it
+did not apply the campaign window.
 
 The worker carries the immutable policy JSON payload returned by the database
 approval read into the connector constructor. The connector compares the

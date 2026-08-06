@@ -88,10 +88,14 @@ it is not a sample of all developers, products, or competitors. The connector
 fails closed for disabled/pending/expired policies, non-HTTPS or non-official
 API origins, empty searches, quota overages, oversized responses, malformed
 records, API throttling, and missing required public fields. It records bounded
-warnings for filtered-search deletion limits and skipped malformed records.
+warnings for filtered-search deletion limits and skipped malformed records. An
+inclusive campaign date window is mapped to the official API's `fromdate` and
+`todate` creation-time parameters and is recorded as a coverage warning; it
+does not establish absence outside the window.
 
 Exact question re-collection uses the official question-by-ID route and still
-emits no tombstone. A source-native `stackoverflow:<question_id>` identifier
+emits no tombstone and does not apply the campaign date window. A source-native
+`stackoverflow:<question_id>` identifier
 and the verified question URL remain in provenance so an operator can inspect
 and attribute the claim.
 

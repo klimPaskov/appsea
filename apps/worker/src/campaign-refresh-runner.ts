@@ -134,6 +134,7 @@ function refreshRequest(
     sourceId,
     policyVersion,
     query: configuration.query,
+    dateRange: configuration.dateRange,
     limit,
     purpose: claim.purpose,
     requestedDisplayMode: configuration.requestedDisplayMode,

@@ -17,6 +17,13 @@ Use the private workspace screen at `/workspace/{workspaceId}/imports`, or the A
 
 The campaign must be private, non-fixture, and explicitly include `manual-owner-import` with excerpt display mode. New collection uses the reviewed `manual-owner-import-v2` snapshot; `manual-owner-import-v1` remains readable only for historical batches. The body is bounded to 2 MiB; the normalized batch is bounded to 5,000 records and the campaign source-item budget. The route admits the durable workflow start before persisting normalized rows, so rate- or concurrency-rejected requests do not create staged payloads. If bounded staging fails, a newly admitted still-reserved row is released through the authenticated database function; an idempotent replay is not released. If Temporal startup fails after staging, the reservation remains protected by the server-owned five-minute TTL and maintenance purge, because the start outcome may be uncertain. A successful response contains the private batch model, workflow ID, run ID, and hashes. Reuse the same idempotency key to safely retry a response lost after staging.
 
+The campaign `dateRange` is inclusive. During collection, records are filtered
+by `published_at` when supplied and otherwise by normalized `captured_at`, then
+the source-item limit is applied. The worker reads the bounded staged batch
+before filtering so late in-range rows are not hidden by an early out-of-range
+row. The result keeps a coverage warning for filtered rows and never treats
+records outside the window as deletion evidence.
+
 For competitor or weak-market work, use a campaign purpose of
 `competitor-research` or `contrary-evidence`, then create a private evidence
 observation from the Competitors route. The observation keeps source-item and

@@ -405,6 +405,12 @@ campaign surface now exposes bounded cursor-paginated one-source and
 multi-source workflow history, with a dedicated private history route and
 stable request-time/identifier cursors; completed runs still link to evidence
 inspection without exposing workflow hashes or raw source payloads.
+The existing campaign `dateRange` is now carried into each one-source,
+scheduled-refresh, and multi-source child request, included in the sanitized
+workflow identity, and persisted in the collection snapshot. Connector tests
+prove CFPB intake-date, Stack Exchange creation-date, fixture, and owner-import
+window enforcement with visible coverage warnings; legacy snapshots remain
+replayable.
 Owners/editors can now choose an approved seed on the
 collection page and launch an explicit downstream analysis. The linked private
 status page/API reconciles safe Temporal state with a PostgreSQL projection,
@@ -589,6 +595,8 @@ Implemented:
 - explicit, one-record tombstone re-collection uses the official complaint
   route, preserves the deleted predecessor, and emits no deletion tombstone;
   the connector remains disabled pending review
+- inclusive campaign date windows are applied at each source boundary with
+  source-specific timestamp semantics and are never treated as deletion proof
 - source-policy record at `docs/product/cfpb-source-policy.md`
 - disabled Stack Exchange candidate at `packages/connectors/src/index.ts`,
   with official API origin pinning, bounded sanitized excerpts, HTTPS

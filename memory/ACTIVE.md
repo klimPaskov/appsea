@@ -34,14 +34,8 @@ gate proves source-backed competitor/contrary coverage. Migrations `0100`/
 `0101` repair legacy states and persist the owner-reviewed gate with stale
 reads; gaps remain visible. Competitors exposes checklist review, while API
 owns evidence/snapshot/membership/step-up and UI never activates sources.
-Report/plan approval is editor/owner-gated; readiness is server-owned.
-Approved report/plan JSON exports now append deterministic, identifier-only
-`report.exported`/`plan.exported` receipts after object hydration/redaction;
-private Activity exposes the scalar receipt. Provider retention, revocation, and
-purge remain external.
-
-`pnpm verify:worker:recovery` proves worker replacement with one-time effects
-and sanitized history; hosted restore/failover/topology remain open.
+Report/plan approval is editor/owner-gated; readiness is server-owned and
+provider retention/revocation/purge remain external.
 
 Authentication uses scrypt sessions, membership/RLS, MFA/governance step-up,
 closure/archival, and scoped read-only agent tokens. OIDC, delivery, retention,
@@ -74,15 +68,6 @@ preflight; the production gate also requires a bounded
 the worker stop-grace window. Remote namespace/task-queue authorization and
 hosted replacement/crash evidence remain external.
 
-The sparse public leaderboard and private opportunity/review routes are
-regression-tested; fixtures and MCP stay read-only, while mutations and
-decision/cluster ledgers remain server/database-owned with stale/hash/redaction
-gates.
-
-The CFPB and Stack Exchange review manifests carry immutable policy/evidence
-metadata, but both sources remain disabled; `0111` requires permission evidence
-before any future activation and all collectibility reads fail closed without it.
-
 The owner-import web ingress now reserves the existing workspace-scoped,
 idempotent production workflow admission before persisting normalized batch
 rows. Rate/concurrency-rejected requests therefore do not leave staged payloads;
@@ -98,6 +83,18 @@ source-item tombstones from the completed run snapshot. `manualImportBatchesPurg
 is bounded and observable; fresh integration and backup/restore proofs pass
 through `0113`. Provider scheduler ownership and external retention/deletion
 operations remain release gates.
+
+The campaign `dateRange` contract is now enforced rather than descriptive:
+web admission, scheduled refresh/orchestration, sanitized Temporal input,
+worker activity reconstruction, and immutable collection snapshots carry the
+validated inclusive bounds. CFPB applies its bounds to `date_received` intake
+dates, Stack Exchange to question creation, and owner imports to published
+time with captured-time fallback; fixture collection follows its publication
+timestamp. Filtered results emit coverage warnings, and exact tombstone
+re-collection explicitly reports that the campaign window was not applied.
+The field is additive so legacy collection snapshots without it remain
+replayable. Tests cover request URLs, filtering-before-limit, warnings, and
+workflow forwarding.
 
 ## Next production tranche
 

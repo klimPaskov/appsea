@@ -28,6 +28,8 @@ function requestFromEnv(
   const maxActivityAttempts = Number(
     process.env.APPSEA_PRODUCTION_CFPB_MAX_ACTIVITY_ATTEMPTS ?? '3'
   )
+  const dateFrom = process.env.APPSEA_PRODUCTION_CFPB_DATE_FROM?.trim() || null
+  const dateTo = process.env.APPSEA_PRODUCTION_CFPB_DATE_TO?.trim() || null
   return productionCollectionRequestSchema.parse({
     workspaceId,
     campaignId: requiredEnv('APPSEA_PRODUCTION_CAMPAIGN_ID'),
@@ -36,6 +38,7 @@ function requestFromEnv(
     sourceId: 'cfpb-consumer-complaints',
     policyVersion,
     query: process.env.APPSEA_PRODUCTION_CFPB_QUERY ?? '',
+    ...(dateFrom || dateTo ? { dateRange: { from: dateFrom, to: dateTo } } : {}),
     limit,
     purpose: process.env.APPSEA_PRODUCTION_CFPB_PURPOSE ?? 'opportunity-research',
     requestedDisplayMode: 'excerpt',

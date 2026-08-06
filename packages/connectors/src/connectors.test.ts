@@ -141,6 +141,21 @@ describe('connector policy gate', () => {
     expect(result.costMicros).toBe(0)
   })
 
+  it('applies a fixture date window before the result limit and discloses its coverage boundary', async () => {
+    const result = await new FixtureConnector().collect({
+      query: 'handoff',
+      limit: 10,
+      purpose: 'testing',
+      requestedDisplayMode: 'fixture',
+      dateRange: {
+        from: '2026-07-08T00:00:00.000Z',
+        to: '2026-07-08T23:59:59.000Z'
+      }
+    })
+    expect(result.complaints.length).toBeGreaterThan(0)
+    expect(result.warnings.some((warning) => warning.includes('outside this window'))).toBe(true)
+  })
+
   it('normalizes bounded owner CSV imports and scrubs personal data without fetching URLs', () => {
     const parsed = parseManualImportContent(
       'source_record_id,text,canonical_locator,captured_at\n' +
@@ -221,6 +236,69 @@ describe('connector policy gate', () => {
       allowedRepresentation: 'excerpt'
     })
     expect(result.warnings).toContain('batch warning')
+  })
+
+  it('filters staged owner records by date before applying the run limit', async () => {
+    let requestedLimit = 0
+    const connector = new ManualImportConnector({
+      batchReader: {
+        async readForCollection(input) {
+          requestedLimit = input.limit
+          return {
+            records: [
+              {
+                sourceRecordId: 'in-window',
+                canonicalLocator: null,
+                capturedAt: '2026-08-02T00:00:00.000Z',
+                publishedAt: null,
+                query: 'support export',
+                product: 'Imported product',
+                company: 'Imported company',
+                feature: 'handoff',
+                category: 'workflow',
+                text: 'The handoff history is available.',
+                language: 'en'
+              },
+              {
+                sourceRecordId: 'out-of-window',
+                canonicalLocator: null,
+                capturedAt: '2026-07-01T00:00:00.000Z',
+                publishedAt: null,
+                query: 'support export',
+                product: 'Imported product',
+                company: 'Imported company',
+                feature: 'handoff',
+                category: 'workflow',
+                text: 'The older handoff history is available.',
+                language: 'en'
+              }
+            ],
+            warnings: []
+          }
+        }
+      },
+      now: () => '2026-08-03T00:00:00.000Z',
+      policy: { ...manualOwnerImportSourcePolicy, expiresAt: null }
+    })
+    const result = await connector.collect({
+      query: 'support export',
+      limit: 1,
+      purpose: 'opportunity-research',
+      requestedDisplayMode: 'excerpt',
+      dateRange: { from: '2026-08-01T00:00:00.000Z', to: '2026-08-03T00:00:00.000Z' },
+      workspaceId: 'workspace:one',
+      runId: 'run:manual-date-window',
+      policyVersion: manualOwnerImportPolicyVersion,
+      manualImportBatchId: 'batch:date-window'
+    })
+    expect(requestedLimit).toBe(5_000)
+    expect(result.complaints).toHaveLength(1)
+    expect(result.complaints[0]?.sourceRecordId).toContain('in-window')
+    expect(
+      result.warnings.some((warning) =>
+        warning.includes('outside the requested source date window')
+      )
+    ).toBe(true)
   })
 
   it('fails closed for an unapproved purpose', () => {
@@ -461,6 +539,36 @@ describe('connector policy gate', () => {
     )
   })
 
+  it('passes an inclusive date window to the official Stack Exchange search route', async () => {
+    let requestedUrl: URL | undefined
+    const connector = new StackExchangeConnector({
+      policy: approvedStackExchangePolicy,
+      fetchImpl: async (url) => {
+        requestedUrl = new URL(String(url))
+        return new Response(JSON.stringify({ items: [stackExchangeQuestion], has_more: false }), {
+          status: 200
+        })
+      },
+      now: () => '2026-08-02T00:00:00.000Z'
+    })
+    const result = await connector.collect({
+      query: 'handoff history',
+      limit: 5,
+      purpose: 'competitor-research',
+      requestedDisplayMode: 'excerpt',
+      dateRange: { from: '2025-01-01T00:00:00.000Z', to: '2026-12-31T23:59:59.000Z' }
+    })
+    expect(requestedUrl?.searchParams.get('fromdate')).toBe(
+      String(Math.floor(Date.parse('2025-01-01T00:00:00.000Z') / 1_000))
+    )
+    expect(requestedUrl?.searchParams.get('todate')).toBe(
+      String(Math.floor(Date.parse('2026-12-31T23:59:59.000Z') / 1_000))
+    )
+    expect(result.warnings.some((warning) => warning.includes('question-creation window'))).toBe(
+      true
+    )
+  })
+
   it('uses the exact Stack Exchange question route for reviewed re-collection', async () => {
     let requestedUrl: URL | undefined
     const connector = new StackExchangeConnector({
@@ -507,6 +615,28 @@ describe('connector policy gate', () => {
     expect(result.warnings).toContain(
       'This exact source-record re-collection used the official complaint-by-ID route and emitted no deletion tombstones.'
     )
+  })
+
+  it('passes the campaign date window to the official CFPB intake-date filters', async () => {
+    let requestedUrl: URL | undefined
+    const connector = new CfpbConnector({
+      policy: approvedCfpbPolicy,
+      fetchImpl: async (url) => {
+        requestedUrl = new URL(String(url))
+        return new Response(JSON.stringify([cfpbRecord]), { status: 200 })
+      },
+      now: () => '2026-07-24T00:00:00.000Z'
+    })
+    const result = await connector.collect({
+      query: 'card',
+      limit: 1,
+      purpose: 'testing',
+      requestedDisplayMode: 'excerpt',
+      dateRange: { from: '2026-07-01T00:00:00.000Z', to: '2026-07-31T23:59:59.000Z' }
+    })
+    expect(requestedUrl?.searchParams.get('date_received_min')).toBe('2026-07-01')
+    expect(requestedUrl?.searchParams.get('date_received_max')).toBe('2026-07-31')
+    expect(result.warnings.some((warning) => warning.includes('intake-date window'))).toBe(true)
   })
 
   it('runs the lease preflight before CFPB HTTP and releases denied quota', async () => {

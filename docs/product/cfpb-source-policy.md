@@ -108,6 +108,14 @@ evidence. CFPB's `date_received` is an intake date rather than a publication
 timestamp, so the current contract leaves `publishedAt` unset and preserves the
 distinction in the collection warning.
 
+Campaign date windows are enforced at the official API boundary with
+`date_received_min` and `date_received_max` (inclusive calendar dates). The
+window is therefore an intake-date filter, not a publication-date claim. A
+filtered collection still cannot establish deletion absence or represent the
+full complaint population; the persisted snapshot and coverage warnings retain
+that limitation. Exact complaint-by-ID re-collection is intentionally not
+filtered by the campaign window and says so in its warning.
+
 The source's own publication and scrubbing statements are the reason for this
 minimum. AppSea does not infer that a published complaint is representative,
 verified, or a measure of total market harm.

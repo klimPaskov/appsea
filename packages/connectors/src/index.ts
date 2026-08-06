@@ -1,7 +1,17 @@
 import { createHash } from 'node:crypto'
 import { seedComplaints } from '@appsea/catalog'
-import type { Complaint, SourceDeletionEvent, SourcePolicy } from '@appsea/contracts'
-import { complaintSchema, sourceDeletionEventSchema, sourcePolicySchema } from '@appsea/contracts'
+import type {
+  Complaint,
+  ResearchDateRange,
+  SourceDeletionEvent,
+  SourcePolicy
+} from '@appsea/contracts'
+import {
+  complaintSchema,
+  researchDateRangeSchema,
+  sourceDeletionEventSchema,
+  sourcePolicySchema
+} from '@appsea/contracts'
 
 export * from './manual-import'
 
@@ -53,6 +63,8 @@ export interface CollectionRequest {
   limit: number
   purpose: string
   requestedDisplayMode: SourcePolicy['displayMode']
+  /** Inclusive source-native date bounds selected by the campaign. */
+  dateRange?: ResearchDateRange
   runId?: string
   /** Workspace is required when a durable quota ledger is supplied. */
   workspaceId?: string
@@ -229,6 +241,7 @@ export function assertPolicyAllowsCollection(
   policy: SourcePolicy,
   request: CollectionRequest
 ): void {
+  if (request.dateRange !== undefined) researchDateRangeSchema.parse(request.dateRange)
   if (!policy.enabled) {
     throw new Error(`Source ${policy.sourceId} is disabled`)
   }
@@ -274,6 +287,28 @@ export function assertPolicyAllowsCollection(
   }
 }
 
+export function hasDateRangeBounds(dateRange: ResearchDateRange | undefined): boolean {
+  return Boolean(dateRange?.from || dateRange?.to)
+}
+
+export function dateRangeIncludes(
+  value: string | null | undefined,
+  dateRange: ResearchDateRange
+): boolean {
+  if (!value) return false
+  const timestamp = Date.parse(value)
+  if (!Number.isFinite(timestamp)) return false
+  const from = dateRange.from ? Date.parse(dateRange.from) : Number.NEGATIVE_INFINITY
+  const to = dateRange.to ? Date.parse(dateRange.to) : Number.POSITIVE_INFINITY
+  return timestamp >= from && timestamp <= to
+}
+
+export function dateRangeCoverageWarning(basis: string, dateRange: ResearchDateRange): string {
+  const from = dateRange.from ?? 'the beginning of available source history'
+  const to = dateRange.to ?? 'the collection time'
+  return `Collection was limited to the inclusive ${basis} window ${from} through ${to}; records outside this window are not evidence of absence.`
+}
+
 export class FixtureConnector implements SourceConnector {
   readonly sourceId = fixtureSourcePolicy.sourceId
   readonly policy = fixtureSourcePolicy
@@ -284,6 +319,12 @@ export class FixtureConnector implements SourceConnector {
     const matches = seedComplaints.filter((entry) => {
       if (request.sourceRecordId !== undefined) {
         return entry.sourceRecordId === request.sourceRecordId
+      }
+      if (
+        hasDateRangeBounds(request.dateRange) &&
+        !dateRangeIncludes(entry.publishedAt ?? entry.capturedAt, request.dateRange!)
+      ) {
+        return false
       }
       if (!query) return true
       return [entry.product, entry.feature, entry.category, entry.text]
@@ -297,7 +338,10 @@ export class FixtureConnector implements SourceConnector {
       complaints: matches.slice(0, request.limit),
       deletions: [],
       warnings: [
-        'Fixture results are synthetic and must not be presented as real market research.'
+        'Fixture results are synthetic and must not be presented as real market research.',
+        ...(hasDateRangeBounds(request.dateRange)
+          ? [dateRangeCoverageWarning('fixture publication timestamp', request.dateRange!)]
+          : [])
       ],
       costMicros: 0
     }
@@ -802,6 +846,7 @@ export class StackExchangeConnector implements SourceConnector {
           idempotencyMaterial: request.idempotencyKey ?? '',
           request: {
             query: request.query,
+            dateRange: request.dateRange ?? null,
             limit: request.limit,
             purpose: request.purpose,
             requestedDisplayMode: request.requestedDisplayMode,
@@ -892,6 +937,15 @@ export class StackExchangeConnector implements SourceConnector {
       url.searchParams.set('q', request.query.trim())
       url.searchParams.set('sort', 'relevance')
       url.searchParams.set('pagesize', String(request.limit))
+      if (request.dateRange?.from) {
+        url.searchParams.set(
+          'fromdate',
+          String(Math.floor(Date.parse(request.dateRange.from) / 1_000))
+        )
+      }
+      if (request.dateRange?.to) {
+        url.searchParams.set('todate', String(Math.floor(Date.parse(request.dateRange.to) / 1_000)))
+      }
     }
     if (this.apiKey) url.searchParams.set('key', this.apiKey)
 
@@ -978,6 +1032,16 @@ export class StackExchangeConnector implements SourceConnector {
     if (questionId) {
       warnings.push(
         'This exact source-record re-collection used the official question-by-ID route and emitted no deletion tombstones.'
+      )
+      if (hasDateRangeBounds(request.dateRange)) {
+        warnings.push(
+          'The campaign date window was not applied to this exact source-record re-collection.'
+        )
+      }
+    }
+    if (!questionId && hasDateRangeBounds(request.dateRange)) {
+      warnings.push(
+        dateRangeCoverageWarning('Stack Exchange question-creation', request.dateRange!)
       )
     }
     const costMicros = await this.settleQuota(request, reservation, extracted.items.length)
@@ -1250,6 +1314,7 @@ export class CfpbConnector implements SourceConnector {
           idempotencyMaterial,
           request: {
             query: request.query,
+            dateRange: request.dateRange ?? null,
             limit: request.limit,
             purpose: request.purpose,
             requestedDisplayMode: request.requestedDisplayMode,
@@ -1357,6 +1422,18 @@ export class CfpbConnector implements SourceConnector {
       url.searchParams.set('frm', '0')
       url.searchParams.set('size', String(request.limit))
       url.searchParams.set('format', 'json')
+      if (request.dateRange?.from) {
+        url.searchParams.set(
+          'date_received_min',
+          new Date(request.dateRange.from).toISOString().slice(0, 10)
+        )
+      }
+      if (request.dateRange?.to) {
+        url.searchParams.set(
+          'date_received_max',
+          new Date(request.dateRange.to).toISOString().slice(0, 10)
+        )
+      }
     }
 
     try {
@@ -1439,6 +1516,14 @@ export class CfpbConnector implements SourceConnector {
         ? 'This exact source-record re-collection used the official complaint-by-ID route and emitted no deletion tombstones.'
         : 'Deletion synchronization requires a full snapshot; this filtered request emitted no tombstones.'
     )
+    if (request.sourceRecordId && hasDateRangeBounds(request.dateRange)) {
+      warnings.push(
+        'The campaign date window was not applied to this exact source-record re-collection.'
+      )
+    }
+    if (!request.sourceRecordId && hasDateRangeBounds(request.dateRange)) {
+      warnings.push(dateRangeCoverageWarning('CFPB date_received intake-date', request.dateRange!))
+    }
     const costMicros = await this.commitDurableQuota(request, reservation, records.length)
     return { policy: this.policy, complaints, deletions: [], warnings, costMicros }
   }

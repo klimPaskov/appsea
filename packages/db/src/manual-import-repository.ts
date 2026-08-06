@@ -433,6 +433,7 @@ export class PostgresManualImportRepository {
     policyVersion: string
     runId: string
     limit: number
+    dateRange?: { from: string | null; to: string | null }
   }): Promise<ManualImportCollectionRead> {
     const workspaceId = appseaIdentifierSchema.parse(input.workspaceId)
     const batchId = appseaIdentifierSchema.parse(input.batchId)

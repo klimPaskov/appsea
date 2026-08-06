@@ -14,6 +14,9 @@ import {
   SourceCollectionPreflightDeniedError,
   SourceQuotaExceededError,
   SourceQuotaReservationReplayError,
+  dateRangeCoverageWarning,
+  dateRangeIncludes,
+  hasDateRangeBounds,
   type CollectionRequest,
   type ConnectorResult,
   type SourceConnector,
@@ -54,6 +57,7 @@ export interface ManualImportBatchReader {
     policyVersion: string
     runId: string
     limit: number
+    dateRange?: CollectionRequest['dateRange']
   }): Promise<{ records: ManualImportRecord[]; warnings: string[] }>
 }
 
@@ -494,6 +498,7 @@ export class ManualImportConnector implements SourceConnector {
           idempotencyMaterial: request.idempotencyKey ?? '',
           request: {
             query: request.query,
+            dateRange: request.dateRange ?? null,
             limit: request.limit,
             purpose: request.purpose,
             requestedDisplayMode: request.requestedDisplayMode
@@ -576,11 +581,31 @@ export class ManualImportConnector implements SourceConnector {
         batchId: request.manualImportBatchId,
         policyVersion: request.policyVersion,
         runId: request.runId,
-        limit: request.limit
+        // A bounded date window must be applied before the request limit, so
+        // the reader returns the full staged batch (capped at the policy
+        // maximum) for deterministic filtering.
+        limit: hasDateRangeBounds(request.dateRange) ? MANUAL_IMPORT_MAX_RECORDS : request.limit,
+        ...(request.dateRange ? { dateRange: request.dateRange } : {})
       })
       request.onPhase?.('batch_read')
-      const records = loaded.records.slice(0, request.limit)
+      const windowedRecords = request.dateRange
+        ? loaded.records.filter((record) =>
+            dateRangeIncludes(record.publishedAt ?? record.capturedAt, request.dateRange!)
+          )
+        : loaded.records
+      const records = windowedRecords.slice(0, request.limit)
       const warnings = [...manualImportWarnings, ...loaded.warnings]
+      if (request.dateRange && hasDateRangeBounds(request.dateRange)) {
+        const filteredCount = loaded.records.length - windowedRecords.length
+        if (filteredCount > 0) {
+          warnings.push(
+            `${filteredCount} staged records fell outside the requested source date window.`
+          )
+        }
+        warnings.push(
+          dateRangeCoverageWarning('owner-import published/captured timestamp', request.dateRange)
+        )
+      }
       if (loaded.records.length > records.length) {
         warnings.push(
           `The staged batch contained ${loaded.records.length} records; this run requested only ${records.length}.`

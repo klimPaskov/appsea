@@ -264,6 +264,16 @@ as a production source. The production collection activity and scheduled
 refresh path select a connector only after `readCollectible` returns a matching
 approved source-policy snapshot; no connector can self-activate.
 
+Campaign `dateRange` bounds are additive request identity material. The web
+campaign and refresh/orchestration builders carry the validated bounds through
+the sanitized Temporal input, the worker activity, and the immutable collection
+snapshot. Source connectors apply the bounds using their documented native
+timestamp: CFPB uses inclusive `date_received` intake dates, Stack Exchange uses
+inclusive question creation timestamps, and owner imports use the published
+timestamp with captured-time fallback. Each filtered result records a coverage
+warning; exact tombstone re-collection explicitly reports that the campaign
+window was not applied.
+
 The source-maintenance worker also exposes a supervised `maintenance:loop`
 entrypoint. It starts one existing lease-backed pass at a time, applies a
 bounded interval or failure backoff, forwards shutdown to the child, and emits

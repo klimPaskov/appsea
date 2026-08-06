@@ -167,6 +167,7 @@ export function prepareProductionCollectionWorkflowStart(
     sourceId: parsed.sourceId,
     policyVersion: parsed.policyVersion,
     query: parsed.query,
+    ...(parsed.dateRange ? { dateRange: parsed.dateRange } : {}),
     limit: parsed.limit,
     purpose: parsed.purpose,
     requestedDisplayMode: parsed.requestedDisplayMode,

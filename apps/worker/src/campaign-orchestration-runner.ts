@@ -155,6 +155,7 @@ function sourceRequest(claim: ResearchCampaignOrchestrationClaim, policyVersion:
     sourceId: claim.sourceId,
     policyVersion,
     query: claim.configuration.query,
+    dateRange: claim.configuration.dateRange,
     limit,
     purpose: claim.purpose,
     requestedDisplayMode: claim.configuration.requestedDisplayMode,

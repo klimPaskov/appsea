@@ -78,6 +78,7 @@ const productionRequest = {
   sourceId: 'cfpb-consumer-complaints',
   policyVersion: 'cfpb-v1',
   query: 'billing',
+  dateRange: { from: '2026-07-01T00:00:00.000Z', to: '2026-07-31T23:59:59.000Z' },
   limit: 4,
   purpose: 'opportunity-research',
   requestedDisplayMode: 'excerpt' as const,
@@ -492,6 +493,7 @@ describe.sequential('production collection Temporal workflow', () => {
   it('keeps the caller idempotency key out of workflow history and completes', async () => {
     const prepared = prepareProductionCollectionWorkflowStart(productionRequest)
     expect(JSON.stringify(prepared.input)).not.toContain(productionRequest.idempotencyKey)
+    expect(prepared.input.dateRange).toEqual(productionRequest.dateRange)
     queueCounter += 1
     const worker = await Worker.create({
       connection: testEnvironment.nativeConnection,

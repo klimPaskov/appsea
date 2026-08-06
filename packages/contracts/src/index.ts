@@ -3050,6 +3050,27 @@ export const researchCampaignStateSchema = z.enum([
 
 export const researchCampaignRefreshPolicySchema = z.enum(['manual', 'daily', 'weekly', 'monthly'])
 
+/** Inclusive source-date bounds carried from a campaign into each collection request. */
+export const researchDateRangeSchema = z
+  .object({
+    from: z.string().datetime().nullable(),
+    to: z.string().datetime().nullable()
+  })
+  .strict()
+  .superRefine((dateRange, context) => {
+    if (
+      dateRange.from !== null &&
+      dateRange.to !== null &&
+      Date.parse(dateRange.from) >= Date.parse(dateRange.to)
+    ) {
+      context.addIssue({
+        code: 'custom',
+        path: [],
+        message: 'Date range must end after it starts'
+      })
+    }
+  })
+
 export const researchCampaignConfigurationSchema = z
   .object({
     schemaVersion: z.literal('campaign-v1'),
@@ -3059,12 +3080,7 @@ export const researchCampaignConfigurationSchema = z
     sourceIds: z.array(appseaIdentifierSchema).min(1).max(16),
     languages: z.array(z.string().min(2).max(16)).max(16),
     geographies: z.array(z.string().min(1).max(120)).max(32),
-    dateRange: z
-      .object({
-        from: z.string().datetime().nullable(),
-        to: z.string().datetime().nullable()
-      })
-      .strict(),
+    dateRange: researchDateRangeSchema,
     exclusions: z.array(z.string().min(1).max(240)).max(100),
     maxEvidenceCount: z.number().int().min(1).max(5_000),
     refreshPolicy: researchCampaignRefreshPolicySchema,
@@ -3078,17 +3094,6 @@ export const researchCampaignConfigurationSchema = z
         code: 'custom',
         path: ['sourceIds'],
         message: 'Campaign source IDs must be unique'
-      })
-    }
-    if (
-      configuration.dateRange.from !== null &&
-      configuration.dateRange.to !== null &&
-      Date.parse(configuration.dateRange.from) >= Date.parse(configuration.dateRange.to)
-    ) {
-      context.addIssue({
-        code: 'custom',
-        path: ['dateRange'],
-        message: 'Campaign date range must end after it starts'
       })
     }
   })
@@ -3219,6 +3224,8 @@ export const productionCollectionRequestSchema = z
       .max(80)
       .regex(/^[a-zA-Z0-9._:-]+$/),
     query: z.string().max(500),
+    /** Inclusive source-date bounds selected on the campaign, when present. */
+    dateRange: researchDateRangeSchema.optional(),
     limit: z.number().int().min(1).max(5_000),
     purpose: z.string().min(1).max(120),
     requestedDisplayMode: z.enum(['excerpt', 'metadata-only', 'aggregate-only']),
@@ -3921,6 +3928,8 @@ export const productionCollectionSnapshotSchema = z
     sourceId: appseaIdentifierSchema,
     policyVersion: z.string().min(1).max(80),
     query: z.string().max(500),
+    /** Inclusive source-date bounds selected on the campaign, when present. */
+    dateRange: researchDateRangeSchema.optional(),
     limit: z.number().int().min(1).max(5_000),
     purpose: z.string().min(1).max(120),
     requestedDisplayMode: z.enum(['excerpt', 'metadata-only', 'aggregate-only']),
@@ -4080,6 +4089,7 @@ export const productionCollectionWorkflowStartRequestSchema = z
       .max(80)
       .regex(/^[a-zA-Z0-9._:-]+$/),
     query: z.string().max(500),
+    dateRange: researchDateRangeSchema.optional(),
     limit: z.number().int().min(1).max(5_000),
     purpose: z.string().min(1).max(120),
     requestedDisplayMode: z.enum(['excerpt', 'metadata-only', 'aggregate-only']),
@@ -4197,6 +4207,7 @@ const productionCollectionWorkflowInputBaseSchema = z
       .max(80)
       .regex(/^[a-zA-Z0-9._:-]+$/),
     query: z.string().max(500),
+    dateRange: researchDateRangeSchema.optional(),
     limit: z.number().int().min(1).max(5_000),
     purpose: z.string().min(1).max(120),
     requestedDisplayMode: z.enum(['excerpt', 'metadata-only', 'aggregate-only']),
@@ -7923,6 +7934,7 @@ export type ScoreSnapshot = z.infer<typeof scoreSnapshotSchema>
 export type Opportunity = z.infer<typeof opportunitySchema>
 export type ResearchCampaignState = z.infer<typeof researchCampaignStateSchema>
 export type ResearchCampaignRefreshPolicy = z.infer<typeof researchCampaignRefreshPolicySchema>
+export type ResearchDateRange = z.infer<typeof researchDateRangeSchema>
 export type ResearchCampaignConfiguration = z.infer<typeof researchCampaignConfigurationSchema>
 export type ResearchCampaignCreateInput = z.infer<typeof researchCampaignCreateInputSchema>
 export type ResearchCampaignUpdateInput = z.infer<typeof researchCampaignUpdateInputSchema>

@@ -2685,6 +2685,7 @@ describe('contracts', () => {
       sourceId: 'source-cfpb',
       policyVersion: 'cfpb-v1',
       query: 'billing',
+      dateRange: { from: '2026-07-01T00:00:00.000Z', to: '2026-07-31T23:59:59.000Z' },
       limit: 10,
       purpose: 'opportunity-research',
       requestedDisplayMode: 'excerpt',
@@ -2699,6 +2700,7 @@ describe('contracts', () => {
     })
     expect(parsed.success).toBe(true)
     expect(parsed.success && parsed.data.analysisSeedReviewId).toBe('seed-review:billing')
+    expect(parsed.success && parsed.data.dateRange?.from).toBe('2026-07-01T00:00:00.000Z')
   })
 
   it('keeps production workflow admission decisions bounded and identifier-only', () => {

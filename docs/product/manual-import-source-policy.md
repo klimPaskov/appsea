@@ -32,4 +32,9 @@ shown as coverage gaps; review does not trigger an autonomous rerun.
 
 Every normalized complaint keeps the owner-provided record identifier, capture time, query route, policy version, redaction state, and allowed representation. The collection result adds explicit gaps: it covers only the supplied export and query route, is not a statistical sample, and has not by itself run clustering, competitor research, contrary-evidence review, deterministic scoring, report generation, or plan packaging.
 
+When a campaign supplies an inclusive date window, the owner-import connector
+filters by `publishedAt` when present and `capturedAt` otherwise, before applying
+the run limit. It records the window and any excluded rows as coverage warnings;
+the export outside that window is not evidence of absence.
+
 Operators must review the authority and privacy basis for the workspace’s export. AppSea does not infer authority from a filename, URL, or text inside the imported content, and imported content cannot modify code, skills, instructions, permissions, or repository memory.

@@ -240,6 +240,7 @@ export async function POST(
     sourceId: 'manual-owner-import',
     policyVersion: manualOwnerImportPolicyVersion,
     query,
+    dateRange: configuration.data.dateRange,
     limit: parsedImport.records.length,
     purpose,
     requestedDisplayMode: 'excerpt',

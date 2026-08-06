@@ -301,6 +301,7 @@ export async function runProductionCollection(
       limit: effectiveRequest.limit,
       purpose: effectiveRequest.purpose,
       requestedDisplayMode: effectiveRequest.requestedDisplayMode,
+      ...(effectiveRequest.dateRange ? { dateRange: effectiveRequest.dateRange } : {}),
       workspaceId: effectiveRequest.workspaceId,
       runId: effectiveRequest.runId,
       policyVersion: effectiveRequest.policyVersion,

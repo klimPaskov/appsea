@@ -280,6 +280,7 @@ export async function POST(
     sourceId: source!.sourceId,
     policyVersion: source!.policyVersion!,
     query: configuration.data.query,
+    dateRange: configuration.data.dateRange,
     limit,
     purpose: campaign.purpose,
     requestedDisplayMode: configuration.data.requestedDisplayMode,

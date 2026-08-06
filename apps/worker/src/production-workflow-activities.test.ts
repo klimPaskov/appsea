@@ -24,13 +24,15 @@ describe('production collection activity request reconstruction', () => {
         maxActivityAttempts: 3
       },
       requestedAt: '2026-07-10T00:00:00.000Z',
+      dateRange: { from: '2026-07-01T00:00:00.000Z', to: '2026-07-31T23:59:59.000Z' },
       manualImportBatchId: 'batch:manual-forwarding-test'
     })
 
     expect(productionCollectionRequestFromActivityInput(input)).toMatchObject({
       idempotencyKey: 'a'.repeat(64),
       sourceId: 'manual-owner-import',
-      manualImportBatchId: 'batch:manual-forwarding-test'
+      manualImportBatchId: 'batch:manual-forwarding-test',
+      dateRange: { from: '2026-07-01T00:00:00.000Z', to: '2026-07-31T23:59:59.000Z' }
     })
   })
 })

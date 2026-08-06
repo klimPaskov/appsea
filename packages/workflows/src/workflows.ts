@@ -485,6 +485,7 @@ function sanitizeProductionCollectionInput(
     'analysisSeedReviewId',
     'budget',
     'campaignId',
+    'dateRange',
     'idempotencyDigest',
     'inputHash',
     'limit',
@@ -506,7 +507,8 @@ function sanitizeProductionCollectionInput(
       key !== 'requestedBy' &&
       key !== 'analysisSeedReviewId' &&
       key !== 'manualImportBatchId' &&
-      key !== 'recollectionTombstoneId'
+      key !== 'recollectionTombstoneId' &&
+      key !== 'dateRange'
   )
   const allowedKeys = new Set(allowed)
   const hasOnlyAllowedKeys = keys.every((key) => allowedKeys.has(key))
