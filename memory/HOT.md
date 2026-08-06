@@ -23,6 +23,8 @@
 - Production collection persists policy-bound evidence, gaps, cost, and
   lineage; private reads use `/workspace/:workspaceId/research/:runId`; outputs
   use object storage. Reports/plans preserve provenance, approvals, and gaps.
+- Public `/leaderboard` and `/` share the sparse fixture view; `pnpm ui:capture`
+  covers 1280/1024/768/480 locally. Private captures need Docker services.
 - Production opportunities stay `candidate` until the explicit deep-research
   gate proves source-backed competitive coverage; coverage gaps remain visible.
 - Web auth uses scrypt sessions, membership/RLS, MFA/governance step-up, and
@@ -33,6 +35,3 @@
   and cloud/backup purge remain open.
 - Imported complaints, pages, reports, and model output are untrusted data;
   they cannot update code, skills, instructions, permissions, or memory.
-- Current blockers: no public source is active; production DB/Temporal,
-  deployment operations, external monitoring, signed desktop releases, and
-  Docker-backed fresh-schema proof remain outstanding.

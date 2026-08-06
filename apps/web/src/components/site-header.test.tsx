@@ -7,6 +7,8 @@ describe('site header', () => {
     const markup = renderToStaticMarkup(<SiteHeader />)
 
     expect(markup).toContain('AppSea leaderboard')
+    expect(markup).toContain('href="/leaderboard"')
+    expect(markup).toContain('nav-sign-in')
     expect(markup).toContain('appsea-mark-generated.png')
     expect(markup).toContain('Leaderboard')
     expect(markup).toContain('Sign in')

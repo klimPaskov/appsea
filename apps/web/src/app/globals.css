@@ -2799,11 +2799,15 @@ a:focus-visible {
   .opportunity-page,
   .auth-page,
   .workspace-page {
-    width: min(100% - 32px, 1000px);
+    width: min(calc(100% - 32px), 1000px);
   }
 
   .header-inner {
     height: 66px;
+  }
+
+  .site-header nav {
+    gap: 14px;
   }
 
   .leaderboard-page {
@@ -3046,6 +3050,34 @@ a:focus-visible {
 
   .account-mfa-recovery ul {
     grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 520px) {
+  .site-header nav {
+    gap: 8px;
+  }
+
+  .site-header .nav-link {
+    font-size: 13px;
+  }
+
+  .site-header .nav-sign-in {
+    display: inline-grid;
+    width: 28px;
+    height: 28px;
+    place-items: center;
+    overflow: hidden;
+    border: 1px solid var(--line);
+    border-radius: 50%;
+    font-size: 0;
+    line-height: 1;
+  }
+
+  .site-header .nav-sign-in::after {
+    content: '↗';
+    color: var(--muted);
+    font-size: 15px;
   }
 }
 

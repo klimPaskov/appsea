@@ -58,6 +58,25 @@ def forbid(value: str, body: str, route: str) -> None:
         raise AssertionError(f'{route} unexpectedly contains {value!r}')
 
 
+def stop_server(process: subprocess.Popen[str]) -> None:
+    if process.poll() is not None:
+        return
+    if os.name == 'nt':
+        subprocess.run(
+            ['taskkill', '/PID', str(process.pid), '/T', '/F'],
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            check=False,
+        )
+    else:
+        process.terminate()
+    try:
+        process.wait(timeout=10)
+    except subprocess.TimeoutExpired:
+        process.kill()
+        process.wait(timeout=5)
+
+
 def main() -> int:
     if not (WEB / '.next' / 'BUILD_ID').exists():
         raise RuntimeError('Build the web app before running the smoke test')
@@ -78,6 +97,13 @@ def main() -> int:
             wait_for_server(process)
             routes = {
                 '/': [
+                    'Leaderboard',
+                    'Inbox Relay',
+                    'Complaints',
+                    'Score',
+                    'appsea-mark-generated.png'
+                ],
+                '/leaderboard': [
                     'Leaderboard',
                     'Inbox Relay',
                     'Complaints',
@@ -126,12 +152,7 @@ def main() -> int:
             if health.get('service') != 'appsea-web' or health.get('status') != 'ok':
                 raise AssertionError('liveness probe did not return the bounded ok payload')
         finally:
-            process.terminate()
-            try:
-                process.wait(timeout=10)
-            except subprocess.TimeoutExpired:
-                process.kill()
-                process.wait(timeout=5)
+            stop_server(process)
 
     print('web smoke test passed for leaderboard, opportunity routes, and fixture API')
     return 0

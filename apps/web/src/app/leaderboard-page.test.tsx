@@ -1,6 +1,7 @@
 import { renderToStaticMarkup } from 'react-dom/server'
 import { describe, expect, it } from 'vitest'
 import LeaderboardPage from './page'
+import CanonicalLeaderboardPage from './leaderboard/page'
 
 describe('public leaderboard page', () => {
   it('keeps the public surface sparse and fixture-disclosed', () => {
@@ -15,5 +16,11 @@ describe('public leaderboard page', () => {
     expect(markup).not.toContain('Evidence-ranked software opportunities')
     expect(markup).not.toContain('Research status')
     expect(markup).not.toContain('Selected opportunity')
+  })
+
+  it('keeps the canonical reference route identical to the root alias', () => {
+    expect(renderToStaticMarkup(<CanonicalLeaderboardPage />)).toBe(
+      renderToStaticMarkup(<LeaderboardPage />)
+    )
   })
 })

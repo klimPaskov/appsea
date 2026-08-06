@@ -895,3 +895,23 @@ Implemented:
 
 Remaining: hosted-origin review, updater trust, signed installers, macOS
 notarization, platform installation tests, and desktop-specific release review.
+
+### 10. Website reference loop
+
+Status: public route and local capture evidence implemented; authenticated
+workspace capture remains stack-dependent.
+
+Implemented:
+
+- canonical `/leaderboard` route plus the backwards-compatible root alias,
+  both backed by the same sparse fixture-disclosed view;
+- local `pnpm ui:capture` command using a loopback Next.js server and a local
+  headless Chrome/Chromium executable;
+- public captures for the leaderboard, overview, complaints, competitors, and
+  coding-plan routes at 1280, 1024, 768, and 480 pixels;
+- responsive header fix verified at 480 pixels without changing desktop
+  layout or adding research detail to the leaderboard.
+
+Remaining: run the same capture/compare loop against authenticated workspace
+routes when the disposable PostgreSQL/Temporal/MinIO stack is available, then
+complete signed desktop release evidence.

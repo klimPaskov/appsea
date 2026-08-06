@@ -414,6 +414,17 @@ referenced data.
 
 ## Sources
 
+## Website and capture evidence
+
+The public leaderboard is canonical at `/leaderboard` with `/` retained as an
+alias, and the local headless capture workflow covers the public opportunity
+routes at 1280, 1024, 768, and 480 pixels. The 480 header keeps the sign-in
+action accessible without clipping; desktop captures retain the desktop
+layout. Authenticated workspace captures still require the disposable
+PostgreSQL/Temporal/MinIO stack and are not claimed while Docker is
+unavailable. Signed desktop installers, hosted-origin review, updater trust,
+and platform installation evidence remain open.
+
 The private source registry at `/workspace/:workspaceId/sources` and its
 no-store API make current policy readiness, quotas, retention/deletion duties,
 and coverage notes visible to workspace members. It is intentionally a

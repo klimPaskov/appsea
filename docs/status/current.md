@@ -142,10 +142,13 @@
 - Documentation system: implemented and linked
 - UI references: deterministic sparse desktop/mobile reference sources now include
   the private owner-import and activity screens and share the dark navy/violet/
-  cyan palette used by the reviewed PNG references. A local production-web
-  capture set covers the public leaderboard at 1440/1280/1024/768/480 pixels
-  plus the overview, complaints, competitors, and coding-plan routes; private
-  authenticated captures remain open. See the [UI reference-loop report](ui-reference-loop-completion-report-2026-08-06.md).
+  cyan palette used by the reviewed PNG references. The canonical `/leaderboard`
+  route and root alias share one database-free view. `pnpm ui:capture` covers the
+  public leaderboard at 1280/1024/768/480 pixels plus the overview, complaints,
+  competitors, and coding-plan routes; the 480 capture fixed a clipped sign-in
+  action, while desktop captures retain the desktop layout. Public captures are
+  checked in; private authenticated captures remain open. See the [UI
+  reference-loop report](ui-reference-loop-completion-report-2026-08-06.md).
 - Third-party source connectors: CFPB connector boundary and policy metadata implemented, disabled pending legal/privacy/security approval; migrations `0027` and `0054` add operator-only draft/approval evidence with canonical reviewer identity and independence attestation, and migration `0111` adds a policy-declared permission requirement with a durable immutable evidence reference. The production collection checkpoint persists policy-bound non-synthetic source/evidence/complaint lineage when a reviewed version is explicitly activated. The disabled Stack Exchange candidate adds bounded official-API competitor/contrary collection, sanitized excerpts, and HTTPS attribution locators; its current draft now records unknown commercial permission and `permissionEvidenceRequired: true` because the first-party Network Acceptable Use Policy blocks automated similar/competitive or generative-AI collection without express written consent or a commercial exception. The production worker and scheduled refresh select it only from the approved source-policy registry, but it remains unregistered pending independent review and that permission record. The direct CFPB command retains its dedicated worker-principal admission branch and cannot bypass the bounded production ingress ledger. The only active non-fixture path is the reviewed `manual-owner-import-v2` policy, which is tenant-private owner-attested intake rather than public market coverage; v1 remains historical.
 - CFPB policy handoff: `pnpm worker:source:policy:cfpb:manifest` emits a deterministic, secret-free manifest with the current policy content hash and first-party API/privacy evidence observed on 2026-08-06. It is a reviewer handoff only; the connector remains disabled and no commercial-use or source-activation decision is inferred.
 - Connector policy handoff: the source-policy repository now carries the immutable reviewed JSON payload alongside the database-owned activation snapshot. CFPB, Stack Exchange, and owner-import constructors compare immutable purpose, quota, retention, deletion, attribution, display, and coverage fields before a request; production construction fails closed without the reviewed payload. The Stack Exchange draft additionally carries the AUP/written-consent blocker in its coverage notes and remains disabled. This prevents in-memory policy drift but does not approve or activate a source.

@@ -1,48 +1,48 @@
-# UI reference loop completion report — 2026-08-06
+# UI reference-loop completion report — 2026-08-06
 
-Status: local visual validation completed for the public leaderboard and the
-four public opportunity routes; authenticated private-workspace capture remains
-open.
+## Outcome
 
-## Capture set
+The public reference-loop route is now canonical at `/leaderboard`. The root
+route remains a backwards-compatible alias, and both routes render the same
+database-free, synthetic-disclosed sparse leaderboard view.
 
-The captures were made from the local production web server on `localhost:3001`
-with a standalone headless Edge process. The user's browser was not inspected
-or controlled. Desktop and responsive captures are separate artifacts; the
-desktop page is not switched to the mobile layout.
+The local capture workflow now runs the built web app on loopback and captures
+the public leaderboard and opportunity detail routes at 1280, 1024, 768, and
+480 pixels. Desktop captures use the desktop layout; only the 480-pixel case
+uses the responsive layout. A narrow-header overflow found in the 480 capture
+was fixed by constraining the mobile navigation and presenting the sign-in
+action as an accessible compact icon while retaining its text label in the
+HTML.
 
-| Surface              | Desktop                                                                                           | Responsive                                                                                                                                                                                                                                                                                                                                                                           |
-| -------------------- | ------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Public leaderboard   | [`leaderboard-desktop.png`](../../artifacts/ui-reference-loop/2026-08-06/leaderboard-desktop.png) | [`leaderboard-1280.png`](../../artifacts/ui-reference-loop/2026-08-06/leaderboard-1280.png), [`leaderboard-1024.png`](../../artifacts/ui-reference-loop/2026-08-06/leaderboard-1024.png), [`leaderboard-768.png`](../../artifacts/ui-reference-loop/2026-08-06/leaderboard-768.png), [`leaderboard-mobile.png`](../../artifacts/ui-reference-loop/2026-08-06/leaderboard-mobile.png) |
-| Opportunity overview | [`opportunity-desktop.png`](../../artifacts/ui-reference-loop/2026-08-06/opportunity-desktop.png) | [`opportunity-mobile.png`](../../artifacts/ui-reference-loop/2026-08-06/opportunity-mobile.png)                                                                                                                                                                                                                                                                                      |
-| Complaints           | [`complaints-desktop.png`](../../artifacts/ui-reference-loop/2026-08-06/complaints-desktop.png)   | Not captured in this tranche                                                                                                                                                                                                                                                                                                                                                         |
-| Competitors          | [`competitors-desktop.png`](../../artifacts/ui-reference-loop/2026-08-06/competitors-desktop.png) | Not captured in this tranche                                                                                                                                                                                                                                                                                                                                                         |
-| Coding plan          | [`plan-desktop.png`](../../artifacts/ui-reference-loop/2026-08-06/plan-desktop.png)               | Not captured in this tranche                                                                                                                                                                                                                                                                                                                                                         |
+## Evidence
 
-## Review findings
+- `artifacts/ui-reference-loop/2026-08-06/leaderboard-1280.png`
+- `artifacts/ui-reference-loop/2026-08-06/leaderboard-1024.png`
+- `artifacts/ui-reference-loop/2026-08-06/leaderboard-768.png`
+- `artifacts/ui-reference-loop/2026-08-06/leaderboard-mobile.png`
+- `pnpm ui:capture` generated the full five-route × four-viewport set under
+  `.appsea/ui-reference-loop/` during this review.
+- `pnpm exec vitest run scripts/capture_ui_reference.test.mjs` passed the
+  route and viewport contract checks.
+- `pnpm smoke:web` now checks both `/` and `/leaderboard` plus the existing
+  opportunity, complaint, competitor, and plan routes.
 
-- The desktop leaderboard remains sparse: navigation, `Leaderboard`, rank,
-  opportunity, complaint count, score, and the synthetic fixture disclosure.
-  No dashboard cards, charts, preview panel, or research detail leaked onto
-  the public route.
-- The dark near-black navy surface, cool borders, restrained violet/cyan
-  accents, readable muted text, generous spacing, and visible active-tab state
-  match the current reference brief.
-- The 1280, 1024, 768, and 480 captures keep the table readable. The 480
-  capture uses the separate responsive card layout; it is not used for the
-  desktop presentation.
-- Opportunity overview, complaints, competitors, and coding plan stay on
-  separate focused routes. The captures show no clipped headings or accidental
-  dashboard expansion in the reviewed desktop view.
-- Focus-visible styles and reduced-motion rules are present in
-  `apps/web/src/app/globals.css`; the public links remain semantic anchors.
+## Contract and accessibility decisions
 
-## Limits
+- The leaderboard still contains only minimal navigation, rank, opportunity,
+  complaint count, score, and the synthetic fixture disclosure. Reference
+  artwork that contains category, momentum, confidence, or promotional panels
+  is not copied into the product because the repository contract keeps the
+  public page single-purpose.
+- Opportunity research remains on separate detail routes.
+- The sign-in action remains keyboard and screen-reader discoverable; its
+  compact mobile presentation is CSS-only and does not rely on color alone.
+- Imported content is not used to generate markup or styles.
 
-This is visual evidence for the public and fixture opportunity routes, not a
-production-readiness claim. Authenticated private pages still need a seeded
-workspace capture after a local stack with PostgreSQL is available. The
-generated historical reference PNGs contain a richer marketing navigation and
-extra leaderboard fields that conflict with the active sparse leaderboard
-contract; this tranche follows the repository contract and does not add those
-fields to the public page.
+## Remaining gap
+
+Authenticated workspace captures still require the disposable PostgreSQL,
+Temporal, and MinIO stack. Docker Desktop's Linux engine is unavailable on the
+current host, so this report does not claim private-route screenshot proof.
+The capture command reports that limitation rather than inspecting a user
+browser or presenting public fixture content as private research.

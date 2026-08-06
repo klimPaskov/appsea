@@ -9,3 +9,28 @@
 7. Iterate until the implemented page serves the same single purpose as the reference.
 
 The reference is a target, not evidence that the implementation matches. Actual browser captures belong in review artifacts, not in the source reference folder.
+
+## Local capture command
+
+The public reference route is `/leaderboard`; `/` remains a backwards-compatible
+alias and renders the same shared leaderboard view. After building the web app,
+run the repository-local headless capture command:
+
+```bash
+pnpm --filter @appsea/web build
+pnpm ui:capture
+```
+
+The command starts a loopback Next.js server on `127.0.0.1:4313`, captures the
+public leaderboard and opportunity routes at 1280, 1024, 768, and 480 pixels,
+and writes disposable PNGs under `.appsea/ui-reference-loop/`. Set
+`APPSEA_CHROME_PATH` when Chrome is not installed in the standard location; use
+`pnpm ui:capture -- --persist` to write review artifacts under
+`artifacts/ui-reference-loop/<date>/`.
+
+The 480-pixel captures intentionally use the responsive layout. Desktop
+captures never use the mobile layout. Authenticated workspace captures require
+`pnpm dev:local` and the PostgreSQL/Temporal/MinIO stack; when those services
+are unavailable the command reports that private capture evidence is missing
+instead of inspecting a user browser or treating the public fixture as private
+research.

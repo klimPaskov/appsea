@@ -5,7 +5,7 @@ export function SiteHeader() {
   return (
     <header className="site-header">
       <div className="header-inner">
-        <Link className="brand" href="/" aria-label="AppSea leaderboard">
+        <Link className="brand" href="/leaderboard" aria-label="AppSea leaderboard">
           <Image
             className="brand-mark"
             src="/appsea-mark-generated.png"
@@ -18,10 +18,10 @@ export function SiteHeader() {
           <span>AppSea</span>
         </Link>
         <nav aria-label="Primary navigation">
-          <Link className="nav-link" href="/">
+          <Link className="nav-link" href="/leaderboard">
             Leaderboard
           </Link>
-          <Link className="nav-link" href="/login">
+          <Link className="nav-link nav-sign-in" href="/login">
             Sign in
           </Link>
         </nav>
