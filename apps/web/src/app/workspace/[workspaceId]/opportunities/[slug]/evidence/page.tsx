@@ -103,6 +103,9 @@ export default async function PrivateEvidencePage({
                 <span>{evidence.synthetic ? 'Synthetic fixture' : evidence.sourceItemId}</span>
                 <span>{evidence.analysis.complaintType.replace('_', ' ')}</span>
                 <span>Severity {evidence.analysis.severity}/5</span>
+                {evidence.analysis.manipulationRisk >= 0.85 ? (
+                  <span>Instruction-like content: review required</span>
+                ) : null}
                 {evidence.deduplication?.reviewRequired ? (
                   <span>Near-duplicate review required</span>
                 ) : null}

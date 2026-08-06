@@ -1,5 +1,5 @@
 {
-  "id": "analysis:fd4d476c280e6b292a5577fbecd3a594",
+  "id": "analysis:a7e21df092e86bde3f88f7394565588d",
   "mode": "production",
   "createdAt": "2026-07-26T00:00:00.000Z",
   "sourcePolicies": [
@@ -145,7 +145,7 @@
         "source-policy-representation-applied"
       ],
       "reviewState": "unreviewed",
-      "extractionVersion": "complaint-analysis-v0.1.0",
+      "extractionVersion": "complaint-analysis-v0.2.0",
       "derivation": {
         "skillVersion": "appsea-complaint-analysis-v1",
         "modelVersion": "deterministic-rules-v1",
@@ -211,7 +211,7 @@
         "source-policy-representation-applied"
       ],
       "reviewState": "unreviewed",
-      "extractionVersion": "complaint-analysis-v0.1.0",
+      "extractionVersion": "complaint-analysis-v0.2.0",
       "derivation": {
         "skillVersion": "appsea-complaint-analysis-v1",
         "modelVersion": "deterministic-rules-v1",
@@ -277,7 +277,7 @@
         "source-policy-representation-applied"
       ],
       "reviewState": "unreviewed",
-      "extractionVersion": "complaint-analysis-v0.1.0",
+      "extractionVersion": "complaint-analysis-v0.2.0",
       "derivation": {
         "skillVersion": "appsea-complaint-analysis-v1",
         "modelVersion": "deterministic-rules-v1",

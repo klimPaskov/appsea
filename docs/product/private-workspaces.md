@@ -47,6 +47,7 @@ The public AppSea leaderboard is a sparse, synthetic fixture surface. Private re
   receive `428 Recent MFA verification required`. Accounts without enabled MFA
   retain the password-only compatibility path.
 - Every workspace read checks membership before setting the database workspace context. A workspace ID in a URL is not an authorization grant.
+- Private collection and opportunity evidence pages retain provenance and show an explicit review marker when complaint analysis detects instruction-like source text. Those observations remain visible as evidence and coverage gaps; imported content never becomes an instruction for the application or an agent.
 - Workspace owners can inspect the private member roster at `/workspace/:workspaceId/members` and
   through `GET /api/workspaces/:workspaceId/members`. Member emails are exposed only to an owner.
   Owners can change a member between `owner`, `editor`, and `viewer`, or remove a member through

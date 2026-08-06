@@ -34,7 +34,8 @@ const MAX_TRACKED_LOCAL_RUN_QUOTA_KEYS = 10_000
 const manualImportWarnings = [
   'Owner-authorized imports are tenant-private and do not establish public market coverage.',
   'Imported content was normalized and PII-scrubbed before persistence.',
-  'AppSea does not fetch URLs from imported records.'
+  'AppSea does not fetch URLs from imported records.',
+  'Imported text is untrusted evidence; instruction-like content is held for review and never executed.'
 ]
 
 export interface ManualImportParseOptions {

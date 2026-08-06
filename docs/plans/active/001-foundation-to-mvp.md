@@ -756,6 +756,13 @@ provenance-linked `deduplication` array. Safe source-native duplicates are
 collapsed, while high-similarity distinct records remain retained with a
 human-review flag and visible coverage gap; legacy JSON artifacts default to
 an empty array, so this slice requires no relational migration.
+Complaint analysis v0.2.0 adds the same additive safety boundary for
+instruction-like imported text. Deterministic signals set `manipulationRisk`
+and `policyFlags`, keep the source text and provenance immutable, render a
+private review marker, and add a production-artifact coverage gap until a human
+reviews the interpretation. The existing JSONB fields make this replay-safe
+without a migration; it does not activate a model gateway or execute imported
+content.
 Private opportunity reads now expose a separate competitive-research coverage
 record, per-claim provenance observations, and a competitors/contrary-signals
 route; it does not promote reviewed seed assumptions to source-backed market

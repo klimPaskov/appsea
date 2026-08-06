@@ -9,6 +9,7 @@
 - [`status/source-policy-permission-evidence-completion-report-2026-08-06.md`](status/source-policy-permission-evidence-completion-report-2026-08-06.md)
 - [`status/production-workflow-admission-release-completion-report-2026-08-06.md`](status/production-workflow-admission-release-completion-report-2026-08-06.md)
 - [`status/manual-import-retention-completion-report-2026-08-06.md`](status/manual-import-retention-completion-report-2026-08-06.md)
+- [`status/imported-content-safety-completion-report-2026-08-06.md`](status/imported-content-safety-completion-report-2026-08-06.md)
 - [`status/worker-drain-window-completion-report-2026-08-06.md`](status/worker-drain-window-completion-report-2026-08-06.md)
 - [`status/campaign-date-window-completion-report-2026-08-06.md`](status/campaign-date-window-completion-report-2026-08-06.md)
 - [`status/report-plan-approval-ui-completion-report-2026-08-05.md`](status/report-plan-approval-ui-completion-report-2026-08-05.md)

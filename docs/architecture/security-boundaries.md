@@ -8,6 +8,13 @@ path, not third-party source approval. The current immutable policy snapshot is
 maps an allow-listed field set, scrubs common PII/secret patterns, and drops
 raw upload bytes. Unknown fields and text instructions are never executed or
 copied into code, skills, instructions, permissions, or repository memory.
+The deterministic complaint-analysis safety projection
+(`complaint-analysis-v0.2.0`) also marks instruction-like text with
+`manipulationRisk` and policy flags while retaining the original evidence and
+provenance. Private evidence reads label flagged observations for human review,
+and production artifacts expose a coverage gap; no imported text is promoted
+to executable configuration or automatically interpreted as a complaint until
+review.
 The workflow history carries only a batch identifier. HTTP(S) locators are
 validated for storage but are never fetched by the server. Owner deletion
 clears staged payloads and records tombstones in the same authenticated
@@ -268,8 +275,12 @@ for that pre-context authorization lookup.
 - Migration `0053` stores derived complaint analysis in a validated JSONB
   snapshot. The deterministic extractor receives already policy-checked
   evidence, records its version and confidence, and emits no competitor or
-  substitute relation without a reviewed source. Imported text remains data,
-  and analysis output cannot write instructions, code, skills, or memory.
+  substitute relation without a reviewed source. The v0.2.0 safety projection
+  detects bounded instruction-like patterns, retains the text, and marks the
+  interpretation for review; imported text remains data, and analysis output
+  cannot write instructions, code, skills, or memory. Existing JSONB fields
+  already carry `manipulationRisk` and `policyFlags`, so this additive version
+  requires no relational migration and legacy snapshots remain readable.
 - The private competitors/contrary-signals read model records competitive
   research state and seed-review provenance separately from complaint evidence.
   It cannot label a synthetic or reviewed-seed-only record source-backed;

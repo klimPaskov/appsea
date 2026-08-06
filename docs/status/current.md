@@ -59,6 +59,12 @@
   preserves source-native duplicate decisions and retains high-similarity
   cross-record candidates for human review. Private evidence/report routes
   show the state; this does not infer unique authors or add live market data.
+- Complaint analysis safety: `complaint-analysis-v0.2.0` marks bounded
+  instruction-like source text with deterministic `manipulationRisk` and
+  `policyFlags`, keeps evidence/provenance retained, labels flagged rows for
+  human review in private reads, and exposes a production coverage gap. This
+  does not execute imported content, add a model gateway, or claim semantic
+  prompt-injection or malware coverage.
 - Research maturity: production analysis now persists and reads as `candidate`
   until an explicit deep-research gate records source-backed competitor and
   contrary-evidence coverage. Migration `0100` repairs legacy non-synthetic

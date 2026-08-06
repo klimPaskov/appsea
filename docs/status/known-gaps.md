@@ -534,6 +534,14 @@ not semantic author resolution, does not estimate unique people, and has no
 live calibration; any future automatic merge requires a new reviewed algorithm
 version.
 
+Complaint analysis v0.2.0 now applies a bounded deterministic safety projection
+to fixture and owner-import text. Instruction-like patterns remain intact as
+evidence, receive `manipulationRisk`/`policyFlags`, render a private review
+marker, and add a coverage gap until human review. This is an isolation and
+review signal, not malware scanning, semantic prompt-injection proof, a model
+gateway, or a permission to execute imported content; the existing JSONB shape
+keeps legacy snapshots readable without a migration.
+
 The Stack Exchange connector is now a second policy-drafted candidate for
 `competitor-research` and `contrary-evidence`. The production collection worker
 and scheduled refresh dispatcher select it only from the approved source-policy
@@ -582,7 +590,9 @@ maintenance-role provisioning remain deployment work.
 
 ## Models
 
-No model gateway is wired. The fixture path uses deterministic labels and explicit data.
+No model gateway is wired. The fixture path uses deterministic labels and explicit data; the
+instruction-like safety projection is deterministic review metadata, not model
+interpretation or live-market evidence.
 
 ## Reports
 

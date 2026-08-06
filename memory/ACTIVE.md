@@ -84,17 +84,18 @@ is bounded and observable; fresh integration and backup/restore proofs pass
 through `0113`. Provider scheduler ownership and external retention/deletion
 operations remain release gates.
 
-The campaign `dateRange` contract is now enforced rather than descriptive:
-web admission, scheduled refresh/orchestration, sanitized Temporal input,
-worker activity reconstruction, and immutable collection snapshots carry the
-validated inclusive bounds. CFPB applies its bounds to `date_received` intake
-dates, Stack Exchange to question creation, and owner imports to published
-time with captured-time fallback; fixture collection follows its publication
-timestamp. Filtered results emit coverage warnings, and exact tombstone
-re-collection explicitly reports that the campaign window was not applied.
-Legacy snapshots remain replayable without the additive field. Tests cover
-request URLs, filtering-before-limit, warnings, and workflow forwarding.
-Private collection reads/page render query and window beside coverage gaps.
+The campaign `dateRange` contract is enforced across web admission, refresh,
+Temporal input, worker reconstruction, snapshots, and source-appropriate
+filtering (including owner-import published/captured fallback). Filtered runs
+emit coverage warnings; legacy snapshots remain replayable. Private reads show
+query and window beside coverage gaps.
+
+Complaint analysis v0.2.0 now detects bounded instruction-like imported text,
+retains its evidence/provenance, sets deterministic `manipulationRisk` and
+`policyFlags`, labels private rows for review, and adds an artifact coverage
+gap. No content is executed or copied into repository controls; this additive
+JSONB projection requires no migration. See
+`docs/status/imported-content-safety-completion-report-2026-08-06.md`.
 
 ## Next production tranche
 

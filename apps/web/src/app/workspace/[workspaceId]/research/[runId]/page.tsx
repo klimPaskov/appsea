@@ -143,6 +143,9 @@ export default async function ProductionCollectionPage({
                 <span>{evidence.redacted ? 'redacted' : 'not redacted'}</span>
                 <span>{evidence.analysis.complaintType.replace('_', ' ')}</span>
                 <span>Severity {evidence.analysis.severity}/5</span>
+                {evidence.analysis.manipulationRisk >= 0.85 ? (
+                  <span>Instruction-like content: review required</span>
+                ) : null}
               </div>
               <p>
                 {evidence.text ?? 'Narrative text is not displayable under this source policy.'}

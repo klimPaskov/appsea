@@ -122,14 +122,12 @@ than source-wide, cloud/backup, closure, or export purge
 
 ## 2026-07-26: Preserve production analysis provenance before persistence
 
-Require downstream analysis inputs to carry a policy version, policy content
-hash, approval review ID, distinct analysis-run ID, and explicit evidence/source
-item IDs and hashes for every retained complaint. Product, competitor,
-contrary-signal, and score assumptions remain inside a separately reviewed seed
-envelope. Reports map observations to evidence IDs (not complaint IDs). This is
-an additive contract hardening step; the reviewed production analysis
-projection, object references, and post-collection workflow now preserve that
-boundary.
+Require downstream analysis inputs to carry policy version/content hash,
+approval review ID, distinct analysis-run ID, and evidence/source-item IDs and
+hashes for every retained complaint. Product, competitor, contrary-signal, and
+score assumptions stay in a reviewed seed envelope; reports map observations
+to evidence IDs. The production projection, object references, and workflow
+preserve this boundary.
 
 ## 2026-07-26: Persist production analysis as a separate idempotent projection
 
@@ -149,10 +147,9 @@ just because its report was approved.
 
 ## 2026-07-26: Review complaints before downstream analysis
 
-Migration `0032` keeps curation separate: only active workspace editors/owners
-change review state, identifier-only receipts preserve provenance, and
-production analysis consumes confirmed observations without changing source
-policy.
+Migration `0032` keeps curation separate: active editors/owners change review
+state, identifier-only receipts preserve provenance, and production analysis
+consumes confirmed observations without changing source policy.
 
 ## 2026-07-26: Start analysis from persisted reviewed evidence
 
@@ -371,10 +368,9 @@ is reviewed or confirmed.
 ## 2026-08-06: Keep source observability bounded and additive
 
 Health/freshness stay private; missing observations never imply absent
-complaints. `0107` adds quota capacity; `0108`/`0109` add scalar health reads
-and allowlists. Stale/exhausted/aged-degraded signals alert; truncation is
-incomplete; no fetch/retry/activation occurs. `0110` adds a leased
-outbox status read; no payloads, mutation, or incident routing.
+complaints. `0107`-`0110` add bounded quota/health/alert and leased outbox
+status reads. Stale/exhausted/aged-degraded signals alert; no fetch, retry,
+activation, payload, or incident mutation occurs.
 
 ## 2026-08-06: Carry the reviewed policy payload into connector execution
 
@@ -384,9 +380,15 @@ the payload is absent; activation remains database-owned.
 
 ## 2026-08-06: Audit approved report and plan exports in the same transaction
 
-Approved report and plan exports record one deterministic `report.exported` or
-`plan.exported` receipt per workspace/artifact version/actor after validated
-object hydration and redaction. The receipt reads the actor from the
-transaction-local authentication GUC and stores only the target identifier,
-manifest hash, and JSON representation. It is idempotent accountability, not
-provider-side retention, download revocation, or purge authority.
+Approved report and plan exports record one deterministic, identifier-only
+`report.exported`/`plan.exported` receipt per workspace/artifact version/actor
+after validated hydration and redaction. It stores the target, manifest hash,
+and representation; it is accountability, not provider retention, revocation,
+or purge authority.
+
+## 2026-08-06: Isolate instruction-like evidence
+
+Complaint analysis v0.2.0 flags bounded instruction-like fixture/owner-import
+text in `manipulationRisk`/`policyFlags`; evidence/provenance remain immutable,
+private rows require review, and artifacts show a coverage gap. No migration;
+imported text cannot execute or write repository controls.

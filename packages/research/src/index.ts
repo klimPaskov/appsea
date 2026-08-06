@@ -29,7 +29,7 @@ import {
 } from '@appsea/contracts'
 import { buildResearchQualitySnapshot } from './quality-benchmark'
 
-export const COMPLAINT_ANALYSIS_VERSION = 'complaint-analysis-v0.1.0'
+export const COMPLAINT_ANALYSIS_VERSION = 'complaint-analysis-v0.2.0'
 export const COMPLAINT_DEDUPLICATION_VERSION = 'complaint-deduplication-v1.0.0'
 
 export interface DeepResearchGateEvaluation {
@@ -52,6 +52,57 @@ const NEAR_DUPLICATE_THRESHOLD = 0.9
 const MAX_NEAR_DUPLICATE_CANDIDATES = 64
 
 const genericEntityLabels = new Set(['app', 'application', 'software', 'tool', 'teams', 'pages'])
+
+const instructionLikeSignals: ReadonlyArray<{ id: string; pattern: RegExp }> = [
+  {
+    id: 'prompt-injection-instruction',
+    pattern: /\bignore\s+(?:all\s+)?(?:previous|prior|above|earlier)\s+instructions?\b/i
+  },
+  {
+    id: 'prompt-boundary-reference',
+    pattern: /\b(?:system|developer|assistant)\s+(?:prompt|message|instruction)\b/i
+  },
+  {
+    id: 'secret-extraction-request',
+    pattern:
+      /\b(?:reveal|show|print|leak|expose|dump)\b.{0,60}\b(?:prompt|secret|token|credential|api\s*key|password)\b/i
+  },
+  {
+    id: 'repository-control-target',
+    pattern:
+      /(?:AGENTS\.md|\.agents[\\/]skills|\.codex[\\/]agents|repository\s+memory|source\s+code|permissions?)/i
+  },
+  {
+    id: 'tool-execution-command',
+    pattern: /(?:^|\n)\s*(?:run|execute|call)\s+(?:this|the)?\s*(?:command|tool|script)\b/i
+  },
+  {
+    id: 'role-jailbreak',
+    pattern: /\b(?:you are now|act as|jailbreak|bypass\s+(?:the\s+)?policy)\b/i
+  }
+]
+
+export interface ComplaintContentSafetyAssessment {
+  manipulationRisk: number
+  signals: string[]
+}
+
+/**
+ * Detect instruction-shaped source text before it can influence derived
+ * complaint fields. The text remains immutable evidence; this function only
+ * creates a deterministic review signal and never executes or rewrites it.
+ */
+export function assessComplaintContentSafety(text: string): ComplaintContentSafetyAssessment {
+  const normalized = normalizeComplaintText(text)
+  const signals = instructionLikeSignals
+    .filter(({ pattern }) => pattern.test(normalized))
+    .map(({ id }) => id)
+  if (signals.length === 0) return { manipulationRisk: 0, signals: [] }
+  return {
+    manipulationRisk: Math.min(1, Number((0.85 + (signals.length - 1) * 0.05).toFixed(2))),
+    signals
+  }
+}
 
 function lower(value: string): string {
   return value.normalize('NFKC').trim().toLocaleLowerCase('en-US')
@@ -148,8 +199,14 @@ function entityReference(
 
 export function analyzeComplaint(complaint: Complaint): ComplaintAnalysis {
   const normalizedText = normalizeComplaintText(complaint.text)
-  const complaintType = classifyComplaintType(complaint.category, normalizedText)
-  const classification = classifyContent(complaint.category, normalizedText)
+  const safety = assessComplaintContentSafety(normalizedText)
+  const safetyFlagged = safety.signals.length > 0
+  const complaintType = safetyFlagged
+    ? ('other' as const)
+    : classifyComplaintType(complaint.category, normalizedText)
+  const classification = safetyFlagged
+    ? ('unrelated' as const)
+    : classifyContent(complaint.category, normalizedText)
   const product = entityReference('product', complaint.product)
   const company = entityReference('company', complaint.company)
   const feature = entityReference('feature', complaint.feature)
@@ -160,8 +217,12 @@ export function analyzeComplaint(complaint: Complaint): ComplaintAnalysis {
     'substitute',
     'competitor'
   ]
-  const severity = severityFor(complaint.category, normalizedText)
-  const classificationConfidence = classification === 'complaint' ? 0.8 : 0.62
+  const severity = safetyFlagged ? 0 : severityFor(complaint.category, normalizedText)
+  const classificationConfidence = safetyFlagged
+    ? 0.95
+    : classification === 'complaint'
+      ? 0.8
+      : 0.62
   return complaintAnalysisSchema.parse({
     complaintId: complaint.id,
     classification,
@@ -175,18 +236,26 @@ export function analyzeComplaint(complaint: Complaint): ComplaintAnalysis {
     featureMentions: uniqueStrings([complaint.feature]),
     userSegmentHints: [],
     severity,
-    recurrence: recurrenceFor(complaint.category, normalizedText),
-    switchingIntent: switchingIntentFor(complaint.category, normalizedText),
-    paymentSignal: paymentSignalFor(complaint.category, normalizedText),
-    actionabilityProbability: classification === 'complaint' ? 0.8 : 0.45,
+    recurrence: safetyFlagged ? 'unknown' : recurrenceFor(complaint.category, normalizedText),
+    switchingIntent: safetyFlagged
+      ? 'unknown'
+      : switchingIntentFor(complaint.category, normalizedText),
+    paymentSignal: safetyFlagged ? 'unknown' : paymentSignalFor(complaint.category, normalizedText),
+    actionabilityProbability: safetyFlagged ? 0.05 : classification === 'complaint' ? 0.8 : 0.45,
     classificationConfidence,
     entityConfidence: Number(
       ((product.confidence + company.confidence + feature.confidence) / 3).toFixed(2)
     ),
-    manipulationRisk: 0,
+    manipulationRisk: safety.manipulationRisk,
     piiFlags: [],
     policyFlags: [
-      complaint.synthetic ? 'synthetic-fixture' : 'source-policy-representation-applied'
+      complaint.synthetic ? 'synthetic-fixture' : 'source-policy-representation-applied',
+      ...(safetyFlagged
+        ? [
+            'instruction-like-content-retained-for-review',
+            ...safety.signals.map((id) => `content-safety:${id}`)
+          ]
+        : [])
     ],
     reviewState: 'unreviewed',
     extractionVersion: COMPLAINT_ANALYSIS_VERSION,
@@ -582,6 +651,12 @@ export function buildProductionResearchArtifact(
   if (deduplicated.decisions.some((decision) => decision.decision === 'review-required')) {
     coverageGaps.add(
       'Near-duplicate candidates are retained pending human review; retained observations are not unique-author counts.'
+    )
+  }
+  const safetyFlaggedCount = analyses.filter((analysis) => analysis.manipulationRisk >= 0.85).length
+  if (safetyFlaggedCount > 0) {
+    coverageGaps.add(
+      `${safetyFlaggedCount} retained observation${safetyFlaggedCount === 1 ? '' : 's'} contain${safetyFlaggedCount === 1 ? 's' : ''} instruction-like source text and ${safetyFlaggedCount === 1 ? 'remains' : 'remain'} excluded from automatic complaint interpretation until human review.`
     )
   }
   const artifactId = `analysis:${stableHash({

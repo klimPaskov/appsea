@@ -81,7 +81,7 @@ Raw source records live in a restricted evidence vault.
 
 The vault stores only what the source policy permits. A source may require link-only storage, short excerpts, expiry, deletion synchronization, or no long-term raw content.
 
-The raw item is never inserted directly into a model prompt. It first passes content-type validation, malware controls for files, HTML cleaning, Unicode normalization, and prompt-injection isolation.
+The raw item is never inserted directly into a model prompt. It first passes content-type validation, malware controls for files, HTML cleaning, Unicode normalization, and prompt-injection isolation. The current deterministic fixture and owner-import path additionally detects bounded instruction-like patterns during complaint analysis, retains the exact normalized evidence, sets a review flag, and never executes or rewrites the imported text; the production artifact adds a visible coverage gap for flagged observations. Full file-malware controls, model-gateway isolation, and deployed sandboxing remain release requirements.
 
 ### 5. Normalization
 
