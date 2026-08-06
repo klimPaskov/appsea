@@ -5,8 +5,8 @@ does not hold credentials, provider state, migrations, or source activation.
 
 - Keep `production.env` untracked and load secrets through the deployment
   secret mechanism.
-- Preserve the one-shot `production:preflight` gate before web, worker, or
-  maintenance startup.
+- Preserve the one-shot `production:preflight` gate before web, worker,
+  maintenance, or alerts startup.
 - Keep migrations behind the explicit `migrate` Compose profile and use the
   dedicated migrator role; never add automatic destructive or down migrations.
 - Treat PostgreSQL, Temporal, object storage, identity, alert delivery, and
@@ -16,3 +16,6 @@ does not hold credentials, provider state, migrations, or source activation.
   deployment contract change.
 - Keep long-lived services non-root, read-only, capability-dropped, and
   loopback-bound by default unless a deployment review documents the change.
+- The `alerts` service is a supervisor only: it must invoke the existing
+  lease-owned alert scans and delivery drain in a fixed bounded order and must
+  not replace their PostgreSQL leases with an in-memory lock.

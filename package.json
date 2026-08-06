@@ -53,6 +53,7 @@
     "worker:source:health:alert": "pnpm --filter @appsea/worker source:health:alert",
     "worker:production:analysis:recompute:alert": "pnpm --filter @appsea/worker production:analysis:recompute:alert",
     "worker:workspace:cost:alert": "pnpm --filter @appsea/worker workspace:cost:alert",
+    "worker:alerts:loop": "pnpm --filter @appsea/worker alerts:loop",
     "worker:alerts:deliver": "pnpm --filter @appsea/worker alerts:deliver",
     "production:preflight": "pnpm --filter @appsea/worker production:preflight",
     "worker:source:policy:cfpb": "pnpm --filter @appsea/worker source:policy:cfpb",

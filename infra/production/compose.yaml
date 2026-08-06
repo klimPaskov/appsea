@@ -96,3 +96,25 @@ services:
     security_opt:
       - no-new-privileges:true
     restart: unless-stopped
+
+  alerts:
+    build:
+      context: ../..
+      dockerfile: Dockerfile.worker
+    env_file:
+      - path: ./production.env
+        required: false
+    environment:
+      NODE_ENV: production
+    depends_on:
+      preflight:
+        condition: service_completed_successfully
+    command: ['alerts:loop']
+    init: true
+    read_only: true
+    tmpfs:
+      - /tmp
+    cap_drop: ['ALL']
+    security_opt:
+      - no-new-privileges:true
+    restart: unless-stopped

@@ -338,10 +338,13 @@ SQL-only maintenance mutations with the server-clock lease identity; external
 source/provider/object-store effects and snapshot reconciliation remain outside
 that atomic boundary. Migration `0082` now makes operational alert enqueue,
 claim, retry, exhaustion, and retention purge durable through a scalar-only
-outbox and forward-compatible v2 scheduler functions. Deployment still lacks
-scheduler process ownership, alert endpoint operation/incident response,
-provider pricing/billing controls, per-scheduler maintenance credentials, and
-a fresh Docker-backed recovery proof. The current
+outbox and forward-compatible v2 scheduler functions. The repository now also
+ships an `alerts:loop` supervisor and a hardened Compose `alerts` service that
+runs the five bounded inspection/delivery commands sequentially, continues after
+one child failure, and uses bounded backoff and signal-safe shutdown. Deployment
+still lacks operated scheduler ownership, alert endpoint operation/incident
+response, provider pricing/billing controls, per-scheduler maintenance
+credentials, and a fresh Docker-backed recovery proof. The current
 `appsea_maintenance` coordinator is trusted across
 the allowlisted names; production data-work role separation and optional
 per-scheduler isolation remain release gates.

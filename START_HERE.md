@@ -58,6 +58,7 @@ The disposable integration smoke is `pnpm verify:local-stack`.
 - lease-owned, read-only production-analysis recomputation alert inspection with bounded alert/incomplete/clear events and visible truncated coverage; it never dispatches or retries a repair
 - lease-owned, read-only workspace cost-threshold inspection with exact micro-unit aggregates, explicit currency gaps, and bounded alert/incomplete/clear events; it never blocks work or performs billing
 - scalar-only, maintenance-owned operational-alert outbox with idempotent enqueue, stale-claim recovery, bounded retry/exhaustion, retention purge, and the `pnpm worker:alerts:deliver` drain command
+- supervised `pnpm worker:alerts:loop` command and hardened Compose `alerts` service that run the five bounded alert scans/delivery commands sequentially with fixed backoff and signal-safe shutdown; deployment endpoint ownership remains external
 - archived-owner, private, deterministic metadata-only workspace purge manifests with 24-hour expiry and visible object/export/backup requirements; they never authorize deletion
 - explicit, one-record, tombstone-bound source re-collection with immutable lineage and private review; it never runs automatically and does not activate a connector
 - direct CFPB source commands use the same bounded production admission ledger through the `appsea-worker` service principal; they cannot bypass private-workspace, fixture, or source-policy gates

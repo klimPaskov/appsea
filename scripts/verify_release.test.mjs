@@ -68,6 +68,13 @@ test('the release boundary rejects a service that can bypass preflight', async (
   assert.ok(findings.some((finding) => finding.includes('successful preflight')))
 })
 
+test('the release boundary requires the long-lived alerts supervisor', async () => {
+  const current = await inputs()
+  const withoutAlerts = current.compose.replace(/\n  alerts:\n[\s\S]*$/, '\n')
+  const findings = releaseBoundaryFindings({ ...current, compose: withoutAlerts })
+  assert.ok(findings.includes('production compose is missing alerts'))
+})
+
 test('static-only verification runs without opening providers', async () => {
   await assert.doesNotReject(() => verifyRelease({ repositoryRoot: root, staticOnly: true }))
 })

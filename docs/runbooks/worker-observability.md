@@ -26,6 +26,11 @@ log sink and alert on:
   `maintenance_loop_stopped` events. The loop's failure event carries only a
   consecutive-attempt counter and the fixed
   `APPSEA_MAINTENANCE_LOOP_PASS_FAILED` code; it never forwards child errors;
+- `alerts_loop_started`, `alerts_loop_pass_failed`, and `alerts_loop_stopped`
+  events from the long-lived `alerts` service. Its failure event carries only
+  a consecutive-attempt counter and the fixed
+  `APPSEA_ALERTS_LOOP_PASS_FAILED` code; child command errors are never
+  forwarded to logs or alert payloads;
 - `source_quota_reconciliation_failed` events and open-case age from the
   private reconciliation read model; these require an explicit maintenance-role
   decision and never justify an automatic re-fetch;
@@ -116,6 +121,18 @@ three alert inspection commands enqueue before attempting the external HMAC
 provider, then this drain command provides the crash/provider-outage recovery
 path. Endpoint ownership, HMAC secret rotation, provider idempotency, scheduler
 availability, and incident routing remain deployment responsibilities.
+
+The production Compose `alerts` service runs the worker's `alerts:loop` command
+(the repository wrapper is `pnpm worker:alerts:loop`). One pass
+invokes `source:quota:alert`, `source:health:alert`,
+`production:analysis:recompute:alert`, `workspace:cost:alert`, and
+`alerts:deliver` sequentially. A failed child does not starve later scans or
+delivery, but the pass fails and uses the bounded backoff before retrying. Each
+child still acquires its own database-backed scheduler lease; the loop is not
+an in-memory duplicate-run lock. `APPSEA_ALERTS_INTERVAL_SECONDS` and
+`APPSEA_ALERTS_FAILURE_BACKOFF_SECONDS` control only the supervisor cadence.
+SIGINT/SIGTERM terminates the active child and waits for the pass to stop before
+the process exits.
 
 Migration `0046` adds a server-clock scheduler lease shared by source
 maintenance, auth retention, password-recovery delivery, and workspace-

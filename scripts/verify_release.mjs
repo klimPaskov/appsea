@@ -5,8 +5,8 @@ import path from 'node:path'
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 
-const requiredServices = ['preflight', 'migrate', 'web', 'worker', 'maintenance']
-const longLivedServices = ['web', 'worker', 'maintenance']
+const requiredServices = ['preflight', 'migrate', 'web', 'worker', 'maintenance', 'alerts']
+const longLivedServices = ['web', 'worker', 'maintenance', 'alerts']
 const requiredEnvironmentNames = [
   'DATABASE_URL',
   'APPSEA_MAINTENANCE_DATABASE_URL',

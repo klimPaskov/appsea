@@ -815,9 +815,12 @@ inspection while production preflight requires explicit comparison and
 threshold settings; `0082` adds the maintenance-owned scalar operational-alert
 outbox, v2 scheduler allowlist, bounded retries/exhaustion, retention purge,
 and the durable drain;
-the worker also exposes a supervised `maintenance:loop` command that starts
-one lease-backed pass at a time, retries child failures with bounded backoff,
-and forwards shutdown without logging raw errors;
+the worker also exposes supervised `maintenance:loop` and `alerts:loop`
+commands. The alerts supervisor runs quota, source-health, recomputation, cost,
+and delivery commands in a fixed sequential pass; one child failure does not
+starve later scans, while the pass still retries with bounded backoff and
+forwards shutdown without logging raw errors. Each child retains its own
+database-backed scheduler lease;
 the long-lived worker emits a bounded 30-second heartbeat and the web service
 exposes fail-closed liveness/readiness probes; deployed process-supervisor
 ownership, alert endpoint operations, traces, role separation, incident drills,
@@ -825,8 +828,8 @@ and production security review remain. A local/CI worker replacement drill now
 force-stops a real worker during fixture persistence and verifies replacement
 recovery, one-time PostgreSQL effects, and sanitized Temporal history through
 `pnpm verify:worker:recovery`; hosted restore/failover proof remains open.
-Provider idempotency, object-store conditional-delete, and deployed scheduler
-ownership remain deployment responsibilities.
+Provider idempotency, object-store conditional-delete, deployed scheduler
+ownership, and alert endpoint operation remain deployment responsibilities.
 
 ### 7. Desktop release
 
@@ -842,8 +845,9 @@ Implemented:
 - `Dockerfile.web` builds the Next.js standalone server and serves the existing
   health probes from a non-root runtime image.
 - `Dockerfile.worker` packages the durable worker and reviewed preflight,
-  migration, and maintenance entry points under a non-root runtime boundary.
-- `infra/production/compose.yaml` gates web, worker, and maintenance on the
+  migration, maintenance, and alert-supervisor entry points under a non-root
+  runtime boundary.
+- `infra/production/compose.yaml` gates web, worker, maintenance, and alerts on the
   one-shot production preflight, keeps migrations behind an explicit profile,
   binds web to loopback by default, and drops capabilities on long-lived
   services.

@@ -54,8 +54,8 @@ Run the one-shot preflight before any service can start:
 docker compose --file infra/production/compose.yaml run --rm preflight
 ```
 
-The Compose `preflight` dependency also gates `web`, `worker`, and
-`maintenance`. A failed preflight is a release stop, not a reason to weaken
+The Compose `preflight` dependency also gates `web`, `worker`, `maintenance`,
+and `alerts`. A failed preflight is a release stop, not a reason to weaken
 TLS, role separation, object-storage, alert, or identity settings.
 
 The Temporal deployment must grant the worker identity access only to the
@@ -75,15 +75,18 @@ worker runtime role, and do not make a down migration part of rollback.
 ## Start and verify
 
 ```bash
-docker compose --file infra/production/compose.yaml up -d web worker maintenance
+docker compose --file infra/production/compose.yaml up -d web worker maintenance alerts
 curl --fail https://<approved-origin>/api/health/live
 curl --fail https://<approved-origin>/api/health/ready
 ```
 
 Route load-balancer admission through `/api/health/ready`; use `/api/health/live`
-for process liveness. Confirm the worker heartbeat and maintenance metrics
-through the deployment's approved log/metric sink. The readiness route does not
-run migrations, start workflows, or test object bodies.
+for process liveness. Confirm the worker heartbeat, maintenance metrics, and
+alerts-loop events through the deployment's approved log/metric sink. The
+`alerts` service runs the five existing lease-owned alert/delivery commands
+sequentially; each child retains its own PostgreSQL scheduler lease, while the
+loop only supervises ordering, bounded backoff, and shutdown. The readiness
+route does not run migrations, start workflows, or test object bodies.
 
 The release CI container job also starts the web image, calls the liveness
 route, waits for the Docker healthcheck to become `healthy`, and verifies that
