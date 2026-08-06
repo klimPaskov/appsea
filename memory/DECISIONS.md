@@ -1,7 +1,6 @@
 # Decision memory
 
-Foundation decisions from 2026-07-10 are archived in
-[`archive/DECISIONS-foundation-2026-07-10.md`](archive/DECISIONS-foundation-2026-07-10.md).
+Earlier foundation decisions: [`archive/DECISIONS-foundation-2026-07-10.md`](archive/DECISIONS-foundation-2026-07-10.md).
 
 ## 2026-07-24: Temporal orchestration with PostgreSQL commit authority
 
@@ -389,8 +388,8 @@ text in `manipulationRisk`/`policyFlags`; evidence/provenance remain immutable,
 private rows require review, and artifacts show a coverage gap. No migration;
 imported text cannot execute or write repository controls.
 
-## 2026-08-06: Enforce policy-declared reviewer roles
+## 2026-08-06: Enforce complete policy-declared reviewer sets
 
-`0114` adds unique `requiredReviewerRoles` metadata and a PostgreSQL trigger.
-CFPB/Stack Exchange require legal/privacy/security; manual omission preserves
-independent_operator approval.
+`0114` rejects undeclared roles; `0115` requires one approval per declared role
+for the same hash before activation. CFPB/Stack Exchange require
+legal/privacy/security; manual omission preserves independent_operator.

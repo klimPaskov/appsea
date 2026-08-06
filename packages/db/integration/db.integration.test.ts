@@ -385,6 +385,13 @@ async function registerFixturePolicy(
 
 let upgradeBackfillCounts: { opportunity_links: string; score_links: string; plan_links: string }
 let upgradeProcessingStartedAt: string | null
+type ReviewerCompletenessDemotion = {
+  source_lifecycle_state: string
+  source_current_policy_version: string | null
+  policy_state: string
+  policy_reviewed_at: string | null
+}
+let reviewerCompletenessDemotion: ReviewerCompletenessDemotion | null
 let firstMigrationResult: Awaited<ReturnType<typeof migrateDatabase>>
 let secondMigrationResult: Awaited<ReturnType<typeof migrateDatabase>>
 
@@ -426,6 +433,68 @@ describe.sequential('PostgreSQL fixture persistence lifecycle', () => {
       },
       { readOnly: true }
     )
+
+    await resetDisposableDatabase()
+    await migrateDatabase(migrationPool, { ...migrationOptions, throughVersion: '0114' })
+    const legacyPolicyHash = 'f'.repeat(64)
+    await withOwnerClient(async (client) => {
+      await client.query(
+        `INSERT INTO appsea.sources
+         (source_id, display_name, source_type, lifecycle_state, current_policy_version,
+            created_at, updated_at)
+         VALUES ('source-reviewer-upgrade', 'Reviewer upgrade source', 'api',
+                 'disabled_pending_review', NULL, $1, $1)`,
+        [fixedAt]
+      )
+      await client.query(
+        `INSERT INTO appsea.source_policy_versions
+           (source_id, policy_version, policy_state, permitted_purposes, commercial_use,
+            access_method, retention_days, deletion_required, attribution_required,
+            display_mode, coverage_notes, policy_document_ref, reviewed_at, expires_at,
+            policy_payload, content_hash, created_at)
+         VALUES ('source-reviewer-upgrade', 'reviewer-upgrade-v1', 'approved',
+                 ARRAY['opportunity-research'], 'restricted', 'upgrade fixture', 14,
+                 true, true, 'excerpt', ARRAY['upgrade fixture'],
+                 'https://example.com/reviewer-upgrade', $1, NULL,
+                 '{"requiredReviewerRoles":["legal","privacy","security"]}'::jsonb,
+                 $2, $1)`,
+        [fixedAt, legacyPolicyHash]
+      )
+      await client.query(
+        `INSERT INTO appsea.source_policy_reviews
+           (review_id, source_id, policy_version, decision, reviewer,
+            reviewer_identity, reviewer_role, independence_attested,
+            approval_reference, notes, content_hash, reviewed_at, recorded_at)
+         VALUES ('review:reviewer-upgrade:legal', 'source-reviewer-upgrade',
+                 'reviewer-upgrade-v1', 'approved', 'Upgrade reviewer',
+                 'upgrade-reviewer@example.invalid', 'legal', true,
+                 'approval:reviewer-upgrade:legal', ARRAY['upgrade fixture'],
+                 $1, $2, $2)`,
+        [legacyPolicyHash, fixedAt]
+      )
+      await client.query(
+        `UPDATE appsea.sources
+            SET lifecycle_state = 'active', current_policy_version = 'reviewer-upgrade-v1',
+                updated_at = $1
+          WHERE source_id = 'source-reviewer-upgrade'`,
+        [fixedAt]
+      )
+    })
+    await migrateDatabase(migrationPool, migrationOptions)
+    reviewerCompletenessDemotion = await withOwnerClient(async (client) => {
+      const result = await client.query<ReviewerCompletenessDemotion>(
+        `SELECT source.lifecycle_state AS source_lifecycle_state,
+                source.current_policy_version AS source_current_policy_version,
+                policy.policy_state,
+                policy.reviewed_at AS policy_reviewed_at
+           FROM appsea.sources source
+           JOIN appsea.source_policy_versions policy
+             ON policy.source_id = source.source_id
+            AND policy.policy_version = 'reviewer-upgrade-v1'
+          WHERE source.source_id = 'source-reviewer-upgrade'`
+      )
+      return result.rows[0] ?? null
+    })
 
     await resetDisposableDatabase()
     firstMigrationResult = await migrateDatabase(migrationPool, migrationOptions)
@@ -557,7 +626,8 @@ describe.sequential('PostgreSQL fixture persistence lifecycle', () => {
       '0111',
       '0112',
       '0113',
-      '0114'
+      '0114',
+      '0115'
     ])
     expect(secondMigrationResult.applied).toEqual([])
     expect(secondMigrationResult.alreadyApplied).toEqual([
@@ -674,8 +744,18 @@ describe.sequential('PostgreSQL fixture persistence lifecycle', () => {
       '0111',
       '0112',
       '0113',
-      '0114'
+      '0114',
+      '0115'
     ])
+  })
+
+  it('demotes incomplete active reviewer sets during the 0115 upgrade', () => {
+    expect(reviewerCompletenessDemotion).toEqual({
+      source_lifecycle_state: 'disabled_pending_review',
+      source_current_policy_version: null,
+      policy_state: 'pending_review',
+      policy_reviewed_at: null
+    })
   })
 
   it('runs PostgreSQL 18 with a non-owner, non-bypass runtime role', async () => {
@@ -1601,22 +1681,203 @@ describe.sequential('PostgreSQL fixture persistence lifecycle', () => {
       ).resolves.toBeUndefined()
 
       await withOwnerClient(async (client) => {
+        const partial = await client.query<{
+          lifecycle_state: string
+          current_policy_version: string | null
+          policy_state: string
+        }>(
+          `SELECT source.lifecycle_state, source.current_policy_version, policy.policy_state
+             FROM appsea.sources source
+             JOIN appsea.source_policy_versions policy
+               ON policy.source_id = source.source_id
+              AND policy.policy_version = $2
+            WHERE source.source_id = $1`,
+          [sourceId, policyVersion]
+        )
+        expect(partial.rows[0]).toEqual({
+          lifecycle_state: 'disabled_pending_review',
+          current_policy_version: null,
+          policy_state: 'pending_review'
+        })
+      })
+
+      await expect(
+        reviewRepository.approve({
+          sourceId,
+          policyVersion,
+          reviewId: 'review:permission:privacy',
+          reviewer: 'Independent privacy reviewer',
+          reviewerIdentity: 'privacy-reviewer@example.invalid',
+          reviewerRole: 'privacy',
+          independenceAttested: true,
+          approvalReference: 'ticket:permission:privacy',
+          permissionEvidenceReference: 'consent:permission:2026-08',
+          notes: [],
+          contentHash: policyHash,
+          reviewedAt: fixedAt,
+          expiresAt: null,
+          recordedAt: fixedAt
+        })
+      ).resolves.toBeUndefined()
+
+      await expect(
+        reviewRepository.approve({
+          sourceId,
+          policyVersion,
+          reviewId: 'review:permission:security',
+          reviewer: 'Independent security reviewer',
+          reviewerIdentity: 'security-reviewer@example.invalid',
+          reviewerRole: 'security',
+          independenceAttested: true,
+          approvalReference: 'ticket:permission:security',
+          permissionEvidenceReference: 'consent:permission:2026-08',
+          notes: [],
+          contentHash: policyHash,
+          reviewedAt: fixedAt,
+          expiresAt: null,
+          recordedAt: fixedAt
+        })
+      ).resolves.toBeUndefined()
+
+      await expect(
+        reviewRepository.approve({
+          sourceId,
+          policyVersion,
+          reviewId: 'review:permission:security',
+          reviewer: 'Independent security reviewer',
+          reviewerIdentity: 'security-reviewer@example.invalid',
+          reviewerRole: 'security',
+          independenceAttested: true,
+          approvalReference: 'ticket:permission:security',
+          permissionEvidenceReference: 'consent:permission:2026-08',
+          notes: [],
+          contentHash: policyHash,
+          reviewedAt: fixedAt,
+          expiresAt: null,
+          recordedAt: fixedAt
+        })
+      ).resolves.toBeUndefined()
+
+      await withOwnerClient(async (client) => {
         const result = await client.query<{
           lifecycle_state: string
+          current_policy_version: string | null
+          policy_state: string
+          approved_review_count: number
           permission_evidence_reference: string | null
         }>(
-          `SELECT source.lifecycle_state, review.permission_evidence_reference
+          `SELECT source.lifecycle_state, source.current_policy_version,
+                  policy.policy_state,
+                  (SELECT count(*)::integer
+                     FROM appsea.source_policy_reviews approved
+                    WHERE approved.source_id = source.source_id
+                      AND approved.policy_version = $2
+                      AND approved.decision = 'approved'
+                      AND approved.content_hash = policy.content_hash) AS approved_review_count,
+                  review.permission_evidence_reference
              FROM appsea.sources source
+             JOIN appsea.source_policy_versions policy
+               ON policy.source_id = source.source_id
+              AND policy.policy_version = $2
              JOIN appsea.source_policy_reviews review
                ON review.source_id = source.source_id
               AND review.policy_version = $2
-              AND review.review_id = 'review:permission:approved'
+              AND review.review_id = 'review:permission:security'
             WHERE source.source_id = $1`,
           [sourceId, policyVersion]
         )
         expect(result.rows[0]).toEqual({
           lifecycle_state: 'active',
+          current_policy_version: policyVersion,
+          policy_state: 'approved',
+          approved_review_count: 3,
           permission_evidence_reference: 'consent:permission:2026-08'
+        })
+      })
+    } finally {
+      await withOwnerClient(async (client) => {
+        await client.query('DELETE FROM appsea.source_policy_reviews WHERE source_id = $1', [
+          sourceId
+        ])
+        await client.query(
+          `UPDATE appsea.sources
+              SET lifecycle_state = 'retired', current_policy_version = NULL
+            WHERE source_id = $1`,
+          [sourceId]
+        )
+        await client.query('DELETE FROM appsea.source_policy_versions WHERE source_id = $1', [
+          sourceId
+        ])
+        await client.query('DELETE FROM appsea.sources WHERE source_id = $1', [sourceId])
+      })
+    }
+  })
+
+  it('keeps legacy manual policies on the independent-operator approval path', async () => {
+    const sourceId = 'source-manual-reviewer-default'
+    const policyVersion = 'manual-reviewer-v1'
+    const policyHash = 'd'.repeat(64)
+    const reviewRepository = new PostgresSourcePolicyRepository(migrationPool)
+    await withOwnerClient(async (client) => {
+      await client.query(
+        `INSERT INTO appsea.sources
+           (source_id, display_name, source_type, lifecycle_state, created_at, updated_at)
+         VALUES ($1, 'Manual reviewer default', 'manual', 'disabled_pending_review', $2, $2)`,
+        [sourceId, fixedAt]
+      )
+      await client.query(
+        `INSERT INTO appsea.source_policy_versions
+           (source_id, policy_version, policy_state, permitted_purposes, commercial_use,
+            access_method, retention_days, deletion_required, attribution_required,
+            display_mode, coverage_notes, policy_document_ref, expires_at,
+            policy_payload, content_hash, created_at)
+         VALUES ($1, $2, 'pending_review', ARRAY['opportunity-research'], 'allowed',
+                 'owner upload', 30, true, false, 'excerpt', ARRAY['manual test policy'],
+                 'https://example.com/manual-reviewer', NULL,
+                 '{"sourceId":"source-manual-reviewer-default","sourceType":"manual","enabled":false,"policyState":"pending_review"}'::jsonb,
+                 $3, $4)`,
+        [sourceId, policyVersion, policyHash, fixedAt]
+      )
+    })
+
+    try {
+      await expect(
+        reviewRepository.approve({
+          sourceId,
+          policyVersion,
+          reviewId: 'review:manual-reviewer-default',
+          reviewer: 'Independent owner-import reviewer',
+          reviewerIdentity: 'manual-reviewer@example.invalid',
+          reviewerRole: 'independent_operator',
+          independenceAttested: true,
+          approvalReference: 'ticket:manual-reviewer-default',
+          permissionEvidenceReference: null,
+          notes: ['manual compatibility test'],
+          contentHash: policyHash,
+          reviewedAt: fixedAt,
+          expiresAt: null,
+          recordedAt: fixedAt
+        })
+      ).resolves.toBeUndefined()
+
+      await withOwnerClient(async (client) => {
+        const result = await client.query<{
+          lifecycle_state: string
+          current_policy_version: string | null
+          policy_state: string
+        }>(
+          `SELECT source.lifecycle_state, source.current_policy_version, policy.policy_state
+             FROM appsea.sources source
+             JOIN appsea.source_policy_versions policy
+               ON policy.source_id = source.source_id
+              AND policy.policy_version = $2
+            WHERE source.source_id = $1`,
+          [sourceId, policyVersion]
+        )
+        expect(result.rows[0]).toEqual({
+          lifecycle_state: 'active',
+          current_policy_version: policyVersion,
+          policy_state: 'approved'
         })
       })
     } finally {

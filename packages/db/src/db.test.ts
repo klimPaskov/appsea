@@ -127,7 +127,8 @@ describe('database foundation', () => {
       '0111',
       '0112',
       '0113',
-      '0114'
+      '0114',
+      '0115'
     ])
     expect(migrations[0]?.checksum).toMatch(/^[a-f0-9]{64}$/)
     expect(migrations[0]?.sql).toContain('CREATE TABLE appsea.evidence_records')
@@ -343,6 +344,21 @@ describe('database foundation', () => {
       'source policy approval reviewer role is not permitted by policy'
     )
     expect(sourceReviewerRoleMigration?.sql).toContain('independent_operator')
+    const sourceReviewerCompletenessMigration = migrations.find(
+      (migration) => migration.version === '0115'
+    )
+    expect(sourceReviewerCompletenessMigration?.sql).toContain(
+      'source_policy_reviews_role_content_hash_key'
+    )
+    expect(sourceReviewerCompletenessMigration?.sql).toContain(
+      'source_policy_reviews_source_id_policy_version_decision_con_key'
+    )
+    expect(sourceReviewerCompletenessMigration?.sql).toContain(
+      'source_policy_required_reviewer_roles'
+    )
+    expect(sourceReviewerCompletenessMigration?.sql).toContain(
+      'source policy approval conflicts with immutable review evidence'
+    )
     const productionAdmissionReleaseMigration = migrations.find(
       (migration) => migration.version === '0112'
     )

@@ -61,12 +61,15 @@ requires the same immutable policy content hash and activates exactly the
 reviewed version; it cannot activate a retired or operator-blocked source.
 
 The reviewer role must be one of the roles declared by the immutable policy
-payload. CFPB and Stack Exchange drafts declare all three independent roles:
-`legal`, `privacy`, and `security`; migration `0114` rejects an
-`independent_operator` approval for either draft. The legacy owner-import
-policies intentionally omit the field and retain their `independent_operator`
-approval boundary. A reviewer cannot substitute a different role through the
-CLI or by writing directly to the review table.
+payload, and every declared role must approve the same policy hash. CFPB and
+Stack Exchange drafts require all three independent roles: `legal`, `privacy`,
+and `security`. Migrations `0114` and `0115` reject an
+`independent_operator` approval for either draft and keep the source disabled
+until all three approvals exist. Run the approval command once per reviewer
+role with a distinct review ID and canonical identity. The legacy owner-import
+policies intentionally omit the field and retain their
+`independent_operator` approval boundary. A reviewer cannot substitute a
+different role through the CLI or by writing directly to the review table.
 
 ```powershell
 $env:APPSEA_SOURCE_POLICY_ACTION = 'approve'

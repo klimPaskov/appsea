@@ -22,10 +22,12 @@ transaction; migration `0113` adds a second fenced path that expires staged or
 consumed batches from their immutable policy snapshot, records a fixed system
 audit receipt, and queues exact source-item tombstones from the completed run
 snapshot. Downstream redaction remains the existing service-worker path.
-Source-policy approval also has a policy-declared reviewer-role guard: `0114`
-requires the declared legal/privacy/security roles for non-manual policies and
-defaults legacy manual policies to `independent_operator`; the guard runs in
-PostgreSQL before an immutable approval row can activate a source.
+Source-policy approval also has a policy-declared reviewer-role guard:
+`0114` rejects undeclared roles and `0115` requires the complete declared
+legal/privacy/security approval set for non-manual policies. Legacy manual
+policies default to `independent_operator`; partial approvals remain pending
+and the guard runs in PostgreSQL before an immutable approval row can activate
+a source.
 The v2 `competitor-research` and `contrary-evidence` purposes only enable a
 private observation write linked to retained evidence. Observation claims are
 unreviewed by default and require editor/owner review; they never bypass the

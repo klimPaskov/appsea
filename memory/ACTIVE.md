@@ -19,9 +19,9 @@ enabled. Reviewed `manual-owner-import-v2` supports tenant-private
 owner-authorized CSV/JSON without claiming public market coverage; v1 is
 historical.
 
-Migrations `0027`-`0114` cover policy, deletion/leases, orchestration,
+Migrations `0027`-`0115` cover policy, deletion/leases, orchestration,
 analysis/report/plan governance, cost/alerts, object refs, archival/purge
-intent, redaction, agent tokens, TOTP MFA, and policy-declared reviewer roles.
+intent, redaction, agent tokens, TOTP MFA, and complete reviewer-role approval.
 OIDC/MCP remain gated.
 
 Fixture is the persisted path. Production collection and
@@ -78,11 +78,11 @@ repository tests cover the fail-closed ordering.
 
 Migration `0113` closes the owner-import staging-retention gap through a
 fenced, policy-snapshot-driven purge with audit and exact source-item
-tombstones. `0114` adds a PostgreSQL reviewer-role trigger: CFPB and Stack
-Exchange require legal/privacy/security, while legacy manual policies default
-to independent_operator. Fresh integration and backup/restore proofs pass
-through `0114`; provider scheduler ownership and external retention/deletion
-operations remain release gates.
+tombstones. `0114` rejects undeclared reviewer roles; `0115` requires the full
+CFPB/Stack legal/privacy/security set while preserving manual
+independent_operator compatibility. Fresh integration and backup/restore
+proofs pass through `0115`; provider scheduler ownership and external
+retention/deletion operations remain release gates.
 
 The campaign `dateRange` contract is enforced across web admission, refresh,
 Temporal input, worker reconstruction, snapshots, and source-appropriate
