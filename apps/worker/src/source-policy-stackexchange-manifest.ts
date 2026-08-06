@@ -62,6 +62,7 @@ export interface StackExchangeSourcePolicyReviewManifest {
     permittedPurposes: readonly string[]
     commercialUse: SourcePolicy['commercialUse']
     permissionEvidenceRequired: true
+    requiredReviewerRoles: readonly ['legal', 'privacy', 'security']
     retentionDays: number
     deletionRequired: boolean
     attributionRequired: boolean
@@ -120,6 +121,7 @@ export function buildStackExchangeSourcePolicyReviewManifest(
       permittedPurposes: stackExchangeSourcePolicy.permittedPurposes,
       commercialUse: stackExchangeSourcePolicy.commercialUse,
       permissionEvidenceRequired: true,
+      requiredReviewerRoles: ['legal', 'privacy', 'security'],
       retentionDays: stackExchangeSourcePolicy.retentionDays,
       deletionRequired: stackExchangeSourcePolicy.deletionRequired,
       attributionRequired: stackExchangeSourcePolicy.attributionRequired,

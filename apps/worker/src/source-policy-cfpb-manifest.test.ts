@@ -26,6 +26,7 @@ describe('CFPB source-policy review manifest', () => {
       /bounded lowercase identifier/
     )
     const manifest = buildCfpbSourcePolicyReviewManifest('cfpb-2026-08-v2')
+    expect(manifest.policy.requiredReviewerRoles).toEqual(['legal', 'privacy', 'security'])
     expect(manifest.approvalGate).toMatchObject({
       activationFunction: 'appsea.approve_source_policy',
       requiredReviewerRoles: ['legal', 'privacy', 'security'],

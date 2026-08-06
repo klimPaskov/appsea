@@ -556,7 +556,8 @@ describe.sequential('PostgreSQL fixture persistence lifecycle', () => {
       '0110',
       '0111',
       '0112',
-      '0113'
+      '0113',
+      '0114'
     ])
     expect(secondMigrationResult.applied).toEqual([])
     expect(secondMigrationResult.alreadyApplied).toEqual([
@@ -672,7 +673,8 @@ describe.sequential('PostgreSQL fixture persistence lifecycle', () => {
       '0110',
       '0111',
       '0112',
-      '0113'
+      '0113',
+      '0114'
     ])
   })
 
@@ -1534,13 +1536,32 @@ describe.sequential('PostgreSQL fixture persistence lifecycle', () => {
          VALUES ($1, $2, 'pending_review', ARRAY['opportunity-research'], 'restricted',
                  'review fixture', 14, true, true, 'excerpt', ARRAY['review fixture'],
                  'https://example.com/policy', NULL,
-                 '{"sourceId":"source-permission-evidence","sourceType":"api","enabled":false,"policyState":"pending_review","policyOwner":"policy-owner@example.invalid","permissionEvidenceRequired":true}'::jsonb,
+                 '{"sourceId":"source-permission-evidence","sourceType":"api","enabled":false,"policyState":"pending_review","policyOwner":"policy-owner@example.invalid","permissionEvidenceRequired":true,"requiredReviewerRoles":["legal","privacy","security"]}'::jsonb,
                  $3, $4)`,
         [sourceId, policyVersion, policyHash, fixedAt]
       )
     })
 
     try {
+      await expect(
+        reviewRepository.approve({
+          sourceId,
+          policyVersion,
+          reviewId: 'review:permission:role-denied',
+          reviewer: 'Independent operator reviewer',
+          reviewerIdentity: 'operator-reviewer@example.invalid',
+          reviewerRole: 'independent_operator',
+          independenceAttested: true,
+          approvalReference: 'ticket:permission:role-denied',
+          permissionEvidenceReference: 'consent:permission:2026-08',
+          notes: [],
+          contentHash: policyHash,
+          reviewedAt: fixedAt,
+          expiresAt: null,
+          recordedAt: fixedAt
+        })
+      ).rejects.toMatchObject({ code: '42501' })
+
       await expect(
         reviewRepository.approve({
           sourceId,
@@ -1646,7 +1667,8 @@ describe.sequential('PostgreSQL fixture persistence lifecycle', () => {
             policy_payload, content_hash, created_at)
          VALUES ($1, $2, 'approved', ARRAY['opportunity-research'], 'allowed', 'test route',
                  30, true, true, 'excerpt', ARRAY['fixture-backed policy'],
-                 'https://example.com/lease-policy', $3, NULL, '{}'::jsonb, $4, $3)`,
+                 'https://example.com/lease-policy', $3, NULL,
+                 '{"requiredReviewerRoles":["independent_operator"]}'::jsonb, $4, $3)`,
         [sourceId, policyVersion, fixedAt, policyHash]
       )
       await client.query(
@@ -1758,7 +1780,8 @@ describe.sequential('PostgreSQL fixture persistence lifecycle', () => {
             policy_payload, content_hash, created_at)
          VALUES ($1, $2, 'approved', ARRAY['deletion-reconciliation'], 'allowed', 'test route',
                  30, true, true, 'excerpt', ARRAY['identifier-only integration policy'],
-                 'https://example.com/snapshot-policy', $3, NULL, '{}'::jsonb, $4, $3)`,
+                 'https://example.com/snapshot-policy', $3, NULL,
+                 '{"requiredReviewerRoles":["independent_operator"]}'::jsonb, $4, $3)`,
         [sourceId, policyVersion, fixedAt, policyHash]
       )
       await client.query(
@@ -1935,6 +1958,7 @@ describe.sequential('PostgreSQL fixture persistence lifecycle', () => {
           fixedAt,
           JSON.stringify({
             freshness: { mode: 'scheduled', expectedIntervalHours: 1, allowedDelayHours: 1 },
+            requiredReviewerRoles: ['independent_operator'],
             quota: { requestsPerMinute: 6 }
           }),
           policyHash

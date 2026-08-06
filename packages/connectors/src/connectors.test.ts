@@ -99,6 +99,12 @@ describe('connector policy gate', () => {
     })
     expect(cfpbSourcePolicy.enabled).toBe(false)
     expect(stackExchangeSourcePolicy.enabled).toBe(false)
+    expect(cfpbSourcePolicy.requiredReviewerRoles).toEqual(['legal', 'privacy', 'security'])
+    expect(stackExchangeSourcePolicy.requiredReviewerRoles).toEqual([
+      'legal',
+      'privacy',
+      'security'
+    ])
   })
 
   it('records the Stack Exchange automated-collection restriction as a fail-closed blocker', () => {
@@ -414,6 +420,14 @@ describe('connector policy gate', () => {
       )
     ).toThrow(/does not match the reviewed source contract/)
   })
+
+  const cfpbWithDifferentReviewerRoles = sourcePolicySchema.parse({
+    ...approvedCfpbPolicy,
+    requiredReviewerRoles: ['legal', 'privacy']
+  })
+  expect(() =>
+    assertReviewedPolicyContract(cfpbWithDifferentReviewerRoles, approvedCfpbPolicy, 'CFPB')
+  ).toThrow(/does not match the reviewed source contract/)
 
   it('requires a durable quota ledger for approved runtime policies', () => {
     vi.stubEnv('NODE_ENV', 'production')

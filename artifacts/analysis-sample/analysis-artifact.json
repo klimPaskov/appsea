@@ -1,5 +1,5 @@
 {
-  "id": "analysis:a7e21df092e86bde3f88f7394565588d",
+  "id": "analysis:07f5d14d3d21b25c5a9641e809dd7f40",
   "mode": "production",
   "createdAt": "2026-07-26T00:00:00.000Z",
   "sourcePolicies": [
@@ -16,6 +16,11 @@
         "testing"
       ],
       "commercialUse": "allowed",
+      "requiredReviewerRoles": [
+        "legal",
+        "privacy",
+        "security"
+      ],
       "accessMethod": "Official CFPB public JSON search API; no credentials and no scraping; test-only in-memory transport",
       "retentionDays": 30,
       "deletionRequired": true,
@@ -639,6 +644,11 @@
         "testing"
       ],
       "commercialUse": "allowed",
+      "requiredReviewerRoles": [
+        "legal",
+        "privacy",
+        "security"
+      ],
       "accessMethod": "Official CFPB public JSON search API; no credentials and no scraping; test-only in-memory transport",
       "retentionDays": 30,
       "deletionRequired": true,

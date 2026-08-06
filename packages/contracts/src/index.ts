@@ -107,6 +107,13 @@ export const sourceFreshnessPolicySchema = z
 
 export const sourcePolicyStateSchema = z.enum(['approved', 'pending_review', 'expired', 'revoked'])
 
+export const sourcePolicyReviewerRoleSchema = z.enum([
+  'legal',
+  'privacy',
+  'security',
+  'independent_operator'
+])
+
 const policyDocumentRefSchema = z
   .string()
   .url()
@@ -142,6 +149,14 @@ export const sourcePolicySchema = z.object({
   // before an approved policy can become collectible. The approval evidence
   // is stored separately; this flag is immutable policy metadata.
   permissionEvidenceRequired: z.boolean().optional(),
+  // Third-party policy drafts may require named independent reviewer roles.
+  // Omission preserves legacy manual-import policy compatibility.
+  requiredReviewerRoles: z
+    .array(sourcePolicyReviewerRoleSchema)
+    .min(1)
+    .max(4)
+    .refine((roles) => new Set(roles).size === roles.length, 'Reviewer roles must be unique')
+    .optional(),
   accessMethod: z.string().min(1),
   retentionDays: z.number().int().nonnegative(),
   deletionRequired: z.boolean(),
@@ -1240,13 +1255,6 @@ export const workspaceSourceReadModelSchema = z
     })
   })
   .strict()
-
-export const sourcePolicyReviewerRoleSchema = z.enum([
-  'legal',
-  'privacy',
-  'security',
-  'independent_operator'
-])
 
 const sourcePolicyReviewerIdentitySchema = z
   .string()

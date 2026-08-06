@@ -155,6 +155,7 @@ export interface SourceConnector {
 function freezePolicy(policy: SourcePolicy): SourcePolicy {
   Object.freeze(policy.permittedPurposes)
   Object.freeze(policy.coverageNotes)
+  if (policy.requiredReviewerRoles) Object.freeze(policy.requiredReviewerRoles)
   if (policy.freshness) Object.freeze(policy.freshness)
   Object.freeze(policy.quota)
   Object.freeze(policy.deletion)
@@ -187,6 +188,7 @@ function reviewedPolicyContract(policy: SourcePolicy): unknown {
     permittedPurposes: policy.permittedPurposes,
     commercialUse: policy.commercialUse,
     permissionEvidenceRequired: policy.permissionEvidenceRequired ?? null,
+    requiredReviewerRoles: policy.requiredReviewerRoles ?? null,
     accessMethod: policy.accessMethod,
     retentionDays: policy.retentionDays,
     deletionRequired: policy.deletionRequired,
@@ -362,6 +364,7 @@ const cfpbSourcePolicy = freezePolicy(
       'testing'
     ],
     commercialUse: 'allowed',
+    requiredReviewerRoles: ['legal', 'privacy', 'security'],
     accessMethod: 'Official CFPB public JSON search API; no credentials and no scraping',
     retentionDays: 30,
     deletionRequired: true,
@@ -419,6 +422,7 @@ const stackExchangeSourcePolicy = freezePolicy(
     permittedPurposes: ['competitor-research', 'contrary-evidence', 'development', 'testing'],
     commercialUse: 'unknown',
     permissionEvidenceRequired: true,
+    requiredReviewerRoles: ['legal', 'privacy', 'security'],
     accessMethod:
       'Official Stack Exchange API v2.3 search/advanced endpoint; no scraping; optional application key supplied only through runtime configuration; API access does not waive the Network Acceptable Use Policy',
     retentionDays: 14,

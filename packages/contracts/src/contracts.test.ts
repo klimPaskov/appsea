@@ -726,6 +726,41 @@ describe('contracts', () => {
     expect(legacy.freshness).toBeUndefined()
   })
 
+  it('validates optional source-policy reviewer role requirements', () => {
+    const basePolicy = {
+      sourceId: 'role-policy-source',
+      displayName: 'Role policy source',
+      sourceType: 'api' as const,
+      enabled: false,
+      policyState: 'pending_review' as const,
+      permittedPurposes: ['testing'],
+      commercialUse: 'unknown' as const,
+      accessMethod: 'No access',
+      retentionDays: 0,
+      deletionRequired: false,
+      attributionRequired: false,
+      displayMode: 'metadata-only' as const,
+      coverageNotes: [],
+      reviewedAt: now
+    }
+    expect(
+      sourcePolicySchema.safeParse({
+        ...basePolicy,
+        requiredReviewerRoles: ['legal', 'privacy', 'security']
+      }).success
+    ).toBe(true)
+    expect(
+      sourcePolicySchema.safeParse({
+        ...basePolicy,
+        requiredReviewerRoles: ['legal', 'legal']
+      }).success
+    ).toBe(false)
+    expect(sourcePolicySchema.safeParse({ ...basePolicy, requiredReviewerRoles: [] }).success).toBe(
+      false
+    )
+    expect(sourcePolicySchema.safeParse(basePolicy).success).toBe(true)
+  })
+
   it('keeps the private source registry bounded and policy-safe', () => {
     const source = workspaceSourceReadModelSchema.parse({
       sourceId: 'cfpb-consumer-complaints',

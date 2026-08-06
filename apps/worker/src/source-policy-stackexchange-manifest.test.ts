@@ -28,7 +28,8 @@ describe('Stack Exchange source-policy review manifest', () => {
     const manifest = buildStackExchangeSourcePolicyReviewManifest('stackexchange-2026-09-v2')
     expect(manifest.policy).toMatchObject({
       commercialUse: 'unknown',
-      permissionEvidenceRequired: true
+      permissionEvidenceRequired: true,
+      requiredReviewerRoles: ['legal', 'privacy', 'security']
     })
     expect(manifest.approvalGate).toMatchObject({
       activationFunction: 'appsea.approve_source_policy',

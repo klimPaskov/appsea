@@ -19,9 +19,10 @@ enabled. Reviewed `manual-owner-import-v2` supports tenant-private
 owner-authorized CSV/JSON without claiming public market coverage; v1 is
 historical.
 
-Migrations `0027`-`0113` cover policy, deletion/leases, orchestration,
+Migrations `0027`-`0114` cover policy, deletion/leases, orchestration,
 analysis/report/plan governance, cost/alerts, object refs, archival/purge
-intent, redaction, agent tokens, and TOTP MFA. OIDC/MCP remain gated.
+intent, redaction, agent tokens, TOTP MFA, and policy-declared reviewer roles.
+OIDC/MCP remain gated.
 
 Fixture is the persisted path. Production collection and
 analysis v2 are policy-gated/replay-safe; CFPB and Stack Exchange remain
@@ -75,13 +76,12 @@ fresh reservations are released when staging fails, while the server-owned
 five-minute reservation TTL bounds failures before Temporal startup. Route and
 repository tests cover the fail-closed ordering.
 
-Migration `0113` closes the owner-import staging-retention gap. The leased
-source-maintenance pass now uses the immutable batch policy snapshot and a
-fenced security-definer function to purge expired staged/consumed normalized
-payloads, write a fixed audit receipt, mark the batch deleted, and queue exact
-source-item tombstones from the completed run snapshot. `manualImportBatchesPurged`
-is bounded and observable; fresh integration and backup/restore proofs pass
-through `0113`. Provider scheduler ownership and external retention/deletion
+Migration `0113` closes the owner-import staging-retention gap through a
+fenced, policy-snapshot-driven purge with audit and exact source-item
+tombstones. `0114` adds a PostgreSQL reviewer-role trigger: CFPB and Stack
+Exchange require legal/privacy/security, while legacy manual policies default
+to independent_operator. Fresh integration and backup/restore proofs pass
+through `0114`; provider scheduler ownership and external retention/deletion
 operations remain release gates.
 
 The campaign `dateRange` contract is enforced across web admission, refresh,

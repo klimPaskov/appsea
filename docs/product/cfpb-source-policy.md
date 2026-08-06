@@ -5,7 +5,8 @@
 - Connector enabled: no
 - Engineering review date: 2026-07-24
 - Policy owner: AppSea source-policy review queue
-- Activation owner: an explicitly assigned legal/privacy/security reviewer
+- Activation owner: explicitly assigned legal, privacy, and security reviewers
+- Required reviewer roles: `legal`, `privacy`, and `security`
 
 This is an engineering policy record, not legal advice or an activation approval.
 The connector remains disabled until the review owner confirms commercial use,
@@ -16,12 +17,14 @@ The source-policy registry now makes that boundary executable. Drafts are
 registered as disabled rows by an operator connection, and activation requires
 an immutable review record through `appsea.approve_source_policy`. Migration
 `0054_source_policy_review_integrity.sql` binds each new approval to a
-lowercase reviewer identity, an independent legal/privacy/security role, and an
-explicit independence attestation; the policy owner cannot approve its own
-policy. Runtime workers can read only the resulting active snapshot; they
-cannot insert policy rows or change lifecycle state. Pre-0054 approvals remain
-audit history but are returned to pending review until re-approved. The
-repository does not seed or auto-approve this CFPB policy.
+lowercase reviewer identity, an independent role, and an explicit independence
+attestation; the policy owner cannot approve its own policy. The policy itself
+declares the required `legal`, `privacy`, and `security` roles, and migration
+`0114_source_policy_reviewer_roles.sql` rejects an approval whose role is not in
+that immutable declaration. Runtime workers can read only the resulting active
+snapshot; they cannot insert policy rows or change lifecycle state. Pre-0054
+approvals remain audit history but are returned to pending review until
+re-approved. The repository does not seed or auto-approve this CFPB policy.
 
 ## Permitted route
 

@@ -368,23 +368,19 @@ is reviewed or confirmed.
 ## 2026-08-06: Keep source observability bounded and additive
 
 Health/freshness stay private; missing observations never imply absent
-complaints. `0107`-`0110` add bounded quota/health/alert and leased outbox
-status reads. Stale/exhausted/aged-degraded signals alert; no fetch, retry,
-activation, payload, or incident mutation occurs.
+complaints. `0107`-`0110` add bounded quota/health/alert reads and leased
+outbox status; no fetch, activation, payload, or incident mutation occurs.
 
 ## 2026-08-06: Carry the reviewed policy payload into connector execution
 
-`readCollectible` returns hash-verified policy JSON with the activation snapshot.
-Connectors compare immutable policy fields before requests and fail closed when
-the payload is absent; activation remains database-owned.
+`readCollectible` returns hash-verified policy JSON with the activation snapshot;
+connectors compare immutable fields before requests and fail closed when absent.
+Activation remains database-owned.
 
 ## 2026-08-06: Audit approved report and plan exports in the same transaction
 
-Approved report and plan exports record one deterministic, identifier-only
-`report.exported`/`plan.exported` receipt per workspace/artifact version/actor
-after validated hydration and redaction. It stores the target, manifest hash,
-and representation; it is accountability, not provider retention, revocation,
-or purge authority.
+Report/plan exports record deterministic identifier-only receipts after
+hydration/redaction; this is accountability, not provider purge authority.
 
 ## 2026-08-06: Isolate instruction-like evidence
 
@@ -392,3 +388,9 @@ Complaint analysis v0.2.0 flags bounded instruction-like fixture/owner-import
 text in `manipulationRisk`/`policyFlags`; evidence/provenance remain immutable,
 private rows require review, and artifacts show a coverage gap. No migration;
 imported text cannot execute or write repository controls.
+
+## 2026-08-06: Enforce policy-declared reviewer roles
+
+`0114` adds unique `requiredReviewerRoles` metadata and a PostgreSQL trigger.
+CFPB/Stack Exchange require legal/privacy/security; manual omission preserves
+independent_operator approval.

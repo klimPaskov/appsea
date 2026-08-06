@@ -55,6 +55,7 @@ export interface CfpbSourcePolicyReviewManifest {
   policy: {
     permittedPurposes: readonly string[]
     commercialUse: SourcePolicy['commercialUse']
+    requiredReviewerRoles: readonly ['legal', 'privacy', 'security']
     retentionDays: number
     deletionRequired: boolean
     attributionRequired: boolean
@@ -111,6 +112,7 @@ export function buildCfpbSourcePolicyReviewManifest(
     policy: {
       permittedPurposes: cfpbSourcePolicy.permittedPurposes,
       commercialUse: cfpbSourcePolicy.commercialUse,
+      requiredReviewerRoles: ['legal', 'privacy', 'security'],
       retentionDays: cfpbSourcePolicy.retentionDays,
       deletionRequired: cfpbSourcePolicy.deletionRequired,
       attributionRequired: cfpbSourcePolicy.attributionRequired,

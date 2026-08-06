@@ -11,7 +11,10 @@ This is an engineering policy draft for the bounded
 activation record. The connector must remain disabled until an independent
 legal/privacy/security review records a canonical reviewer identity, permitted
 commercial purpose, retention decision, and attribution approval in the source
-registry. The immutable draft also declares `permissionEvidenceRequired: true`;
+registry. The immutable draft declares required reviewer roles `legal`,
+`privacy`, and `security`; migration `0114_source_policy_reviewer_roles.sql`
+enforces that declaration at the database approval trigger. It also declares
+`permissionEvidenceRequired: true`;
 an approval must therefore carry a non-empty
 `source_policy_reviews.permission_evidence_reference` pointing to the written
 consent or commercial-exception record. Free-form notes do not satisfy that

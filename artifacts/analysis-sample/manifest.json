@@ -1,13 +1,13 @@
 {
-  "artifactId": "analysis:a7e21df092e86bde3f88f7394565588d",
-  "reportArtifactId": "analysis:a7e21df092e86bde3f88f7394565588d",
+  "artifactId": "analysis:07f5d14d3d21b25c5a9641e809dd7f40",
+  "reportArtifactId": "analysis:07f5d14d3d21b25c5a9641e809dd7f40",
   "planOpportunitySlug": "handoff-audit-sample",
   "generatedAt": "2026-07-26T00:00:00.000Z",
   "testOnly": true,
   "transport": "offline-sample",
   "files": {
     "README.md": "170be8d3e482d61ff691dce0138ea2dbc12e85617b8755805c8524c8e237e8ad",
-    "01-product-brief.md": "5ace675b9c01965b473401c7f54b50bc9fbac16568a5e9dd3f98df6ad6f04e62",
+    "01-product-brief.md": "c5775723c5ee5b367b48e2485655020876ddb1c1acd0269907d7c9ce4092008c",
     "02-mvp-scope.md": "6b6d5cb23ce336862bbc52b6731e0b6897081507c85524c1970bbff04e9ca8ce",
     "03-architecture.md": "ffe9dd5771019fc717750c30912d6fb0b604cf8181f4494e4bf0f0ab6aecd982",
     "04-task-graph.json": "aeefa35dacf6b72c11fcde41c8711a24b9129dff53db4af3499ef5da5408c22d",
