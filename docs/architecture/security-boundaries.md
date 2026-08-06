@@ -46,6 +46,35 @@ private observation write linked to retained evidence. Observation claims are
 unreviewed by default and require editor/owner review; they never bypass the
 source-policy, provenance, or deep-research gate.
 
+## Model gateway
+
+The provider-neutral gateway (`packages/model-gateway`) runs inside the
+production-analysis activity, after the worker has reconstructed a
+policy-validated collection. It constructs fixed system/developer segments and
+places complaint fields in exactly one `untrusted-data` segment. A caller cannot
+replace those instructions or move imported content into an authority-bearing
+role. Workspace identity is carried with the request for tenant-scoped audit
+and egress binding, and route, prompt, and model versions are allowlisted in
+code.
+
+The gateway normalizes input, redacts secret- and PII-like patterns before any
+transport, refuses instruction-like content, enforces byte/token budgets, and
+uses an idempotency digest for retries. Structured suggestions are schema
+validated and never persisted as authoritative `ComplaintAnalysis` rows. The
+artifact carries only the model-gateway version, provider state, hashes, fixed
+safety findings, counts, and zero/settled cost; raw complaint text, prompts, and
+provider responses are not logged or written to Temporal history.
+
+The only enabled local route is `deterministic-fallback-v1`, which is a review
+signal and not model-backed market evidence. `external-disabled` refuses every
+request. Source policy fields in a gateway request are provenance only; model-
+use approval is not a caller-supplied request field, and snapshot policy state
+is fixed by the server-owned gateway context. A real model
+requires a separately reviewed source model-use permission, provider
+DPA/retention/training terms, credential and egress controls, content-type and
+malware scanning, leak/adversarial tests, cost settlement, and calibration
+evidence. Those are release blockers, not inferred permissions.
+
 ## Read-only agent access
 
 Migration `0069_agent_access_tokens.sql` adds the coding-agent boundary. An

@@ -595,9 +595,21 @@ maintenance-role provisioning remain deployment work.
 
 ## Models
 
-No model gateway is wired. The fixture path uses deterministic labels and explicit data; the
-instruction-like safety projection is deterministic review metadata, not model
-interpretation or live-market evidence.
+The provider-neutral `packages/model-gateway` boundary is now wired into the
+production-analysis activity. It fixes authority-bearing prompts, keeps
+complaints in an `untrusted-data` segment, redacts secret/PII-like values,
+refuses instruction-like content, validates structured fallback suggestions,
+and records only bounded hashes/counters. The deterministic fallback remains a
+review signal; deterministic and human-corrected complaint analyses still own
+the published artifact. External providers remain disabled and fail closed,
+including when collection policy is approved.
+
+The source-policy contract still lacks a separately reviewed model-use,
+training, and retention permission. File content-type/malware controls,
+provider DPA/egress/credential operations, durable provider cost settlement,
+semantic model evaluation, calibration, and a model-backed analysis path remain
+open. The gateway tranche does not claim model interpretation or live-market
+evidence.
 
 ## Reports
 

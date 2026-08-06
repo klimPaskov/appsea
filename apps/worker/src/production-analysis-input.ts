@@ -5,7 +5,14 @@ import {
   PostgresProductionCollectionRepository,
   ProductionCollectionAnalysisUnavailableError
 } from '@appsea/db'
-import { productionOpportunitySeedSchema, type ProductionResearchArtifact } from '@appsea/contracts'
+import {
+  productionOpportunitySeedSchema,
+  type ModelGatewaySnapshot,
+  type ProductionAnalysisComplaint,
+  type ProductionPolicySnapshot,
+  type ProductionResearchArtifact
+} from '@appsea/contracts'
+import { buildComplaintAnalysisRequest, createModelGateway } from '@appsea/model-gateway'
 import { buildProductionResearchArtifact } from '@appsea/research'
 import type { Pool } from 'pg'
 
@@ -15,6 +22,49 @@ export interface ProductionAnalysisArtifactReconstructionInput {
   analysisRunId: string
   seedReviewId: string
   analysisAt: string
+}
+
+export interface ProductionModelGatewaySnapshotInput {
+  workspaceId: string
+  analysisRunId: string
+  analysisAt: string
+  policySnapshot: ProductionPolicySnapshot
+  complaints: ProductionAnalysisComplaint[]
+}
+
+/**
+ * Run the bounded gateway review inside the activity process. Only the
+ * non-sensitive summary crosses into the production artifact; deterministic
+ * and human-corrected complaint analyses remain authoritative.
+ */
+export function buildProductionModelGatewaySnapshot(
+  input: ProductionModelGatewaySnapshotInput
+): ModelGatewaySnapshot {
+  const modelGateway = createModelGateway({
+    provider: 'deterministic-fallback',
+    policyState: 'external-not-approved',
+    now: () => input.analysisAt
+  })
+  const gatewayResults = input.complaints.map((complaint) =>
+    modelGateway.execute(
+      buildComplaintAnalysisRequest({
+        workspaceId: input.workspaceId,
+        requestId: `model-request:${input.analysisRunId}:${complaint.id}`,
+        idempotencyKey: `model-analysis:${input.analysisRunId}:${complaint.id}`,
+        text: complaint.text,
+        category: complaint.category,
+        product: complaint.product,
+        company: complaint.company,
+        feature: complaint.feature,
+        sourcePolicy: {
+          sourceId: input.policySnapshot.sourceId,
+          policyVersion: input.policySnapshot.policyVersion,
+          contentHash: input.policySnapshot.contentHash
+        }
+      })
+    )
+  )
+  return modelGateway.summarize(gatewayResults, input.analysisAt)
 }
 
 /**
@@ -41,6 +91,13 @@ export async function reconstructProductionAnalysisArtifact(
     input.collectionRunId,
     seed.data.id
   )
+  const modelGatewaySnapshot = buildProductionModelGatewaySnapshot({
+    workspaceId: input.workspaceId,
+    analysisRunId: input.analysisRunId,
+    analysisAt: input.analysisAt,
+    policySnapshot: source.policySnapshot,
+    complaints: source.complaints
+  })
   return buildProductionResearchArtifact({
     collectionArtifactId: source.collectionArtifactId,
     runId: source.runId,
@@ -55,6 +112,7 @@ export async function reconstructProductionAnalysisArtifact(
     competitiveResearch: competitiveSnapshot,
     coverageGaps: source.coverageGaps,
     warnings: source.warnings,
+    modelGateway: modelGatewaySnapshot,
     opportunitySeed: {
       seed: seed.data,
       seedVersion: seedReview.seedVersion,

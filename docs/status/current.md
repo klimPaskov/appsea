@@ -65,9 +65,18 @@
 - Complaint analysis safety: `complaint-analysis-v0.2.0` marks bounded
   instruction-like source text with deterministic `manipulationRisk` and
   `policyFlags`, keeps evidence/provenance retained, labels flagged rows for
-  human review in private reads, and exposes a production coverage gap. This
-  does not execute imported content, add a model gateway, or claim semantic
-  prompt-injection or malware coverage.
+  human review in private reads, and exposes a production coverage gap. The
+  provider-neutral model gateway now runs inside production analysis with fixed
+  trust-tagged segments, redaction, allowlists, budgets, replay protection, and
+  bounded non-sensitive summaries; deterministic/human-corrected analysis
+  remains authoritative. External providers stay disabled, and this does not
+  claim semantic model quality or malware coverage.
+- Model gateway boundary: `@appsea/model-gateway` is fixture/fallback-only and
+  fail-closed for external providers. Production artifacts carry a
+  `model-gateway-v1` summary with hashes, fixed safety findings, and cost
+  counters, never raw prompts or complaint text. Source model-use permission,
+  file-malware scanning, provider DPA/retention/egress controls, durable model
+  cost settlement, and calibration remain release blockers.
 - Research maturity: production analysis now persists and reads as `candidate`
   until an explicit deep-research gate records source-backed competitor and
   contrary-evidence coverage. Migration `0100` repairs legacy non-synthetic

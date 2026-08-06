@@ -1342,6 +1342,146 @@ const contentHashSchema = z
   .length(64)
   .regex(/^[a-f0-9]{64}$/)
 
+/**
+ * Provider-neutral model gateway contracts. Source text is always carried as
+ * an untrusted data segment; it can never become a system or developer
+ * instruction. External provider use is deliberately a separate reviewed
+ * permission and is not inferred from a source policy's collection approval.
+ */
+export const modelGatewayTaskSchema = z.enum(['complaint-analysis'])
+export const modelGatewayProviderSchema = z.enum(['deterministic-fallback', 'external-disabled'])
+export const modelGatewayExecutionStatusSchema = z.enum(['completed', 'fallback', 'refused'])
+export const modelGatewaySafetyFindingSchema = z.enum([
+  'prompt-injection',
+  'secret-like-content',
+  'pii-like-content',
+  'unsupported-instruction',
+  'output-leak',
+  'budget-exceeded',
+  'provider-not-approved',
+  'schema-invalid'
+])
+
+export const modelGatewayTrustSegmentSchema = z
+  .object({
+    role: z.enum(['system', 'developer', 'untrusted-data']),
+    content: z.string().min(1).max(20_000)
+  })
+  .strict()
+
+export const modelGatewayBudgetSchema = z
+  .object({
+    maxInputBytes: z.number().int().positive().max(2_000_000),
+    maxOutputTokens: z.number().int().positive().max(16_384),
+    maxCostMicros: z.number().int().nonnegative().max(1_000_000_000_000)
+  })
+  .strict()
+
+export const modelGatewaySourcePolicySchema = z
+  .object({
+    sourceId: appseaIdentifierSchema,
+    policyVersion: z.string().min(1).max(80),
+    contentHash: contentHashSchema
+  })
+  .strict()
+
+export const modelGatewayRequestSchema = z
+  .object({
+    workspaceId: appseaIdentifierSchema,
+    requestId: appseaIdentifierSchema,
+    idempotencyKey: z.string().min(1).max(240),
+    task: modelGatewayTaskSchema,
+    purpose: z.literal('research-analysis'),
+    routeVersion: z.string().min(1).max(80),
+    promptVersion: z.string().min(1).max(80),
+    modelVersion: z.string().min(1).max(80),
+    outputSchemaVersion: z.string().min(1).max(80),
+    segments: z.array(modelGatewayTrustSegmentSchema).min(1).max(16),
+    budget: modelGatewayBudgetSchema,
+    sourcePolicy: modelGatewaySourcePolicySchema.optional()
+  })
+  .strict()
+  .superRefine((request, context) => {
+    const expectedRoles = ['system', 'developer', 'untrusted-data'] as const
+    if (
+      request.segments.length !== expectedRoles.length ||
+      request.segments.some((segment, index) => segment.role !== expectedRoles[index])
+    ) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['segments'],
+        message: 'Gateway requests must contain fixed system/developer and untrusted-data segments'
+      })
+    }
+  })
+
+/** Structured suggestions are never authoritative complaint analyses. */
+export const modelGatewayComplaintSuggestionSchema = z
+  .object({
+    classification: complaintClassificationSchema,
+    complaintType: complaintTypeSchema,
+    severityHint: z.number().int().min(0).max(5),
+    recurrenceHint: z.enum(['none', 'occasional', 'repeated', 'persistent', 'unknown']),
+    switchingIntentHint: z.enum(['none', 'possible', 'explicit', 'unknown']),
+    paymentSignalHint: z.enum(['none', 'weak', 'explicit', 'unknown']),
+    confidence: z.number().min(0).max(1)
+  })
+  .strict()
+
+export const modelGatewayResultSchema = z
+  .object({
+    requestId: appseaIdentifierSchema,
+    idempotencyKey: z.string().min(1).max(240),
+    task: modelGatewayTaskSchema,
+    provider: modelGatewayProviderSchema,
+    status: modelGatewayExecutionStatusSchema,
+    routeVersion: z.string().min(1).max(80),
+    promptVersion: z.string().min(1).max(80),
+    modelVersion: z.string().min(1).max(80),
+    outputSchemaVersion: z.string().min(1).max(80),
+    inputHash: contentHashSchema,
+    outputHash: contentHashSchema.nullable(),
+    suggestion: modelGatewayComplaintSuggestionSchema.nullable(),
+    safetyFindings: z.array(modelGatewaySafetyFindingSchema).max(20),
+    inputTokensEstimate: z.number().int().nonnegative().max(1_000_000),
+    outputTokensEstimate: z.number().int().nonnegative().max(1_000_000),
+    costMicros: z.number().int().nonnegative().max(1_000_000_000_000),
+    completedAt: z.string().datetime()
+  })
+  .strict()
+
+/** Non-sensitive, bounded artifact metadata for a gateway batch. */
+export const modelGatewaySnapshotSchema = z
+  .object({
+    version: z.literal('model-gateway-v1'),
+    provider: modelGatewayProviderSchema,
+    routeVersion: z.string().min(1).max(80),
+    promptVersion: z.string().min(1).max(80),
+    modelVersion: z.string().min(1).max(80),
+    outputSchemaVersion: z.string().min(1).max(80),
+    policyState: z.enum(['external-not-approved', 'fixture-only']),
+    requestCount: z.number().int().nonnegative().max(5_000),
+    completedCount: z.number().int().nonnegative().max(5_000),
+    fallbackCount: z.number().int().nonnegative().max(5_000),
+    refusedCount: z.number().int().nonnegative().max(5_000),
+    safetyFindingCounts: z
+      .array(
+        z
+          .object({
+            finding: modelGatewaySafetyFindingSchema,
+            count: z.number().int().positive().max(5_000)
+          })
+          .strict()
+      )
+      .max(20),
+    inputTokensEstimate: z.number().int().nonnegative().max(5_000_000),
+    outputTokensEstimate: z.number().int().nonnegative().max(5_000_000),
+    costMicros: z.number().int().nonnegative().max(1_000_000_000_000),
+    inputHash: contentHashSchema,
+    capturedAt: z.string().datetime()
+  })
+  .strict()
+
 const qualityVersionSchema = z
   .string()
   .min(1)
@@ -2610,6 +2750,8 @@ export const researchArtifactSchema = z.object({
   deduplication: z.array(complaintDeduplicationDecisionSchema).max(10_000).default([]),
   coverageGaps: z.array(z.string()).max(500),
   warnings: z.array(z.string()).max(500),
+  /** Optional, non-sensitive gateway execution summary; never model authority. */
+  modelGateway: modelGatewaySnapshotSchema.optional(),
   /** Optional offline benchmark evidence; absent in legacy artifacts. */
   qualitySnapshot: researchQualitySnapshotSchema.optional()
 })
@@ -3415,6 +3557,7 @@ export const productionAnalysisInputSchema = z
     }),
     coverageGaps: z.array(z.string().max(500)).max(500),
     warnings: z.array(z.string().max(500)).max(500),
+    modelGateway: modelGatewaySnapshotSchema.optional(),
     opportunitySeed: productionOpportunitySeedReviewSchema,
     analysisAt: z.string().datetime()
   })
@@ -3476,6 +3619,20 @@ export const productionAnalysisInputSchema = z
     }
     if (!input.policySnapshot.policy.permittedPurposes.includes(input.request.purpose)) {
       addIssue(['request', 'purpose'], 'Analysis purpose is absent from the policy snapshot')
+    }
+    if (input.modelGateway) {
+      if (input.modelGateway.requestCount !== input.complaints.length) {
+        addIssue(
+          ['modelGateway', 'requestCount'],
+          'Gateway request count must cover each retained complaint exactly once'
+        )
+      }
+      if (input.modelGateway.policyState !== 'external-not-approved') {
+        addIssue(
+          ['modelGateway', 'policyState'],
+          'Production analysis cannot claim approved or fixture-only model use'
+        )
+      }
     }
     if (input.transport === 'offline-sample' && !input.testOnly) {
       addIssue(['testOnly'], 'Offline analysis transport must be explicitly test-only')
@@ -3656,6 +3813,23 @@ export const productionResearchArtifactSchema = researchArtifactSchema
         ['policySnapshot', 'sourceId'],
         'Artifact policy snapshot must match the source-policy array'
       )
+    }
+    if (artifact.modelGateway) {
+      if (artifact.modelGateway.requestCount !== artifact.complaints.length) {
+        addIssue(
+          ['modelGateway', 'requestCount'],
+          'Artifact gateway request count must cover each retained complaint exactly once'
+        )
+      }
+      if (
+        artifact.modelGateway.policyState !== 'external-not-approved' ||
+        artifact.modelGateway.provider !== 'deterministic-fallback'
+      ) {
+        addIssue(
+          ['modelGateway'],
+          'Production artifact gateway metadata must describe the deterministic fallback with no approved external model'
+        )
+      }
     }
     if (artifact.opportunity.id !== artifact.opportunitySeedReview.seed.id) {
       addIssue(
@@ -8053,6 +8227,17 @@ export type WorkspaceOpportunitySeedReadModel = z.infer<
   typeof workspaceOpportunitySeedReadModelSchema
 >
 export type ProductionAnalysisInput = z.infer<typeof productionAnalysisInputSchema>
+export type ModelGatewayTask = z.infer<typeof modelGatewayTaskSchema>
+export type ModelGatewayProvider = z.infer<typeof modelGatewayProviderSchema>
+export type ModelGatewayExecutionStatus = z.infer<typeof modelGatewayExecutionStatusSchema>
+export type ModelGatewaySafetyFinding = z.infer<typeof modelGatewaySafetyFindingSchema>
+export type ModelGatewayTrustSegment = z.infer<typeof modelGatewayTrustSegmentSchema>
+export type ModelGatewayBudget = z.infer<typeof modelGatewayBudgetSchema>
+export type ModelGatewaySourcePolicy = z.infer<typeof modelGatewaySourcePolicySchema>
+export type ModelGatewayRequest = z.infer<typeof modelGatewayRequestSchema>
+export type ModelGatewayComplaintSuggestion = z.infer<typeof modelGatewayComplaintSuggestionSchema>
+export type ModelGatewayResult = z.infer<typeof modelGatewayResultSchema>
+export type ModelGatewaySnapshot = z.infer<typeof modelGatewaySnapshotSchema>
 export type ProductionResearchArtifact = z.infer<typeof productionResearchArtifactSchema>
 export type ProductionAnalysisTransport = z.infer<typeof productionAnalysisTransportSchema>
 export type ProductionAnalysisComplaint = z.infer<typeof productionAnalysisComplaintSchema>

@@ -3,17 +3,9 @@
 ## State
 
 Audit: `docs/status/production-readiness-audit-2026-08-06.md`.
-`pnpm verify` passes at the last clean checkpoint; PostgreSQL and
-package-level proofs now pass through migration `0119`. Public and private local
-captures pass against the disposable stack at `http://localhost:3000`; no user
-browser was inspected or debugged. Desktop captures retain the desktop layout;
-responsive captures are isolated to the 480-pixel viewport.
-The local private-stack smoke caught and fixed PostgreSQL `42803` source-coverage
-aggregation; grouping policy eligibility columns restores private readback.
-`/leaderboard` and `/` share sparse view; `pnpm ui:capture` audits public
-1280/1024/768/480 captures under
-`artifacts/ui-reference-loop/2026-08-06/`; `pnpm ui:capture:private` covers
-nine private routes; audit fails on runtime error, missing main, or overflow.
+`pnpm verify` and local PostgreSQL/Temporal/MinIO smoke pass through migration
+`0119`; public/private captures pass against the disposable stack. The
+leaderboard remains sparse.
 
 AppSea remains fixture-first with production-shaped PostgreSQL, Temporal,
 source-policy, private-workspace, report/plan, and maintenance boundaries. The
@@ -24,10 +16,8 @@ historical.
 
 Migrations `0027`-`0119` cover policy, deletion/leases, orchestration,
 analysis/report/plan governance, cost/alerts, object refs, archival/purge
-intent, redaction, agent tokens, TOTP MFA, complete reviewer-role approval,
-reviewer-identity independence, shared collectibility, and operator-only
-approval progress.
-OIDC/MCP remain gated.
+intent, redaction, agent tokens, MFA, complete reviews, shared collectibility,
+and policy-impact expiry. OIDC and deployment operations remain gated.
 
 Fixture is the persisted path. Production collection and
 analysis v2 are policy-gated/replay-safe; CFPB and Stack Exchange remain
@@ -71,18 +61,11 @@ persisting rows; rejected requests leave no staged payloads, and a server-owned
 five-minute TTL bounds uncertain Temporal starts. Route/repository tests cover
 the fail-closed ordering.
 
-Migration `0113` closes the owner-import staging-retention gap through a
-fenced, policy-snapshot-driven purge with audit and exact source-item
-tombstones. `0114` rejects undeclared reviewer roles; `0115` requires the full
-CFPB/Stack legal/privacy/security set while preserving manual
-independent_operator compatibility. `0116` rejects reviewer-identity reuse and
-applies the complete-review helper across runtime gates; `0117` adds an
-operator-only scalar approval-progress CLI; `0118` closes direct activation,
-lease/reconciliation replay, and production lineage gates; `0119` adds bounded
-policy-impact expiry, pointer repair, durable receipts, and current-policy
-private read/export gates. Fresh integration proof passes through `0119`; policy
-decay retains objects until a later source deletion, and provider scheduler
-ownership plus external retention/deletion operations remain release gates.
+Forward migrations `0113`–`0119` harden owner-import retention, reviewer
+independence, collectibility, lineage, policy-impact expiry, pointer repair,
+and current-policy private reads/exports. Policy decay retains objects until a
+later source deletion; provider scheduler ownership and external retention
+remain release gates.
 
 The campaign `dateRange` contract is enforced across web admission, refresh,
 Temporal input, worker reconstruction, snapshots, and source-appropriate
@@ -96,6 +79,18 @@ retains its evidence/provenance, sets deterministic `manipulationRisk` and
 gap. No content is executed or copied into repository controls; this additive
 JSONB projection requires no migration. See
 `docs/status/imported-content-safety-completion-report-2026-08-06.md`.
+
+The provider-neutral `@appsea/model-gateway` boundary is now wired into the
+production-analysis activity. Workspace-bound requests carry only tenant
+identity plus fixed system/developer prompts and an explicit
+`untrusted-data` segment, route/model/prompt allowlists, secret/PII-like
+redaction, instruction refusal, bounded budgets, bounded local replay identity,
+homogeneous batch checks, structured validation, and non-sensitive summaries
+are covered by package tests. The worker records only a `model-gateway-v1`
+snapshot; deterministic and human-corrected complaint analyses remain
+authoritative. External providers remain disabled because model-use approval is
+not a caller-supplied request field; malware, provider/DPA/egress, durable
+idempotency/cost settlement, and calibration remain blockers.
 
 ## Next production tranche
 
@@ -113,6 +108,8 @@ JSONB projection requires no migration. See
    namespace/task-queue ACLs and worker identity, scheduler ownership, and the
    read-only MCP boundary.
 6. Complete signed Windows/macOS Tauri release validation.
+7. Review the model-use policy and provider controls before any external model
+   route is enabled; add malware scanning and calibration evidence first.
 
 ## Current blockers
 
@@ -134,3 +131,7 @@ JSONB projection requires no migration. See
 - Deployed Temporal cancellation, restore, and hosted crash-drill evidence are
   not claimed; the repository-level process replacement proof is now present.
 - Signed Windows/macOS release evidence remains open.
+- External model use is not approved: the repository has only the deterministic
+  fallback gateway boundary; model provider credentials, egress, malware,
+  retention/training terms, durable cost settlement, and calibration remain
+  external review gates.

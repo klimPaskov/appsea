@@ -764,8 +764,12 @@ instruction-like imported text. Deterministic signals set `manipulationRisk`
 and `policyFlags`, keep the source text and provenance immutable, render a
 private review marker, and add a production-artifact coverage gap until a human
 reviews the interpretation. The existing JSONB fields make this replay-safe
-without a migration; it does not activate a model gateway or execute imported
-content.
+without a migration; it does not execute imported content. The follow-on
+`@appsea/model-gateway` boundary now runs inside the production analysis
+activity with fixed authority-bearing segments, redaction, route allowlists,
+budgets, replay protection, and bounded summary metadata. Its deterministic
+fallback is non-authoritative and the external provider remains disabled until
+model-use, DPA/retention, egress, malware, and calibration review is complete.
 Private opportunity reads now expose a separate competitive-research coverage
 record, per-claim provenance observations, and a competitors/contrary-signals
 route; it does not promote reviewed seed assumptions to source-backed market

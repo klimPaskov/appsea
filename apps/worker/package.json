@@ -46,6 +46,7 @@
     "@appsea/contracts": "workspace:*",
     "@appsea/db": "workspace:*",
     "@appsea/object-store": "workspace:*",
+    "@appsea/model-gateway": "workspace:*",
     "@appsea/reports": "workspace:*",
     "@appsea/research": "workspace:*",
     "@appsea/workflows": "workspace:*",

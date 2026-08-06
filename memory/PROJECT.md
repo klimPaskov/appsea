@@ -17,17 +17,21 @@ AppSea is an opportunity intelligence system for software products. It turns per
 - `scripts/run_db_backup_restore.mjs` provides a local 119-migration dump/restore drill with forced RLS and least-privilege checks; it is not provider HA or production restore evidence.
 - `packages/workflows` owns Temporal/client hashing; `apps/worker` owns
   activities/startup; `packages/db` owns RLS persistence. Local proof passes
-  through `0119`; workflow security, HA, object-store purge, and deployment
-  remain external.
+  through `0119`; workflow security, HA, object purge, and deployment remain
+  external.
 - Campaign cancellation is a durable control boundary: migrations `0070`/`0071` store owner/editor intent before Temporal for multi-source and one-source runs; the worker retries external cancellation, while each workflow owns safe reconciliation.
 - Private campaign history uses strict bounded cursor pages ordered by request timestamp plus stable identifier; only the validated boundary crosses private APIs. The public leaderboard is unaffected.
-- Public `/leaderboard` and `/` share a database-free view. `pnpm ui:capture`
-  audits 1280/1024/768/480; `pnpm ui:capture:private` captures nine
-  routes with an owner session and layout checks.
-  PNGs are local synthetic/owner content, not public market coverage.
+- Public `/leaderboard` and `/` share a sparse database-free view; UI captures
+  audit public/private runtime and layout behavior. Captures are synthetic or
+  owner content, not public market coverage.
 - Migration `0068` and `PostgresResearchCampaignOrchestrationRepository` own the durable multi-source campaign parent/child queue. The existing service admission and one-source Temporal workflow remain the child execution boundary; the lease-backed maintenance worker rechecks approved policy and reconciles child projections into private parent/campaign state. The slice is production-shaped but live source activation, deployed scheduler/Temporal ownership, and crash/retry proof remain external.
 - Migrations `0069` and `0081` plus `PostgresAgentAccessTokenRepository` own expiring, hash-only, forced-RLS agent tokens. `/api/mcp` is read-only, workspace-bound, scope-filtered, and reuses private projections; non-synthetic reports/plans require approval. Password-gated mutations require recent password step-up plus a fresh MFA marker when MFA is enabled; provider identity, secret/rate-limit deployment, and mutations without step-up remain external. Migration `0080` owns browser TOTP.
 - The post-collection production analysis workflow is `production-analysis-v2`: Temporal carries only identifiers and immutable digests, and `apps/worker` reconstructs the reviewed artifact from workspace-bound rows inside the persistence activity. New starts carry a strict history-safety memo; `apps/worker` provides a visibility-only checker and reviewed manifest for legacy v1 histories, while archive/retention remains deployment-owned.
+- `packages/model-gateway` is the provider-neutral trust boundary inside that
+  activity: workspace-bound requests, fixed prompts, untrusted-data segments,
+  redaction, refusal, allowlists, bounded validation/replay, and hashes/counters
+  only. External model use requires separate reviewed permission and remains
+  disabled.
 - Migration `0055` persists the highest bounded Temporal activity attempt on each production-analysis run through a monotonic trigger and a narrow runtime update grant; the attempt remains outside the research input hash.
 - Migration `0056` adds forced-RLS, secret-free production-analysis activity history with server-clock start/finish/duration, bounded stage heartbeats, fixed failure codes, and immutable lineage; the private status projection exposes at most ten rows.
 - Migration `0059` adds forced-RLS competitor observations with source/evidence lineage, purpose gating, bounded claims, and owner/editor review; only confirmed non-synthetic rows become source-backed. Complaint locators are HTTPS-constrained by migration `0060`. Production collection and refresh select connectors only from matching approved snapshots; Stack Exchange remains a disabled candidate with an AUP/written-consent blocker and operator-only review CLI.
@@ -42,7 +46,7 @@ AppSea is an opportunity intelligence system for software products. It turns per
 - Migration `0083` adds a forced-RLS workspace purge-manifest ledger; `0084` repairs PostgreSQL 18 archival qualification, `0085` keeps private reads read-only, `0086` versions MFA ciphertext, and `0087` adds identifier-only dormant-account rewrap events. An archived owner can prepare a deduplicated 24-hour inventory of workspace-bound object references after password+MFA step-up; the private manifest never authorizes deletion. MFA rotation uses a reviewed current/previous-key window, bounded rewrap, and count-only status; previous-key removal remains operator-controlled.
 - `packages/db` migrations 0008-0039 own auth/session/RLS, source quotas/tombstones, report approval, collection leases, actor attribution, and immutable policy-review evidence. The web boundary uses an HttpOnly session cookie and authorizes membership before RLS; recovery/invitation delivery remain provider-gated.
 - `packages/reports` owns the deterministic fixture opportunity report contract and composer; fixture persistence stores its content-hashed report version and links the plan package. Private report reads keep evidence, inference, recommendation, contrary evidence, and source coverage separate.
-- `apps/worker` maintenance commands use `packages/contracts`-validated pure runners with bounded counters, sorted workspace enumeration, independent quota expiry/purge budgets, and scheduler correlation IDs; PostgreSQL idempotency remains the rerun boundary. The `maintenance:loop` entrypoint supervises one lease-backed pass at a time with bounded interval/backoff and signal-safe child shutdown; deployment process ownership and alerting remain external.
+- `apps/worker` maintenance commands use validated pure runners with bounded counters, sorted workspaces, independent budgets, and scheduler IDs; PostgreSQL remains the rerun boundary. `maintenance:loop` supervises one lease-backed pass with bounded backoff and signal-safe shutdown; deployment ownership and alerting remain external.
 - Migrations `0046`-`0052` own server-clock maintenance leases/fencing, scheduler metrics, cost/quota inspection, explicit tombstone-bound re-collection, and the direct-CFPB worker admission branch. The original lease boundary is allowlisted to four scheduler names and callable only through `appsea_maintenance`; later forward migrations extend that allowlist for source-health, delivery, and operational-alert status inspection without changing released history. Re-collection is never automatic. External source/provider/object-store effects, deployed scheduler ownership, alert routing, billing, and lock/recovery proof remain external.
 - The private source registry includes bounded connector health from jobs, active items, and deletion tombstones; raw failures and mutation controls stay outside the read boundary.
 - Migration `0107` adds a workspace-context-required, security-definer source

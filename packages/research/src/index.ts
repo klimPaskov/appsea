@@ -659,6 +659,18 @@ export function buildProductionResearchArtifact(
       `${safetyFlaggedCount} retained observation${safetyFlaggedCount === 1 ? '' : 's'} contain${safetyFlaggedCount === 1 ? 's' : ''} instruction-like source text and ${safetyFlaggedCount === 1 ? 'remains' : 'remain'} excluded from automatic complaint interpretation until human review.`
     )
   }
+  if (parsed.modelGateway) {
+    if (parsed.modelGateway.provider === 'deterministic-fallback') {
+      coverageGaps.add(
+        'No external model-use policy is approved; the provider-neutral gateway used a deterministic fallback and its suggestions are non-authoritative.'
+      )
+    }
+    if (parsed.modelGateway.refusedCount > 0) {
+      coverageGaps.add(
+        `${parsed.modelGateway.refusedCount} gateway request${parsed.modelGateway.refusedCount === 1 ? '' : 's'} was refused by the trust, policy, or budget boundary; deterministic complaint analysis remains authoritative.`
+      )
+    }
+  }
   const artifactId = `analysis:${stableHash({
     collectionArtifactId: parsed.collectionArtifactId,
     runId: parsed.runId,
@@ -673,7 +685,8 @@ export function buildProductionResearchArtifact(
     policySnapshot: parsed.policySnapshot,
     opportunitySeed: parsed.opportunitySeed,
     evidenceIds: complaints.map((complaint) => complaint.evidenceId),
-    competitiveResearch: parsed.competitiveResearch
+    competitiveResearch: parsed.competitiveResearch,
+    ...(parsed.modelGateway ? { modelGateway: parsed.modelGateway } : {})
   }).slice(0, 32)}`
   return productionResearchArtifactSchema.parse({
     id: artifactId,
@@ -696,6 +709,7 @@ export function buildProductionResearchArtifact(
     policySnapshot: parsed.policySnapshot,
     opportunitySeedReview: parsed.opportunitySeed,
     competitiveResearch: parsed.competitiveResearch,
+    ...(parsed.modelGateway ? { modelGateway: parsed.modelGateway } : {}),
     qualitySnapshot: buildResearchQualitySnapshot(undefined, parsed.analysisAt)
   })
 }

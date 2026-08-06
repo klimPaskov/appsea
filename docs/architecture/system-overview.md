@@ -28,6 +28,16 @@ hashes, budgets, and fixed summaries. PostgreSQL and Temporal are verified in
 loopback local environments and CI, with separate database roles plus forced
 workspace RLS.
 
+The `packages/model-gateway` boundary is called inside the production-analysis
+activity after the worker reads policy-validated rows. It owns fixed
+system/developer prompts, an explicit `untrusted-data` segment, route/model/
+prompt allowlists, secret/PII-like redaction, instruction refusal, budget and
+idempotency checks, structured-result validation, and bounded non-sensitive
+summaries. The current provider is a deterministic fallback; the external
+provider is disabled and fails closed because collection approval is not
+model-use approval. Gateway suggestions are review-gated metadata only and
+cannot replace deterministic or human-corrected complaint analyses.
+
 Non-fixture report, plan, and production-analysis artifact blobs cross the
 `packages/object-store` content-addressed reference seam. Its in-memory, local
 filesystem, and signed S3-compatible adapters prove workspace isolation,

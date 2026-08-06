@@ -1,10 +1,18 @@
-# Decision memory
+# Decisions
 
-Earlier foundation decisions: [`archive/DECISIONS-foundation-2026-07-10.md`](archive/DECISIONS-foundation-2026-07-10.md).
+## 2026-08-06: Provider-neutral model boundary before provider activation
+
+Route imported complaint text through `packages/model-gateway` as context plus
+`untrusted-data`; bind each request to a workspace. Allowlist versions,
+redact secrets/PII, refuse instructions, enforce budgets/idempotency, and store
+hashes/findings/counters only. Deterministic
+or human-corrected analysis stays authoritative; external providers wait for
+model-use, DPA/retention/training, egress, malware, durable cost/idempotency,
+and calibration.
 
 ## 2026-07-24: Temporal orchestration with PostgreSQL commit authority
 
-Use pinned Temporal workflows for retries, cancellation, and recovery with
+Use pinned Temporal workflows for retry, cancellation, and recovery with
 sanitized history and activity side effects. PostgreSQL owns RLS, checkpoints,
 lineage, and ledgers; persistence safe points reconcile late cancellation.
 Compose is local proof, not production deployment.
@@ -82,13 +90,9 @@ not production Temporal/live-source/purge/downstream analysis.
 
 ## 2026-07-25: Policy-derived source retention
 
-Enforce `retentionDays` and `deletionRequired` through a bounded
-migration-owner function that queues deterministic tombstones and reuses the
-skip-locked propagation path for redaction and report/plan invalidation. It
-uses database time, skips fixture/purge-only policies without a matching purge,
-and keeps budgets independent. `redact` and `tombstone` share source-deletion
-semantics; field-level, object-store/backup purge, and recomputation remain
-separate.
+Enforce `retentionDays`/`deletionRequired` with bounded database-time
+tombstones and skip-locked propagation. Keep fixture/purge-only policies,
+field-level/object-store/backup purge, and recomputation separate.
 
 ## 2026-07-26: Offline production analysis composition boundary
 
@@ -322,10 +326,9 @@ export/backup deletion, and replay/cancellation remain explicit.
 
 ## 2026-08-04: Keep purge manifests metadata-only and provider-neutral
 
-Migration `0083` stores an expiring per-workspace object inventory/hash after
-archival; `0084`/`0085` repair PostgreSQL/read-only behavior. Deduplicated
-URI/kinds and identifier-only receipts stay behind owner/password-MFA step-up,
-RLS, confirmation, and a metadata-only non-deleting boundary.
+Migration `0083` stores an expiring archived-workspace object inventory/hash;
+`0084`/`0085` repair PostgreSQL/read-only behavior. URI kinds and receipts stay
+behind owner/password-MFA step-up, RLS, confirmation, and a non-deleting gate.
 
 ## 2026-08-03: Require conditional MFA for password-gated mutations
 
@@ -334,10 +337,9 @@ high-risk mutations; accounts without MFA retain password-only auth.
 
 ## 2026-08-03: Drain legacy Temporal histories without decoding them
 
-New production-analysis v2 starts carry a strict identifier-only memo. A
-visibility-only checker and reviewed manifest classify legacy/unknown runs and
-fail closed before the v1 worker is removed; archive/deletion stays an approved
-deployment operation and never occurs in workflow code.
+Production-analysis v2 starts carry an identifier-only memo; the visibility-only
+checker and reviewed manifest fail closed before v1 removal. Archive/deletion is
+an approved deployment operation, never workflow code.
 
 ## 2026-08-05: Guard private decisions and auth ingress
 
@@ -356,9 +358,9 @@ is reviewed or confirmed.
 
 ## 2026-08-06: Keep source observability bounded and additive
 
-Health/freshness stay private; missing observations never imply absent
-complaints. `0107`-`0110` add bounded quota/health/alert reads and leased
-outbox status; no fetch, activation, payload, or incident mutation occurs.
+Health/freshness stay private; missing observations never imply absence.
+`0107`-`0110` add bounded quota/health/alert reads and leased outbox status;
+no fetch, activation, payload, or incident mutation occurs.
 
 ## 2026-08-06: Carry the reviewed policy payload into connector execution
 
@@ -368,8 +370,8 @@ Activation remains database-owned.
 
 ## 2026-08-06: Audit approved report and plan exports in the same transaction
 
-Report/plan exports record deterministic identifier-only receipts after
-hydration/redaction; this is accountability, not provider purge authority.
+Report/plan exports record identifier-only receipts after hydration/redaction;
+this is accountability, not provider purge authority.
 
 ## 2026-08-06: Isolate instruction-like evidence
 
