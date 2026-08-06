@@ -3,8 +3,10 @@
 ## State
 
 Current audit: `docs/status/production-readiness-audit-2026-08-06.md`.
-`pnpm verify` passes; Docker fresh/backup proof and authenticated UI captures
-remain blocked. No production-readiness claim is justified.
+`pnpm verify` passes; Docker fresh/backup proof and authenticated private UI
+captures remain blocked. Public/local opportunity captures are checked in under
+`artifacts/ui-reference-loop/2026-08-06/`. No production-readiness claim is
+justified.
 
 AppSea remains a validated fixture-first product with production-shaped
 PostgreSQL, Temporal, source-policy, private-workspace, report/plan, and
