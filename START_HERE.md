@@ -58,7 +58,8 @@ The disposable integration smoke is `pnpm verify:local-stack`.
 - lease-owned, read-only production-analysis recomputation alert inspection with bounded alert/incomplete/clear events and visible truncated coverage; it never dispatches or retries a repair
 - lease-owned, read-only workspace cost-threshold inspection with exact micro-unit aggregates, explicit currency gaps, and bounded alert/incomplete/clear events; it never blocks work or performs billing
 - scalar-only, maintenance-owned operational-alert outbox with idempotent enqueue, stale-claim recovery, bounded retry/exhaustion, retention purge, and the `pnpm worker:alerts:deliver` drain command
-- supervised `pnpm worker:alerts:loop` command and hardened Compose `alerts` service that run the five bounded alert scans/delivery commands sequentially with fixed backoff and signal-safe shutdown; deployment endpoint ownership remains external
+- supervised `pnpm worker:alerts:loop` command and hardened Compose `alerts` service that run six bounded alert scans/delivery/status commands sequentially with fixed backoff and signal-safe shutdown; deployment endpoint ownership remains external
+- deterministic `pnpm worker:source:policy:cfpb:manifest` handoff with the CFPB policy hash, first-party evidence references, coverage gaps, and independent-review gate; it never activates or fetches the source
 - archived-owner, private, deterministic metadata-only workspace purge manifests with 24-hour expiry and visible object/export/backup requirements; they never authorize deletion
 - explicit, one-record, tombstone-bound source re-collection with immutable lineage and private review; it never runs automatically and does not activate a connector
 - direct CFPB source commands use the same bounded production admission ledger through the `appsea-worker` service principal; they cannot bypass private-workspace, fixture, or source-policy gates
@@ -67,7 +68,7 @@ The disposable integration smoke is `pnpm verify:local-stack`.
 - owner-issued, expiring workspace-scoped agent tokens with hash-only persistence, recent password step-up, and conditional recent-MFA create/revoke controls
 - authenticated read-only MCP-over-HTTP access to scoped private opportunities, evidence references, source coverage, and approved report/plan artifacts
 - approved report and plan JSON exports emit deterministic, identifier-only audit receipts visible in private Activity; provider retention and purge stay outside this repository boundary
-- owner-authorized, tenant-private CSV/JSON intake through the `manual-owner-import-v1` policy, with bounded parsing, PII scrubbing, identifier-only Temporal handoff, durable batch consumption, and owner deletion/tombstones; this is not public market coverage and never fetches imported URLs
+- owner-authorized, tenant-private CSV/JSON intake through the reviewed `manual-owner-import-v2` policy, with bounded parsing, PII scrubbing, identifier-only Temporal handoff, durable batch consumption, and owner deletion/tombstones; v1 remains historical, this is not public market coverage, and imported URLs are never fetched
 - provider-neutral password recovery mechanics with hash-only reset tokens,
   encrypted outbox delivery, fragment links, and a production kill switch
 - native Codex skills and bounded subagents

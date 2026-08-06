@@ -87,6 +87,11 @@ The SQL integration suites and backup/restore drill remain present in the
 repository and must be rerun when Docker is available. Hosted GitHub runs are
 also payment-gated.
 
+The latest private `main` push run (`31065010546`, commit `48ec38d`) confirms
+the hosted gate: every job was rejected before startup with GitHub's
+payments/spending-limit annotation, so it provides no PostgreSQL, Temporal,
+container, or desktop execution evidence.
+
 ## Deliberate simplifications and blockers
 
 - No third-party source is activated. The CFPB and Stack Exchange policy

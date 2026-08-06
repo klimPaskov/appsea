@@ -59,9 +59,6 @@ and public sources remain disabled. Confirmed competitive observations are
 carried only into the next explicit reviewed production analysis; lineage keeps
 observation/evidence hashes, restricted claim text is masked, and rejection or
 source deletion invalidates active outputs without auto-recompute.
-Local-stack checks pass when Docker is available; hosted restore/HA/failover
-remain external.
-
 Scoring preserves `opportunity-score-v0.2.0` and adds reviewed-input balanced
 `opportunity-score-v1.0.0` with risk, confidence, coverage, freshness, and
 explanations. Synthetic quality benchmarks and the versioned regression gate
@@ -86,13 +83,9 @@ coverage remain outside the boundary. Owner-import freshness stays unknown.
 
 The 2026-08-06 policy handoff carries immutable reviewed JSON from
 `readCollectible` into source constructors; collection fails closed without it.
-Database-owned activation fields remain mutable.
-
-The CFPB policy handoff also has a deterministic, secret-free review manifest
-(`pnpm worker:source:policy:cfpb:manifest`) with an immutable policy content
-hash, first-party evidence references observed on 2026-08-06, bounded
-coverage/quota/deletion metadata, and explicit independent-review fields. It
-does not contact CFPB, change the registry, or activate the disabled source.
+The deterministic CFPB review manifest adds the policy hash, first-party
+evidence, bounded coverage/quota/deletion metadata, and independent-review
+fields without contacting CFPB, changing the registry, or activating it.
 
 ## Validated commands
 
@@ -121,6 +114,9 @@ open.
 
 - No third-party public source is active; fixture rankings and owner-import
   evidence are not public market research.
+- GitHub CI run `31065010546` for `48ec38d` was payment-gated before startup;
+  Docker's stopped `com.docker.service` also blocks fresh PostgreSQL/Temporal/
+  backup proof.
 - Competitive lineage/report enrichment is locally unit-tested, but fresh
   PostgreSQL RLS, rejection-trigger, and deletion-propagation execution still
   await Docker or hosted CI; the workflow remains manual-rerun and tenant-private.
