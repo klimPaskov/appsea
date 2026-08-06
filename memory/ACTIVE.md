@@ -92,9 +92,9 @@ dates, Stack Exchange to question creation, and owner imports to published
 time with captured-time fallback; fixture collection follows its publication
 timestamp. Filtered results emit coverage warnings, and exact tombstone
 re-collection explicitly reports that the campaign window was not applied.
-The field is additive so legacy collection snapshots without it remain
-replayable. Tests cover request URLs, filtering-before-limit, warnings, and
-workflow forwarding.
+Legacy snapshots remain replayable without the additive field. Tests cover
+request URLs, filtering-before-limit, warnings, and workflow forwarding.
+Private collection reads/page render query and window beside coverage gaps.
 
 ## Next production tranche
 

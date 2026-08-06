@@ -99,6 +99,8 @@ const productionPersistenceResult: ProductionCollectionWorkflowPersistenceActivi
     artifactId: 'production-collection-artifact',
     sourceId: productionRequest.sourceId,
     policyVersion: productionRequest.policyVersion,
+    query: productionRequest.query,
+    dateRange: productionRequest.dateRange,
     sourceItemCount: 4,
     evidenceCount: 4,
     complaintCount: 4,

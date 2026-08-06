@@ -65,6 +65,11 @@ request rather than an ambiguous replay. Records outside a filtered window are
 not evidence of absence, and an exact tombstone re-collection reports that it
 did not apply the campaign window.
 
+The private completed-collection read model returns the query and normalized
+inclusive window from the immutable snapshot. The evidence-inspection page
+renders that scope next to source coverage gaps and warnings so operators can
+audit what the run did and did not search.
+
 The worker carries the immutable policy JSON payload returned by the database
 approval read into the connector constructor. The connector compares the
 purpose, quota, retention, deletion, attribution, display, and coverage fields

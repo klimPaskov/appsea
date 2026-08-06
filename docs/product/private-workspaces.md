@@ -156,6 +156,11 @@ and timestamps; completed runs link to the existing source evidence and
 coverage page. Idempotency hashes, raw source payloads, and caller secrets
 never appear in this history.
 
+The completed collection evidence page also shows the persisted query and
+inclusive source-date window (or an explicit unbounded scope) beside its
+coverage gaps and collection warnings. This keeps a filtered run's scope
+visible without treating records outside the window as evidence of absence.
+
 After a completed private collection, an owner or editor can choose an approved
 seed review on the collection page and start the downstream analysis explicitly.
 The start request contains only the collection/analysis identifiers, approved

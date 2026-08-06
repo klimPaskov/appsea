@@ -2973,6 +2973,8 @@ describe('contracts', () => {
         artifactId: 'production-collection:abc123',
         sourceId: policy.sourceId,
         policyVersion: 'cfpb-v1',
+        query: 'billing',
+        dateRange: { from: null, to: null },
         sourceItemCount: 1,
         evidenceCount: 1,
         complaintCount: 1,
@@ -2984,6 +2986,29 @@ describe('contracts', () => {
         replayed: false
       }).success
     ).toBe(true)
+    const scoped = productionCollectionResultSchema.parse({
+      workspaceId: 'workspace-production',
+      campaignId: 'campaign-production',
+      runId: 'run-production',
+      artifactId: 'production-collection:scoped',
+      sourceId: policy.sourceId,
+      policyVersion: 'cfpb-v1',
+      query: 'billing',
+      dateRange: {
+        from: '2026-07-01T00:00:00.000Z',
+        to: '2026-07-31T23:59:59.000Z'
+      },
+      sourceItemCount: 0,
+      evidenceCount: 0,
+      complaintCount: 0,
+      deletionCount: 0,
+      coverageGaps: [],
+      warnings: [],
+      state: 'completed',
+      completedAt: now,
+      replayed: false
+    })
+    expect(scoped.dateRange.from).toBe('2026-07-01T00:00:00.000Z')
   })
 
   it('bounds explicit tombstone re-collection to one source record', () => {
@@ -3018,6 +3043,8 @@ describe('contracts', () => {
       artifactId: 'production-collection:recollection',
       sourceId: request.sourceId,
       policyVersion: request.policyVersion,
+      query: request.query,
+      dateRange: { from: null, to: null },
       sourceItemCount: 1,
       evidenceCount: 1,
       complaintCount: 1,

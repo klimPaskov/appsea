@@ -135,6 +135,8 @@ vi.mock('@appsea/db', () => ({
         sourceId: state.policySourceId,
         policyVersion:
           state.policySourceId === 'stackexchange-stackoverflow' ? 'stack-v1' : 'cfpb-v1',
+        query: 'billing',
+        dateRange: { from: null, to: null },
         sourceItemCount: 0,
         evidenceCount: 0,
         complaintCount: 0,

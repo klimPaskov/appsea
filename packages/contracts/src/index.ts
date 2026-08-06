@@ -3901,6 +3901,9 @@ export const productionCollectionResultSchema = z
     artifactId: appseaIdentifierSchema,
     sourceId: appseaIdentifierSchema,
     policyVersion: z.string().min(1).max(80),
+    /** Query and source-date scope copied from the immutable collection snapshot. */
+    query: z.string().max(500),
+    dateRange: researchDateRangeSchema,
     sourceItemCount: z.number().int().nonnegative(),
     evidenceCount: z.number().int().nonnegative(),
     complaintCount: z.number().int().nonnegative(),

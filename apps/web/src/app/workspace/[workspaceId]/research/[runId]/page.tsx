@@ -11,6 +11,11 @@ import { ProductionAnalysisStartAction } from '../../../production-analysis-star
 
 export const dynamic = 'force-dynamic'
 
+function collectionDateWindow(dateRange: { from: string | null; to: string | null }): string {
+  if (!dateRange.from && !dateRange.to) return 'Unbounded; all available source history'
+  return `${dateRange.from ?? 'source history start'} → ${dateRange.to ?? 'collection time'} (inclusive)`
+}
+
 export default async function ProductionCollectionPage({
   params
 }: {
@@ -80,6 +85,15 @@ export default async function ProductionCollectionPage({
           </p>
         </div>
         <div className="detail-grid">
+          <div>
+            <p className="label">Collection scope</p>
+            <p className="muted-note">
+              Query: {collection.result.query || 'all available records'}
+            </p>
+            <p className="muted-note">
+              Source date window: {collectionDateWindow(collection.result.dateRange)}
+            </p>
+          </div>
           <div>
             <p className="label">Coverage gaps</p>
             <ul>

@@ -410,7 +410,9 @@ scheduled-refresh, and multi-source child request, included in the sanitized
 workflow identity, and persisted in the collection snapshot. Connector tests
 prove CFPB intake-date, Stack Exchange creation-date, fixture, and owner-import
 window enforcement with visible coverage warnings; legacy snapshots remain
-replayable.
+replayable. The private completed-collection read model now returns the query
+and normalized inclusive window, and the evidence-inspection page renders that
+scope beside its coverage gaps and warnings.
 Owners/editors can now choose an approved seed on the
 collection page and launch an explicit downstream analysis. The linked private
 status page/API reconciles safe Temporal state with a PostgreSQL projection,

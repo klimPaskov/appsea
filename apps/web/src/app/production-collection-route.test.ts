@@ -32,7 +32,11 @@ describe('production collection read route', () => {
     mocks.readForUser.mockReset()
     mocks.readSession.mockResolvedValue(session)
     mocks.readForUser.mockResolvedValue({
-      result: { runId: 'run:one' },
+      result: {
+        runId: 'run:one',
+        query: 'billing',
+        dateRange: { from: null, to: null }
+      },
       evidence: [],
       sourceCoverage: [],
       analysisHandoff: null
@@ -64,7 +68,11 @@ describe('production collection read route', () => {
     expect(response.headers.get('cache-control')).toBe('private, no-store')
     await expect(response.json()).resolves.toEqual({
       data: {
-        result: { runId: 'run:one' },
+        result: {
+          runId: 'run:one',
+          query: 'billing',
+          dateRange: { from: null, to: null }
+        },
         evidence: [],
         sourceCoverage: [],
         analysisHandoff: null
@@ -83,7 +91,11 @@ describe('production collection read route', () => {
 
   it('passes the private handoff status through without widening the public route', async () => {
     mocks.readForUser.mockResolvedValue({
-      result: { runId: 'run:one' },
+      result: {
+        runId: 'run:one',
+        query: 'billing',
+        dateRange: { from: '2026-07-01T00:00:00.000Z', to: '2026-07-31T23:59:59.000Z' }
+      },
       evidence: [],
       sourceCoverage: [],
       analysisHandoff: {

@@ -322,6 +322,8 @@ async function resultFromRun(
     artifactId: run.artifact_id,
     sourceId: snapshot.sourceId,
     policyVersion: snapshot.policyVersion,
+    query: snapshot.query,
+    dateRange: snapshot.dateRange ?? { from: null, to: null },
     sourceItemCount: snapshot.sourceItemCount,
     evidenceCount: snapshot.evidenceCount,
     complaintCount: snapshot.complaintCount,

@@ -271,8 +271,9 @@ snapshot. Source connectors apply the bounds using their documented native
 timestamp: CFPB uses inclusive `date_received` intake dates, Stack Exchange uses
 inclusive question creation timestamps, and owner imports use the published
 timestamp with captured-time fallback. Each filtered result records a coverage
-warning; exact tombstone re-collection explicitly reports that the campaign
-window was not applied.
+warning; the private collection result/read route echoes the query and validated
+window next to those gaps. Exact tombstone re-collection explicitly reports
+that the campaign window was not applied.
 
 The source-maintenance worker also exposes a supervised `maintenance:loop`
 entrypoint. It starts one existing lease-backed pass at a time, applies a

@@ -423,7 +423,7 @@ function assertPrivateWorkspaceResponses({
     ['campaigns', privatePages?.campaigns, 'Research campaigns'],
     ['owner imports', privatePages?.imports, 'Owner imports'],
     ['members', privatePages?.members, 'Members'],
-    ['collection detail', privatePages?.collection, 'Source collection'],
+    ['collection detail', privatePages?.collection, 'Collection scope'],
     ['analysis detail', privatePages?.analysis, 'Analysis status'],
     ['workflow detail', privatePages?.workflow, 'Collection status'],
     ['campaign history', privatePages?.campaignRuns, 'run history']
