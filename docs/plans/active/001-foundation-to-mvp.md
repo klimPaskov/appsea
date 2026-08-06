@@ -909,6 +909,8 @@ Implemented:
   headless Chrome/Chromium executable;
 - public captures for the leaderboard, overview, complaints, competitors, and
   coding-plan routes at 1280, 1024, 768, and 480 pixels;
+- public captures fail on scalar runtime/title/main/overflow findings and
+  `--persist` writes a secret-free public capture manifest;
 - responsive header fix verified at 480 pixels without changing desktop
   layout or adding research detail to the leaderboard.
 - `pnpm ui:capture:private` creates a disposable local owner session, captures

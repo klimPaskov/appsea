@@ -26,6 +26,9 @@ the mobile password step-up form now collapses to one column.
 - `artifacts/ui-reference-loop/2026-08-06/leaderboard-mobile.png`
 - `pnpm ui:capture` generated the full five-route × four-viewport set under
   `.appsea/ui-reference-loop/` during this review.
+- The persisted public set now includes
+  `artifacts/ui-reference-loop/2026-08-06/public-capture-manifest.json`; all
+  20 public captures passed the same scalar runtime/title/main/overflow audit.
 - `pnpm ui:capture:private` generated the nine-route × four-viewport private set
   under `artifacts/ui-reference-loop/2026-08-06/` against the local stack. The
   manifest uses a `<workspaceId>` placeholder and contains no session cookie or

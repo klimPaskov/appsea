@@ -23,13 +23,16 @@ pnpm ui:capture
 
 The command starts a loopback Next.js server on `127.0.0.1:4313`, captures the
 public leaderboard and opportunity routes at 1280, 1024, 768, and 480 pixels,
-and writes disposable PNGs under `.appsea/ui-reference-loop/`. Set
+audits runtime/title/main/overflow health, and writes disposable PNGs under
+`.appsea/ui-reference-loop/`. Set
 `APPSEA_CHROME_PATH` when Chrome is not installed in the standard location; use
 `pnpm ui:capture -- --persist` to write review artifacts under
 `artifacts/ui-reference-loop/<date>/`.
 
 The 480-pixel captures intentionally use the responsive layout. Desktop
 captures never use the mobile layout. The public command remains database-free.
+When persisted, it also writes a secret-free `public-capture-manifest.json`
+with placeholder-free public routes and scalar audit results.
 For authenticated workspace evidence, start the disposable local stack and
 run:
 

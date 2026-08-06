@@ -22,7 +22,7 @@ AppSea is an opportunity intelligence system for software products. It turns per
 - Campaign cancellation is a durable control boundary: migrations `0070`/`0071` store owner/editor intent before Temporal for multi-source and one-source runs; the worker retries external cancellation, while each workflow owns safe reconciliation.
 - Private campaign history uses strict bounded cursor pages ordered by request timestamp plus stable identifier; only the validated boundary crosses private APIs. The public leaderboard is unaffected.
 - Public `/leaderboard` and `/` share a database-free view. `pnpm ui:capture`
-  covers 1280/1024/768/480; `pnpm ui:capture:private` captures nine
+  audits 1280/1024/768/480; `pnpm ui:capture:private` captures nine
   routes with an owner session and layout checks.
   PNGs are local synthetic/owner content, not public market coverage.
 - Migration `0068` and `PostgresResearchCampaignOrchestrationRepository` own the durable multi-source campaign parent/child queue. The existing service admission and one-source Temporal workflow remain the child execution boundary; the lease-backed maintenance worker rechecks approved policy and reconciles child projections into private parent/campaign state. The slice is production-shaped but live source activation, deployed scheduler/Temporal ownership, and crash/retry proof remain external.

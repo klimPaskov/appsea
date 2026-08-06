@@ -453,33 +453,7 @@ async function stop(processHandle) {
   }
 }
 
-async function capture(chrome, output, route, viewport, userDataDirectory) {
-  const filename = `${route.id}-${viewport.id}.png`
-  const target = path.join(output, filename)
-  const args = [
-    '--headless=new',
-    '--disable-gpu',
-    '--disable-extensions',
-    '--disable-background-networking',
-    '--disable-default-apps',
-    '--disable-sync',
-    '--hide-scrollbars',
-    '--no-first-run',
-    '--no-default-browser-check',
-    '--run-all-compositor-stages-before-draw',
-    '--virtual-time-budget=1000',
-    '--force-device-scale-factor=1',
-    `--user-data-dir=${userDataDirectory}`,
-    `--window-size=${viewport.width},${viewport.height}`,
-    `--screenshot=${target}`,
-    `${baseUrl}${route.path}`
-  ]
-  if (process.platform !== 'win32') args.unshift('--no-sandbox')
-  await run(chrome, args)
-  return { filename, route: route.path, viewport }
-}
-
-export async function captureLocalUi({ output = defaultOutput } = {}) {
+export async function captureLocalUi({ output = defaultOutput, persistManifest = false } = {}) {
   if (!(await exists(path.join(webRoot, '.next', 'BUILD_ID')))) {
     throw new Error('Build the web app before capturing it (run pnpm --filter @appsea/web build).')
   }
@@ -493,22 +467,58 @@ export async function captureLocalUi({ output = defaultOutput } = {}) {
     shell: start.shell,
     stdio: 'ignore'
   })
+  let cdp
   try {
     await waitForServer()
+    await disableNextDevIndicator(baseUrl)
+    cdp = await startCdpPage(chrome, userDataDirectory)
+    await cdp.command('Page.enable')
+    await cdp.command('Runtime.enable')
     const captures = []
     for (const route of captureRoutes) {
       for (const viewport of captureViewports) {
-        captures.push(await capture(chrome, output, route, viewport, userDataDirectory))
+        await cdp.command('Emulation.setDeviceMetricsOverride', {
+          width: viewport.width,
+          height: viewport.height,
+          deviceScaleFactor: 1,
+          mobile: false
+        })
+        const load = cdp.waitForEvent('Page.loadEventFired')
+        await cdp.command('Page.navigate', { url: `${baseUrl}${route.path}` })
+        await load
+        await new Promise((resolve) => setTimeout(resolve, 500))
+        const audit = await collectUiAudit(cdp)
+        if (audit.status !== 'ok') {
+          throw new Error(
+            `${route.id} at ${viewport.id} failed local UI audit: ${audit.failures.join(', ')}`
+          )
+        }
+        const screenshot = await cdp.command('Page.captureScreenshot', {
+          format: 'png',
+          captureBeyondViewport: false
+        })
+        const filename = `${route.id}-${viewport.id}.png`
+        await writeFile(path.join(output, filename), Buffer.from(screenshot.data, 'base64'))
+        captures.push({ filename, route: route.path, viewport, audit })
       }
     }
-    return {
+    const manifest = {
       generatedAt: new Date().toISOString(),
       baseUrl,
       output,
       captures,
       privateRoutes: 'Not captured: authenticated PostgreSQL/Temporal stack is required.'
     }
+    if (persistManifest) {
+      await writeFile(
+        path.join(output, 'public-capture-manifest.json'),
+        `${JSON.stringify(manifest, null, 2)}\n`,
+        'utf8'
+      )
+    }
+    return manifest
   } finally {
+    if (cdp) await cdp.close()
     await stop(server)
     await removeCaptureProfile(userDataDirectory)
   }
@@ -606,7 +616,7 @@ async function main() {
     : defaultOutput
   const manifest = privateMode
     ? await captureAuthenticatedLocalUi({ output })
-    : await captureLocalUi({ output })
+    : await captureLocalUi({ output, persistManifest: persist })
   console.log(JSON.stringify(manifest, null, 2))
 }
 

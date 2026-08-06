@@ -34,6 +34,8 @@
   widths. It fails on an explicit runtime-error page, missing title/`<main>`, or
   horizontal overflow; the checked-in manifest records only those scalar
   results and placeholder routes.
+- The database-free `pnpm ui:capture -- --persist` path runs the same audit on
+  the five public routes and writes a secret-free public capture manifest.
 - Release boundary: `pnpm verify:release` checks the provider-neutral Compose
   topology, non-root/read-only image defaults, secret-free production example,
   disabled identity/delivery defaults, and fail-closed production preflight;

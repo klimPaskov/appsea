@@ -7,7 +7,7 @@ Audit: `docs/status/production-readiness-audit-2026-08-06.md`.
 real local-stack proofs passed on 2026-08-06. Authenticated private captures
 pass against the disposable local stack and are checked in.
 `/leaderboard` and `/` share sparse view;
-`pnpm ui:capture` checks public 1280/1024/768/480 captures under
+`pnpm ui:capture` audits public 1280/1024/768/480 captures under
 `artifacts/ui-reference-loop/2026-08-06/`; `pnpm ui:capture:private` covers
 nine private routes; audit fails on runtime error, missing main, or overflow.
 Claim open.
