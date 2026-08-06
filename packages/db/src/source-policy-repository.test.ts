@@ -124,6 +124,7 @@ describe('source policy repository', () => {
       reviewerRole: 'privacy',
       independenceAttested: true,
       approvalReference: 'ticket:cfpb:v1',
+      permissionEvidenceReference: null,
       notes: ['Reviewed intended use.'],
       contentHash: contentHash(draft),
       reviewedAt: now,
@@ -136,6 +137,7 @@ describe('source policy repository', () => {
     expect(statement?.values).toContain('privacy-reviewer@example.invalid')
     expect(statement?.values).toContain('privacy')
     expect(statement?.values).toContain(true)
+    expect(statement?.values).toContain(null)
     await expect(
       repository.approve({
         sourceId: draft.sourceId,
@@ -146,6 +148,7 @@ describe('source policy repository', () => {
         reviewerRole: 'privacy',
         independenceAttested: true,
         approvalReference: 'ticket:cfpb:v2',
+        permissionEvidenceReference: null,
         notes: [],
         contentHash: contentHash(draft),
         reviewedAt: now,

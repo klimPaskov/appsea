@@ -11,7 +11,11 @@ This is an engineering policy draft for the bounded
 activation record. The connector must remain disabled until an independent
 legal/privacy/security review records a canonical reviewer identity, permitted
 commercial purpose, retention decision, and attribution approval in the source
-registry.
+registry. The immutable draft also declares `permissionEvidenceRequired: true`;
+an approval must therefore carry a non-empty
+`source_policy_reviews.permission_evidence_reference` pointing to the written
+consent or commercial-exception record. Free-form notes do not satisfy that
+gate.
 
 ## Access and purpose
 
@@ -89,7 +93,8 @@ and attribute the claim.
 
 1. Legal obtains and records express prior written consent or an applicable
    commercial exception for AppSea's automated collection purpose; the
-   consent/exception reference must be retained with the approval record.
+   consent/exception reference must be retained in the immutable
+   `source_policy_reviews.permission_evidence_reference` field.
 2. Legal confirms the commercial CC BY-SA/share-alike and attribution path.
 3. Privacy confirms the excerpt, profile exclusion, retention, and deletion
    treatment.

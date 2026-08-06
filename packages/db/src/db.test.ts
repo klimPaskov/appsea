@@ -123,7 +123,8 @@ describe('database foundation', () => {
       '0107',
       '0108',
       '0109',
-      '0110'
+      '0110',
+      '0111'
     ])
     expect(migrations[0]?.checksum).toMatch(/^[a-f0-9]{64}$/)
     expect(migrations[0]?.sql).toContain('CREATE TABLE appsea.evidence_records')
@@ -323,6 +324,14 @@ describe('database foundation', () => {
     expect(operationalAlertStatusMigration?.sql).toContain(
       'REVOKE ALL ON FUNCTION appsea.read_operational_alert_outbox_status'
     )
+    const sourcePermissionEvidenceMigration = migrations.find(
+      (migration) => migration.version === '0111'
+    )
+    expect(sourcePermissionEvidenceMigration?.sql).toContain('permission_evidence_reference')
+    expect(sourcePermissionEvidenceMigration?.sql).toContain(
+      'source policy approval requires a permission evidence reference'
+    )
+    expect(sourcePermissionEvidenceMigration?.sql).toContain('permissionEvidenceRequired')
     const workspacePurgeManifestMigration = migrations.find(
       (migration) => migration.version === '0083'
     )

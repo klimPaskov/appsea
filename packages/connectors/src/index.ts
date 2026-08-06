@@ -174,6 +174,7 @@ function reviewedPolicyContract(policy: SourcePolicy): unknown {
     sourceType: policy.sourceType,
     permittedPurposes: policy.permittedPurposes,
     commercialUse: policy.commercialUse,
+    permissionEvidenceRequired: policy.permissionEvidenceRequired ?? null,
     accessMethod: policy.accessMethod,
     retentionDays: policy.retentionDays,
     deletionRequired: policy.deletionRequired,
@@ -373,6 +374,7 @@ const stackExchangeSourcePolicy = freezePolicy(
     policyState: 'pending_review',
     permittedPurposes: ['competitor-research', 'contrary-evidence', 'development', 'testing'],
     commercialUse: 'unknown',
+    permissionEvidenceRequired: true,
     accessMethod:
       'Official Stack Exchange API v2.3 search/advanced endpoint; no scraping; optional application key supplied only through runtime configuration; API access does not waive the Network Acceptable Use Policy',
     retentionDays: 14,

@@ -14,7 +14,7 @@ AppSea is an opportunity intelligence system for software products. It turns per
 - A future Tauri shell will reuse the website contract.
 - `packages/db` owns PostgreSQL 18 migrations, transaction-scoped workspace RLS, and persistence repositories.
 - Local and CI PostgreSQL use a no-login owner, separate migrator, and non-owner runtime role. Production provisioning remains external and unimplemented.
-- `scripts/run_db_backup_restore.mjs` provides a local 109-migration dump/restore drill with forced RLS and least-privilege checks; it is not provider HA or production restore evidence.
+- `scripts/run_db_backup_restore.mjs` provides a local 111-migration dump/restore drill with forced RLS and least-privilege checks; it is not provider HA or production restore evidence.
 - `packages/workflows` owns Temporal orchestration and client hashing; `apps/worker` owns activity adapters/startup; `packages/db` owns RLS-protected fixture and production-collection projections/checkpoints. Production workflow security, HA, object-store/backups purge, deployment, and Docker-backed integration proof remain external.
 - Campaign cancellation is a durable control boundary: migrations `0070`/`0071` store owner/editor intent before Temporal for multi-source and one-source runs; the worker retries external cancellation, while each workflow owns safe reconciliation.
 - Private campaign history uses strict bounded cursor pages ordered by request timestamp plus stable identifier; only the validated boundary crosses private APIs. The public leaderboard is unaffected.
@@ -37,22 +37,22 @@ AppSea is an opportunity intelligence system for software products. It turns per
 - `packages/reports` owns the deterministic fixture opportunity report contract and composer; fixture persistence stores its content-hashed report version and links the plan package. Private report reads keep evidence, inference, recommendation, contrary evidence, and source coverage separate.
 - `apps/worker` maintenance commands use `packages/contracts`-validated pure runners with bounded counters, sorted workspace enumeration, independent quota expiry/purge budgets, and scheduler correlation IDs; PostgreSQL idempotency remains the rerun boundary. The `maintenance:loop` entrypoint supervises one lease-backed pass at a time with bounded interval/backoff and signal-safe child shutdown; deployment process ownership and alerting remain external.
 - Migrations `0046`-`0052` own server-clock maintenance leases/fencing, scheduler metrics, cost/quota inspection, explicit tombstone-bound re-collection, and the direct-CFPB worker admission branch. The original lease boundary is allowlisted to four scheduler names and callable only through `appsea_maintenance`; later forward migrations extend that allowlist for source-health, delivery, and operational-alert status inspection without changing released history. Re-collection is never automatic. External source/provider/object-store effects, deployed scheduler ownership, alert routing, billing, and lock/recovery proof remain external.
-- Private workspace members can read exact currency-separated cost totals and bounded quota-reconciliation cases at `/workspace/:workspaceId/usage`; the page is inspection-only and cannot resolve, refund, or re-fetch anything. Maintenance-role resolution remains separate from the browser boundary.
 - The private source registry includes bounded connector health from jobs, active items, and deletion tombstones; raw failures and mutation controls stay outside the read boundary.
 - Migration `0107` adds a workspace-context-required, security-definer source
   quota headroom projection. It reports only shared current-minute limit/used/
   remaining capacity and window timestamps; direct runtime access to global
   quota windows and reservation rows remains denied.
 - Migrations `0108` and `0109` add a maintenance-only scalar source-health
-  projection and forward scheduler/outbox allowlist for the bounded
-  `source:health:alert` worker command. It returns no source payloads, policy
-  JSON, complaint text, or activation capability; capped coverage remains
-  incomplete rather than clear.
+  projection and scheduler/outbox allowlist for `source:health:alert`; it
+  returns no source payloads, policy JSON, complaint text, or activation
+  capability and capped coverage remains incomplete.
 - The source-policy repository returns the hash-verified immutable policy JSON
   alongside the effective activation snapshot. Production connector
   constructors compare immutable purpose/quota/retention/deletion/display
   metadata and fail closed when the reviewed payload is absent; activation
-  fields remain database-owned.
+  fields remain database-owned. Migration `0111` adds optional
+  `permissionEvidenceRequired` policy metadata and stores a required external
+  permission/exception reference on immutable approval rows when declared.
 - `apps/worker` also owns the bounded `auth:recovery` outbox runner. It decrypts a reset token only in memory, sends a signed/idempotent fragment-link request with redirect blocking, and records fixed-code retries without logging provider responses or raw errors.
 - `apps/worker` provides an explicit CFPB policy-review wrapper and a
   PostgreSQL-idempotent approved-source collection checkpoint. It never activates

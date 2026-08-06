@@ -138,6 +138,10 @@ export const sourcePolicySchema = z.object({
   policyState: sourcePolicyStateSchema.default('pending_review'),
   permittedPurposes: z.array(z.string().min(1)).min(1),
   commercialUse: z.enum(['allowed', 'restricted', 'unknown']),
+  // Some sources require a durable external permission or exception record
+  // before an approved policy can become collectible. The approval evidence
+  // is stored separately; this flag is immutable policy metadata.
+  permissionEvidenceRequired: z.boolean().optional(),
   accessMethod: z.string().min(1),
   retentionDays: z.number().int().nonnegative(),
   deletionRequired: z.boolean(),
@@ -1265,6 +1269,7 @@ export const sourcePolicyApprovalInputSchema = z
     reviewerRole: sourcePolicyReviewerRoleSchema,
     independenceAttested: z.literal(true),
     approvalReference: z.string().min(1).max(500),
+    permissionEvidenceReference: z.string().min(1).max(500).nullable().default(null),
     notes: z.array(z.string().min(1).max(500)).max(100),
     contentHash: z
       .string()

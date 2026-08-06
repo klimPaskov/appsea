@@ -25,7 +25,7 @@ Status: production-shaped foundation implemented and validated locally; producti
 
 Implemented:
 
-- PostgreSQL 18 schema and one hundred ten forward, checksummed migrations
+- PostgreSQL 18 schema and one hundred eleven forward, checksummed migrations
 - normalized source, evidence, complaint, cluster, competitor, opportunity, score, report, plan, audit, cost, deletion, outbox, and lineage tables
 - no-login owner, separate migrator, and least-privilege runtime role contract
 - forced workspace RLS and transaction-scoped workspace context
@@ -35,7 +35,7 @@ Implemented:
 - populated upgrade, fresh install, privilege, RLS, provenance, policy, cross-wire, and replay tests
 - local runbook and CI persistence gate
 - isolated local PostgreSQL backup/restore runbook and CI gate; the drill
-  restores a disposable dump through all one hundred ten migrations and verifies
+  restores a disposable dump through all one hundred eleven migrations and verifies
   forced workspace RLS plus runtime/maintenance privileges without accepting a
   remote URL
 - one-command loopback private-workspace stack with migration, worker, and web
@@ -225,7 +225,7 @@ Migration `0096_opportunity_score_v1_envelope.sql` adds nullable, range-checked
 balanced v1 score fields, reviewed evidence/coverage/freshness references, and
 a private ranking index. Legacy score rows remain readable and keep `score` as
 their raw-score compatibility field. During the `0096` tranche, the local
-backup/restore drill passed through that migration; the current `0110` drill is
+backup/restore drill passed through that migration; the current `0111` drill is
 blocked before execution when Docker Desktop's Linux engine is unavailable.
 Provider backup, HA, retention, and production restore remain deployment work.
 
@@ -816,6 +816,10 @@ incomplete and the worker never fetches or activates a source;
 reader and `pnpm worker:alerts:status`; it never returns payloads, mutates
 delivery state, calls a provider, or routes an incident. Production enablement
 remains explicit and operated scheduler/endpoint ownership remains open;
+`0111` adds a policy-declared permission-evidence requirement and stores the
+external consent/exception reference on immutable source-policy reviews; the
+Stack Exchange candidate remains disabled until that evidence and independent
+review exist;
 scheduled commands now share migration `0046`'s server-clock owner/token lease
 with renewal, stale takeover, migration `0052` transaction fencing for selected
 SQL mutations, and fixed lease-loss failures;

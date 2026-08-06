@@ -504,6 +504,10 @@ export class PostgresResearchCampaignOrchestrationRepository {
                        AND review.decision = 'approved'
                        AND review.content_hash = policy.content_hash
                        AND review.independence_attested
+                       AND (
+                         COALESCE((policy.policy_payload->>'permissionEvidenceRequired')::boolean, false) = false
+                         OR NULLIF(trim(review.permission_evidence_reference), '') IS NOT NULL
+                       )
                   ) AS approved_review
              FROM appsea.sources source
              LEFT JOIN appsea.source_policy_versions policy

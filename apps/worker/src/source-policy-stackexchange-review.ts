@@ -57,6 +57,7 @@ try {
         'legal' | 'privacy' | 'security' | 'independent_operator',
       independenceAttested: requiredTrue('APPSEA_POLICY_INDEPENDENCE_ATTESTED'),
       approvalReference: required('APPSEA_POLICY_APPROVAL_REFERENCE'),
+      permissionEvidenceReference: required('APPSEA_POLICY_PERMISSION_EVIDENCE_REFERENCE'),
       notes: (process.env.APPSEA_POLICY_REVIEW_NOTES ?? '')
         .split('\n')
         .map((value) => value.trim())

@@ -299,6 +299,10 @@ export class PostgresSourcePolicyRepository {
                    AND review.decision = 'approved'
                    AND review.content_hash = policy.content_hash
                    AND review.independence_attested
+                   AND (
+                     COALESCE((policy.policy_payload->>'permissionEvidenceRequired')::boolean, false) = false
+                     OR NULLIF(trim(review.permission_evidence_reference), '') IS NOT NULL
+                   )
               )
               AND (policy.expires_at IS NULL OR policy.expires_at > clock_timestamp())`,
           [validatedSourceId, requestedVersion]
@@ -375,6 +379,10 @@ export class PostgresSourcePolicyRepository {
                            AND review.decision = 'approved'
                            AND review.content_hash = policy.content_hash
                            AND review.independence_attested
+                           AND (
+                             COALESCE((policy.policy_payload->>'permissionEvidenceRequired')::boolean, false) = false
+                             OR NULLIF(trim(review.permission_evidence_reference), '') IS NOT NULL
+                           )
                       )
                     )
                   ), false) AS enabled,
@@ -393,6 +401,10 @@ export class PostgresSourcePolicyRepository {
                          AND review.decision = 'approved'
                          AND review.content_hash = policy.content_hash
                          AND review.independence_attested
+                         AND (
+                           COALESCE((policy.policy_payload->>'permissionEvidenceRequired')::boolean, false) = false
+                           OR NULLIF(trim(review.permission_evidence_reference), '') IS NOT NULL
+                         )
                     )
                   ), false) AS collectible,
                   CASE
@@ -592,6 +604,7 @@ export class PostgresSourcePolicyRepository {
           parsed.reviewerRole,
           parsed.independenceAttested,
           parsed.approvalReference,
+          parsed.permissionEvidenceReference,
           parsed.notes,
           parsed.contentHash,
           parsed.reviewedAt,

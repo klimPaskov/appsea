@@ -574,6 +574,10 @@ export class PostgresProductionCollectionRepository {
               AND review.decision = 'approved'
               AND review.content_hash = policy.content_hash
               AND review.independence_attested
+              AND (
+                COALESCE((policy.policy_payload->>'permissionEvidenceRequired')::boolean, false) = false
+                OR NULLIF(trim(review.permission_evidence_reference), '') IS NOT NULL
+              )
             WHERE source.source_id = $1
               AND source.source_type <> 'fixture'
               AND source.lifecycle_state = 'active'
@@ -872,6 +876,10 @@ export class PostgresProductionCollectionRepository {
                      AND review.decision = 'approved'
                      AND review.content_hash = policy.content_hash
                      AND review.independence_attested
+                     AND (
+                       COALESCE((policy.policy_payload->>'permissionEvidenceRequired')::boolean, false) = false
+                       OR NULLIF(trim(review.permission_evidence_reference), '') IS NOT NULL
+                     )
                 )`,
             [parsed.request.sourceId, parsed.request.policyVersion]
           )

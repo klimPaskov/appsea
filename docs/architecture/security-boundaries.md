@@ -160,6 +160,11 @@ for that pre-context authorization lookup.
   trigger rejects unattested or self-owned approvals, and pre-0054 approvals
   are conservatively disabled until re-reviewed. This strengthens the gate but
   does not grant legal, privacy, or security approval or activate a source.
+- Migration `0111` adds optional `permissionEvidenceRequired` policy metadata
+  and stores a bounded external permission or commercial-exception reference
+  on the immutable review row when the policy requires one. The approval
+  function, review trigger, and runtime collectibility reads reject activation
+  without that reference; legacy review rows remain nullable audit history.
 - The private source-registry read is a separate authenticated, read-only
   projection. `GET /api/workspaces/:workspaceId/sources` requires private
   workspace membership and a transaction-local authorization check; the

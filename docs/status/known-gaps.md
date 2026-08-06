@@ -24,7 +24,10 @@ market coverage. CFPB, Stack Exchange, and other third-party sources remain
 disabled pending independent review. Stack Exchange additionally has a
 first-party automated-collection restriction for AppSea's intended
 similar/competitive or generative-AI use; written consent or a commercial
-exception is not present.
+exception is not present. Migration `0111` now stores a required
+permission/exception reference on the immutable approval row when a policy
+declares `permissionEvidenceRequired`; this strengthens the gate but does not
+create the missing permission or activate the source.
 
 Source freshness is now visible for policies that declare a reviewed schedule,
 and migration `0107` adds a bounded shared current-minute quota-headroom
@@ -520,6 +523,9 @@ exception. The API terms/CC BY-SA attribution path, 14-day excerpt retention,
 deletion behavior, and any permission record still require independent review.
 Its filtered search path
 emits no deletion tombstones and cannot be used to infer absence.
+The draft now declares `permissionEvidenceRequired: true`; migration `0111`
+and the Stack Exchange review CLI require a durable
+`permission_evidence_reference` before any approval could activate it.
 Migration `0067_field_level_evidence_redaction.sql` now adds a separate,
 editor/owner-only field-redaction boundary. It records an immutable receipt,
 retains source identifiers, capture/policy metadata, and the original content

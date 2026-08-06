@@ -352,6 +352,10 @@ const productionSnapshotSelect = `
      AND policy_review.decision = 'approved'
      AND policy_review.independence_attested
      AND policy_review.reviewer_role <> 'legacy'
+     AND (
+       COALESCE((policy.policy_payload->>'permissionEvidenceRequired')::boolean, false) = false
+       OR NULLIF(trim(policy_review.permission_evidence_reference), '') IS NOT NULL
+     )
     JOIN appsea.opportunity_competitors relation
       ON relation.workspace_id = observation.workspace_id
      AND relation.opportunity_id = observation.opportunity_id

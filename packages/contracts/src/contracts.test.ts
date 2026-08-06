@@ -647,6 +647,7 @@ describe('contracts', () => {
       reviewerRole: 'privacy' as const,
       independenceAttested: true as const,
       approvalReference: 'ticket:cfpb:v1',
+      permissionEvidenceReference: null,
       notes: ['Reviewed intended use and retention.'],
       contentHash: 'a'.repeat(64),
       reviewedAt: now,
@@ -662,6 +663,18 @@ describe('contracts', () => {
     ).toBe(false)
     expect(
       sourcePolicyApprovalInputSchema.safeParse({ ...valid, independenceAttested: false }).success
+    ).toBe(false)
+    expect(
+      sourcePolicyApprovalInputSchema.safeParse({
+        ...valid,
+        permissionEvidenceReference: 'consent:stackexchange:2026-08'
+      }).success
+    ).toBe(true)
+    expect(
+      sourcePolicyApprovalInputSchema.safeParse({
+        ...valid,
+        permissionEvidenceReference: 'x'.repeat(501)
+      }).success
     ).toBe(false)
   })
 

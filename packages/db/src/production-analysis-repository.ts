@@ -577,6 +577,10 @@ async function assertCollectionAndPolicyLineage(
         AND review.content_hash = policy.content_hash
         AND review.decision = 'approved'
         AND review.independence_attested
+        AND (
+          COALESCE((policy.policy_payload->>'permissionEvidenceRequired')::boolean, false) = false
+          OR NULLIF(trim(review.permission_evidence_reference), '') IS NOT NULL
+        )
       WHERE run_policy.workspace_id = $1
         AND run_policy.run_id = $2
         AND run_policy.source_id = $3

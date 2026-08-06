@@ -104,6 +104,7 @@ describe('connector policy gate', () => {
   it('records the Stack Exchange automated-collection restriction as a fail-closed blocker', () => {
     expect(stackExchangeSourcePolicy.policyState).toBe('pending_review')
     expect(stackExchangeSourcePolicy.commercialUse).toBe('unknown')
+    expect(stackExchangeSourcePolicy.permissionEvidenceRequired).toBe(true)
     expect(stackExchangeSourcePolicy.coverageNotes.join(' ')).toContain(
       'express prior written consent'
     )

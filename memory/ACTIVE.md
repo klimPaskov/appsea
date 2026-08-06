@@ -14,7 +14,7 @@ sparse; no third-party public source is enabled. A reviewed internal
 `manual-owner-import-v2` policy now supports tenant-private owner-authorized
 CSV/JSON intake without claiming public market coverage; v1 remains historical.
 
-Migrations `0027`-`0110` cover policy, deletion/leases, orchestration,
+Migrations `0027`-`0111` cover policy, deletion/leases, orchestration,
 analysis/report/plan governance, cost/alerts, object refs, archival/purge
 intent, redaction, agent tokens, and TOTP MFA. OIDC/MCP remain gated.
 
@@ -25,12 +25,10 @@ AUP/written-consent blocker. Reports/plans preserve provenance,
 coverage gaps, approval state, synthetic disclosure, and object references.
 
 Production opportunities remain `candidate` until an explicit deep-research
-gate proves source-backed competitor/contrary coverage. Migration `0100` repairs
-legacy non-synthetic `researched` rows; `0101` persists the append-only,
-owner-reviewed gate with provenance/stale reads while fixture state stays
-synthetic. Gaps remain visible after pass. Competitors exposes checklist review:
-editors submit; owners promote/withdraw. API owns evidence/snapshot/membership/
-step-up; UI never activates sources.
+gate proves source-backed competitor/contrary coverage. Migrations `0100`/
+`0101` repair legacy states and persist the owner-reviewed gate with stale
+reads; gaps remain visible. Competitors exposes checklist review, while API
+owns evidence/snapshot/membership/step-up and UI never activates sources.
 Report/plan approval is editor/owner-gated; readiness is server-owned.
 Approved report/plan JSON exports now append deterministic, identifier-only
 `report.exported`/`plan.exported` receipts after object hydration/redaction;
@@ -45,9 +43,8 @@ closure/archival, and scoped read-only agent tokens. OIDC, delivery, retention,
 egress, and deployment operations remain external.
 
 Workers have server-clock leases, fenced mutations, retries, recovery, metrics,
-and signed alerts; `alerts:loop` supervises scans, delivery, and a separate
-bounded outbox-status read in Compose; operated
-scheduler, billing, cloud purge, and provider topology remain open.
+and signed alerts; `alerts:loop` supervises scans, delivery, and outbox status.
+Operated scheduler, billing, cloud purge, and provider topology remain open.
 
 Imported complaints, pages, reports, and model output are untrusted data; they
 cannot update code, skills, instructions, permissions, or repository memory.
@@ -87,6 +84,10 @@ The 2026-08-06 policy handoff carries immutable reviewed JSON from
 The deterministic CFPB review manifest adds the policy hash, first-party
 evidence, bounded coverage/quota/deletion metadata, and independent-review
 fields without contacting CFPB, changing the registry, or activating it.
+Migration `0111` now carries a policy-declared permission requirement into a
+dedicated immutable review reference; the Stack Exchange approval CLI requires
+that reference and all collectibility reads fail closed without it. The source
+remains disabled pending actual independent permission review.
 
 ## Validated commands
 

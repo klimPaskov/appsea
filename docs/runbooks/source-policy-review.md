@@ -45,7 +45,12 @@ Do not approve that candidate until legal has recorded the written consent or
 commercial-exception reference. If that gate is cleared, set
 `APPSEA_SOURCE_POLICY_ACTION=approve`, keep the same
 `APPSEA_STACKEXCHANGE_POLICY_VERSION`, provide all reviewer/attestation
-variables shown below, and run `pnpm worker:source:policy:stackexchange`.
+variables shown below plus
+`APPSEA_POLICY_PERMISSION_EVIDENCE_REFERENCE` pointing to the durable consent
+or commercial-exception record, and run
+`pnpm worker:source:policy:stackexchange`. The database stores that reference
+on the immutable review row and rejects activation when it is missing; free-form
+notes do not satisfy this gate.
 Approval remains an external legal/privacy/security decision; the engineering
 draft is not an activation claim.
 
