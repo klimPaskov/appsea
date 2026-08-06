@@ -480,6 +480,40 @@ describe.sequential('PostgreSQL fixture persistence lifecycle', () => {
         [fixedAt]
       )
     })
+    await migrateDatabase(migrationPool, { ...migrationOptions, throughVersion: '0115' })
+    await withOwnerClient(async (client) => {
+      await client.query(
+        `INSERT INTO appsea.source_policy_reviews
+           (review_id, source_id, policy_version, decision, reviewer,
+            reviewer_identity, reviewer_role, independence_attested,
+            approval_reference, notes, content_hash, reviewed_at, recorded_at)
+         VALUES ('review:reviewer-upgrade:privacy', 'source-reviewer-upgrade',
+                 'reviewer-upgrade-v1', 'approved', 'Upgrade reviewer',
+                 'upgrade-reviewer@example.invalid', 'privacy', true,
+                 'approval:reviewer-upgrade:privacy', ARRAY['upgrade fixture'],
+                 $1, $2, $2),
+                ('review:reviewer-upgrade:security', 'source-reviewer-upgrade',
+                 'reviewer-upgrade-v1', 'approved', 'Upgrade reviewer',
+                 'upgrade-reviewer@example.invalid', 'security', true,
+                 'approval:reviewer-upgrade:security', ARRAY['upgrade fixture'],
+                 $1, $2, $2)`,
+        [legacyPolicyHash, fixedAt]
+      )
+      await client.query(
+        `UPDATE appsea.source_policy_versions
+            SET policy_state = 'approved', reviewed_at = $1
+          WHERE source_id = 'source-reviewer-upgrade'
+            AND policy_version = 'reviewer-upgrade-v1'`,
+        [fixedAt]
+      )
+      await client.query(
+        `UPDATE appsea.sources
+            SET lifecycle_state = 'active', current_policy_version = 'reviewer-upgrade-v1',
+                updated_at = $1
+          WHERE source_id = 'source-reviewer-upgrade'`,
+        [fixedAt]
+      )
+    })
     await migrateDatabase(migrationPool, migrationOptions)
     reviewerCompletenessDemotion = await withOwnerClient(async (client) => {
       const result = await client.query<ReviewerCompletenessDemotion>(
@@ -627,7 +661,10 @@ describe.sequential('PostgreSQL fixture persistence lifecycle', () => {
       '0112',
       '0113',
       '0114',
-      '0115'
+      '0115',
+      '0116',
+      '0117',
+      '0118'
     ])
     expect(secondMigrationResult.applied).toEqual([])
     expect(secondMigrationResult.alreadyApplied).toEqual([
@@ -745,11 +782,14 @@ describe.sequential('PostgreSQL fixture persistence lifecycle', () => {
       '0112',
       '0113',
       '0114',
-      '0115'
+      '0115',
+      '0116',
+      '0117',
+      '0118'
     ])
   })
 
-  it('demotes incomplete active reviewer sets during the 0115 upgrade', () => {
+  it('demotes incomplete or non-independent active reviewer sets during the 0115/0116 upgrade', () => {
     expect(reviewerCompletenessDemotion).toEqual({
       source_lifecycle_state: 'disabled_pending_review',
       source_current_policy_version: null,
@@ -1294,9 +1334,19 @@ describe.sequential('PostgreSQL fixture persistence lifecycle', () => {
             display_mode, coverage_notes, reviewed_at, policy_payload, content_hash, created_at)
          VALUES ($1, $2, 'approved', ARRAY['opportunity-research'], 'allowed', 'test route',
                  30, false, false, 'metadata-only', ARRAY['test-only'], $3,
-                 '{"quota":{"requestsPerMinute":10,"maxRecordsPerRun":10}}'::jsonb,
+                 '{"requiredReviewerRoles":["independent_operator"],"quota":{"requestsPerMinute":10,"maxRecordsPerRun":10}}'::jsonb,
                  $4, $3)`,
         [sourceId, policyVersion, fixedAt, 'a'.repeat(64)]
+      )
+      await client.query(
+        `INSERT INTO appsea.source_policy_reviews
+           (review_id, source_id, policy_version, decision, reviewer,
+            reviewer_identity, reviewer_role, independence_attested,
+            approval_reference, notes, content_hash, reviewed_at, recorded_at)
+         VALUES ('review:quota:reconcile', $1, $2, 'approved', 'Quota reviewer',
+                 'quota-reviewer@example.invalid', 'independent_operator', true,
+                 'approval:quota:reconcile', ARRAY['test-only'], $3, $4, $4)`,
+        [sourceId, policyVersion, 'a'.repeat(64), fixedAt]
       )
       await client.query(
         `UPDATE appsea.sources
@@ -1392,6 +1442,9 @@ describe.sequential('PostgreSQL fixture persistence lifecycle', () => {
             WHERE source_id = $1`,
           [sourceId]
         )
+        await client.query('DELETE FROM appsea.source_policy_reviews WHERE source_id = $1', [
+          sourceId
+        ])
         await client.query('DELETE FROM appsea.source_policy_versions WHERE source_id = $1', [
           sourceId
         ])
@@ -1705,6 +1758,25 @@ describe.sequential('PostgreSQL fixture persistence lifecycle', () => {
         reviewRepository.approve({
           sourceId,
           policyVersion,
+          reviewId: 'review:permission:privacy-same-identity',
+          reviewer: 'Independent privacy reviewer',
+          reviewerIdentity: 'legal-reviewer@example.invalid',
+          reviewerRole: 'privacy',
+          independenceAttested: true,
+          approvalReference: 'ticket:permission:privacy-same-identity',
+          permissionEvidenceReference: 'consent:permission:2026-08',
+          notes: [],
+          contentHash: policyHash,
+          reviewedAt: fixedAt,
+          expiresAt: null,
+          recordedAt: fixedAt
+        })
+      ).rejects.toMatchObject({ code: '42501' })
+
+      await expect(
+        reviewRepository.approve({
+          sourceId,
+          policyVersion,
           reviewId: 'review:permission:privacy',
           reviewer: 'Independent privacy reviewer',
           reviewerIdentity: 'privacy-reviewer@example.invalid',
@@ -1809,6 +1881,343 @@ describe.sequential('PostgreSQL fixture persistence lifecycle', () => {
           sourceId
         ])
         await client.query('DELETE FROM appsea.sources WHERE source_id = $1', [sourceId])
+      })
+    }
+  })
+
+  it('reports bounded approval progress and fails closed for incomplete active policies', async () => {
+    const sourceId = 'source-policy-progress'
+    const policyVersion = 'progress-v1'
+    const policyHash = 'e'.repeat(64)
+    const reviewRepository = new PostgresSourcePolicyRepository(migrationPool)
+    await withOwnerClient(async (client) => {
+      await client.query(
+        `INSERT INTO appsea.sources
+           (source_id, display_name, source_type, lifecycle_state, created_at, updated_at)
+         VALUES ($1, 'Policy Progress Source', 'api', 'disabled_pending_review', $2, $2)`,
+        [sourceId, fixedAt]
+      )
+      await client.query(
+        `INSERT INTO appsea.source_policy_versions
+           (source_id, policy_version, policy_state, permitted_purposes, commercial_use,
+            access_method, retention_days, deletion_required, attribution_required,
+            display_mode, coverage_notes, policy_document_ref, reviewed_at, expires_at,
+            policy_payload, content_hash, created_at)
+         VALUES ($1, $2, 'pending_review', ARRAY['opportunity-research'], 'allowed',
+                 'operator review fixture', 30, true, true, 'excerpt', ARRAY['test-only'],
+                 'https://example.com/policy-progress', NULL, NULL,
+                 '{"requiredReviewerRoles":["legal","privacy","security"],"permissionEvidenceRequired":true}'::jsonb,
+                 $3, $4)`,
+        [sourceId, policyVersion, policyHash, fixedAt]
+      )
+    })
+
+    try {
+      await expect(reviewRepository.readApprovalProgress(sourceId, policyVersion)).resolves.toEqual(
+        {
+          sourceId,
+          displayName: 'Policy Progress Source',
+          sourceType: 'api',
+          lifecycleState: 'disabled_pending_review',
+          currentPolicyVersion: null,
+          policyVersion,
+          policyState: 'pending_review',
+          contentHash: policyHash,
+          expiresAt: null,
+          requiredReviewerRoles: ['legal', 'privacy', 'security'],
+          approvedReviewerRoles: [],
+          missingReviewerRoles: ['legal', 'privacy', 'security'],
+          permissionEvidenceRequired: true,
+          permissionEvidencePresent: false,
+          complete: false,
+          collectible: false
+        }
+      )
+
+      await withOwnerClient(async (client) => {
+        await client.query(
+          `INSERT INTO appsea.source_policy_reviews
+             (review_id, source_id, policy_version, decision, reviewer,
+              reviewer_identity, reviewer_role, independence_attested,
+              approval_reference, permission_evidence_reference, notes,
+              content_hash, reviewed_at, recorded_at)
+           VALUES ('review:policy-progress:legal', $1, $2, 'approved', 'Legal reviewer',
+                   'progress-legal@example.invalid', 'legal', true,
+                   'approval:policy-progress:legal', 'permission:policy-progress',
+                   ARRAY['test-only'], $3, $4, $4)`,
+          [sourceId, policyVersion, policyHash, fixedAt]
+        )
+      })
+      await expect(
+        reviewRepository.readApprovalProgress(sourceId, policyVersion)
+      ).resolves.toMatchObject({
+        approvedReviewerRoles: ['legal'],
+        missingReviewerRoles: ['privacy', 'security'],
+        permissionEvidencePresent: false,
+        complete: false,
+        collectible: false
+      })
+
+      await withOwnerClient(async (client) => {
+        await client.query(
+          `INSERT INTO appsea.source_policy_reviews
+             (review_id, source_id, policy_version, decision, reviewer,
+              reviewer_identity, reviewer_role, independence_attested,
+              approval_reference, permission_evidence_reference, notes,
+              content_hash, reviewed_at, recorded_at)
+           VALUES ('review:policy-progress:privacy-wrong-hash', $1, $2, 'approved', 'Privacy reviewer',
+                   'progress-privacy@example.invalid', 'privacy', true,
+                   'approval:policy-progress:privacy-wrong-hash', 'permission:policy-progress',
+                   ARRAY['wrong hash'], repeat('f', 64), $3, $3)`,
+          [sourceId, policyVersion, fixedAt]
+        )
+      })
+      await expect(
+        reviewRepository.readApprovalProgress(sourceId, policyVersion)
+      ).resolves.toMatchObject({
+        approvedReviewerRoles: ['legal'],
+        missingReviewerRoles: ['privacy', 'security'],
+        complete: false
+      })
+
+      await withOwnerClient(async (client) => {
+        await client.query(
+          `INSERT INTO appsea.source_policy_reviews
+             (review_id, source_id, policy_version, decision, reviewer,
+              reviewer_identity, reviewer_role, independence_attested,
+              approval_reference, permission_evidence_reference, notes,
+              content_hash, reviewed_at, recorded_at)
+           VALUES ('review:policy-progress:privacy', $1, $2, 'approved', 'Privacy reviewer',
+                   'progress-privacy@example.invalid', 'privacy', true,
+                   'approval:policy-progress:privacy', 'permission:policy-progress',
+                   ARRAY['test-only'], $3, $4, $4),
+                  ('review:policy-progress:security', $1, $2, 'approved', 'Security reviewer',
+                   'progress-security@example.invalid', 'security', true,
+                   'approval:policy-progress:security', 'permission:policy-progress',
+                   ARRAY['test-only'], $3, $4, $4)`,
+          [sourceId, policyVersion, policyHash, fixedAt]
+        )
+      })
+      await expect(
+        reviewRepository.readApprovalProgress(sourceId, policyVersion)
+      ).resolves.toMatchObject({
+        approvedReviewerRoles: ['legal', 'privacy', 'security'],
+        missingReviewerRoles: [],
+        permissionEvidencePresent: true,
+        complete: true,
+        collectible: false
+      })
+
+      await withOwnerClient(async (client) => {
+        await client.query(
+          `UPDATE appsea.source_policy_versions
+              SET policy_state = 'approved', reviewed_at = $3
+            WHERE source_id = $1 AND policy_version = $2`,
+          [sourceId, policyVersion, fixedAt]
+        )
+        await client.query(
+          `UPDATE appsea.sources
+              SET lifecycle_state = 'active', current_policy_version = $2, updated_at = $3
+            WHERE source_id = $1`,
+          [sourceId, policyVersion, fixedAt]
+        )
+      })
+      await expect(
+        reviewRepository.readApprovalProgress(sourceId, policyVersion)
+      ).resolves.toMatchObject({
+        complete: true,
+        collectible: true
+      })
+      await expect(
+        servicePool.query('SELECT * FROM appsea.read_source_policy_review_progress($1, $2)', [
+          sourceId,
+          policyVersion
+        ])
+      ).rejects.toMatchObject({ code: '42501' })
+    } finally {
+      await withOwnerClient(async (client) => {
+        await client.query('DELETE FROM appsea.source_policy_reviews WHERE source_id = $1', [
+          sourceId
+        ])
+        await client.query(
+          `UPDATE appsea.sources
+              SET lifecycle_state = 'retired', current_policy_version = NULL
+            WHERE source_id = $1`,
+          [sourceId]
+        )
+        await client.query('DELETE FROM appsea.source_policy_versions WHERE source_id = $1', [
+          sourceId
+        ])
+        await client.query('DELETE FROM appsea.sources WHERE source_id = $1', [sourceId])
+      })
+    }
+  })
+
+  it('fails closed when a complete source review set is withdrawn', async () => {
+    const workspaceId = 'workspace-collectibility-guards'
+    const sourceId = 'source-collectibility-guards'
+    const policyVersion = 'guards-v1'
+    const policyHash = '7'.repeat(64)
+    const reconciliationId = 'reconciliation:source:0123456789abcdef0123456789abcdef'
+    const leaseRepository = new PostgresSourceCollectionLeaseRepository(servicePool)
+    const snapshotRepository = new PostgresSourceSnapshotReconciliationRepository(servicePool)
+    const reviewRepository = new PostgresSourcePolicyRepository(migrationPool)
+    const expiresAt = new Date(Date.now() + 10 * 60_000).toISOString()
+
+    await withOwnerClient(async (client) => {
+      await client.query(
+        `INSERT INTO appsea.workspaces
+           (workspace_id, slug, display_name, visibility, fixture_only, status, created_at, updated_at)
+         VALUES ($1, 'collectibility-guards', 'Collectibility guards', 'private', false, 'active', $2, $2)`,
+        [workspaceId, fixedAt]
+      )
+      await client.query(
+        `INSERT INTO appsea.sources
+           (source_id, display_name, source_type, lifecycle_state, created_at, updated_at)
+         VALUES ($1, 'Collectibility guards', 'api', 'disabled_pending_review', $2, $2)`,
+        [sourceId, fixedAt]
+      )
+      await client.query(
+        `INSERT INTO appsea.source_policy_versions
+           (source_id, policy_version, policy_state, permitted_purposes, commercial_use,
+            access_method, retention_days, deletion_required, attribution_required,
+            display_mode, coverage_notes, policy_document_ref, reviewed_at, expires_at,
+            policy_payload, content_hash, created_at)
+         VALUES ($1, $2, 'approved', ARRAY['deletion-reconciliation'], 'allowed',
+                 'guard fixture', 30, true, true, 'excerpt', ARRAY['test-only'],
+                 'https://example.com/collectibility-guards', $3, NULL,
+                 '{"requiredReviewerRoles":["legal","privacy","security"]}'::jsonb,
+                 $4, $3)`,
+        [sourceId, policyVersion, fixedAt, policyHash]
+      )
+      await client.query(
+        `INSERT INTO appsea.source_policy_reviews
+           (review_id, source_id, policy_version, decision, reviewer,
+            reviewer_identity, reviewer_role, independence_attested,
+            approval_reference, notes, content_hash, reviewed_at, recorded_at)
+         VALUES
+           ('review:guards:legal', $1, $2, 'approved', 'Guards legal',
+            'guards-legal@example.invalid', 'legal', true,
+            'approval:guards:legal', ARRAY['test-only'], $3, $4, $4),
+           ('review:guards:privacy', $1, $2, 'approved', 'Guards privacy',
+            'guards-privacy@example.invalid', 'privacy', true,
+            'approval:guards:privacy', ARRAY['test-only'], $3, $4, $4),
+           ('review:guards:security', $1, $2, 'approved', 'Guards security',
+            'guards-security@example.invalid', 'security', true,
+            'approval:guards:security', ARRAY['test-only'], $3, $4, $4)`,
+        [sourceId, policyVersion, policyHash, fixedAt]
+      )
+      await client.query(
+        `UPDATE appsea.sources
+            SET lifecycle_state = 'active', current_policy_version = $2, updated_at = $3
+          WHERE source_id = $1`,
+        [sourceId, policyVersion, fixedAt]
+      )
+    })
+
+    try {
+      await expect(
+        snapshotRepository.enqueue({
+          workspaceId,
+          reconciliationId,
+          sourceId,
+          policyVersion,
+          idempotencyKey: '8'.repeat(64),
+          pageSize: 1,
+          maxRecords: 1,
+          requestedAt: fixedAt
+        })
+      ).resolves.toMatchObject({ state: 'queued' })
+      const leaseInput = {
+        workspaceId,
+        leaseId: 'lease:collectibility:guards',
+        sourceId,
+        policyVersion,
+        inputHash: '9'.repeat(64),
+        observedAt: fixedAt,
+        expiresAt
+      }
+      await expect(leaseRepository.acquire(leaseInput)).resolves.toMatchObject({
+        decision: 'acquired'
+      })
+
+      await withOwnerClient(async (client) => {
+        await client.query(
+          `DELETE FROM appsea.source_policy_reviews
+            WHERE source_id = $1 AND review_id = 'review:guards:privacy'`,
+          [sourceId]
+        )
+        await client.query(
+          `UPDATE appsea.source_policy_versions
+              SET policy_payload = jsonb_set(
+                policy_payload, '{permissionEvidenceRequired}', 'true'::jsonb, true
+              )
+            WHERE source_id = $1 AND policy_version = $2`,
+          [sourceId, policyVersion]
+        )
+      })
+      await expect(
+        reviewRepository.readApprovalProgress(sourceId, policyVersion)
+      ).resolves.toMatchObject({
+        complete: false,
+        collectible: false
+      })
+      await expect(
+        leaseRepository.assertActive(workspaceId, leaseInput.leaseId, leaseInput.inputHash)
+      ).resolves.toBe(false)
+      await expect(
+        leaseRepository.acquire({
+          ...leaseInput,
+          leaseId: 'lease:collectibility:guards:new',
+          inputHash: 'a'.repeat(64)
+        })
+      ).rejects.toThrow('Source collection lease requires an approved, active source policy')
+      await expect(
+        snapshotRepository.claimById(workspaceId, reconciliationId)
+      ).rejects.toMatchObject({
+        code: '42501'
+      })
+      await expect(
+        reviewRepository.approve({
+          sourceId,
+          policyVersion,
+          reviewId: 'review:guards:privacy-replacement',
+          reviewer: 'Replacement privacy',
+          reviewerIdentity: 'guards-privacy-replacement@example.invalid',
+          reviewerRole: 'privacy',
+          independenceAttested: true,
+          approvalReference: 'approval:guards:privacy-replacement',
+          permissionEvidenceReference: 'permission:guards:replacement',
+          notes: ['test-only'],
+          contentHash: policyHash,
+          reviewedAt: fixedAt,
+          expiresAt: null,
+          recordedAt: fixedAt
+        })
+      ).rejects.toMatchObject({ code: '42501' })
+    } finally {
+      await withOwnerClient(async (client) => {
+        await client.query(
+          'DELETE FROM appsea.source_snapshot_reconciliation_jobs WHERE workspace_id = $1',
+          [workspaceId]
+        )
+        await client.query('DELETE FROM appsea.source_collection_leases WHERE workspace_id = $1', [
+          workspaceId
+        ])
+        await client.query('DELETE FROM appsea.source_policy_reviews WHERE source_id = $1', [
+          sourceId
+        ])
+        await client.query(
+          `UPDATE appsea.sources
+              SET lifecycle_state = 'retired', current_policy_version = NULL
+            WHERE source_id = $1`,
+          [sourceId]
+        )
+        await client.query('DELETE FROM appsea.source_policy_versions WHERE source_id = $1', [
+          sourceId
+        ])
+        await client.query('DELETE FROM appsea.sources WHERE source_id = $1', [sourceId])
+        await client.query('DELETE FROM appsea.workspaces WHERE workspace_id = $1', [workspaceId])
       })
     }
   })

@@ -3,9 +3,11 @@
 ## State
 
 Audit: `docs/status/production-readiness-audit-2026-08-06.md`.
-`pnpm verify` passes; fresh PostgreSQL, backup/restore, worker-replacement, and
-real local-stack proofs passed on 2026-08-06. Authenticated private captures
-pass against the disposable local stack and are checked in.
+`pnpm verify` passes at the last clean checkpoint; fresh PostgreSQL and
+package-level proofs now pass through migration `0118`. Public and private local
+captures pass against the disposable stack at `http://localhost:3000`; no user
+browser was inspected or debugged. Desktop captures retain the desktop layout;
+responsive captures are isolated to the 480-pixel viewport.
 `/leaderboard` and `/` share sparse view;
 `pnpm ui:capture` audits public 1280/1024/768/480 captures under
 `artifacts/ui-reference-loop/2026-08-06/`; `pnpm ui:capture:private` covers
@@ -19,9 +21,11 @@ enabled. Reviewed `manual-owner-import-v2` supports tenant-private
 owner-authorized CSV/JSON without claiming public market coverage; v1 is
 historical.
 
-Migrations `0027`-`0115` cover policy, deletion/leases, orchestration,
+Migrations `0027`-`0118` cover policy, deletion/leases, orchestration,
 analysis/report/plan governance, cost/alerts, object refs, archival/purge
-intent, redaction, agent tokens, TOTP MFA, and complete reviewer-role approval.
+intent, redaction, agent tokens, TOTP MFA, complete reviewer-role approval,
+reviewer-identity independence, shared collectibility, and operator-only
+approval progress.
 OIDC/MCP remain gated.
 
 Fixture is the persisted path. Production collection and
@@ -29,14 +33,6 @@ analysis v2 are policy-gated/replay-safe; CFPB and Stack Exchange remain
 disabled pending independent approval. Stack Exchange also has a first-party
 AUP/written-consent blocker. Reports/plans preserve provenance,
 coverage gaps, approval state, synthetic disclosure, and object references.
-
-Production opportunities remain `candidate` until an explicit deep-research
-gate proves source-backed competitor/contrary coverage. Migrations `0100`/
-`0101` repair legacy states and persist the owner-reviewed gate with stale
-reads; gaps remain visible. Competitors exposes checklist review, while API
-owns evidence/snapshot/membership/step-up and UI never activates sources.
-Report/plan approval is editor/owner-gated; readiness is server-owned and
-provider retention/revocation/purge remain external.
 
 Authentication uses scrypt sessions, membership/RLS, MFA/governance step-up,
 closure/archival, and scoped read-only agent tokens. OIDC, delivery, retention,
@@ -80,8 +76,11 @@ Migration `0113` closes the owner-import staging-retention gap through a
 fenced, policy-snapshot-driven purge with audit and exact source-item
 tombstones. `0114` rejects undeclared reviewer roles; `0115` requires the full
 CFPB/Stack legal/privacy/security set while preserving manual
-independent_operator compatibility. Fresh integration and backup/restore
-proofs pass through `0115`; provider scheduler ownership and external
+independent_operator compatibility. `0116` rejects reviewer-identity reuse and
+applies the complete-review helper across runtime gates; `0117` adds an
+operator-only scalar approval-progress CLI; `0118` closes direct activation,
+lease/reconciliation replay, and production lineage gates. Fresh integration
+proof passes through `0118`; provider scheduler ownership and external
 retention/deletion operations remain release gates.
 
 The campaign `dateRange` contract is enforced across web admission, refresh,

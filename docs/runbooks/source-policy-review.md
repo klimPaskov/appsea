@@ -68,8 +68,31 @@ and `security`. Migrations `0114` and `0115` reject an
 until all three approvals exist. Run the approval command once per reviewer
 role with a distinct review ID and canonical identity. The legacy owner-import
 policies intentionally omit the field and retain their
-`independent_operator` approval boundary. A reviewer cannot substitute a
-different role through the CLI or by writing directly to the review table.
+`independent_operator` approval boundary. Migration `0116` also rejects one
+reviewer identity approving multiple roles for the same immutable policy hash
+and fails closed for pre-existing duplicate-identity activations. A reviewer
+cannot substitute a different role through the CLI or by writing directly to
+the review table.
+
+Before recording the next approval, operators can inspect the scalar progress
+projection. It is migration/maintenance-role-only and returns required,
+approved, and missing roles plus permission-evidence and collectibility flags;
+it never returns reviewer identities, notes, or approval references.
+
+```powershell
+$env:APPSEA_POLICY_DATABASE_URL = '<migration-or-maintenance-role-url>'
+$env:APPSEA_POLICY_SOURCE_ID = 'cfpb-consumer-complaints'
+$env:APPSEA_POLICY_VERSION = 'cfpb-2026-07-v1'
+pnpm worker:source:policy:status
+```
+
+Migration `0117` keeps this read separate from `approve_source_policy`; forward
+migration `0118` also prevents direct activation, stale lease/reconciliation
+replay, and production-lineage writes when the review set is incomplete.
+Progress inspection cannot activate a source. The `complete` flag requires
+every declared role, same-hash independent evidence, distinct identities, and
+required permission evidence; `collectible` additionally requires the active,
+current, approved, unexpired non-fixture source state.
 
 ```powershell
 $env:APPSEA_SOURCE_POLICY_ACTION = 'approve'

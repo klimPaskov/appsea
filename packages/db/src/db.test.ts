@@ -128,7 +128,10 @@ describe('database foundation', () => {
       '0112',
       '0113',
       '0114',
-      '0115'
+      '0115',
+      '0116',
+      '0117',
+      '0118'
     ])
     expect(migrations[0]?.checksum).toMatch(/^[a-f0-9]{64}$/)
     expect(migrations[0]?.sql).toContain('CREATE TABLE appsea.evidence_records')
@@ -358,6 +361,38 @@ describe('database foundation', () => {
     )
     expect(sourceReviewerCompletenessMigration?.sql).toContain(
       'source policy approval conflicts with immutable review evidence'
+    )
+    const sourceReviewerIndependenceMigration = migrations.find(
+      (migration) => migration.version === '0116'
+    )
+    expect(sourceReviewerIndependenceMigration?.sql).toContain(
+      'CREATE OR REPLACE FUNCTION appsea.source_policy_has_complete_reviews'
+    )
+    expect(sourceReviewerIndependenceMigration?.sql).toContain(
+      'source policy reviewer identity cannot approve multiple roles'
+    )
+    expect(sourceReviewerIndependenceMigration?.sql).toContain(
+      'source_policy_reviewer_independence_guard'
+    )
+    const sourceReviewerProgressMigration = migrations.find(
+      (migration) => migration.version === '0117'
+    )
+    expect(sourceReviewerProgressMigration?.sql).toContain(
+      'CREATE OR REPLACE FUNCTION appsea.read_source_policy_review_progress'
+    )
+    expect(sourceReviewerProgressMigration?.sql).toContain(
+      'source policy review progress requires an operator role'
+    )
+    expect(sourceReviewerProgressMigration?.sql).toContain('permission_evidence_present')
+    const sourceCollectibilityGuardsMigration = migrations.find(
+      (migration) => migration.version === '0118'
+    )
+    expect(sourceCollectibilityGuardsMigration?.sql).toContain(
+      'source policy approval requires a complete independent review set'
+    )
+    expect(sourceCollectibilityGuardsMigration?.sql).toContain('source_policy_has_complete_reviews')
+    expect(sourceCollectibilityGuardsMigration?.sql).toContain(
+      'complete_analysis_competitor_lineage_guard'
     )
     const productionAdmissionReleaseMigration = migrations.find(
       (migration) => migration.version === '0112'

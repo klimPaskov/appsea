@@ -2,11 +2,13 @@ import type { Pool, QueryResultRow } from 'pg'
 import {
   appseaIdentifierSchema,
   sourceHealthAlertObservationSchema,
+  sourcePolicyApprovalProgressSchema,
   sourcePolicyApprovalInputSchema,
   sourcePolicySchema,
   workspaceSourceReadModelSchema,
   type SourcePolicy,
   type SourcePolicyApprovalInput as SourcePolicyApprovalInputContract,
+  type SourcePolicyApprovalProgress as SourcePolicyApprovalProgressContract,
   type SourceHealthAlertObservation,
   type WorkspaceSourceHealthReadModel
 } from '@appsea/contracts'
@@ -67,6 +69,25 @@ interface SourceHealthAlertObservationRow extends QueryResultRow {
   quota_state: string
 }
 
+interface SourcePolicyApprovalProgressRow extends QueryResultRow {
+  source_id: string
+  display_name: string
+  source_type: SourcePolicy['sourceType']
+  lifecycle_state: string
+  current_policy_version: string | null
+  policy_version: string
+  policy_state: SourcePolicy['policyState']
+  content_hash: string
+  expires_at: Date | string | null
+  required_reviewer_roles: string[]
+  approved_reviewer_roles: string[]
+  missing_reviewer_roles: string[]
+  permission_evidence_required: boolean
+  permission_evidence_present: boolean
+  complete: boolean
+  collectible: boolean
+}
+
 export interface SourcePolicyRecord {
   sourceId: string
   displayName: string
@@ -85,6 +106,8 @@ export interface SourcePolicyDraftInput {
 }
 
 export type SourcePolicyApprovalInput = SourcePolicyApprovalInputContract
+
+export type SourcePolicyApprovalProgress = SourcePolicyApprovalProgressContract
 
 function policyVersion(value: string): string {
   if (value.length < 1 || value.length > 80 || !/^[a-zA-Z0-9._:-]+$/.test(value)) {
@@ -218,6 +241,51 @@ function mapWorkspaceSource(row: SourcePolicyRegistryRow) {
 export class PostgresSourcePolicyRepository {
   constructor(private readonly pool: Pool) {}
 
+  /** Operator-only scalar approval status; the database function hides review identities and references. */
+  async readApprovalProgress(
+    sourceId: string,
+    policyVersionValue: string
+  ): Promise<SourcePolicyApprovalProgress | null> {
+    const validatedSourceId = appseaIdentifierSchema.parse(sourceId)
+    const requestedVersion = policyVersion(policyVersionValue)
+    return withDatabaseTransaction(
+      this.pool,
+      async (client) => {
+        const result = await client.query<SourcePolicyApprovalProgressRow>(
+          `SELECT source_id, display_name, source_type, lifecycle_state,
+                  current_policy_version, policy_version, policy_state,
+                  content_hash, expires_at, required_reviewer_roles,
+                  approved_reviewer_roles, missing_reviewer_roles,
+                  permission_evidence_required, permission_evidence_present,
+                  complete, collectible
+             FROM appsea.read_source_policy_review_progress($1, $2)`,
+          [validatedSourceId, requestedVersion]
+        )
+        const row = result.rows[0]
+        if (!row) return null
+        return sourcePolicyApprovalProgressSchema.parse({
+          sourceId: row.source_id,
+          displayName: row.display_name,
+          sourceType: row.source_type,
+          lifecycleState: row.lifecycle_state,
+          currentPolicyVersion: row.current_policy_version,
+          policyVersion: row.policy_version,
+          policyState: row.policy_state,
+          contentHash: row.content_hash,
+          expiresAt: iso(row.expires_at),
+          requiredReviewerRoles: row.required_reviewer_roles,
+          approvedReviewerRoles: row.approved_reviewer_roles,
+          missingReviewerRoles: row.missing_reviewer_roles,
+          permissionEvidenceRequired: row.permission_evidence_required,
+          permissionEvidencePresent: row.permission_evidence_present,
+          complete: row.complete,
+          collectible: row.collectible
+        })
+      },
+      { readOnly: true }
+    )
+  }
+
   /** Read a policy snapshot without granting runtime code any write capability. */
   async read(
     sourceId: string,
@@ -291,18 +359,8 @@ export class PostgresSourcePolicyRepository {
               AND source.current_policy_version = policy.policy_version
               AND policy.policy_state = 'approved'
               AND policy.reviewed_at IS NOT NULL
-              AND EXISTS (
-                SELECT 1
-                  FROM appsea.source_policy_reviews review
-                 WHERE review.source_id = policy.source_id
-                   AND review.policy_version = policy.policy_version
-                   AND review.decision = 'approved'
-                   AND review.content_hash = policy.content_hash
-                   AND review.independence_attested
-                   AND (
-                     COALESCE((policy.policy_payload->>'permissionEvidenceRequired')::boolean, false) = false
-                     OR NULLIF(trim(review.permission_evidence_reference), '') IS NOT NULL
-                   )
+              AND appsea.source_policy_has_complete_reviews(
+                policy.source_id, policy.policy_version, policy.content_hash
               )
               AND (policy.expires_at IS NULL OR policy.expires_at > clock_timestamp())`,
           [validatedSourceId, requestedVersion]
@@ -371,18 +429,8 @@ export class PostgresSourcePolicyRepository {
                     AND (policy.expires_at IS NULL OR policy.expires_at > clock_timestamp())
                     AND (
                       source.source_type = 'fixture'
-                      OR EXISTS (
-                        SELECT 1
-                          FROM appsea.source_policy_reviews review
-                         WHERE review.source_id = policy.source_id
-                           AND review.policy_version = policy.policy_version
-                           AND review.decision = 'approved'
-                           AND review.content_hash = policy.content_hash
-                           AND review.independence_attested
-                           AND (
-                             COALESCE((policy.policy_payload->>'permissionEvidenceRequired')::boolean, false) = false
-                             OR NULLIF(trim(review.permission_evidence_reference), '') IS NOT NULL
-                           )
+                      OR appsea.source_policy_has_complete_reviews(
+                        policy.source_id, policy.policy_version, policy.content_hash
                       )
                     )
                   ), false) AS enabled,
@@ -393,18 +441,8 @@ export class PostgresSourcePolicyRepository {
                     AND policy.policy_state = 'approved'
                     AND policy.reviewed_at IS NOT NULL
                     AND (policy.expires_at IS NULL OR policy.expires_at > clock_timestamp())
-                    AND EXISTS (
-                      SELECT 1
-                        FROM appsea.source_policy_reviews review
-                       WHERE review.source_id = policy.source_id
-                         AND review.policy_version = policy.policy_version
-                         AND review.decision = 'approved'
-                         AND review.content_hash = policy.content_hash
-                         AND review.independence_attested
-                         AND (
-                           COALESCE((policy.policy_payload->>'permissionEvidenceRequired')::boolean, false) = false
-                           OR NULLIF(trim(review.permission_evidence_reference), '') IS NOT NULL
-                         )
+                    AND appsea.source_policy_has_complete_reviews(
+                      policy.source_id, policy.policy_version, policy.content_hash
                     )
                   ), false) AS collectible,
                   CASE

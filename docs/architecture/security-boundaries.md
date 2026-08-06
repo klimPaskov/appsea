@@ -27,7 +27,13 @@ Source-policy approval also has a policy-declared reviewer-role guard:
 legal/privacy/security approval set for non-manual policies. Legacy manual
 policies default to `independent_operator`; partial approvals remain pending
 and the guard runs in PostgreSQL before an immutable approval row can activate
-a source.
+a source. `0116` rejects reviewer-identity reuse across roles, demotes unsafe
+legacy activations, and centralizes the complete-review check across source
+registry, collection, reconciliation, campaign, manual-import, and health
+read gates. `0117` provides migration/maintenance roles a scalar approval
+progress read without identities, notes, or permission references; it cannot
+activate a source. `0118` applies the same helper to direct activation, lease
+replay, reconciliation claims, and production lineage.
 The v2 `competitor-research` and `contrary-evidence` purposes only enable a
 private observation write linked to retained evidence. Observation claims are
 unreviewed by default and require editor/owner review; they never bypass the

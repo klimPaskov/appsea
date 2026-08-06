@@ -95,6 +95,7 @@ import {
   sourceFreshnessPolicySchema,
   workspaceSourceQuotaHeadroomReadModelSchema,
   sourcePolicyApprovalInputSchema,
+  sourcePolicyApprovalProgressSchema,
   workspaceSourceHealthReadModelSchema,
   workspaceSourceReadModelSchema,
   complaintAnalysisCorrectionSchema,
@@ -759,6 +760,32 @@ describe('contracts', () => {
       false
     )
     expect(sourcePolicySchema.safeParse(basePolicy).success).toBe(true)
+  })
+
+  it('keeps operator approval progress scalar and reviewer-safe', () => {
+    const progress = sourcePolicyApprovalProgressSchema.parse({
+      sourceId: 'cfpb-consumer-complaints',
+      displayName: 'CFPB Consumer Complaint Database',
+      sourceType: 'api',
+      lifecycleState: 'disabled_pending_review',
+      currentPolicyVersion: null,
+      policyVersion: 'cfpb-policy-v1',
+      policyState: 'pending_review',
+      contentHash: 'a'.repeat(64),
+      expiresAt: null,
+      requiredReviewerRoles: ['legal', 'privacy', 'security'],
+      approvedReviewerRoles: ['legal'],
+      missingReviewerRoles: ['privacy', 'security'],
+      permissionEvidenceRequired: true,
+      permissionEvidencePresent: false,
+      complete: false,
+      collectible: false
+    })
+    expect(progress.approvedReviewerRoles).toEqual(['legal'])
+    expect(
+      sourcePolicyApprovalProgressSchema.safeParse({ ...progress, reviewerIdentity: 'hidden' })
+        .success
+    ).toBe(false)
   })
 
   it('keeps the private source registry bounded and policy-safe', () => {

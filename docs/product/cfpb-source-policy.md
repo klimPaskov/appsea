@@ -23,6 +23,14 @@ declares the required `legal`, `privacy`, and `security` roles. Migrations
 `0114_source_policy_reviewer_roles.sql` and
 `0115_source_policy_reviewer_role_completeness.sql` reject undeclared roles and
 keep the source disabled until all three roles approve the same policy hash.
+Migration `0116_source_policy_review_independence_and_collectibility.sql`
+requires distinct reviewer identities across those roles and applies the same
+complete-review gate to runtime collectibility. Migration
+`0117_source_policy_review_progress_read.sql` adds an operator-only scalar
+progress read; it exposes missing roles and collectibility without reviewer
+identities or approval references. Forward migration `0118` applies the same
+complete-review invariant to direct activation, lease/reconciliation replay,
+and production-lineage writes.
 Runtime workers can read only the resulting active snapshot; they cannot insert
 policy rows or change lifecycle state. Pre-0054 approvals remain audit history
 but are returned to pending review until re-approved. The repository does not

@@ -41,6 +41,30 @@ class FakeClient {
 
   async query<T extends Record<string, unknown>>(text: string, values: unknown[] = []) {
     this.statements.push({ text, values })
+    if (text.includes('read_source_policy_review_progress')) {
+      return {
+        rows: [
+          {
+            source_id: draft.sourceId,
+            display_name: draft.displayName,
+            source_type: draft.sourceType,
+            lifecycle_state: 'disabled_pending_review',
+            current_policy_version: null,
+            policy_version: 'cfpb-v1',
+            policy_state: 'pending_review',
+            content_hash: 'a'.repeat(64),
+            expires_at: null,
+            required_reviewer_roles: ['legal', 'privacy', 'security'],
+            approved_reviewer_roles: ['legal'],
+            missing_reviewer_roles: ['privacy', 'security'],
+            permission_evidence_required: true,
+            permission_evidence_present: false,
+            complete: false,
+            collectible: false
+          }
+        ]
+      } as unknown as { rows: T[] }
+    }
     if (text.includes('FROM appsea.sources source')) {
       return {
         rows: [
@@ -99,6 +123,28 @@ describe('source policy repository', () => {
     expect(result?.reviewedPolicy).toEqual(draft)
     expect(result?.policyVersion).toBe('cfpb-v1')
     expect(result?.contentHash).toBe(contentHash(draft))
+  })
+
+  it('reads bounded operator approval progress without reviewer evidence fields', async () => {
+    const client = new FakeClient()
+    const result = await new PostgresSourcePolicyRepository(fakePool(client)).readApprovalProgress(
+      draft.sourceId,
+      'cfpb-v1'
+    )
+    expect(result).toMatchObject({
+      sourceId: draft.sourceId,
+      requiredReviewerRoles: ['legal', 'privacy', 'security'],
+      approvedReviewerRoles: ['legal'],
+      missingReviewerRoles: ['privacy', 'security'],
+      complete: false,
+      collectible: false
+    })
+    expect(result).not.toHaveProperty('reviewerIdentity')
+    expect(
+      client.statements.some((statement) =>
+        statement.text.includes('read_source_policy_review_progress')
+      )
+    ).toBe(true)
   })
 
   it('keeps policy draft registration operator-only at the application boundary', async () => {

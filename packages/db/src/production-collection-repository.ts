@@ -567,30 +567,34 @@ export class PostgresProductionCollectionRepository {
                   policy.policy_version, policy.policy_state, policy.commercial_use,
                   policy.policy_payload,
                   policy.content_hash, policy.reviewed_at, policy.expires_at,
-                  policy.policy_document_ref, review.review_id
+                  policy.policy_document_ref,
+                  (
+                    SELECT review.review_id
+                      FROM appsea.source_policy_reviews review
+                     WHERE review.source_id = policy.source_id
+                       AND review.policy_version = policy.policy_version
+                       AND review.decision = 'approved'
+                       AND review.content_hash = policy.content_hash
+                       AND review.independence_attested
+                       AND review.reviewer_role <> 'legacy'
+                     ORDER BY review.reviewed_at DESC, review.review_id
+                     LIMIT 1
+                  ) AS review_id
              FROM appsea.sources source
              JOIN appsea.source_policy_versions policy
                ON policy.source_id = source.source_id
               AND policy.policy_version = $2
-             JOIN appsea.source_policy_reviews review
-               ON review.source_id = policy.source_id
-              AND review.policy_version = policy.policy_version
-              AND review.decision = 'approved'
-              AND review.content_hash = policy.content_hash
-              AND review.independence_attested
-              AND (
-                COALESCE((policy.policy_payload->>'permissionEvidenceRequired')::boolean, false) = false
-                OR NULLIF(trim(review.permission_evidence_reference), '') IS NOT NULL
-              )
             WHERE source.source_id = $1
               AND source.source_type <> 'fixture'
               AND source.lifecycle_state = 'active'
               AND source.current_policy_version = policy.policy_version
               AND policy.policy_state = 'approved'
+              AND appsea.source_policy_has_complete_reviews(
+                policy.source_id, policy.policy_version, policy.content_hash
+              )
               AND policy.commercial_use IN ('allowed', 'restricted')
               AND policy.reviewed_at IS NOT NULL
               AND (policy.expires_at IS NULL OR policy.expires_at > clock_timestamp())
-            ORDER BY review.reviewed_at DESC, review.review_id
             LIMIT 1`,
       [snapshot.sourceId, snapshot.policyVersion]
     )
@@ -872,18 +876,8 @@ export class PostgresProductionCollectionRepository {
                  ON policy.source_id = source.source_id
                 AND policy.policy_version = $2
               WHERE source.source_id = $1
-                AND EXISTS (
-                  SELECT 1
-                    FROM appsea.source_policy_reviews review
-                   WHERE review.source_id = policy.source_id
-                     AND review.policy_version = policy.policy_version
-                     AND review.decision = 'approved'
-                     AND review.content_hash = policy.content_hash
-                     AND review.independence_attested
-                     AND (
-                       COALESCE((policy.policy_payload->>'permissionEvidenceRequired')::boolean, false) = false
-                       OR NULLIF(trim(review.permission_evidence_reference), '') IS NOT NULL
-                     )
+                AND appsea.source_policy_has_complete_reviews(
+                  policy.source_id, policy.policy_version, policy.content_hash
                 )`,
             [parsed.request.sourceId, parsed.request.policyVersion]
           )
@@ -1525,7 +1519,23 @@ export class PostgresProductionCollectionRepository {
     >(
       `SELECT source.source_id, source.display_name, source.source_type,
                   source.lifecycle_state, policy.policy_state,
-                  (source.lifecycle_state = 'active') AS enabled,
+                  (
+                    source.lifecycle_state = 'active'
+                    AND (
+                      source.source_type = 'fixture'
+                      OR (
+                        source.source_type <> 'fixture'
+                        AND source.current_policy_version = policy.policy_version
+                        AND policy.policy_state = 'approved'
+                        AND policy.reviewed_at IS NOT NULL
+                        AND (policy.expires_at IS NULL OR policy.expires_at > clock_timestamp())
+                        AND policy.commercial_use IN ('allowed', 'restricted')
+                        AND appsea.source_policy_has_complete_reviews(
+                          policy.source_id, policy.policy_version, policy.content_hash
+                        )
+                      )
+                    )
+                  ) AS enabled,
                   policy.display_mode, policy.coverage_notes,
                   policy.reviewed_at, policy.expires_at,
                   count(source_item.source_item_id)::text AS observation_count

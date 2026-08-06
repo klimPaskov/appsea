@@ -184,7 +184,7 @@ describe('source policy registry repository', () => {
     expect(sources[0]).not.toHaveProperty('policyPayload')
 
     const statement = query.mock.calls[0]?.[0] as string
-    expect(statement).toContain('source_policy_reviews')
+    expect(statement).toContain('source_policy_has_complete_reviews')
     expect(statement).toContain('clock_timestamp()')
     expect(statement).toContain('production_collection_workflow_jobs')
     expect(statement).toContain('deletion_tombstones')

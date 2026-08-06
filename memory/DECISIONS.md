@@ -46,12 +46,6 @@ deletion remain separate.
 Quota/deletion and auth retention stay pure, bounded, independently budgeted,
 and keyed by stable scheduler IDs; PostgreSQL owns idempotency.
 
-## 2026-07-24: Provider-neutral password recovery boundary
-
-Recovery remains global with hash-only tokens, encrypted outbox, generic
-responses, and bounded idempotent delivery; production delivery stays
-kill-switched pending identity/email, DPA, keys, monitoring, and approval.
-
 ## 2026-07-25: Existing-account workspace invitations
 
 Keep invitations owner-scoped and provider-neutral: store a hash-only token,
@@ -339,8 +333,7 @@ RLS, confirmation, and a metadata-only non-deleting boundary.
 ## 2026-08-03: Require conditional MFA for password-gated mutations
 
 Migration `0081` adds a session MFA timestamp consumed by password-gated
-high-risk mutations; accounts without MFA retain password-only auth, while
-provider identity/key rotation and unrelated mutation contracts stay separate.
+high-risk mutations; accounts without MFA retain password-only auth.
 
 ## 2026-08-03: Drain legacy Temporal histories without decoding them
 
@@ -393,3 +386,7 @@ imported text cannot execute or write repository controls.
 `0114` rejects undeclared roles; `0115` requires one approval per declared role
 for the same hash before activation. CFPB/Stack Exchange require
 legal/privacy/security; manual omission preserves independent_operator.
+`0116` rejects identity reuse and centralizes complete collectibility in
+`appsea.source_policy_has_complete_reviews`; `0117` adds scalar operator
+progress without identities or activation; `0118` closes direct activation,
+lease/reconciliation replay, and production-lineage paths on the same helper.

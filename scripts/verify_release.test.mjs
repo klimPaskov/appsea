@@ -104,6 +104,22 @@ test('the release boundary requires the long-lived alerts supervisor', async () 
   assert.ok(findings.includes('production compose is missing alerts'))
 })
 
+test('long-lived services cannot inherit the migration database credential', async () => {
+  const current = await inputs()
+  const weakened = current.compose
+    .replace(/      APPSEA_MIGRATION_DATABASE_URL: ''\n/g, '')
+    .replace(/      APPSEA_DATABASE_MIGRATION_ROLE: ''\n/g, '')
+  const findings = releaseBoundaryFindings({ ...current, compose: weakened })
+  assert.ok(findings.includes('web must not receive the migration database credential'))
+  assert.ok(findings.includes('worker must not receive the migration database credential'))
+  assert.ok(findings.includes('maintenance must not receive the migration database credential'))
+  assert.ok(findings.includes('alerts must not receive the migration database credential'))
+  assert.ok(findings.includes('web must not receive the migration role override'))
+  assert.ok(findings.includes('worker must not receive the migration role override'))
+  assert.ok(findings.includes('maintenance must not receive the migration role override'))
+  assert.ok(findings.includes('alerts must not receive the migration role override'))
+})
+
 test('static-only verification runs without opening providers', async () => {
   await assert.doesNotReject(() => verifyRelease({ repositoryRoot: root, staticOnly: true }))
 })

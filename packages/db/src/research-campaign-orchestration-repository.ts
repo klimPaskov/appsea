@@ -496,18 +496,8 @@ export class PostgresResearchCampaignOrchestrationRepository {
                   source.current_policy_version, policy.policy_version,
                   policy.policy_state, policy.permitted_purposes,
                   policy.display_mode, policy.reviewed_at, policy.expires_at,
-                  EXISTS (
-                    SELECT 1
-                      FROM appsea.source_policy_reviews review
-                     WHERE review.source_id = policy.source_id
-                       AND review.policy_version = policy.policy_version
-                       AND review.decision = 'approved'
-                       AND review.content_hash = policy.content_hash
-                       AND review.independence_attested
-                       AND (
-                         COALESCE((policy.policy_payload->>'permissionEvidenceRequired')::boolean, false) = false
-                         OR NULLIF(trim(review.permission_evidence_reference), '') IS NOT NULL
-                       )
+                  appsea.source_policy_has_complete_reviews(
+                    policy.source_id, policy.policy_version, policy.content_hash
                   ) AS approved_review
              FROM appsea.sources source
              LEFT JOIN appsea.source_policy_versions policy

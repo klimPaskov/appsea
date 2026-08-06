@@ -1289,6 +1289,37 @@ export const sourcePolicyApprovalInputSchema = z
   })
   .strict()
 
+/** Operator-only scalar status; reviewer identities and approval references never cross this boundary. */
+export const sourcePolicyApprovalProgressSchema = z
+  .object({
+    sourceId: appseaIdentifierSchema,
+    displayName: z.string().min(1).max(160),
+    sourceType: z.enum(['fixture', 'api', 'export', 'licensed-feed', 'manual']),
+    lifecycleState: z.enum([
+      'active',
+      'disabled_pending_review',
+      'disabled_policy',
+      'disabled_operator',
+      'retired'
+    ]),
+    currentPolicyVersion: z.string().min(1).max(80).nullable(),
+    policyVersion: z.string().min(1).max(80),
+    policyState: sourcePolicyStateSchema,
+    contentHash: z
+      .string()
+      .length(64)
+      .regex(/^[a-f0-9]{64}$/),
+    expiresAt: z.string().datetime().nullable(),
+    requiredReviewerRoles: z.array(sourcePolicyReviewerRoleSchema).min(1).max(4),
+    approvedReviewerRoles: z.array(sourcePolicyReviewerRoleSchema).max(4),
+    missingReviewerRoles: z.array(sourcePolicyReviewerRoleSchema).max(4),
+    permissionEvidenceRequired: z.boolean(),
+    permissionEvidencePresent: z.boolean(),
+    complete: z.boolean(),
+    collectible: z.boolean()
+  })
+  .strict()
+
 export const workflowActorSchema = z.discriminatedUnion('actorType', [
   z
     .object({
@@ -7889,6 +7920,7 @@ export type SourceFreshnessPolicy = z.infer<typeof sourceFreshnessPolicySchema>
 export type SourcePolicyState = z.infer<typeof sourcePolicyStateSchema>
 export type SourcePolicyReviewerRole = z.infer<typeof sourcePolicyReviewerRoleSchema>
 export type SourcePolicyApprovalInput = z.infer<typeof sourcePolicyApprovalInputSchema>
+export type SourcePolicyApprovalProgress = z.infer<typeof sourcePolicyApprovalProgressSchema>
 export type SourceHealthState = z.infer<typeof sourceHealthStateSchema>
 export type SourceFreshnessState = z.infer<typeof sourceFreshnessStateSchema>
 export type SourceQuotaHeadroomState = z.infer<typeof sourceQuotaHeadroomStateSchema>

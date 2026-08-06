@@ -38,6 +38,7 @@
     "source:policy:cfpb:manifest": "tsx src/source-policy-cfpb-manifest-cli.ts",
     "source:policy:stackexchange": "tsx src/source-policy-stackexchange-review.ts",
     "source:policy:stackexchange:manifest": "tsx src/source-policy-stackexchange-manifest-cli.ts",
+    "source:policy:status": "tsx src/source-policy-status.ts",
     "workflow:worker": "tsx src/durable-worker.ts"
   },
   "dependencies": {

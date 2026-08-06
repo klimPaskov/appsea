@@ -64,6 +64,15 @@ configured namespace and `appsea-research-v1` task queue. Record that provider
 ACL, namespace retention, TLS trust, and service-identity evidence with the
 release; the repository preflight cannot prove a remote provider's ACL.
 
+The shared `production.env` may contain the dedicated migrator URL because it
+is consumed by `preflight` and the explicit `migrate` profile. Compose
+overrides `APPSEA_MIGRATION_DATABASE_URL` and
+`APPSEA_DATABASE_MIGRATION_ROLE` to empty values in every long-lived `web`,
+`worker`, `maintenance`, and `alerts` container. Verify the rendered Compose
+configuration before startup; these services must not receive migration
+credentials, even when they use the same env file for their other runtime
+settings.
+
 Run the forward-only migration as a separately reviewed release step:
 
 ```bash

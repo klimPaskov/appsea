@@ -377,6 +377,9 @@ const productionSnapshotSelect = `
      AND source.lifecycle_state = 'active'
      AND source.current_policy_version = policy.policy_version
      AND policy.policy_state = 'approved'
+     AND appsea.source_policy_has_complete_reviews(
+       policy.source_id, policy.policy_version, policy.content_hash
+     )
      AND policy.commercial_use IN ('allowed', 'restricted')
      AND policy.reviewed_at IS NOT NULL
      AND (policy.expires_at IS NULL OR policy.expires_at > clock_timestamp())

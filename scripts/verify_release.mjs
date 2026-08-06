@@ -108,6 +108,12 @@ export function releaseBoundaryFindings({
       findings.push(`${service} must set no-new-privileges`)
     }
     if (!/init:\s*true/.test(body)) findings.push(`${service} must use an init process`)
+    if (!/APPSEA_MIGRATION_DATABASE_URL:\s*(?:''|"")/.test(body)) {
+      findings.push(`${service} must not receive the migration database credential`)
+    }
+    if (!/APPSEA_DATABASE_MIGRATION_ROLE:\s*(?:''|"")/.test(body)) {
+      findings.push(`${service} must not receive the migration role override`)
+    }
   }
 
   const web = section(compose, 'web')

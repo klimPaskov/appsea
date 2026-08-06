@@ -40,6 +40,11 @@ services:
         required: false
     environment:
       NODE_ENV: production
+      # The migrator URL is needed only by the one-shot preflight/migrate
+      # containers. Keep it out of long-lived runtime process environments;
+      # an application compromise must not disclose migration credentials.
+      APPSEA_MIGRATION_DATABASE_URL: ''
+      APPSEA_DATABASE_MIGRATION_ROLE: ''
     depends_on:
       preflight:
         condition: service_completed_successfully
@@ -63,6 +68,8 @@ services:
         required: false
     environment:
       NODE_ENV: production
+      APPSEA_MIGRATION_DATABASE_URL: ''
+      APPSEA_DATABASE_MIGRATION_ROLE: ''
     depends_on:
       preflight:
         condition: service_completed_successfully
@@ -85,6 +92,8 @@ services:
         required: false
     environment:
       NODE_ENV: production
+      APPSEA_MIGRATION_DATABASE_URL: ''
+      APPSEA_DATABASE_MIGRATION_ROLE: ''
     depends_on:
       preflight:
         condition: service_completed_successfully
@@ -107,6 +116,8 @@ services:
         required: false
     environment:
       NODE_ENV: production
+      APPSEA_MIGRATION_DATABASE_URL: ''
+      APPSEA_DATABASE_MIGRATION_ROLE: ''
     depends_on:
       preflight:
         condition: service_completed_successfully
