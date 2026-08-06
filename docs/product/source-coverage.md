@@ -91,6 +91,9 @@ The Stack Exchange connector is a disabled source candidate for those
 purposes. It uses only the official Stack Exchange API, retains sanitized
 bounded question excerpts with an HTTPS attribution locator, and emits no
 deletion tombstones because filtered search cannot establish absence. Its
-draft policy is `restricted` commercial use with a 14-day retention window;
-independent legal/privacy/security review and source-registry approval are
-still required.
+draft policy records `unknown` commercial use with a 14-day retention window:
+the current Network Acceptable Use Policy separately restricts automated
+collection for similar/competitive products or generative-AI work unless
+express prior written consent or a commercial exception is documented.
+Independent legal/privacy/security review, that permission record, and
+source-registry approval are still required.

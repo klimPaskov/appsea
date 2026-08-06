@@ -47,6 +47,9 @@ const approvedStackExchangePolicy = sourcePolicySchema.parse({
   ...stackExchangeSourcePolicy,
   enabled: true,
   policyState: 'approved',
+  // Unit HTTP fixtures model a hypothetical reviewed permission. The draft
+  // itself stays `unknown` and therefore fails closed before any request.
+  commercialUse: 'restricted',
   expiresAt: null
 })
 
@@ -96,6 +99,33 @@ describe('connector policy gate', () => {
     })
     expect(cfpbSourcePolicy.enabled).toBe(false)
     expect(stackExchangeSourcePolicy.enabled).toBe(false)
+  })
+
+  it('records the Stack Exchange automated-collection restriction as a fail-closed blocker', () => {
+    expect(stackExchangeSourcePolicy.policyState).toBe('pending_review')
+    expect(stackExchangeSourcePolicy.commercialUse).toBe('unknown')
+    expect(stackExchangeSourcePolicy.coverageNotes.join(' ')).toContain(
+      'express prior written consent'
+    )
+    expect(stackExchangeSourcePolicy.coverageNotes.join(' ')).toContain(
+      'similar or competitive product/service'
+    )
+    expect(() =>
+      assertPolicyAllowsCollection(
+        sourcePolicySchema.parse({
+          ...stackExchangeSourcePolicy,
+          enabled: true,
+          policyState: 'approved',
+          expiresAt: null
+        }),
+        {
+          query: 'handoff history',
+          limit: 1,
+          purpose: 'competitor-research',
+          requestedDisplayMode: 'excerpt'
+        }
+      )
+    ).toThrow(/Commercial-use state is unknown/)
   })
 
   it('collects labeled fixture records through an allowed request', async () => {

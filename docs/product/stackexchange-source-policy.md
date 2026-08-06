@@ -1,6 +1,10 @@
 # Stack Exchange source policy draft
 
-Status: disabled and not registered for production collection.
+Status: disabled and not registered for production collection. The current
+first-party Acceptable Use Policy is a blocking review item for AppSea's
+intended automated competitor/contrary research; no collection is permitted
+without documented express prior written consent or an applicable commercial
+exception.
 
 This is an engineering policy draft for the bounded
 `stackexchange-stackoverflow` connector. It is not legal advice or an
@@ -14,13 +18,24 @@ registry.
 - Access uses only the official Stack Exchange API v2.3
   [`search/advanced`](https://api.stackexchange.com/docs/advanced-search) and
   exact question routes. AppSea does not scrape Stack Overflow pages.
-- The connector accepts only bounded `competitor-research` or
-  `contrary-evidence` collection requests (plus development/test purposes).
+- The engineering draft models bounded `competitor-research` or
+  `contrary-evidence` requests (plus development/test purposes), but the
+  connector must remain disabled until the Network AUP blocker is cleared.
 - `site=stackoverflow` is fixed by code. The caller cannot select another
   network site through this connector.
 - An optional API key is supplied from runtime configuration and is never
   persisted, logged, or placed in fixtures. Production use requires the
   durable source-quota ledger.
+
+The official API documentation describes API access and throttling, but it does
+not grant permission for every purpose. The [Network Acceptable Use
+Policy](https://stackoverflow.com/legal/acceptable-use-policy) currently
+restricts automated systems that collect Network content for building a similar
+or competitive product/service or for generative-AI work unless express prior
+written consent is obtained. AppSea's intended use is close enough to that
+language that the source stays blocked pending a written permission or
+commercial-license record reviewed by legal and security. This is a policy
+constraint, not a legal conclusion.
 
 ## Commercial, attribution, and storage boundary
 
@@ -28,8 +43,10 @@ Stack Exchange's [API Terms of Use](https://engineering.stackexchange.com/legal/
 require visible attribution to the Stack Exchange Network. Public
 contributions are distributed under the time-dependent
 [CC BY-SA terms documented by Stack Overflow](https://stackoverflow.com/help/licensing).
-The policy therefore treats commercial use as `restricted` until review
-confirms the exact attribution, share-alike, and downstream-report treatment.
+Because the AUP permission question is unresolved, the policy records
+commercial use as `unknown`, not `restricted` or `allowed`. CC BY-SA and API
+attribution alone are not treated as permission to run AppSea's automated
+collection route.
 
 The connector stores only a bounded, sanitized question title/body excerpt,
 stable question identifier, capture/publication times, and an HTTPS source
@@ -70,16 +87,19 @@ and attribute the claim.
 
 ## Review checklist before activation
 
-1. Legal confirms the commercial CC BY-SA/share-alike and attribution path.
-2. Privacy confirms the excerpt, profile exclusion, retention, and deletion
+1. Legal obtains and records express prior written consent or an applicable
+   commercial exception for AppSea's automated collection purpose; the
+   consent/exception reference must be retained with the approval record.
+2. Legal confirms the commercial CC BY-SA/share-alike and attribution path.
+3. Privacy confirms the excerpt, profile exclusion, retention, and deletion
    treatment.
-3. Security confirms API-key handling, outbound-origin pinning, response
+4. Security confirms API-key handling, outbound-origin pinning, response
    minimization, HTML stripping, and log redaction.
-4. An independent reviewer records the policy hash, canonical identity, role,
+5. An independent reviewer records the policy hash, canonical identity, role,
    and attestation through the source-policy review boundary.
-5. A reviewed source registry entry supplies the approved purpose,
+6. A reviewed source registry entry supplies the approved purpose,
    display mode, quotas, expiry, and deletion duties.
-6. Production deployment proves the durable quota ledger, retention worker,
+7. Production deployment proves the durable quota ledger, retention worker,
    attribution UI, and failure/rollback monitoring before enabling the source.
 
 The operator-only `pnpm worker:source:policy:stackexchange` command can register
@@ -90,4 +110,6 @@ when that database snapshot is active, current, unexpired, and independently
 approved; neither the CLI nor the worker bypasses the review gate.
 
 Until every item passes, Stack Exchange remains a fixture-backed connector
-test surface only and cannot create non-synthetic production evidence.
+test surface only and cannot create non-synthetic production evidence. A
+source-policy approval without the written-consent/exception record is not
+sufficient for activation.

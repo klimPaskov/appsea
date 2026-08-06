@@ -21,7 +21,10 @@ The reviewed `manual-owner-import-v2` policy now supports tenant-private
 submit an evidence-linked observation from the private Competitors route, but
 each claim starts unreviewed and the import still cannot establish public
 market coverage. CFPB, Stack Exchange, and other third-party sources remain
-disabled pending independent review.
+disabled pending independent review. Stack Exchange additionally has a
+first-party automated-collection restriction for AppSea's intended
+similar/competitive or generative-AI use; written consent or a commercial
+exception is not present.
 
 Source freshness is now visible for policies that declare a reviewed schedule,
 and migration `0107` adds a bounded shared current-minute quota-headroom
@@ -510,9 +513,12 @@ version.
 The Stack Exchange connector is now a second policy-drafted candidate for
 `competitor-research` and `contrary-evidence`. The production collection worker
 and scheduled refresh dispatcher select it only from the approved source-policy
-registry, but it remains disabled and unregistered: the API terms/CC BY-SA
-attribution path, 14-day excerpt retention, deletion behavior, and restricted
-commercial use still require independent review. Its filtered search path
+registry, but it remains disabled and unregistered: the current Network AUP
+restricts automated collection for a similar/competitive product or
+generative-AI use without express prior written consent or a commercial
+exception. The API terms/CC BY-SA attribution path, 14-day excerpt retention,
+deletion behavior, and any permission record still require independent review.
+Its filtered search path
 emits no deletion tombstones and cannot be used to infer absence.
 Migration `0067_field_level_evidence_redaction.sql` now adds a separate,
 editor/owner-only field-redaction boundary. It records an immutable receipt,

@@ -586,13 +586,15 @@ Implemented:
 - source-policy record at `docs/product/cfpb-source-policy.md`
 - disabled Stack Exchange candidate at `packages/connectors/src/index.ts`,
   with official API origin pinning, bounded sanitized excerpts, HTTPS
-  attribution locators, optional secret-bound API key, quotas, and explicit
-  no-tombstone coverage warnings; see
+  attribution locators, optional secret-bound API key, quotas, an explicit
+  first-party AUP/written-consent blocker, and no-tombstone coverage warnings;
+  see
   `docs/product/stackexchange-source-policy.md`
 - the production collection workflow and scheduled refresh dispatcher select
   only the CFPB or Stack Exchange connector after the database returns a
   matching approved source-policy snapshot; the Stack Exchange review CLI
-  registers or approves it only through the operator boundary
+  registers or approves it only through the operator boundary and only after
+  the documented AUP permission/exception gate is cleared
 - deterministic `pnpm worker:source:policy:cfpb:manifest` handoff with the
   immutable engineering policy hash, first-party API/privacy references, and
   explicit independent-review checklist; this command never fetches or
@@ -633,8 +635,9 @@ review-start route now reconstructs the confirmed/corrected collection subset an
 the durable workflow explicitly; the local adapter does not
 authorize a production source activation. Stack Exchange remains unregistered
 and pending independent attribution, privacy, deletion, and commercial-use
-review; its connector is fixture-tested and registry-selected in the worker,
-but no source-policy row is registered or active in this repository.
+review plus the first-party AUP written-consent/exception gate; its connector
+is fixture-tested and registry-selected in the worker, but no source-policy row
+is registered or active in this repository.
 
 ### 4. Workspaces and authentication
 

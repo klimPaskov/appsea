@@ -5,7 +5,9 @@
   synthetic. Approved collection is separate and non-synthetic; hosted restore,
   crash-drill, and cloud purge remain pending.
 - CFPB and Stack Exchange are disabled pending independent legal/privacy/
-  security/commercial review. `manual-owner-import-v2` is active: owner-attested,
+  security/commercial review; Stack Exchange also needs first-party written
+  consent or a commercial exception for the intended automated use.
+  `manual-owner-import-v2` is active: owner-attested,
   tenant-private CSV/JSON, no URL fetch or public coverage; competitor/contrary
   claims start unreviewed.
 - Source registry health is private/read-only. It separates connector state

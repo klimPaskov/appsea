@@ -255,11 +255,14 @@ terminal reconciliation authority. This is not a data purge operation.
 The connector package now includes a disabled Stack Exchange candidate for
 bounded competitor/contrary-signal collection. It uses the official API only,
 sanitizes question excerpts, preserves an HTTPS attribution locator, and emits
-no deletion tombstones from filtered search. The source remains pending
-independent review and is not registered or active as a production source. The
-production collection activity and scheduled refresh path select a connector
-only after `readCollectible` returns a matching approved source-policy
-snapshot; no connector can self-activate.
+no deletion tombstones from filtered search. The current Network Acceptable Use
+Policy is an additional blocker for AppSea's intended automated similar/
+competitive or generative-AI use: express prior written consent or a
+commercial exception must be recorded before any approval can be considered.
+The source remains pending independent review and is not registered or active
+as a production source. The production collection activity and scheduled
+refresh path select a connector only after `readCollectible` returns a matching
+approved source-policy snapshot; no connector can self-activate.
 
 The source-maintenance worker also exposes a supervised `maintenance:loop`
 entrypoint. It starts one existing lease-backed pass at a time, applies a

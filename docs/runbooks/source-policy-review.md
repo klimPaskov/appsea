@@ -28,7 +28,10 @@ runtime. The connector's in-memory quota bookkeeping is a test-only fallback;
 it is bounded and must never be used as production cost or rate enforcement.
 
 The Stack Exchange candidate uses the same operator boundary with its own
-review CLI and version variable:
+review CLI and version variable. Registering a draft does not make the API
+permitted for AppSea's intended use; the current Network Acceptable Use Policy
+requires an express prior written consent or commercial exception for the
+automated similar/competitive or generative-AI collection purpose.
 
 ```powershell
 $env:APPSEA_SOURCE_POLICY_ACTION = 'draft'
@@ -38,8 +41,10 @@ $env:APPSEA_POLICY_RECORDED_AT = '2026-08-02T00:00:00.000Z'
 pnpm worker:source:policy:stackexchange
 ```
 
-To approve that candidate, set `APPSEA_SOURCE_POLICY_ACTION=approve`, keep the
-same `APPSEA_STACKEXCHANGE_POLICY_VERSION`, provide all reviewer/attestation
+Do not approve that candidate until legal has recorded the written consent or
+commercial-exception reference. If that gate is cleared, set
+`APPSEA_SOURCE_POLICY_ACTION=approve`, keep the same
+`APPSEA_STACKEXCHANGE_POLICY_VERSION`, provide all reviewer/attestation
 variables shown below, and run `pnpm worker:source:policy:stackexchange`.
 Approval remains an external legal/privacy/security decision; the engineering
 draft is not an activation claim.

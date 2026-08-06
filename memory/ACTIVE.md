@@ -20,7 +20,8 @@ intent, redaction, agent tokens, and TOTP MFA. OIDC/MCP remain gated.
 
 Fixture is the persisted path. Production collection and
 analysis v2 are policy-gated/replay-safe; CFPB and Stack Exchange remain
-disabled pending independent approval. Reports/plans preserve provenance,
+disabled pending independent approval. Stack Exchange also has a first-party
+AUP/written-consent blocker. Reports/plans preserve provenance,
 coverage gaps, approval state, synthetic disclosure, and object references.
 
 Production opportunities remain `candidate` until an explicit deep-research

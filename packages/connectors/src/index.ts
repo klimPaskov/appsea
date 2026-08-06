@@ -357,11 +357,12 @@ export { cfpbSourcePolicy }
 
 /**
  * Stack Exchange is a source candidate for competitor and contrary-signal
- * research, not an activated production source. Public contributions carry
- * CC BY-SA obligations and the API terms require visible Stack Exchange
- * attribution, so the policy deliberately remains disabled until an
- * independent legal/privacy/security review records the exact commercial
- * display and retention decision.
+ * research, not an activated production source. The official API and API
+ * terms do not by themselves resolve the Network AUP's automated-collection
+ * restriction for similar/competitive products or generative-AI use. The
+ * policy therefore remains disabled with unknown commercial permission until
+ * an independent review records express written consent (or a commercial
+ * exception), attribution, display, and retention decisions.
  */
 const stackExchangeSourcePolicy = freezePolicy(
   sourcePolicySchema.parse({
@@ -371,15 +372,16 @@ const stackExchangeSourcePolicy = freezePolicy(
     enabled: false,
     policyState: 'pending_review',
     permittedPurposes: ['competitor-research', 'contrary-evidence', 'development', 'testing'],
-    commercialUse: 'restricted',
+    commercialUse: 'unknown',
     accessMethod:
-      'Official Stack Exchange API v2.3 search/advanced endpoint; no scraping; optional application key supplied only through runtime configuration',
+      'Official Stack Exchange API v2.3 search/advanced endpoint; no scraping; optional application key supplied only through runtime configuration; API access does not waive the Network Acceptable Use Policy',
     retentionDays: 14,
     deletionRequired: true,
     attributionRequired: true,
     displayMode: 'excerpt',
     coverageNotes: [
       'Engineering policy draft: independent legal, privacy, and security approval is still required.',
+      'Blocking policy review item: the Network Acceptable Use Policy restricts automated collection for a similar or competitive product/service or generative-AI use unless express prior written consent or a commercial exception is documented.',
       'Coverage is limited to Stack Overflow questions matching an explicit bounded query; it is not a census of developer experience.',
       'Public contributions carry time-dependent CC BY-SA terms and API responses require visible Stack Exchange attribution.',
       'Question bodies are sanitized and retained only as bounded excerpts; answers, comments, user profiles, and private data are not collected.',
