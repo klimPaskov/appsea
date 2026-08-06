@@ -593,6 +593,10 @@ Implemented:
   only the CFPB or Stack Exchange connector after the database returns a
   matching approved source-policy snapshot; the Stack Exchange review CLI
   registers or approves it only through the operator boundary
+- deterministic `pnpm worker:source:policy:cfpb:manifest` handoff with the
+  immutable engineering policy hash, first-party API/privacy references, and
+  explicit independent-review checklist; this command never fetches or
+  activates the source
 
 Remaining: assign legal/privacy/security owners, confirm intended commercial use
 and retention/display terms, approve a policy version, then activate only through

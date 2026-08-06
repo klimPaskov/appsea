@@ -35,6 +35,7 @@
     "source:cfpb:reconcile": "tsx src/production-cfpb-reconciliation-cli.ts",
     "source:cfpb:reconcile:next": "tsx src/production-cfpb-reconciliation-next.ts",
     "source:policy:cfpb": "tsx src/source-policy-cfpb-review.ts",
+    "source:policy:cfpb:manifest": "tsx src/source-policy-cfpb-manifest-cli.ts",
     "source:policy:stackexchange": "tsx src/source-policy-stackexchange-review.ts",
     "workflow:worker": "tsx src/durable-worker.ts"
   },

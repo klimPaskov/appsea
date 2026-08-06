@@ -58,6 +58,7 @@
     "worker:alerts:status": "pnpm --filter @appsea/worker alerts:status",
     "production:preflight": "pnpm --filter @appsea/worker production:preflight",
     "worker:source:policy:cfpb": "pnpm --filter @appsea/worker source:policy:cfpb",
+    "worker:source:policy:cfpb:manifest": "pnpm --filter @appsea/worker source:policy:cfpb:manifest",
     "worker:source:policy:stackexchange": "pnpm --filter @appsea/worker source:policy:stackexchange",
     "worker:workflow:fixture": "pnpm --filter @appsea/worker workflow:fixture",
     "worker:workflow:analysis:history:check": "pnpm --filter @appsea/worker workflow:analysis:history:check",

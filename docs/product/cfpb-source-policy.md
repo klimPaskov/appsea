@@ -43,6 +43,16 @@ fetches one record, retains no raw response, and emits no deletion tombstone;
 the path is private, explicit, and disabled until this source policy is
 approved.
 
+On 2026-08-06 the engineering review refreshed its first-party references in
+[`cfpb-source-policy-evidence-handoff-2026-08-06.md`](../status/cfpb-source-policy-evidence-handoff-2026-08-06.md).
+The current CFPB Open Tech API page documents the public API, and its linked
+OpenAPI page exposes search and complaint-by-ID routes. The CFPB's current
+complaint-program page continues to describe opt-in narrative publication and
+personal-information removal. These facts support the connector's
+consent/scrubbing and provenance assumptions only; they do not replace the
+independent commercial-use, privacy, and security approval required before
+activation.
+
 ## Policy metadata
 
 The typed record is `cfpbSourcePolicy` in

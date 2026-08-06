@@ -164,6 +164,8 @@
 - [`status/ui-reference-loop-completion-report-2026-08-06.md`](status/ui-reference-loop-completion-report-2026-08-06.md)
 - [`status/alert-maintenance-loop-completion-report-2026-08-06.md`](status/alert-maintenance-loop-completion-report-2026-08-06.md)
 - [`status/operational-alert-status-completion-report-2026-08-06.md`](status/operational-alert-status-completion-report-2026-08-06.md)
+- [`status/cfpb-source-policy-evidence-handoff-2026-08-06.md`](status/cfpb-source-policy-evidence-handoff-2026-08-06.md)
+- [`status/cfpb-source-policy-manifest-completion-report-2026-08-06.md`](status/cfpb-source-policy-manifest-completion-report-2026-08-06.md)
 - [`status/owner-import-competitive-observation-completion-report-2026-08-05.md`](status/owner-import-competitive-observation-completion-report-2026-08-05.md)
 - [`status/score-factor-provenance-completion-report-2026-08-04.md`](status/score-factor-provenance-completion-report-2026-08-04.md)
 - [`status/workspace-invitation-completion-report.md`](status/workspace-invitation-completion-report.md)

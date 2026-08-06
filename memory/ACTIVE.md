@@ -88,6 +88,12 @@ The 2026-08-06 policy handoff carries immutable reviewed JSON from
 `readCollectible` into source constructors; collection fails closed without it.
 Database-owned activation fields remain mutable.
 
+The CFPB policy handoff also has a deterministic, secret-free review manifest
+(`pnpm worker:source:policy:cfpb:manifest`) with an immutable policy content
+hash, first-party evidence references observed on 2026-08-06, bounded
+coverage/quota/deletion metadata, and explicit independent-review fields. It
+does not contact CFPB, change the registry, or activate the disabled source.
+
 ## Validated commands
 
 Repository tests, type checks, builds, fixture/plan generation, and web smoke

@@ -441,6 +441,13 @@ source. Collection now carries the
 settled source-request cost from the quota reservation through the immutable
 snapshot/result, workflow checkpoint, and audit/outbox metadata. CFPB currently
 records zero source cost because the reviewed policy declares zero API cost;
+
+The deterministic `pnpm worker:source:policy:cfpb:manifest` handoff now
+packages the policy content hash and first-party API/privacy references without
+contacting CFPB or changing registry state. It improves review reproducibility
+but is not independent legal approval, commercial-use authorization, or public
+market coverage.
+
 non-zero billing adapters, provider pricing, and deployment threshold selection
 are not implemented. Migration `0065` adds repository-level cost-threshold
 inspection, but deployed routing and billing remain external. Known policy-cost overages are now rejected before a source lease
