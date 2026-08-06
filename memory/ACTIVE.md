@@ -2,6 +2,10 @@
 
 ## State
 
+Current audit: `docs/status/production-readiness-audit-2026-08-06.md`.
+`pnpm verify` passes; Docker fresh/backup proof and authenticated UI captures
+remain blocked. No production-readiness claim is justified.
+
 AppSea remains a validated fixture-first product with production-shaped
 PostgreSQL, Temporal, source-policy, private-workspace, report/plan, and
 maintenance boundaries. The public leaderboard is intentionally synthetic and
@@ -87,11 +91,6 @@ reviewed JSON payload from `readCollectible` into CFPB, Stack Exchange, and
 owner-import constructors. Immutable purpose/quota/retention/deletion/display
 metadata before collection; production construction fails closed without that
 payload. Database-owned activation fields remain mutable.
-
-The source-health alert scan is capped and lease-owned: stale, exhausted, or
-aged-degraded signals alert, while truncated coverage is incomplete and never
-clear. It never fetches, retries, activates, or reads source text. PostgreSQL
-integration proof remains blocked until Docker Desktop's Linux engine is available.
 
 ## Validated commands
 

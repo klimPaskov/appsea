@@ -3,7 +3,7 @@
 - Status: active
 - Owner: main coding agent
 - Started: 2026-07-10
-- Current audit: [`production-readiness-audit-2026-08-04.md`](../../status/production-readiness-audit-2026-08-04.md)
+- Current audit: [`production-readiness-audit-2026-08-06.md`](../../status/production-readiness-audit-2026-08-06.md)
 
 ## Completed foundation
 
@@ -224,9 +224,10 @@ other lease columns remain maintenance-only.
 Migration `0096_opportunity_score_v1_envelope.sql` adds nullable, range-checked
 balanced v1 score fields, reviewed evidence/coverage/freshness references, and
 a private ranking index. Legacy score rows remain readable and keep `score` as
-their raw-score compatibility field. `pnpm verify:backup-restore` now passes
-through `0096`; provider backup, HA, retention, and production restore remain
-deployment work.
+their raw-score compatibility field. During the `0096` tranche, the local
+backup/restore drill passed through that migration; the current `0109` drill is
+blocked before execution when Docker Desktop's Linux engine is unavailable.
+Provider backup, HA, retention, and production restore remain deployment work.
 
 Migration `0097_mcp_agent_access_admission.sql` rechecks workspace membership
 for bearer authentication and adds a forced-RLS request-lease projection. The
