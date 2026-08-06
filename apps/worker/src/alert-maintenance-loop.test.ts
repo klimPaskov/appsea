@@ -21,6 +21,11 @@ describe('alert maintenance loop', () => {
     )
     expect(calls).toEqual(alertMaintenanceCommands.map((command) => command.name))
     expect(runCommand).toHaveBeenCalledTimes(alertMaintenanceCommands.length)
+    expect(alertMaintenanceCommands.at(-1)).toEqual({
+      name: 'alerts:status',
+      command: 'pnpm',
+      args: ['--filter', '@appsea/worker', 'alerts:status']
+    })
   })
 
   it('retries a failed pass with bounded backoff and stops cleanly', async () => {

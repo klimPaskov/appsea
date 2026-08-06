@@ -106,6 +106,10 @@ fixed-code retry/exhaustion state, and purges terminal rows after retention.
 The outbox table is not directly readable by either runtime role, and the v2
 scheduler functions extend the allowlist for the three alert scans and the
 bounded drain without rewriting released migration history.
+Migration `0110` adds a separately leased, scalar-only outbox status reader.
+It reports bounded pending/sending/exhausted/age/truncation state for operator
+telemetry without returning payloads or mutating delivery state; it is not an
+incident router or provider integration.
 
 Migration `0083` adds the owner-scoped workspace purge-manifest ledger. An
 archived owner can prepare a deterministic, expiring inventory of persisted

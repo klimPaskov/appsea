@@ -340,14 +340,18 @@ that atomic boundary. Migration `0082` now makes operational alert enqueue,
 claim, retry, exhaustion, and retention purge durable through a scalar-only
 outbox and forward-compatible v2 scheduler functions. The repository now also
 ships an `alerts:loop` supervisor and a hardened Compose `alerts` service that
-runs the five bounded inspection/delivery commands sequentially, continues after
+runs six bounded inspection/delivery/status commands sequentially, continues after
 one child failure, and uses bounded backoff and signal-safe shutdown. Deployment
 still lacks operated scheduler ownership, alert endpoint operation/incident
 response, provider pricing/billing controls, per-scheduler maintenance
 credentials, and a fresh Docker-backed recovery proof. The current
 `appsea_maintenance` coordinator is trusted across
 the allowlisted names; production data-work role separation and optional
-per-scheduler isolation remain release gates.
+per-scheduler isolation remain release gates. Migration `0110` and
+`pnpm worker:alerts:status` now add a lease-owned, bounded scalar projection
+for pending, sending, exhausted, stale, and truncated outbox state. It is
+read-only telemetry, never an automatic repair or incident router; endpoint
+ownership and operated scheduler coverage remain open.
 
 The production workflow start route caps both declared and chunked JSON bodies
 and now calls the migration `0038` admission function before Temporal. The

@@ -370,11 +370,11 @@ is reviewed or confirmed.
 
 ## 2026-08-06: Keep source observability bounded and additive
 
-Health/freshness are private; stale/missing observations never imply absent
-complaints. `0107` adds quota capacity; `0108`/`0109` add a maintenance scalar
-health read and allowlists. The scan alerts on stale, exhausted, or aged-
-degraded signals, reports truncation incomplete, and cannot fetch, retry,
-or activate.
+Health/freshness stay private; missing observations never imply absent
+complaints. `0107` adds quota capacity; `0108`/`0109` add scalar health reads
+and allowlists. Stale/exhausted/aged-degraded signals alert; truncation is
+incomplete; no fetch/retry/activation occurs. `0110` adds a leased
+outbox status read; no payloads, mutation, or incident routing.
 
 ## 2026-08-06: Carry the reviewed policy payload into connector execution
 

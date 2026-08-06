@@ -5379,6 +5379,11 @@ const operationalAlertAllowedKeys = new Set([
   'operationalAlertDeliveryFailed',
   'operationalAlertDeliveryExhausted',
   'operationalAlertDeliveryPurged',
+  'operationalAlertOutboxPending',
+  'operationalAlertOutboxSending',
+  'operationalAlertOutboxExhausted',
+  'operationalAlertOutboxOldestAgeSeconds',
+  'operationalAlertOutboxTruncated',
   'failureCode'
 ])
 
@@ -5445,6 +5450,54 @@ export const operationalAlertPayloadHashSchema = z
   .regex(/^[a-f0-9]{64}$/)
 
 export const operationalAlertOutboxStateSchema = z.enum(['pending', 'sending', 'sent', 'exhausted'])
+
+export const operationalAlertOutboxStatusStateSchema = z.enum(['clear', 'alert', 'incomplete'])
+
+export const operationalAlertOutboxStatusLimits = {
+  defaultLimit: 1_000,
+  maxLimit: 10_000,
+  defaultAlertAfterSeconds: 300,
+  maxAlertAfterSeconds: 86_400
+} as const
+
+export const operationalAlertOutboxStatusInputSchema = z
+  .object({
+    limit: z.number().int().min(1).max(operationalAlertOutboxStatusLimits.maxLimit),
+    alertAfterSeconds: z
+      .number()
+      .int()
+      .min(1)
+      .max(operationalAlertOutboxStatusLimits.maxAlertAfterSeconds)
+  })
+  .strict()
+
+export const operationalAlertOutboxStatusResultSchema = z
+  .object({
+    observedAt: z.string().datetime(),
+    pendingCount: z.number().int().nonnegative(),
+    sendingCount: z.number().int().nonnegative(),
+    exhaustedCount: z.number().int().nonnegative(),
+    oldestOpenAgeSeconds: z.number().int().nonnegative().nullable(),
+    truncated: z.boolean(),
+    state: operationalAlertOutboxStatusStateSchema
+  })
+  .superRefine((result, context) => {
+    if (result.truncated && result.state === 'clear') {
+      context.addIssue({
+        code: 'custom',
+        path: ['state'],
+        message: 'A truncated outbox status cannot claim a clear state'
+      })
+    }
+    if (!result.truncated && result.state === 'incomplete') {
+      context.addIssue({
+        code: 'custom',
+        path: ['state'],
+        message: 'An incomplete outbox status must identify truncation'
+      })
+    }
+  })
+  .strict()
 
 export const operationalAlertOutboxLimits = {
   maxAttempts: 5,
@@ -8166,6 +8219,12 @@ export type OperationalAlertPayload = z.infer<typeof operationalAlertPayloadSche
 export type OperationalAlertDeliveryId = z.infer<typeof operationalAlertDeliveryIdSchema>
 export type OperationalAlertPayloadHash = z.infer<typeof operationalAlertPayloadHashSchema>
 export type OperationalAlertOutboxState = z.infer<typeof operationalAlertOutboxStateSchema>
+export type OperationalAlertOutboxStatusInput = z.infer<
+  typeof operationalAlertOutboxStatusInputSchema
+>
+export type OperationalAlertOutboxStatusResult = z.infer<
+  typeof operationalAlertOutboxStatusResultSchema
+>
 export type OperationalAlertOutboxEnqueueInput = z.infer<
   typeof operationalAlertOutboxEnqueueInputSchema
 >

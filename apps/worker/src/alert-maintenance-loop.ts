@@ -53,6 +53,11 @@ export const alertMaintenanceCommands: readonly AlertMaintenanceCommand[] = [
     name: 'alerts:deliver',
     command: 'pnpm',
     args: ['--filter', '@appsea/worker', 'alerts:deliver']
+  },
+  {
+    name: 'alerts:status',
+    command: 'pnpm',
+    args: ['--filter', '@appsea/worker', 'alerts:status']
   }
 ] as const
 

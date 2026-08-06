@@ -6,6 +6,8 @@ import {
   operationalAlertOutboxEnqueueInputSchema,
   operationalAlertOutboxFailureInputSchema,
   operationalAlertOutboxPurgeInputSchema,
+  operationalAlertOutboxStatusInputSchema,
+  operationalAlertOutboxStatusResultSchema,
   operationalAlertOutboxStateSchema,
   type OperationalAlertOutboxClaim,
   type OperationalAlertOutboxClaimInput,
@@ -13,6 +15,8 @@ import {
   type OperationalAlertOutboxEnqueueInput,
   type OperationalAlertOutboxFailureInput,
   type OperationalAlertOutboxPurgeInput,
+  type OperationalAlertOutboxStatusInput,
+  type OperationalAlertOutboxStatusResult,
   type OperationalAlertOutboxState
 } from '@appsea/contracts'
 import { withDatabaseTransaction } from './transaction'
@@ -29,6 +33,16 @@ interface AlertClaimRow extends QueryResultRow {
 interface AlertFailureRow extends QueryResultRow {
   applied: boolean
   state: string | null
+}
+
+interface AlertStatusRow extends QueryResultRow {
+  observed_at: Date | string
+  pending_count: number | string
+  sending_count: number | string
+  exhausted_count: number | string
+  oldest_open_age_seconds: number | string | null
+  truncated: boolean
+  state: string
 }
 
 function timestamp(value: Date | string): string {
@@ -125,6 +139,32 @@ export class PostgresOperationalAlertOutboxRepository {
       const row = result.rows[0]
       if (!row) throw new Error('Operational alert purge returned no count')
       return Number(row.purged)
+    })
+  }
+
+  async readStatus(
+    input: OperationalAlertOutboxStatusInput
+  ): Promise<OperationalAlertOutboxStatusResult> {
+    const parsed = operationalAlertOutboxStatusInputSchema.parse(input)
+    return withDatabaseTransaction(this.pool, async (client) => {
+      const result = await client.query<AlertStatusRow>(
+        `SELECT observed_at, pending_count, sending_count, exhausted_count,
+                oldest_open_age_seconds, truncated, state
+           FROM appsea.read_operational_alert_outbox_status($1, $2)`,
+        [parsed.limit, parsed.alertAfterSeconds]
+      )
+      const row = result.rows[0]
+      if (!row) throw new Error('Operational alert outbox status returned no result')
+      return operationalAlertOutboxStatusResultSchema.parse({
+        observedAt: timestamp(row.observed_at),
+        pendingCount: Number(row.pending_count),
+        sendingCount: Number(row.sending_count),
+        exhaustedCount: Number(row.exhausted_count),
+        oldestOpenAgeSeconds:
+          row.oldest_open_age_seconds === null ? null : Number(row.oldest_open_age_seconds),
+        truncated: Boolean(row.truncated),
+        state: row.state
+      })
     })
   }
 }

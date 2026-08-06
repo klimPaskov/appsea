@@ -592,6 +592,11 @@ for that pre-context authorization lookup.
   stale claims, bounded retries, terminal exhaustion, and retention purge are
   server-clock operations. The provider effect remains outside the database
   transaction and requires external idempotency/recovery.
+- Migration `0110` adds a second maintenance scheduler name and one bounded
+  `SECURITY DEFINER` status reader for the outbox. It returns only scalar counts,
+  age, truncation, and clear/alert/incomplete state; it never returns payloads,
+  claims or mutates rows, enqueues its own observation, calls a provider, or
+  routes an incident.
 
 ## Temporal boundary
 

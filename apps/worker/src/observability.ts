@@ -94,6 +94,11 @@ export interface WorkerEvent {
   operationalAlertDeliveryFailed?: number
   operationalAlertDeliveryExhausted?: number
   operationalAlertDeliveryPurged?: number
+  operationalAlertOutboxPending?: number
+  operationalAlertOutboxSending?: number
+  operationalAlertOutboxExhausted?: number
+  operationalAlertOutboxOldestAgeSeconds?: number
+  operationalAlertOutboxTruncated?: boolean
   failureCode?: string
   /** Bounded failure identity for diagnosis; never includes raw messages. */
   failureContext?: string
@@ -501,6 +506,25 @@ export function workerEventPayload(event: WorkerEvent): WorkerEventPayload {
       : {}),
     ...(finiteInteger(event.operationalAlertDeliveryPurged) !== undefined
       ? { operationalAlertDeliveryPurged: finiteInteger(event.operationalAlertDeliveryPurged) }
+      : {}),
+    ...(finiteInteger(event.operationalAlertOutboxPending) !== undefined
+      ? { operationalAlertOutboxPending: finiteInteger(event.operationalAlertOutboxPending) }
+      : {}),
+    ...(finiteInteger(event.operationalAlertOutboxSending) !== undefined
+      ? { operationalAlertOutboxSending: finiteInteger(event.operationalAlertOutboxSending) }
+      : {}),
+    ...(finiteInteger(event.operationalAlertOutboxExhausted) !== undefined
+      ? { operationalAlertOutboxExhausted: finiteInteger(event.operationalAlertOutboxExhausted) }
+      : {}),
+    ...(finiteInteger(event.operationalAlertOutboxOldestAgeSeconds) !== undefined
+      ? {
+          operationalAlertOutboxOldestAgeSeconds: finiteInteger(
+            event.operationalAlertOutboxOldestAgeSeconds
+          )
+        }
+      : {}),
+    ...(event.operationalAlertOutboxTruncated !== undefined
+      ? { operationalAlertOutboxTruncated: event.operationalAlertOutboxTruncated }
       : {}),
     ...(event.failureCode ? { failureCode: event.failureCode } : {}),
     ...(boundedFailureContext(event.failureContext)

@@ -113,7 +113,12 @@ describe('worker observability', () => {
       workspaceCostAlertUnsupportedRows: 1,
       workspaceCostAlertWorkspacesOverActual: 1,
       workspaceCostAlertWorkspacesOverEstimated: 2,
-      workspaceCostAlertTruncated: false
+      workspaceCostAlertTruncated: false,
+      operationalAlertOutboxPending: 2,
+      operationalAlertOutboxSending: 1,
+      operationalAlertOutboxExhausted: 0,
+      operationalAlertOutboxOldestAgeSeconds: 901,
+      operationalAlertOutboxTruncated: true
     })
     const payload = JSON.parse(String(log.mock.calls[0]?.[0])) as Record<string, unknown>
     expect(payload).toMatchObject({
@@ -174,7 +179,12 @@ describe('worker observability', () => {
       workspaceCostAlertUnsupportedRows: 1,
       workspaceCostAlertWorkspacesOverActual: 1,
       workspaceCostAlertWorkspacesOverEstimated: 2,
-      workspaceCostAlertTruncated: false
+      workspaceCostAlertTruncated: false,
+      operationalAlertOutboxPending: 2,
+      operationalAlertOutboxSending: 1,
+      operationalAlertOutboxExhausted: 0,
+      operationalAlertOutboxOldestAgeSeconds: 901,
+      operationalAlertOutboxTruncated: true
     })
     expect(JSON.stringify(payload)).not.toContain('source text')
     log.mockRestore()

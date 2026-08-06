@@ -122,7 +122,8 @@ describe('database foundation', () => {
       '0106',
       '0107',
       '0108',
-      '0109'
+      '0109',
+      '0110'
     ])
     expect(migrations[0]?.checksum).toMatch(/^[a-f0-9]{64}$/)
     expect(migrations[0]?.sql).toContain('CREATE TABLE appsea.evidence_records')
@@ -311,6 +312,17 @@ describe('database foundation', () => {
     expect(operationalAlertMigration?.sql).toContain('CREATE TABLE appsea.operational_alert_outbox')
     expect(operationalAlertMigration?.sql).toContain('claim_operational_alerts')
     expect(operationalAlertMigration?.sql).toContain('acquire_maintenance_scheduler_lease_v2')
+    const operationalAlertStatusMigration = migrations.find(
+      (migration) => migration.version === '0110'
+    )
+    expect(operationalAlertStatusMigration?.sql).toContain(
+      'CREATE OR REPLACE FUNCTION appsea.read_operational_alert_outbox_status'
+    )
+    expect(operationalAlertStatusMigration?.sql).toContain("'appsea-operational-alert-status-v1'")
+    expect(operationalAlertStatusMigration?.sql).toContain("'operationalAlertOutboxExhausted'")
+    expect(operationalAlertStatusMigration?.sql).toContain(
+      'REVOKE ALL ON FUNCTION appsea.read_operational_alert_outbox_status'
+    )
     const workspacePurgeManifestMigration = migrations.find(
       (migration) => migration.version === '0083'
     )

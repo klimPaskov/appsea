@@ -66,6 +66,10 @@ a scheduled SLA. Provider-auth expiry, alert delivery, and deployment SLO
 ownership remain operational follow-up work; shared headroom is not a
 per-workspace billing ledger, and stale or missing observations are never
 treated as proof of absent complaints.
+Migration `0110` adds `pnpm worker:alerts:status`, a separately leased,
+bounded scalar projection of operational-alert outbox backlog state. It marks
+truncation incomplete, exposes no payloads, and does not repair, deliver, or
+route incidents.
 
 ### Research quality
 

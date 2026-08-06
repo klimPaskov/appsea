@@ -117,16 +117,30 @@ configured retention window. Set `APPSEA_ALERT_DELIVERY_MAX_ALERTS`,
 `APPSEA_ALERT_DELIVERY_CLAIM_TTL_SECONDS`,
 `APPSEA_ALERT_DELIVERY_RETENTION_DAYS`, and
 `APPSEA_ALERT_DELIVERY_PURGE_BATCH_SIZE` within their documented bounds. The
-three alert inspection commands enqueue before attempting the external HMAC
+four alert inspection commands enqueue before attempting the external HMAC
 provider, then this drain command provides the crash/provider-outage recovery
 path. Endpoint ownership, HMAC secret rotation, provider idempotency, scheduler
 availability, and incident routing remain deployment responsibilities.
+
+The command `pnpm worker:alerts:status` is a separate, read-only operator
+projection for the same outbox. It acquires the
+`appsea-operational-alert-status-v1` maintenance lease and calls the migration
+`0110` scalar reader with `APPSEA_OPERATIONAL_ALERT_STATUS_LIMIT` (default
+1,000, maximum 10,000) and `APPSEA_OPERATIONAL_ALERT_STATUS_ALERT_AFTER_SECONDS`
+(default 300, maximum 86,400). Production must set
+`APPSEA_OPERATIONAL_ALERT_STATUS_ENABLED=true`; development and test runs are
+enabled by default. The result reports only pending, sending, exhausted,
+oldest-open-age, truncation, and clear/alert/incomplete state. A truncated scan
+cannot report clear, and an exhausted or aged/stale row reports alert. The
+command never returns payloads, claims a row, changes retry state, purges data,
+calls a provider, or routes an incident. Its fixed event is local telemetry;
+it is deliberately not enqueued into the outbox it is inspecting.
 
 The production Compose `alerts` service runs the worker's `alerts:loop` command
 (the repository wrapper is `pnpm worker:alerts:loop`). One pass
 invokes `source:quota:alert`, `source:health:alert`,
 `production:analysis:recompute:alert`, `workspace:cost:alert`, and
-`alerts:deliver` sequentially. A failed child does not starve later scans or
+`alerts:deliver`, then `alerts:status`, sequentially. A failed child does not starve later scans or
 delivery, but the pass fails and uses the bounded backoff before retrying. Each
 child still acquires its own database-backed scheduler lease; the loop is not
 an in-memory duplicate-run lock. `APPSEA_ALERTS_INTERVAL_SECONDS` and

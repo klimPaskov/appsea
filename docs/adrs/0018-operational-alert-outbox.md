@@ -29,6 +29,13 @@ fixed failure code, and terminalize after five attempts. The bounded
 rows after retention. Provider effects remain outside the database transaction
 and retain HMAC signing, redirect rejection, and external idempotency headers.
 
+Migration `0110_operational_alert_outbox_status.sql` adds a separate
+`appsea-operational-alert-status-v1` maintenance lease and a bounded scalar
+status reader. `pnpm worker:alerts:status` reports pending/sending/exhausted,
+age, truncation, and clear/alert/incomplete state without returning payloads or
+mutating the outbox. It is local telemetry rather than a provider or incident
+router, and it never enqueues its own observation.
+
 ## Consequences
 
 - Provider/process failures leave an inspectable retry record without persisting

@@ -52,6 +52,22 @@ function fakePool(): { pool: Pool; statements: string[] } {
       if (text.includes('purge_operational_alerts')) {
         return { rows: [{ purged: 3 }], rowCount: 1 }
       }
+      if (text.includes('read_operational_alert_outbox_status')) {
+        return {
+          rows: [
+            {
+              observed_at: '2026-08-04T00:00:00.000Z',
+              pending_count: 2,
+              sending_count: 1,
+              exhausted_count: 0,
+              oldest_open_age_seconds: 301,
+              truncated: false,
+              state: 'alert'
+            }
+          ],
+          rowCount: 1
+        }
+      }
       throw new Error(`Unexpected SQL in test double: ${text}`)
     },
     release: () => undefined
@@ -63,7 +79,7 @@ function fakePool(): { pool: Pool; statements: string[] } {
 }
 
 describe('operational alert outbox repository', () => {
-  it('uses only maintenance-owned functions for enqueue, claim, completion, failure, and purge', async () => {
+  it('uses only maintenance-owned functions for enqueue, claim, completion, failure, purge, and status', async () => {
     const { pool, statements } = fakePool()
     const repository = new PostgresOperationalAlertOutboxRepository(pool)
 
@@ -93,12 +109,24 @@ describe('operational alert outbox repository', () => {
     await expect(repository.purge({ before: '2026-08-04T00:00:00.000Z', limit: 10 })).resolves.toBe(
       3
     )
+    await expect(repository.readStatus({ limit: 10, alertAfterSeconds: 300 })).resolves.toEqual({
+      observedAt: '2026-08-04T00:00:00.000Z',
+      pendingCount: 2,
+      sendingCount: 1,
+      exhaustedCount: 0,
+      oldestOpenAgeSeconds: 301,
+      truncated: false,
+      state: 'alert'
+    })
 
     expect(statements.some((text) => text.includes('enqueue_operational_alert'))).toBe(true)
     expect(statements.some((text) => text.includes('claim_operational_alerts'))).toBe(true)
     expect(statements.some((text) => text.includes('complete_operational_alert'))).toBe(true)
     expect(statements.some((text) => text.includes('fail_operational_alert'))).toBe(true)
     expect(statements.some((text) => text.includes('purge_operational_alerts'))).toBe(true)
+    expect(statements.some((text) => text.includes('read_operational_alert_outbox_status'))).toBe(
+      true
+    )
     expect(statements.some((text) => text.includes('operational_alert_outbox '))).toBe(false)
   })
 
@@ -126,6 +154,7 @@ describe('operational alert outbox repository', () => {
         retryAt: payload.observedAt
       })
     ).rejects.toThrow()
+    await expect(repository.readStatus({ limit: 10, alertAfterSeconds: 0 })).rejects.toThrow()
     expect(statements).toHaveLength(0)
   })
 })

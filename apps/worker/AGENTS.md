@@ -29,6 +29,9 @@ projection through the maintenance-role outbox before attempting the external
 provider. Use the bounded `alerts:deliver` drain for stale/retryable claims;
 provider effects stay outside the database transaction, and failure/exhaustion
 state uses fixed codes without raw response or exception text.
+The separate `alerts:status` command is a maintenance-leased, scalar-only read
+of outbox backlog/age/truncation state. It must not enqueue its own observation,
+claim or mutate rows, call a provider, expose payloads, or route incidents.
 Scheduler outcome telemetry must use the migration `0047` maintenance-role
 functions through the repository; persist only generated run IDs, fixed states
 or failure codes, durations, and bounded numeric counters. Never persist lease

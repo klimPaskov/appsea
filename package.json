@@ -55,6 +55,7 @@
     "worker:workspace:cost:alert": "pnpm --filter @appsea/worker workspace:cost:alert",
     "worker:alerts:loop": "pnpm --filter @appsea/worker alerts:loop",
     "worker:alerts:deliver": "pnpm --filter @appsea/worker alerts:deliver",
+    "worker:alerts:status": "pnpm --filter @appsea/worker alerts:status",
     "production:preflight": "pnpm --filter @appsea/worker production:preflight",
     "worker:source:policy:cfpb": "pnpm --filter @appsea/worker source:policy:cfpb",
     "worker:source:policy:stackexchange": "pnpm --filter @appsea/worker source:policy:stackexchange",

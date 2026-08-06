@@ -14,7 +14,7 @@ sparse; no third-party public source is enabled. A reviewed internal
 `manual-owner-import-v2` policy now supports tenant-private owner-authorized
 CSV/JSON intake without claiming public market coverage; v1 remains historical.
 
-Migrations `0027`-`0109` cover policy, deletion/leases, orchestration,
+Migrations `0027`-`0110` cover policy, deletion/leases, orchestration,
 analysis/report/plan governance, cost/alerts, object refs, archival/purge
 intent, redaction, agent tokens, and TOTP MFA. OIDC/MCP remain gated.
 
@@ -44,7 +44,8 @@ closure/archival, and scoped read-only agent tokens. OIDC, delivery, retention,
 egress, and deployment operations remain external.
 
 Workers have server-clock leases, fenced mutations, retries, recovery, metrics,
-and signed alerts; `alerts:loop` supervises scans/delivery in Compose; operated
+and signed alerts; `alerts:loop` supervises scans, delivery, and a separate
+bounded outbox-status read in Compose; operated
 scheduler, billing, cloud purge, and provider topology remain open.
 
 Imported complaints, pages, reports, and model output are untrusted data; they
@@ -78,7 +79,8 @@ parsing oversized requests. Migrations `0105`/`0106` provide append-only
 decision and cluster review ledgers with stale/hash/redaction-safe gates.
 
 Source-registry tranches add bounded health/freshness, quota headroom, and
-maintenance-only alert inspection. They are private/read-only projections;
+maintenance-only alert inspection; `pnpm worker:alerts:status` adds a separate
+bounded outbox status read. They are private/read-only projections;
 payloads, credentials, reservations, activation, settlement, and public
 coverage remain outside the boundary. Owner-import freshness stays unknown.
 

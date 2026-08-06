@@ -119,6 +119,8 @@ import {
   operationalAlertOutboxEnqueueInputSchema,
   operationalAlertOutboxClaimInputSchema,
   operationalAlertOutboxFailureInputSchema,
+  operationalAlertOutboxStatusInputSchema,
+  operationalAlertOutboxStatusResultSchema,
   workspaceOpportunityReadModelSchema,
   resolveOpportunityStateForRead,
   workspaceOpportunityDetailReadModelSchema,
@@ -3479,6 +3481,19 @@ describe('contracts', () => {
     }
     expect(operationalAlertPayloadSchema.safeParse(payload).success).toBe(true)
     expect(
+      operationalAlertPayloadSchema.safeParse({
+        ...payload,
+        event: 'operational_alert_outbox_alert',
+        taskQueue: 'appsea-operational-alert-status-v1',
+        schedulerName: 'appsea-operational-alert-status-v1',
+        operationalAlertOutboxPending: 2,
+        operationalAlertOutboxSending: 1,
+        operationalAlertOutboxExhausted: 0,
+        operationalAlertOutboxOldestAgeSeconds: 301,
+        operationalAlertOutboxTruncated: false
+      }).success
+    ).toBe(true)
+    expect(
       operationalAlertPayloadSchema.safeParse({ ...payload, importedComplaint: 'secret text' })
         .success
     ).toBe(false)
@@ -3511,5 +3526,31 @@ describe('contracts', () => {
         retryAt: now
       }).success
     ).toBe(true)
+    expect(
+      operationalAlertOutboxStatusInputSchema.safeParse({ limit: 100, alertAfterSeconds: 300 })
+        .success
+    ).toBe(true)
+    expect(
+      operationalAlertOutboxStatusResultSchema.safeParse({
+        observedAt: now,
+        pendingCount: 2,
+        sendingCount: 1,
+        exhaustedCount: 0,
+        oldestOpenAgeSeconds: 301,
+        truncated: false,
+        state: 'alert'
+      }).success
+    ).toBe(true)
+    expect(
+      operationalAlertOutboxStatusResultSchema.safeParse({
+        observedAt: now,
+        pendingCount: 0,
+        sendingCount: 0,
+        exhaustedCount: 0,
+        oldestOpenAgeSeconds: null,
+        truncated: true,
+        state: 'clear'
+      }).success
+    ).toBe(false)
   })
 })

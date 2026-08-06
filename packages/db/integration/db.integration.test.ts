@@ -552,7 +552,8 @@ describe.sequential('PostgreSQL fixture persistence lifecycle', () => {
       '0106',
       '0107',
       '0108',
-      '0109'
+      '0109',
+      '0110'
     ])
     expect(secondMigrationResult.applied).toEqual([])
     expect(secondMigrationResult.alreadyApplied).toEqual([
@@ -664,7 +665,8 @@ describe.sequential('PostgreSQL fixture persistence lifecycle', () => {
       '0106',
       '0107',
       '0108',
-      '0109'
+      '0109',
+      '0110'
     ])
   })
 
@@ -5211,6 +5213,14 @@ describe.sequential('PostgreSQL fixture persistence lifecycle', () => {
           availableAt
         })
       ).resolves.toEqual({ enqueued: false })
+      await maintenancePool.query('SELECT pg_sleep(1.2)')
+      await expect(outbox.readStatus({ limit: 10, alertAfterSeconds: 1 })).resolves.toMatchObject({
+        pendingCount: 1,
+        sendingCount: 0,
+        exhaustedCount: 0,
+        truncated: false,
+        state: 'alert'
+      })
       await expect(
         servicePool.query('SELECT * FROM appsea.operational_alert_outbox')
       ).rejects.toMatchObject({ code: '42501' })
@@ -5242,6 +5252,14 @@ describe.sequential('PostgreSQL fixture persistence lifecycle', () => {
           sentAt: new Date().toISOString()
         })
       ).resolves.toEqual({ completed: true })
+      await expect(outbox.readStatus({ limit: 10, alertAfterSeconds: 1 })).resolves.toMatchObject({
+        pendingCount: 0,
+        sendingCount: 0,
+        exhaustedCount: 0,
+        oldestOpenAgeSeconds: null,
+        truncated: false,
+        state: 'clear'
+      })
 
       const leaseToken = 'integration-alert-lease-token-0002'
       await expect(

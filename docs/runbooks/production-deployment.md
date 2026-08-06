@@ -83,7 +83,7 @@ curl --fail https://<approved-origin>/api/health/ready
 Route load-balancer admission through `/api/health/ready`; use `/api/health/live`
 for process liveness. Confirm the worker heartbeat, maintenance metrics, and
 alerts-loop events through the deployment's approved log/metric sink. The
-`alerts` service runs the five existing lease-owned alert/delivery commands
+`alerts` service runs six lease-owned alert/delivery/status commands
 sequentially; each child retains its own PostgreSQL scheduler lease, while the
 loop only supervises ordering, bounded backoff, and shutdown. The readiness
 route does not run migrations, start workflows, or test object bodies.
