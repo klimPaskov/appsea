@@ -100,9 +100,11 @@ pnpm test:backup-restore
 pnpm verify:backup-restore
 ```
 
-The drill restores the local schema into a temporary database, checks the
-latest migration, forced RLS, and role privileges, then drops the target and
-temporary dump. It is not production backup, HA, or failover proof.
+The drill restores the local schema into a temporary database, checks that the
+latest migration is the checked-in head (`0121`), forced RLS, and role
+privileges, then drops the target and temporary dump. It is not production
+backup, HA, or failover proof. A prior successful run through `0119` is
+historical until the Docker-backed drill is rerun after later migrations.
 
 `verify:persistence:fresh` is intentionally destructive: it removes the Compose project's local PostgreSQL named volume before recreating it. Do not run it when local development data must be retained. The fresh suite also exercises migration `0082` outbox idempotency, claim recovery, retry, completion, v2 alert scheduler names, migration `0083` archived-owner purge-manifest replay/read authorization, migration `0084` archival-function qualification, migration `0085` read-only manifest reads, migration `0086` MFA ciphertext-version defaults/status, migration `0087` identifier-only dormant-account rewrap events, and direct table-access denial.
 

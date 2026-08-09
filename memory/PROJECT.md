@@ -15,8 +15,8 @@ ranked opportunities, and coding-agent planning packages.
 - A future Tauri shell will reuse the website contract.
 - `packages/db` owns PostgreSQL 18 migrations, transaction-scoped workspace RLS, and persistence repositories.
 - Local and CI PostgreSQL use a no-login owner, separate migrator, and non-owner runtime role. Production provisioning remains external and unimplemented.
-- `scripts/run_db_backup_restore.mjs` checks forced RLS and least privilege; the
-  last run covered 119 migrations, while `0120`/`0121` await a Docker rerun. It is not
+- `scripts/run_db_backup_restore.mjs` checks RLS/least privilege and targets
+  head `0121`; last successful proof is `0119`; Docker rerun pending. It is not
   provider HA/restore evidence.
 - Temporal/client hashing belongs to `packages/workflows`; worker activities to
   `apps/worker`; RLS persistence to `packages/db`. Local proof passes through

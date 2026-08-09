@@ -8,8 +8,8 @@ const repositoryRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url))
 const composeFile = path.join(repositoryRoot, 'infra', 'local', 'compose.yaml')
 const localDatabaseName = 'appsea'
 export const restoreDatabaseName = 'appsea_backup_restore_check'
-const expectedMigrationCount = 119
-const expectedLatestMigration = '0119'
+const expectedMigrationCount = 121
+const expectedLatestMigration = '0121'
 const localPostgresPassword = 'postgres-local-bootstrap-only'
 const localMigrationUrl =
   'postgres://appsea_migrator:appsea-migrator-local-only@127.0.0.1:5433/appsea'

@@ -3,8 +3,8 @@
 ## State
 
 Audit: `docs/status/production-readiness-audit-2026-08-06.md`.
-`pnpm verify` and local PostgreSQL/Temporal/MinIO smoke pass through migration
-`0119`; public/private captures pass against the disposable stack.
+`pnpm verify`/local smoke pass through `0119`; backup verifier targets
+head `0121` but last proof is `0119`. Public/private captures pass.
 
 AppSea remains fixture-first with production-shaped persistence, workflow,
 source policy, private workspaces, reports/plans, and maintenance.
