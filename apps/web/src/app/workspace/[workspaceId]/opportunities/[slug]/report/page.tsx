@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import { notFound, redirect } from 'next/navigation'
+import { appseaIdentifierSchema, workspaceArtifactHistoryPageQuerySchema } from '@appsea/contracts'
 import { readSession } from '../../../../../../server/auth-session'
 import {
   readPrivateArtifactHistoryForUser,
@@ -11,12 +12,19 @@ import { WorkspaceOpportunityTabs } from '../../../../../../components/workspace
 
 export const dynamic = 'force-dynamic'
 
+type SearchParams = Record<string, string | string[] | undefined>
+
+function oneValue(value: string | string[] | undefined): string | undefined | null {
+  if (Array.isArray(value)) return value.length === 1 ? value[0] : null
+  return value
+}
+
 export default async function PrivateReportPage({
   params,
   searchParams
 }: {
   params: Promise<{ workspaceId: string; slug: string }>
-  searchParams?: Promise<{ version?: string }>
+  searchParams?: Promise<SearchParams>
 }) {
   const { workspaceId, slug } = await params
   const context = await readPrivateOpportunityContext(workspaceId, slug)
@@ -26,26 +34,42 @@ export default async function PrivateReportPage({
     notFound()
   }
   const { detail: baseDetail, workspace } = context
+  const rawSearchParams = await searchParams
+  const allowedKeys = new Set(['version', 'limit', 'reportCursor'])
+  if (rawSearchParams && Object.keys(rawSearchParams).some((key) => !allowedKeys.has(key))) {
+    notFound()
+  }
+  const version = oneValue(rawSearchParams?.version)
+  const limit = oneValue(rawSearchParams?.limit)
+  const reportCursor = oneValue(rawSearchParams?.reportCursor)
+  if (version === null || limit === null || reportCursor === null) notFound()
+  const historyQuery = workspaceArtifactHistoryPageQuerySchema.safeParse({
+    limit: limit === undefined ? undefined : Number(limit),
+    reportCursor: reportCursor === undefined ? undefined : reportCursor
+  })
+  if (!historyQuery.success) notFound()
   const history = await readPrivateArtifactHistoryForUser(
     context.session.user.userId,
     workspace.workspaceId,
-    baseDetail.opportunity.id
+    baseDetail.opportunity.id,
+    historyQuery.data
   )
-  const requestedVersion = (await searchParams)?.version
-  const selectedSummary = requestedVersion
-    ? history.reports.find(
-        (report) => report.id === requestedVersion && report.approvalState !== 'withdrawn'
-      )
-    : undefined
-  const selectedReport = selectedSummary
-    ? await readPrivateReportVersionForUser(
-        context.session.user.userId,
-        workspace.workspaceId,
-        selectedSummary.id,
-        baseDetail.opportunity.id
-      )
-    : baseDetail.report
+  let selectedReport = baseDetail.report
+  if (version !== undefined) {
+    const parsedVersion = appseaIdentifierSchema.safeParse(version)
+    if (!parsedVersion.success) notFound()
+    selectedReport = await readPrivateReportVersionForUser(
+      context.session.user.userId,
+      workspace.workspaceId,
+      parsedVersion.data,
+      baseDetail.opportunity.id
+    )
+    if (!selectedReport) notFound()
+  }
   const detail = { ...baseDetail, report: selectedReport }
+  const nextReportHref = history.nextReportCursor
+    ? `/workspace/${encodeURIComponent(workspaceId)}/opportunities/${encodeURIComponent(slug)}/report?limit=${historyQuery.data.limit}&reportCursor=${encodeURIComponent(history.nextReportCursor)}`
+    : null
   return (
     <main className="workspace-page">
       <p className="breadcrumb">
@@ -111,9 +135,9 @@ export default async function PrivateReportPage({
               </li>
             ))}
           </ul>
-          {history.truncated ? (
+          {nextReportHref ? (
             <p className="muted-note">
-              Showing the 50 most recent versions; older history is retained in PostgreSQL.
+              <Link href={nextReportHref}>Show older report versions</Link>
             </p>
           ) : null}
         </section>

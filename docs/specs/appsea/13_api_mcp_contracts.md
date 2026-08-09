@@ -146,9 +146,13 @@ GET /api/workspaces/{workspaceId}/plans/{planPackageId}/export?format=json|markd
 ````
 
 History returns at most 50 active, current-policy-visible summaries for each
-artifact family and includes `truncated` when older rows exist. A withdrawn
-summary is metadata-only. Selected reads exclude withdrawn/deleted rows and
-reuse object hydration and field-redaction gates. Export accepts exactly one
+artifact family. `limit` is bounded to 1..50; `reportCursor` and `planCursor`
+are opaque, independently advancing cursors bound to the authenticated
+workspace, opportunity, and artifact family. `nextReportCursor` and
+`nextPlanCursor` identify older pages, while `truncated` remains a compatibility
+boolean derived from either cursor. A withdrawn summary is metadata-only.
+Selected reads exclude withdrawn/deleted rows and reuse object hydration and
+field-redaction gates. Export accepts exactly one
 format value, defaults to JSON, and requires approval; Markdown is rendered on
 demand from the redacted validated read and returns the immutable manifest hash
 in `X-AppSea-Manifest-Hash`. The compare response contains only sorted path

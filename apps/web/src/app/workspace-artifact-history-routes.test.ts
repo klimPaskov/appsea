@@ -1,4 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { WorkspaceArtifactHistoryCursorError } from '@appsea/db'
+import { WorkspaceAuthorizationError } from '@appsea/db/auth'
 import { GET as readHistory } from './api/workspaces/[workspaceId]/opportunities/[slug]/history/route'
 import { GET as comparePlans } from './api/workspaces/[workspaceId]/opportunities/[slug]/plans/compare/route'
 
@@ -6,6 +8,7 @@ const mocks = vi.hoisted(() => ({
   repository: {
     listWorkspaceOpportunities: vi.fn(),
     listWorkspaceArtifactHistoryForUser: vi.fn(),
+    readWorkspacePlanVersionSummaryForUser: vi.fn(),
     readWorkspacePlanVersionForUser: vi.fn()
   },
   readSession: vi.fn()
@@ -107,16 +110,39 @@ describe('private artifact history routes', () => {
     mocks.readSession.mockResolvedValue(session)
     mocks.repository.listWorkspaceOpportunities.mockReset()
     mocks.repository.listWorkspaceArtifactHistoryForUser.mockReset()
+    mocks.repository.readWorkspacePlanVersionSummaryForUser.mockReset()
     mocks.repository.readWorkspacePlanVersionForUser.mockReset()
     mocks.repository.listWorkspaceOpportunities.mockResolvedValue([opportunity])
     mocks.repository.listWorkspaceArtifactHistoryForUser.mockResolvedValue({
       reports,
       plans,
+      nextReportCursor: null,
+      nextPlanCursor: null,
       truncated: false
     })
+    mocks.repository.readWorkspacePlanVersionSummaryForUser.mockImplementation(
+      async (_user: string, _workspace: string, id: keyof typeof planBodies) =>
+        plans.find((plan) => plan.id === id) ?? null
+    )
     mocks.repository.readWorkspacePlanVersionForUser.mockImplementation(
       async (_user: string, _workspace: string, id: keyof typeof planBodies) => planBodies[id]
     )
+  })
+
+  it('requires authentication and workspace membership', async () => {
+    mocks.readSession.mockResolvedValueOnce(null)
+    const unauthenticated = await readHistory(new Request('https://appsea.example'), {
+      params: Promise.resolve({ workspaceId: 'workspace:one', slug: 'private-opportunity' })
+    })
+    expect(unauthenticated.status).toBe(401)
+
+    mocks.repository.listWorkspaceOpportunities.mockRejectedValueOnce(
+      new WorkspaceAuthorizationError()
+    )
+    const forbidden = await readHistory(new Request('https://appsea.example'), {
+      params: Promise.resolve({ workspaceId: 'workspace:one', slug: 'private-opportunity' })
+    })
+    expect(forbidden.status).toBe(403)
   })
 
   it('returns bounded report/plan history for the authenticated opportunity', async () => {
@@ -125,12 +151,19 @@ describe('private artifact history routes', () => {
     })
     expect(response.status).toBe(200)
     await expect(response.json()).resolves.toEqual({
-      data: { reports, plans, truncated: false }
+      data: {
+        reports,
+        plans,
+        nextReportCursor: null,
+        nextPlanCursor: null,
+        truncated: false
+      }
     })
     expect(mocks.repository.listWorkspaceArtifactHistoryForUser).toHaveBeenCalledWith(
       'user:owner',
       'workspace:one',
-      'opportunity:one'
+      'opportunity:one',
+      { limit: 50, reportCursor: undefined, planCursor: undefined }
     )
   })
 
@@ -167,10 +200,45 @@ describe('private artifact history routes', () => {
     expect(unknown.status).toBe(400)
   })
 
-  it('rejects history query parameters instead of silently changing the contract', async () => {
-    const response = await readHistory(new Request('https://appsea.example?cursor=next'), {
+  it('accepts bounded cursors and forwards them to the repository', async () => {
+    const response = await readHistory(
+      new Request('https://appsea.example?limit=1&reportCursor=next-report&planCursor=next-plan'),
+      {
+        params: Promise.resolve({ workspaceId: 'workspace:one', slug: 'private-opportunity' })
+      }
+    )
+    expect(response.status).toBe(200)
+    expect(mocks.repository.listWorkspaceArtifactHistoryForUser).toHaveBeenCalledWith(
+      'user:owner',
+      'workspace:one',
+      'opportunity:one',
+      { limit: 1, reportCursor: 'next-report', planCursor: 'next-plan' }
+    )
+  })
+
+  it('rejects unknown, duplicate, and malformed history query parameters', async () => {
+    const unknown = await readHistory(new Request('https://appsea.example?cursor=next'), {
+      params: Promise.resolve({ workspaceId: 'workspace:one', slug: 'private-opportunity' })
+    })
+    expect(unknown.status).toBe(400)
+    const duplicate = await readHistory(new Request('https://appsea.example?limit=1&limit=2'), {
+      params: Promise.resolve({ workspaceId: 'workspace:one', slug: 'private-opportunity' })
+    })
+    expect(duplicate.status).toBe(400)
+    const malformed = await readHistory(new Request('https://appsea.example?limit=51'), {
+      params: Promise.resolve({ workspaceId: 'workspace:one', slug: 'private-opportunity' })
+    })
+    expect(malformed.status).toBe(400)
+  })
+
+  it('maps repository cursor scope failures to a bounded client error', async () => {
+    mocks.repository.listWorkspaceArtifactHistoryForUser.mockRejectedValueOnce(
+      new WorkspaceArtifactHistoryCursorError()
+    )
+    const response = await readHistory(new Request('https://appsea.example?reportCursor=cursor'), {
       params: Promise.resolve({ workspaceId: 'workspace:one', slug: 'private-opportunity' })
     })
     expect(response.status).toBe(400)
+    await expect(response.json()).resolves.toEqual({ error: 'Invalid history cursor' })
   })
 })

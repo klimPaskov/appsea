@@ -26,6 +26,7 @@ import {
   migrateDatabase,
   MigrationHistoryError,
   AuthenticationError,
+  WorkspaceAuthorizationError,
   AuthMfaVerificationError,
   AuthSessionConflictError,
   WorkspaceMembershipConflictError,
@@ -4369,6 +4370,108 @@ describe.sequential('PostgreSQL fixture persistence lifecycle', () => {
     expect(provenance.source_policy_version).toMatch(/^fixture-[a-f0-9]{12}$/)
     expect(provenance.source_hash).toMatch(/^[a-f0-9]{64}$/)
     expect(provenance.evidence_hash).toMatch(/^[a-f0-9]{64}$/)
+  })
+
+  it('paginates private artifact history under RLS and excludes cross-workspace access', async () => {
+    const input = await fixtureInput(
+      'workspace-history',
+      'campaign-history',
+      'run-history',
+      'fixture-history'
+    )
+    const persisted = await repository.persist(input)
+    const userId = 'user:history-reader'
+    let currentReportId = ''
+    let currentPlanPackageId = ''
+    await withOwnerClient(async (client) => {
+      await client.query(
+        `INSERT INTO appsea.users
+           (user_id, email, display_name, password_hash, created_at, updated_at)
+         VALUES ($1, $2, 'History Reader', repeat('x', 64), $3, $3)`,
+        [userId, 'history-reader@example.test', latestAt]
+      )
+      await client.query(
+        `INSERT INTO appsea.workspace_memberships
+           (workspace_id, user_id, role, created_at, updated_at)
+         VALUES ($1, $2, 'owner', $3, $3)`,
+        [input.workspaceId, userId, latestAt]
+      )
+      const current = await client.query<{ report_id: string; plan_package_id: string }>(
+        `SELECT report.report_id, plan.plan_package_id
+           FROM appsea.report_versions report
+           JOIN appsea.plan_package_versions plan
+             ON plan.workspace_id = report.workspace_id
+            AND plan.opportunity_id = report.opportunity_id
+            AND plan.report_id = report.report_id
+          WHERE report.workspace_id = $1 AND report.opportunity_id = $2
+          ORDER BY report.generated_at DESC
+          LIMIT 1`,
+        [input.workspaceId, persisted.opportunityId]
+      )
+      currentReportId = current.rows[0]!.report_id
+      currentPlanPackageId = current.rows[0]!.plan_package_id
+      await client.query(
+        `INSERT INTO appsea.report_versions
+           (workspace_id, report_id, opportunity_id, version, evidence_snapshot_ref,
+            structured_report, markdown_object_ref, manifest_hash, approval_state,
+            generated_at, synthetic, structured_object_ref)
+         SELECT workspace_id, $1, opportunity_id, 'production-report-v0',
+                evidence_snapshot_ref, structured_report, markdown_object_ref,
+                repeat('c', 64), 'reviewed', $2, synthetic, NULL
+           FROM appsea.report_versions
+          WHERE workspace_id = $3 AND report_id = $4`,
+        ['report:history-older', '2026-07-09T00:00:00.000Z', input.workspaceId, currentReportId]
+      )
+      await client.query(
+        `INSERT INTO appsea.plan_package_versions
+           (workspace_id, plan_package_id, opportunity_id, run_id, report_id, version,
+            manifest_hash, package_object_ref, fixture_files, readiness_state,
+            approval_state, synthetic, generated_at)
+         SELECT workspace_id, $1, opportunity_id, run_id, $2, 'production-plan-v0',
+                repeat('c', 64), package_object_ref, fixture_files, readiness_state,
+                'reviewed', synthetic, $3
+           FROM appsea.plan_package_versions
+          WHERE workspace_id = $4 AND plan_package_id = $5`,
+        [
+          'plan:history-older',
+          'report:history-older',
+          '2026-07-09T00:00:00.000Z',
+          input.workspaceId,
+          currentPlanPackageId
+        ]
+      )
+    })
+
+    const first = await authRepository.listWorkspaceArtifactHistoryForUser(
+      userId,
+      input.workspaceId,
+      persisted.opportunityId,
+      { limit: 1 }
+    )
+    expect(first.reports.map((entry) => entry.id)).toEqual([currentReportId])
+    expect(first.plans.map((entry) => entry.id)).toEqual([currentPlanPackageId])
+    expect(first.nextReportCursor).toBeTruthy()
+    expect(first.nextPlanCursor).toBeTruthy()
+    const second = await authRepository.listWorkspaceArtifactHistoryForUser(
+      userId,
+      input.workspaceId,
+      persisted.opportunityId,
+      {
+        limit: 1,
+        reportCursor: first.nextReportCursor ?? undefined,
+        planCursor: first.nextPlanCursor ?? undefined
+      }
+    )
+    expect(second.reports.map((entry) => entry.id)).toEqual(['report:history-older'])
+    expect(second.plans.map((entry) => entry.id)).toEqual(['plan:history-older'])
+    await expect(
+      authRepository.listWorkspaceArtifactHistoryForUser(
+        'user:history-outsider',
+        input.workspaceId,
+        persisted.opportunityId,
+        { limit: 1 }
+      )
+    ).rejects.toBeInstanceOf(WorkspaceAuthorizationError)
   })
 
   it('applies idempotent field redaction without erasing provenance or immutable analysis', async () => {

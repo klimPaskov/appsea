@@ -84,11 +84,12 @@ disabled pending model-use, malware, DPA/egress, durable cost, and calibration
 review.
 
 The private report/plan history slice reads existing version rows through
-current-policy/deletion/redaction gates, exposes 50-row metadata plus
-`truncated`, selected reads, representation-aware JSON/Markdown audit receipts,
-same-opportunity plan comparison (sorted path/hash/bytes), and page selectors.
-Markdown is on-demand because durable `report-markdown` purge proof is absent;
-MCP stays latest-only and cursor/ZIP follow-ups are explicit. See
+current-policy/deletion/redaction gates, exposes cursor-paginated metadata pages
+of up to 50 rows per artifact family plus compatibility `truncated`, selected
+reads, representation-aware JSON/Markdown audit receipts, same-opportunity plan
+comparison (sorted path/hash/bytes), and page selectors. Markdown is on-demand
+because durable `report-markdown` purge proof is absent; MCP stays latest-only
+and ZIP follow-up is explicit. See
 `docs/status/report-plan-history-completion-report-2026-08-09.md`.
 
 ## Next production tranche

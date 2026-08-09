@@ -383,6 +383,108 @@ function objectBackedPlanPool(
   return Object.assign({ connect: async () => client } as unknown as Pool, { statements })
 }
 
+function artifactHistoryPool(): Pool & { statements: RecordedStatement[] } {
+  const statements: RecordedStatement[] = []
+  const reports = [
+    {
+      report_id: 'report:two',
+      opportunity_id: 'opportunity:one',
+      version: 'production-report-v2',
+      generated_at: '2026-07-25T00:00:00.000Z',
+      approval_state: 'approved',
+      manifest_hash: 'b'.repeat(64),
+      deletion_state: 'active',
+      synthetic: false,
+      structured_report: null,
+      structured_object_ref: null,
+      analysis_report_object_ref: null,
+      analysis_run_id: null,
+      collection_run_id: null
+    },
+    {
+      report_id: 'report:one',
+      opportunity_id: 'opportunity:one',
+      version: 'production-report-v1',
+      generated_at: '2026-07-24T00:00:00.000Z',
+      approval_state: 'reviewed',
+      manifest_hash: 'a'.repeat(64),
+      deletion_state: 'active',
+      synthetic: false,
+      structured_report: null,
+      structured_object_ref: null,
+      analysis_report_object_ref: null,
+      analysis_run_id: null,
+      collection_run_id: null
+    }
+  ]
+  const plans = [
+    {
+      plan_package_id: 'plan:two',
+      opportunity_id: 'opportunity:one',
+      report_id: 'report:two',
+      version: 'production-plan-v2',
+      generated_at: '2026-07-25T00:00:00.000Z',
+      readiness_state: 'ready',
+      approval_state: 'approved',
+      synthetic: false,
+      deletion_state: 'active',
+      manifest_hash: 'b'.repeat(64),
+      opportunity_slug: 'private-opportunity',
+      fixture_files: [],
+      package_object_ref: null,
+      analysis_plan_object_ref: null,
+      analysis_run_id: null,
+      collection_run_id: 'run:one'
+    },
+    {
+      plan_package_id: 'plan:one',
+      opportunity_id: 'opportunity:one',
+      report_id: 'report:one',
+      version: 'production-plan-v1',
+      generated_at: '2026-07-24T00:00:00.000Z',
+      readiness_state: 'ready',
+      approval_state: 'reviewed',
+      synthetic: false,
+      deletion_state: 'active',
+      manifest_hash: 'a'.repeat(64),
+      opportunity_slug: 'private-opportunity',
+      fixture_files: [],
+      package_object_ref: null,
+      analysis_plan_object_ref: null,
+      analysis_run_id: null,
+      collection_run_id: 'run:one'
+    }
+  ]
+  const client = {
+    query: async (text: string, values: unknown[] = []) => {
+      statements.push({ text, values })
+      if (text.startsWith('BEGIN') || text === 'COMMIT') return { rows: [], rowCount: 0 }
+      if (text.includes('set_config')) return { rows: [], rowCount: 0 }
+      if (text.includes('FROM appsea.workspace_memberships')) {
+        return { rows: [{ user_id: 'user:one', role: 'owner' }], rowCount: 1 }
+      }
+      if (text.includes('FROM appsea.workspaces')) {
+        return { rows: [{ workspace_id: 'workspace:one' }], rowCount: 1 }
+      }
+      if (text.includes('FROM appsea.report_versions report')) {
+        return {
+          rows: values[2] === null ? reports : reports.slice(1),
+          rowCount: values[2] === null ? 2 : 1
+        }
+      }
+      if (text.includes('FROM appsea.plan_package_versions plan')) {
+        return {
+          rows: values[2] === null ? plans : plans.slice(1),
+          rowCount: values[2] === null ? 2 : 1
+        }
+      }
+      return { rows: [], rowCount: 0 }
+    },
+    release: () => undefined
+  } as unknown as PoolClient
+  return Object.assign({ connect: async () => client } as unknown as Pool, { statements })
+}
+
 function membershipAdminPool(
   options: {
     actorRole?: 'owner' | 'editor' | 'viewer'
@@ -1777,6 +1879,44 @@ describe('PostgresAuthRepository', () => {
       'report:production',
       JSON.stringify({ manifestHash: stored.contentHash, representation: 'json' })
     ])
+  })
+
+  it('paginates report and plan history with independent stable cursors', async () => {
+    const pool = artifactHistoryPool()
+    const repository = new PostgresAuthRepository(pool)
+    const first = await repository.listWorkspaceArtifactHistoryForUser(
+      'user:one',
+      'workspace:one',
+      'opportunity:one',
+      { limit: 1 }
+    )
+    expect(first.reports.map((entry) => entry.id)).toEqual(['report:two'])
+    expect(first.plans.map((entry) => entry.id)).toEqual(['plan:two'])
+    expect(first.nextReportCursor).toBeTruthy()
+    expect(first.nextPlanCursor).toBeTruthy()
+    expect(first.truncated).toBe(true)
+
+    const second = await repository.listWorkspaceArtifactHistoryForUser(
+      'user:one',
+      'workspace:one',
+      'opportunity:one',
+      {
+        limit: 1,
+        reportCursor: first.nextReportCursor ?? undefined,
+        planCursor: first.nextPlanCursor ?? undefined
+      }
+    )
+    expect(second.reports.map((entry) => entry.id)).toEqual(['report:one'])
+    expect(second.plans.map((entry) => entry.id)).toEqual(['plan:one'])
+    expect(second.nextReportCursor).toBeNull()
+    expect(second.nextPlanCursor).toBeNull()
+    expect(
+      pool.statements.some(
+        (statement) =>
+          statement.text.includes('report.generated_at < $3::timestamptz') &&
+          statement.values[3] === 'report:two'
+      )
+    ).toBe(true)
   })
 
   it('renders approved report Markdown on demand and records representation-specific audit', async () => {

@@ -379,7 +379,9 @@ selected reads reuse membership, current-policy, deletion, hydration, redaction,
 and approval gates. Markdown renders only after that projection; persisting
 `report-markdown` waits for deletion, export-retention, and backup purge proof.
 JSON/Markdown have separate audit idempotency keys. The leaderboard and latest-
-only MCP stay unchanged; the UI shows a 50-row `truncated` bound and plan
-comparison returns only sorted path status/hash/byte metadata.
+only MCP stay unchanged; private web history uses independently advancing,
+workspace/opportunity/family-bound opaque cursors with a 50-row maximum and a
+compatibility `truncated` field. Plan comparison returns only sorted path
+status/hash/byte metadata.
 The transitive `nanoid` high finding is pinned to patched `3.3.17`; the
 production audit is clean.

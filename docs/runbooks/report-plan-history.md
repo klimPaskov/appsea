@@ -10,9 +10,11 @@ a source, changes a report, or authorizes deletion.
    route.
 2. The page requests
    `GET /api/workspaces/{workspaceId}/opportunities/{slug}/history`.
-3. The response contains at most 50 active rows per artifact family. A
-   `truncated` value of `true` means older PostgreSQL metadata exists; do not
-   describe that page as a complete audit history.
+3. The response contains at most 50 active rows per artifact family. Follow
+   `nextReportCursor` or `nextPlanCursor` with the matching `reportCursor` or
+   `planCursor` query parameter to traverse older pages. `truncated` is a
+   compatibility indicator derived from those cursors; do not describe a page
+   with a next cursor as a complete audit history.
 4. Withdrawn rows may appear as metadata (`id`, version, timestamp, state, and
    manifest hash), but selected content reads and exports reject them. Deleted
    rows and rows whose current production policy is no longer collectible are

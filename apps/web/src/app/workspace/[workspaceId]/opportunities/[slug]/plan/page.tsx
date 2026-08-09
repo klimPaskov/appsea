@@ -1,10 +1,12 @@
 import Link from 'next/link'
 import { notFound, redirect } from 'next/navigation'
+import { appseaIdentifierSchema, workspaceArtifactHistoryPageQuerySchema } from '@appsea/contracts'
 import { readSession } from '../../../../../../server/auth-session'
 import {
   readPrivateArtifactHistoryForUser,
   readPrivateOpportunityContext,
-  readPrivatePlanVersionForUser
+  readPrivatePlanVersionForUser,
+  readPrivatePlanVersionSummaryForUser
 } from '../../../../../../server/private-opportunity'
 import { planPackageSchema } from '@appsea/contracts'
 import { comparePlanPackages } from '@appsea/reports'
@@ -13,12 +15,19 @@ import { WorkspaceOpportunityTabs } from '../../../../../../components/workspace
 
 export const dynamic = 'force-dynamic'
 
+type SearchParams = Record<string, string | string[] | undefined>
+
+function oneValue(value: string | string[] | undefined): string | undefined | null {
+  if (Array.isArray(value)) return value.length === 1 ? value[0] : null
+  return value
+}
+
 export default async function PrivatePlanPage({
   params,
   searchParams
 }: {
   params: Promise<{ workspaceId: string; slug: string }>
-  searchParams?: Promise<{ version?: string; from?: string; to?: string }>
+  searchParams?: Promise<SearchParams>
 }) {
   const { workspaceId, slug } = await params
   const context = await readPrivateOpportunityContext(workspaceId, slug)
@@ -28,47 +37,80 @@ export default async function PrivatePlanPage({
     notFound()
   }
   const { detail: baseDetail, workspace } = context
+  const query = await searchParams
+  const allowedKeys = new Set(['version', 'from', 'to', 'limit', 'planCursor'])
+  if (query && Object.keys(query).some((key) => !allowedKeys.has(key))) notFound()
+  const version = oneValue(query?.version)
+  const compareFromId = oneValue(query?.from)
+  const compareToId = oneValue(query?.to)
+  const limit = oneValue(query?.limit)
+  const planCursor = oneValue(query?.planCursor)
+  if (
+    version === null ||
+    compareFromId === null ||
+    compareToId === null ||
+    limit === null ||
+    planCursor === null
+  ) {
+    notFound()
+  }
+  const historyQuery = workspaceArtifactHistoryPageQuerySchema.safeParse({
+    limit: limit === undefined ? undefined : Number(limit),
+    planCursor: planCursor === undefined ? undefined : planCursor
+  })
+  if (!historyQuery.success) notFound()
   const history = await readPrivateArtifactHistoryForUser(
     context.session.user.userId,
     workspace.workspaceId,
-    baseDetail.opportunity.id
+    baseDetail.opportunity.id,
+    historyQuery.data
   )
-  const query = await searchParams
-  const selectedSummary = query?.version
-    ? history.plans.find((plan) => plan.id === query.version && plan.approvalState !== 'withdrawn')
-    : undefined
-  const selectedPlan = selectedSummary
-    ? await readPrivatePlanVersionForUser(
-        context.session.user.userId,
-        workspace.workspaceId,
-        selectedSummary.id,
-        baseDetail.opportunity.id
-      )
-    : baseDetail.plan
+  let selectedPlan = baseDetail.plan
+  if (version !== undefined) {
+    const parsedVersion = appseaIdentifierSchema.safeParse(version)
+    if (!parsedVersion.success) notFound()
+    selectedPlan = await readPrivatePlanVersionForUser(
+      context.session.user.userId,
+      workspace.workspaceId,
+      parsedVersion.data,
+      baseDetail.opportunity.id
+    )
+    if (!selectedPlan) notFound()
+  }
   const detail = { ...baseDetail, plan: selectedPlan }
-  const compareFrom = query?.from
-    ? history.plans.find((plan) => plan.id === query.from && plan.approvalState !== 'withdrawn')
-    : undefined
-  const compareTo = query?.to
-    ? history.plans.find((plan) => plan.id === query.to && plan.approvalState !== 'withdrawn')
-    : undefined
+  const compareFrom = compareFromId ? appseaIdentifierSchema.safeParse(compareFromId) : undefined
+  const compareTo = compareToId ? appseaIdentifierSchema.safeParse(compareToId) : undefined
+  if (compareFrom && !compareFrom.success) notFound()
+  if (compareTo && !compareTo.success) notFound()
   let comparison: ReturnType<typeof comparePlanPackages> | null = null
-  if (compareFrom && compareTo) {
-    const [fromPlan, toPlan] = await Promise.all([
-      readPrivatePlanVersionForUser(
+  if (compareFrom?.success && compareTo?.success) {
+    const [fromSummary, toSummary, fromPlan, toPlan] = await Promise.all([
+      readPrivatePlanVersionSummaryForUser(
         context.session.user.userId,
         workspace.workspaceId,
-        compareFrom.id,
+        compareFrom.data,
+        baseDetail.opportunity.id
+      ),
+      readPrivatePlanVersionSummaryForUser(
+        context.session.user.userId,
+        workspace.workspaceId,
+        compareTo.data,
         baseDetail.opportunity.id
       ),
       readPrivatePlanVersionForUser(
         context.session.user.userId,
         workspace.workspaceId,
-        compareTo.id,
+        compareFrom.data,
+        baseDetail.opportunity.id
+      ),
+      readPrivatePlanVersionForUser(
+        context.session.user.userId,
+        workspace.workspaceId,
+        compareTo.data,
         baseDetail.opportunity.id
       )
     ])
-    if (fromPlan && toPlan) {
+    if (fromSummary && toSummary && fromPlan && toPlan) {
       comparison = comparePlanPackages(
         planPackageSchema.parse({
           opportunitySlug: slug,
@@ -83,6 +125,9 @@ export default async function PrivatePlanPage({
       )
     }
   }
+  const nextPlanHref = history.nextPlanCursor
+    ? `/workspace/${encodeURIComponent(workspaceId)}/opportunities/${encodeURIComponent(slug)}/plan?limit=${historyQuery.data.limit}&planCursor=${encodeURIComponent(history.nextPlanCursor)}`
+    : null
   return (
     <main className="workspace-page">
       <p className="breadcrumb">
@@ -144,9 +189,9 @@ export default async function PrivatePlanPage({
               </li>
             ))}
           </ul>
-          {history.truncated ? (
+          {nextPlanHref ? (
             <p className="muted-note">
-              Showing the 50 most recent versions; older history is retained in PostgreSQL.
+              <Link href={nextPlanHref}>Show older plan versions</Link>
             </p>
           ) : null}
         </section>
@@ -190,7 +235,10 @@ export default async function PrivatePlanPage({
           <form className="plan-compare-form" method="get">
             <label>
               From
-              <select name="from" defaultValue={compareFrom?.id ?? history.plans[1]?.id}>
+              <select
+                name="from"
+                defaultValue={compareFrom?.success ? compareFrom.data : history.plans[1]?.id}
+              >
                 {history.plans
                   .filter((version) => version.approvalState !== 'withdrawn')
                   .map((version) => (
@@ -202,7 +250,10 @@ export default async function PrivatePlanPage({
             </label>
             <label>
               To
-              <select name="to" defaultValue={compareTo?.id ?? history.plans[0]?.id}>
+              <select
+                name="to"
+                defaultValue={compareTo?.success ? compareTo.data : history.plans[0]?.id}
+              >
                 {history.plans
                   .filter((version) => version.approvalState !== 'withdrawn')
                   .map((version) => (

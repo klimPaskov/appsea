@@ -212,6 +212,12 @@ export {
   AuditEventHistoryCursorError
 } from './audit-event-pagination'
 export {
+  decodeWorkspaceArtifactHistoryCursor,
+  encodeWorkspaceArtifactHistoryCursor,
+  WorkspaceArtifactHistoryCursorError,
+  type WorkspaceArtifactHistoryCursorKind
+} from './workspace-artifact-history-pagination'
+export {
   MfaEncryptionKeyConfigurationError,
   mfaEncryptionConfigFromEnv,
   type MfaEncryptionConfig,

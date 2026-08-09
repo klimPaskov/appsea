@@ -12,6 +12,7 @@ import {
   type AuthSessionReadModel,
   type CompetitiveResearchObservation,
   type ProductionAnalysisReadModel,
+  type WorkspaceArtifactHistoryPageQuery,
   type WorkspaceOpportunityDetailReadModel,
   type WorkspaceArtifactHistoryReadModel,
   type WorkspaceCompetitorTarget,
@@ -281,10 +282,16 @@ export async function readPrivateOpportunityContext(
 export async function readPrivateArtifactHistoryForUser(
   userId: string,
   workspaceId: string,
-  opportunityId: string
+  opportunityId: string,
+  query: Partial<WorkspaceArtifactHistoryPageQuery> = {}
 ): Promise<WorkspaceArtifactHistoryReadModel> {
   return workspaceArtifactHistoryReadModelSchema.parse(
-    await authRepository().listWorkspaceArtifactHistoryForUser(userId, workspaceId, opportunityId)
+    await authRepository().listWorkspaceArtifactHistoryForUser(
+      userId,
+      workspaceId,
+      opportunityId,
+      query
+    )
   )
 }
 
@@ -309,6 +316,20 @@ export async function readPrivatePlanVersionForUser(
   opportunityId: string
 ) {
   return authRepository({ objectStore: getObjectStore() }).readWorkspacePlanVersionForUser(
+    userId,
+    workspaceId,
+    planPackageId,
+    opportunityId
+  )
+}
+
+export async function readPrivatePlanVersionSummaryForUser(
+  userId: string,
+  workspaceId: string,
+  planPackageId: string,
+  opportunityId: string
+) {
+  return authRepository().readWorkspacePlanVersionSummaryForUser(
     userId,
     workspaceId,
     planPackageId,

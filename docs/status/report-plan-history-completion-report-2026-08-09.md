@@ -8,10 +8,11 @@ selected reads, deterministic plan comparison, and approved Markdown exports.
 
 ## Implementation evidence
 
-- `packages/contracts` adds bounded report/plan summaries, a visible
-  `truncated` marker, export-format validation, and plan file-change metadata.
-- `packages/db/src/auth-repository.ts` reads up to 51 rows to expose a bounded
-  50-row history, filters deleted/non-collectible analysis rows, keeps
+- `packages/contracts` adds bounded report/plan summaries, opaque cursor/page
+  validation, a compatibility `truncated` marker, export-format validation,
+  and plan file-change metadata.
+- `packages/db/src/auth-repository.ts` reads up to 51 rows per artifact family
+  to expose cursor-paginated 50-row pages, filters deleted/non-collectible analysis rows, keeps
   withdrawn rows metadata-only, hydrates selected versions through the existing
   object-store and redaction boundary, and writes representation-aware export
   audit receipts.
@@ -39,19 +40,19 @@ transport and MCP history resources are also intentionally deferred.
 
 ## Validation
 
-The implementation and repository checks passed after the final
-documentation/memory checkpoint:
+The original history/export tranche passed its repository checks before this
+cursor follow-up. Its evidence is retained in the preceding commit and the
+original validation record. Current follow-up evidence is:
 
 - `pnpm --filter @appsea/contracts test` — 118 tests passed.
 - `pnpm --filter @appsea/reports test` — 13 tests passed.
-- `pnpm --filter @appsea/db test -- src/auth-repository.test.ts` — 186 tests
-  passed across the database source suite.
-- `pnpm --filter @appsea/web test -- src/app/workspace-report-routes.test.ts
-  src/app/workspace-plan-routes.test.ts
-  src/app/workspace-artifact-history-routes.test.ts` — 230 web tests passed.
-- `pnpm verify` — formatting, lint, typecheck, tests, builds, fixture/plan/
-  analysis samples, research-quality gate, web smoke, static release boundary,
-  and repository validation passed.
+- `pnpm --filter @appsea/db test -- src/auth-repository.test.ts` plus cursor
+  tests — 31 focused tests passed; the full database source suite also passed
+  (189 tests).
+- `pnpm --filter @appsea/web test` — 233 web tests passed.
+- `pnpm lint`, `pnpm typecheck`, and `pnpm build` — all 15 packages passed;
+  the Next.js production build compiled and generated all routes.
+- `pnpm format:check`, `pnpm repo:check`, and `git diff --check` passed.
 - `pnpm security:audit` — passed after the workspace-level `nanoid@3.3.17`
   override removed the high transitive PostCSS finding.
 - `pnpm ui:capture` — 24 public route/viewport captures passed with no runtime
@@ -66,10 +67,28 @@ on this machine. This is an environment blocker for private screenshot proof,
 not a browser-debugging result; the private route and repository behavior are
 covered by the authenticated route tests above.
 
+## Follow-up cursor tranche
+
+The 2026-08-09 follow-up adds independently advancing, workspace/opportunity/
+family-bound `reportCursor` and `planCursor` values to the private history API.
+The report and plan pages link to older pages, and selected-version reads now
+resolve an id directly so versions beyond the first page remain reachable.
+
+Cursor follow-up validation: `pnpm --filter @appsea/db typecheck` and `lint`,
+`pnpm --filter @appsea/web typecheck`, the focused DB cursor/auth tests (31
+passed), and the web suite (233 passed) are green. `pnpm format:check`,
+`pnpm agents:sync`, and `pnpm repo:check --docs-only` are green. The current
+repository-wide `pnpm test` is blocked by an existing Temporal workflow test
+leaving overlapping workers after a timeout; rerunning `@appsea/workflows` in
+isolation reproduced seven worker-runtime failures. The PostgreSQL integration
+suite is also not runnable in this shell because the required disposable test
+database environment variables are absent.
+
 ## Remaining gaps
 
-- History is visibly bounded rather than cursor-paginated; a later contract can
-  add an opaque cursor without changing the summary shape.
+- MCP history resources, ZIP/download-directory packaging, and durable
+  `report-markdown` object publication remain deferred until deletion,
+  retention, and backup purge proof covers that object kind.
 - Provider-side export retention, deletion, backup purge, and hosted deployment
   evidence remain external release gates.
 - No third-party public complaint connector is active; fixture and owner-import

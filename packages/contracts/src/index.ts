@@ -7753,6 +7753,34 @@ export const workspaceReportVersionSummarySchema = z
   })
   .strict()
 
+/** Opaque cursor payload for descending report/plan version history. */
+export const workspaceArtifactHistoryCursorSchema = z
+  .object({
+    version: z.literal(1),
+    generatedAt: z.string().datetime(),
+    itemId: appseaIdentifierSchema
+  })
+  .strict()
+
+/** Query boundary for authenticated report/plan version history pages. */
+export const workspaceArtifactHistoryPageQuerySchema = z
+  .object({
+    limit: z.number().int().min(1).max(50).default(50),
+    reportCursor: z
+      .string()
+      .min(1)
+      .max(512)
+      .regex(/^[A-Za-z0-9_-]+$/)
+      .optional(),
+    planCursor: z
+      .string()
+      .min(1)
+      .max(512)
+      .regex(/^[A-Za-z0-9_-]+$/)
+      .optional()
+  })
+  .strict()
+
 export const workspacePlanReadModelSchema = z
   .object({
     id: appseaIdentifierSchema,
@@ -7796,6 +7824,8 @@ export const workspaceArtifactHistoryReadModelSchema = z
   .object({
     reports: z.array(workspaceReportVersionSummarySchema).max(50),
     plans: z.array(workspacePlanVersionSummarySchema).max(50),
+    nextReportCursor: z.string().min(1).max(512).nullable().default(null),
+    nextPlanCursor: z.string().min(1).max(512).nullable().default(null),
     truncated: z.boolean().default(false)
   })
   .strict()
@@ -8681,6 +8711,10 @@ export type ReportSourceCoverage = z.infer<typeof reportSourceCoverageSchema>
 export type OpportunityReport = z.infer<typeof opportunityReportSchema>
 export type WorkspaceReportReadModel = z.infer<typeof workspaceReportReadModelSchema>
 export type WorkspaceReportVersionSummary = z.infer<typeof workspaceReportVersionSummarySchema>
+export type WorkspaceArtifactHistoryCursor = z.infer<typeof workspaceArtifactHistoryCursorSchema>
+export type WorkspaceArtifactHistoryPageQuery = z.infer<
+  typeof workspaceArtifactHistoryPageQuerySchema
+>
 export type WorkspaceReportApprovalInput = z.infer<typeof workspaceReportApprovalInputSchema>
 export type WorkspaceReportExportReadModel = z.infer<typeof workspaceReportExportReadModelSchema>
 export type WorkspacePlanReadModel = z.infer<typeof workspacePlanReadModelSchema>

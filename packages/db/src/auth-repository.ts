@@ -65,6 +65,7 @@ import {
   workspaceMembershipReadModelSchema,
   workspaceOpportunityDetailReadModelSchema,
   workspaceOpportunityReadModelSchema,
+  workspaceArtifactHistoryPageQuerySchema,
   workspaceArtifactHistoryReadModelSchema,
   workspacePlanApprovalInputSchema,
   workspacePlanExportReadModelSchema,
@@ -122,6 +123,7 @@ import {
   type WorkspaceOpportunityDetailReadModel,
   type WorkspaceOpportunityReadModel,
   type WorkspaceArtifactHistoryReadModel,
+  type WorkspaceArtifactHistoryPageQuery,
   type WorkspacePlanApprovalInput,
   type WorkspacePlanExportReadModel,
   type WorkspacePlanReadModel,
@@ -139,6 +141,10 @@ import {
 } from '@appsea/reports'
 import type { ObjectStore } from '@appsea/object-store'
 import { contentHash, sha256 } from './hash'
+import {
+  decodeWorkspaceArtifactHistoryCursor,
+  encodeWorkspaceArtifactHistoryCursor
+} from './workspace-artifact-history-pagination'
 import {
   buildMfaOtpAuthUri,
   generateMfaRecoveryCodes,
@@ -4200,11 +4206,29 @@ export class PostgresAuthRepository {
   async listWorkspaceArtifactHistoryForUser(
     userId: string,
     workspaceId: string,
-    opportunityId: string
+    opportunityId: string,
+    query: Partial<WorkspaceArtifactHistoryPageQuery> = {}
   ): Promise<WorkspaceArtifactHistoryReadModel> {
     const parsedUserId = appseaIdentifierSchema.parse(userId)
     const parsedWorkspaceId = appseaIdentifierSchema.parse(workspaceId)
     const parsedOpportunityId = appseaIdentifierSchema.parse(opportunityId)
+    const parsedQuery = workspaceArtifactHistoryPageQuerySchema.parse(query)
+    const reportCursor = parsedQuery.reportCursor
+      ? decodeWorkspaceArtifactHistoryCursor(
+          parsedQuery.reportCursor,
+          parsedWorkspaceId,
+          parsedOpportunityId,
+          'reports'
+        )
+      : null
+    const planCursor = parsedQuery.planCursor
+      ? decodeWorkspaceArtifactHistoryCursor(
+          parsedQuery.planCursor,
+          parsedWorkspaceId,
+          parsedOpportunityId,
+          'plans'
+        )
+      : null
 
     return withAuthenticatedWorkspaceTransaction(
       this.pool,
@@ -4225,9 +4249,20 @@ export class PostgresAuthRepository {
                  )
                )
              )
+             AND (
+               $3::timestamptz IS NULL
+               OR report.generated_at < $3::timestamptz
+               OR (report.generated_at = $3::timestamptz AND report.report_id > $4)
+             )
            ORDER BY report.generated_at DESC, report.report_id ASC
-           LIMIT 51`,
-          [parsedWorkspaceId, parsedOpportunityId]
+           LIMIT $5`,
+          [
+            parsedWorkspaceId,
+            parsedOpportunityId,
+            reportCursor?.generatedAt ?? null,
+            reportCursor?.itemId ?? null,
+            parsedQuery.limit + 1
+          ]
         )
         const planRows = await client.query<WorkspacePlanRow>(
           `${workspacePlanSelect}
@@ -4243,14 +4278,55 @@ export class PostgresAuthRepository {
                  )
                )
              )
+             AND (
+               $3::timestamptz IS NULL
+               OR plan.generated_at < $3::timestamptz
+               OR (plan.generated_at = $3::timestamptz AND plan.plan_package_id > $4)
+             )
            ORDER BY plan.generated_at DESC, plan.plan_package_id ASC
-           LIMIT 51`,
-          [parsedWorkspaceId, parsedOpportunityId]
+           LIMIT $5`,
+          [
+            parsedWorkspaceId,
+            parsedOpportunityId,
+            planCursor?.generatedAt ?? null,
+            planCursor?.itemId ?? null,
+            parsedQuery.limit + 1
+          ]
         )
+        const reportHasNext = reportRows.rows.length > parsedQuery.limit
+        const planHasNext = planRows.rows.length > parsedQuery.limit
+        const reports = (
+          reportHasNext ? reportRows.rows.slice(0, parsedQuery.limit) : reportRows.rows
+        ).map(mapWorkspaceReportVersionSummary)
+        const plans = (planHasNext ? planRows.rows.slice(0, parsedQuery.limit) : planRows.rows).map(
+          mapWorkspacePlanVersionSummary
+        )
+        const reportLast = reportRows.rows[reports.length - 1]
+        const planLast = planRows.rows[plans.length - 1]
         return workspaceArtifactHistoryReadModelSchema.parse({
-          reports: reportRows.rows.slice(0, 50).map(mapWorkspaceReportVersionSummary),
-          plans: planRows.rows.slice(0, 50).map(mapWorkspacePlanVersionSummary),
-          truncated: reportRows.rows.length > 50 || planRows.rows.length > 50
+          reports,
+          plans,
+          nextReportCursor:
+            reportHasNext && reportLast
+              ? encodeWorkspaceArtifactHistoryCursor(
+                  parsedWorkspaceId,
+                  parsedOpportunityId,
+                  'reports',
+                  iso(reportLast.generated_at),
+                  reportLast.report_id
+                )
+              : null,
+          nextPlanCursor:
+            planHasNext && planLast
+              ? encodeWorkspaceArtifactHistoryCursor(
+                  parsedWorkspaceId,
+                  parsedOpportunityId,
+                  'plans',
+                  iso(planLast.generated_at),
+                  planLast.plan_package_id
+                )
+              : null,
+          truncated: reportHasNext || planHasNext
         })
       },
       { readOnly: true }
@@ -4309,6 +4385,51 @@ export class PostgresAuthRepository {
     )
   }
 
+  async readWorkspaceReportVersionSummaryForUser(
+    userId: string,
+    workspaceId: string,
+    reportId: string,
+    opportunityId?: string
+  ): Promise<WorkspaceReportVersionSummary | null> {
+    const parsedUserId = appseaIdentifierSchema.parse(userId)
+    const parsedWorkspaceId = appseaIdentifierSchema.parse(workspaceId)
+    const parsedReportId = appseaIdentifierSchema.parse(reportId)
+    const parsedOpportunityId = opportunityId
+      ? appseaIdentifierSchema.parse(opportunityId)
+      : undefined
+
+    return withAuthenticatedWorkspaceTransaction(
+      this.pool,
+      parsedUserId,
+      parsedWorkspaceId,
+      async (client) => {
+        const result = await client.query<WorkspaceReportRow>(
+          `${workspaceReportSelect}
+           WHERE report.workspace_id = $1
+             AND report.report_id = $2
+             ${parsedOpportunityId ? 'AND report.opportunity_id = $3' : ''}
+             AND report.approval_state <> 'withdrawn'
+             AND report.deletion_state = 'active'
+             AND (
+               analysis.analysis_run_id IS NULL
+               OR (
+                 analysis.availability_state = 'active'
+                 AND appsea.production_analysis_policies_collectible(
+                   analysis.workspace_id, analysis.analysis_run_id
+                 )
+               )
+             )`,
+          parsedOpportunityId
+            ? [parsedWorkspaceId, parsedReportId, parsedOpportunityId]
+            : [parsedWorkspaceId, parsedReportId]
+        )
+        const row = result.rows[0]
+        return row ? mapWorkspaceReportVersionSummary(row) : null
+      },
+      { readOnly: true }
+    )
+  }
+
   async readWorkspacePlanVersionForUser(
     userId: string,
     workspaceId: string,
@@ -4356,6 +4477,51 @@ export class PostgresAuthRepository {
           row.collection_run_id
         )
         return mapWorkspacePlan(row, parsedWorkspaceId, this.objectStore, masks)
+      },
+      { readOnly: true }
+    )
+  }
+
+  async readWorkspacePlanVersionSummaryForUser(
+    userId: string,
+    workspaceId: string,
+    planPackageId: string,
+    opportunityId?: string
+  ): Promise<WorkspacePlanVersionSummary | null> {
+    const parsedUserId = appseaIdentifierSchema.parse(userId)
+    const parsedWorkspaceId = appseaIdentifierSchema.parse(workspaceId)
+    const parsedPlanPackageId = appseaIdentifierSchema.parse(planPackageId)
+    const parsedOpportunityId = opportunityId
+      ? appseaIdentifierSchema.parse(opportunityId)
+      : undefined
+
+    return withAuthenticatedWorkspaceTransaction(
+      this.pool,
+      parsedUserId,
+      parsedWorkspaceId,
+      async (client) => {
+        const result = await client.query<WorkspacePlanRow>(
+          `${workspacePlanSelect}
+           WHERE plan.workspace_id = $1
+             AND plan.plan_package_id = $2
+             ${parsedOpportunityId ? 'AND plan.opportunity_id = $3' : ''}
+             AND plan.approval_state <> 'withdrawn'
+             AND plan.deletion_state = 'active'
+             AND (
+               analysis.analysis_run_id IS NULL
+               OR (
+                 analysis.availability_state = 'active'
+                 AND appsea.production_analysis_policies_collectible(
+                   analysis.workspace_id, analysis.analysis_run_id
+                 )
+               )
+             )`,
+          parsedOpportunityId
+            ? [parsedWorkspaceId, parsedPlanPackageId, parsedOpportunityId]
+            : [parsedWorkspaceId, parsedPlanPackageId]
+        )
+        const row = result.rows[0]
+        return row ? mapWorkspacePlanVersionSummary(row) : null
       },
       { readOnly: true }
     )

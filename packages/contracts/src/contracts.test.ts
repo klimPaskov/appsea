@@ -136,6 +136,8 @@ import {
   deepResearchGateTransitionInputSchema,
   workspaceReportApprovalInputSchema,
   workspaceReportVersionSummarySchema,
+  workspaceArtifactHistoryCursorSchema,
+  workspaceArtifactHistoryPageQuerySchema,
   workspaceArtifactHistoryReadModelSchema,
   workspacePlanComparisonSchema,
   workspacePlanFileChangeSchema,
@@ -2205,6 +2207,20 @@ describe('contracts', () => {
       workspaceArtifactHistoryReadModelSchema.safeParse({ reports: [report], plans: [plan] })
         .success
     ).toBe(true)
+    expect(workspaceArtifactHistoryPageQuerySchema.parse({ limit: 10 }).limit).toBe(10)
+    expect(
+      workspaceArtifactHistoryCursorSchema.safeParse({
+        version: 1,
+        generatedAt: now,
+        itemId: 'report:one'
+      }).success
+    ).toBe(true)
+    expect(
+      workspaceArtifactHistoryPageQuerySchema.safeParse({
+        limit: 51,
+        reportCursor: 'not a cursor'
+      }).success
+    ).toBe(false)
     expect(workspaceExportFormatSchema.safeParse('markdown').success).toBe(true)
     expect(
       workspacePlanComparisonSchema.safeParse({

@@ -76,9 +76,10 @@ The manifest records:
 ## Version history and export representations
 
 Plan package versions are immutable rows linked to their opportunity and
-report. Private workspace routes expose the newest 50 active versions and set
-`truncated: true` when older metadata exists; the current slice does not hide
-that bound behind an unmarked UI. A comparison is metadata-only: sorted
+report. Private workspace routes expose up to 50 active versions per page and
+return an opaque, workspace/opportunity/family-bound `planCursor` when older
+metadata exists. A compatibility `truncated: true` is derived from either
+family's next cursor; the UI exposes an older-page link. A comparison is metadata-only: sorted
 portable paths, `added`/`removed`/`changed`/`unchanged` status, SHA-256 content
 hashes, and UTF-8 byte counts. It never returns a second file body merely to
 show a diff.

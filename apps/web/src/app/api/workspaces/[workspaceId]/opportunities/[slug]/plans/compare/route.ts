@@ -60,20 +60,19 @@ export async function GET(
         { status: 404, headers: privateResponseHeaders }
       )
     }
-    const history = await repository.listWorkspaceArtifactHistoryForUser(
-      session.user.userId,
-      workspaceId.data,
-      opportunity.id
-    )
-    const fromSummary = history.plans.find((plan) => plan.id === fromId.data)
-    const toSummary = history.plans.find((plan) => plan.id === toId.data)
-    if (!fromSummary || !toSummary) {
-      return Response.json(
-        { error: 'Plan version not found' },
-        { status: 404, headers: privateResponseHeaders }
-      )
-    }
-    const [from, to] = await Promise.all([
+    const [fromSummary, toSummary, from, to] = await Promise.all([
+      repository.readWorkspacePlanVersionSummaryForUser(
+        session.user.userId,
+        workspaceId.data,
+        fromId.data,
+        opportunity.id
+      ),
+      repository.readWorkspacePlanVersionSummaryForUser(
+        session.user.userId,
+        workspaceId.data,
+        toId.data,
+        opportunity.id
+      ),
       repository.readWorkspacePlanVersionForUser(
         session.user.userId,
         workspaceId.data,
@@ -87,7 +86,7 @@ export async function GET(
         opportunity.id
       )
     ])
-    if (!from || !to) {
+    if (!fromSummary || !toSummary || !from || !to) {
       return Response.json(
         { error: 'Plan version is unavailable for comparison' },
         { status: 404, headers: privateResponseHeaders }

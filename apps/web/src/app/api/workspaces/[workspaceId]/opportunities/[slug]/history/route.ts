@@ -1,5 +1,10 @@
-import { appseaIdentifierSchema, opportunitySlugSchema } from '@appsea/contracts'
+import {
+  appseaIdentifierSchema,
+  opportunitySlugSchema,
+  workspaceArtifactHistoryPageQuerySchema
+} from '@appsea/contracts'
 import { WorkspaceAuthorizationError } from '@appsea/db/auth'
+import { WorkspaceArtifactHistoryCursorError } from '@appsea/db'
 import {
   authRepository,
   forbiddenResponse,
@@ -27,10 +32,29 @@ export async function GET(
       { status: 400, headers: privateResponseHeaders }
     )
   }
-  const queryKeys = [...new Set([...new URL(request.url).searchParams.keys()])]
-  if (queryKeys.length > 0) {
+  const query = new URL(request.url).searchParams
+  const queryKeys = [...new Set([...query.keys()])]
+  const allowedKeys = new Set(['limit', 'reportCursor', 'planCursor'])
+  if (queryKeys.some((key) => !allowedKeys.has(key))) {
     return Response.json(
-      { error: 'History does not accept query parameters' },
+      { error: 'Unsupported history query parameter' },
+      { status: 400, headers: privateResponseHeaders }
+    )
+  }
+  if (queryKeys.some((key) => query.getAll(key).length !== 1)) {
+    return Response.json(
+      { error: 'History query parameters must be single-valued' },
+      { status: 400, headers: privateResponseHeaders }
+    )
+  }
+  const parsedQuery = workspaceArtifactHistoryPageQuerySchema.safeParse({
+    limit: query.has('limit') ? Number(query.get('limit')) : undefined,
+    reportCursor: query.get('reportCursor') ?? undefined,
+    planCursor: query.get('planCursor') ?? undefined
+  })
+  if (!parsedQuery.success) {
+    return Response.json(
+      { error: 'Invalid history query' },
       { status: 400, headers: privateResponseHeaders }
     )
   }
@@ -49,11 +73,18 @@ export async function GET(
     const data = await repository.listWorkspaceArtifactHistoryForUser(
       session.user.userId,
       workspaceId.data,
-      opportunity.id
+      opportunity.id,
+      parsedQuery.data
     )
     return Response.json({ data }, { headers: privateResponseHeaders })
   } catch (error) {
     if (error instanceof WorkspaceAuthorizationError) return forbiddenResponse()
+    if (error instanceof WorkspaceArtifactHistoryCursorError) {
+      return Response.json(
+        { error: 'Invalid history cursor' },
+        { status: 400, headers: privateResponseHeaders }
+      )
+    }
     console.error('AppSea artifact history read failed', {
       name: error instanceof Error ? error.name : 'unknown'
     })
