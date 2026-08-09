@@ -41,7 +41,12 @@ presented as public market research.
   and fixture API.
 - `pnpm security:audit` — passed with no known production vulnerabilities.
 - `pnpm memory:check` — passed with 152 indexed chunks.
-- `pnpm docs:check` — passed on the prior checkpoint; rerun after this report.
+- `pnpm docs:check` — passed on the current checkpoint after the private
+  evidence-surface and imagegen icon updates; the report remains incomplete
+  because deployment-owned gates are still open.
+- Repository-wide `pnpm lint`, `pnpm typecheck`, `pnpm build`, and the release
+  static verifier pass on commit `bea2692`; `pnpm format:check` and
+  `git diff --check` also pass.
 - `artifacts/ui-reference-loop/2026-08-06/public-capture-manifest.json` — 20
   captures pass title/main/runtime/overflow checks.
 - `artifacts/ui-reference-loop/2026-08-06/private-capture-manifest.json` — 36
