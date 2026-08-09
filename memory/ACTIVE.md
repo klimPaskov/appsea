@@ -2,7 +2,7 @@
 
 ## State
 
-Audit: `docs/status/production-readiness-audit-2026-08-06.md`.
+Audit: `docs/status/production-readiness-audit-2026-08-09.md`.
 `pnpm verify`/local smoke pass through `0119`; backup verifier targets
 head `0121` but last proof is `0119`. Public/private captures pass.
 

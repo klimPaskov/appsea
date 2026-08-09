@@ -66,7 +66,7 @@ describe('web health contracts', () => {
     expect(report.status).toBe('not_ready')
     expect(report.checks).toEqual({ database: 'failed', temporal: 'failed', objectStore: 'ok' })
     expect(JSON.stringify(report)).not.toContain('password')
-    expect(() => evaluateReadiness([], 99)).rejects.toThrow(/between 100 and 30000/)
+    await expect(evaluateReadiness([], 99)).rejects.toThrow(/between 100 and 30000/)
   })
 
   it('does not treat a late completion as a second result', async () => {

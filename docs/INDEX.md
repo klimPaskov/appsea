@@ -175,6 +175,7 @@
 - [`status/source-quota-headroom-completion-report-2026-08-06.md`](status/source-quota-headroom-completion-report-2026-08-06.md)
 - [`status/source-health-alert-completion-report-2026-08-06.md`](status/source-health-alert-completion-report-2026-08-06.md)
 - [`status/source-policy-contract-boundary-completion-report-2026-08-06.md`](status/source-policy-contract-boundary-completion-report-2026-08-06.md)
+- [`status/production-readiness-audit-2026-08-09.md`](status/production-readiness-audit-2026-08-09.md)
 - [`status/production-readiness-audit-2026-08-06.md`](status/production-readiness-audit-2026-08-06.md)
 - [`status/export-audit-receipt-completion-report-2026-08-06.md`](status/export-audit-receipt-completion-report-2026-08-06.md)
 - [`status/ui-reference-loop-completion-report-2026-08-06.md`](status/ui-reference-loop-completion-report-2026-08-06.md)

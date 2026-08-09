@@ -128,7 +128,7 @@ describe('source quota reconciliation alert inspection', () => {
     ).rejects.toThrow('lease lost')
     expect(listActiveWorkspaceIds).not.toHaveBeenCalled()
     expect(listReconciliationCases).not.toHaveBeenCalled()
-    expect(
+    await expect(
       runSourceQuotaReconciliationAlert(
         {
           observedAt,

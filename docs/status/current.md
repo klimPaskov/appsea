@@ -2,15 +2,16 @@
 
 - Version: `0.3.0`
 - Stage: validated fixture product with production-shaped PostgreSQL persistence and a local/CI-proven durable workflow and worker-replacement slice
-- Production-readiness: not complete; see the current [`production-readiness-audit-2026-08-06.md`](production-readiness-audit-2026-08-06.md) and the historical [`production-readiness-audit-2026-08-04.md`](production-readiness-audit-2026-08-04.md)
+- Production-readiness: not complete; see the current [`production-readiness-audit-2026-08-09.md`](production-readiness-audit-2026-08-09.md) and the historical [`production-readiness-audit-2026-08-06.md`](production-readiness-audit-2026-08-06.md)
 - Website: implemented and freshly production-built; the current web package
   test (237 tests), `pnpm --filter @appsea/web build`, and `pnpm smoke:web`
   pass. The public route now renders only the required `Leaderboard` heading,
   rank/opportunity/complaint/score fields, and synthetic disclosure; private
-  research detail remains on opportunity routes. The current repository-wide
-  `pnpm verify` proof passes, while deployment-only production gates remain open;
-  prior hosted/local Docker baselines passed, and the 2026-08-06 local
-  PostgreSQL/Temporal/MinIO proof now passes after restarting Docker Desktop. The header uses the generated, non-text
+  research detail remains on opportunity routes. The current full `pnpm test`
+  suite passes, while `pnpm verify` is currently blocked before repository
+  checks by the user-owned empty root `AGENTS.md`; deployment-only production
+  gates remain open. Prior hosted/local Docker baselines passed on 2026-08-06,
+  but current Docker-backed reruns are pending. The header uses the generated, non-text
   `appsea-mark-generated.png` asset; this is a website-only brand touch and
   does not alter the staged Tauri icon pair.
 - Local private-workspace stack: `pnpm dev:local` starts loopback PostgreSQL,

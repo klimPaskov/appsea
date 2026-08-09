@@ -3,7 +3,7 @@
 - Status: active
 - Owner: main coding agent
 - Started: 2026-07-10
-- Current audit: [`production-readiness-audit-2026-08-06.md`](../../status/production-readiness-audit-2026-08-06.md)
+- Current audit: [`production-readiness-audit-2026-08-09.md`](../../status/production-readiness-audit-2026-08-09.md)
 
 ## Completed foundation
 
