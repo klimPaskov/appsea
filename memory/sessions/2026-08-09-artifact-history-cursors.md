@@ -43,4 +43,5 @@ Run the PostgreSQL integration suite in a configured disposable stack before
 claiming operational deployment proof. ZIP packaging and durable
 `report-markdown` publication remain intentionally deferred until the
 corresponding deletion/retention/backup purge proof exists; MCP now exposes
-scope-filtered metadata history resources with the same cursor contract.
+scope-filtered metadata history plus addressed approved selected-version
+resources with the same cursor contract.

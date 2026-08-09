@@ -12,14 +12,17 @@ import {
   type McpJsonRpcId,
   type WorkspaceArtifactHistoryPageQuery,
   type WorkspaceArtifactHistoryReadModel,
+  type WorkspacePlanReadModel,
   type WorkspaceOpportunityDetailReadModel,
   type WorkspaceOpportunityReadModel,
+  type WorkspaceReportReadModel,
   type WorkspaceSourceReadModel
 } from '@appsea/contracts'
 import { PostgresAgentAccessTokenRepository } from '@appsea/db/agent-access-token'
 import { PostgresSourcePolicyRepository } from '@appsea/db/source-policy'
 import { authRepository } from './auth-session'
 import { getDatabasePool } from './database'
+import { getObjectStore } from './object-store'
 import {
   readPrivateArtifactHistoryForUser,
   readPrivateOpportunityDetailForUser
@@ -27,7 +30,7 @@ import {
 
 export const mcpProtocolVersion = '2025-06-18'
 export const mcpServerName = 'appsea-readonly'
-export const mcpServerVersion = '0.5.0'
+export const mcpServerVersion = '0.6.0'
 
 const maxRequestBytes = 64 * 1024
 const maxResponseTextBytes = 500 * 1024
@@ -55,6 +58,18 @@ export interface McpDependencies {
     workspaceId: string,
     slug: string
   ) => Promise<WorkspaceOpportunityDetailReadModel | null>
+  readReportVersion: (
+    userId: string,
+    workspaceId: string,
+    reportId: string,
+    opportunityId: string
+  ) => Promise<WorkspaceReportReadModel | null>
+  readPlanVersion: (
+    userId: string,
+    workspaceId: string,
+    planPackageId: string,
+    opportunityId: string
+  ) => Promise<WorkspacePlanReadModel | null>
   listArtifactHistory: (
     userId: string,
     workspaceId: string,
@@ -74,6 +89,20 @@ export function defaultMcpDependencies(): McpDependencies {
     listOpportunities: (userId, workspaceId) =>
       authRepository().listWorkspaceOpportunities(userId, workspaceId),
     readOpportunity: readPrivateOpportunityDetailForUser,
+    readReportVersion: (userId, workspaceId, reportId, opportunityId) =>
+      authRepository({ objectStore: getObjectStore() }).readWorkspaceReportVersionForUser(
+        userId,
+        workspaceId,
+        reportId,
+        opportunityId
+      ),
+    readPlanVersion: (userId, workspaceId, planPackageId, opportunityId) =>
+      authRepository({ objectStore: getObjectStore() }).readWorkspacePlanVersionForUser(
+        userId,
+        workspaceId,
+        planPackageId,
+        opportunityId
+      ),
     listArtifactHistory: (userId, workspaceId, opportunityId, query) =>
       readPrivateArtifactHistoryForUser(userId, workspaceId, opportunityId, query),
     listSources: (userId, workspaceId) =>
@@ -521,7 +550,7 @@ async function readResource(
   const path = separator === -1 ? uri : uri.slice(0, separator)
   const rawQuery = separator === -1 ? '' : uri.slice(separator + 1)
   const match =
-    /^appsea:\/\/workspaces\/([^/]+)\/(sources|opportunities\/([^/]+)(?:\/(evidence|report|plan|report-history|plan-history))?)$/.exec(
+    /^appsea:\/\/workspaces\/([^/]+)\/(sources|opportunities\/([^/]+)(?:\/(evidence|report|plan|report-history|plan-history)(?:\/([^/]+))?)?)$/.exec(
       path
     )
   if (!match) return notFound()
@@ -537,6 +566,10 @@ async function readResource(
   const slug = decodeUriPart(match[3] ?? '')
   if (!slug) return notFound()
   const subresource = match[4]
+  const versionId = decodeUriPart(match[5] ?? '')
+  if (match[5] && !versionId) return notFound()
+  if (versionId && subresource !== 'report' && subresource !== 'plan') return notFound()
+  if (versionId && !appseaIdentifierSchema.safeParse(versionId).success) return invalidArguments()
   if (subresource === 'report-history' || subresource === 'plan-history') {
     const family = subresource === 'report-history' ? 'reports' : 'plans'
     if (!hasScope(auth, family === 'reports' ? 'reports:read' : 'plans:read')) return forbidden()
@@ -552,6 +585,41 @@ async function readResource(
       query
     )
     return contentResult(uri, scopedHistory(history, family))
+  }
+  if (versionId) {
+    if (rawQuery) return invalidArguments()
+    const family = subresource === 'report' ? 'reports' : 'plans'
+    if (!hasScope(auth, family === 'reports' ? 'reports:read' : 'plans:read')) return forbidden()
+    const opportunities = await dependencies.listOpportunities(auth.userId, auth.workspaceId)
+    const opportunity = opportunities.find((candidate) => candidate.slug === slug)
+    if (!opportunity) return notFound()
+    if (family === 'reports') {
+      const report = await dependencies.readReportVersion(
+        auth.userId,
+        auth.workspaceId,
+        versionId,
+        opportunity.id
+      )
+      if (!report) return notFound()
+      if (!opportunity.synthetic && report.approvalState !== 'approved') {
+        return { code: -32005, message: 'Report is not approved for agent access' }
+      }
+      return contentResult(uri, { report, synthetic: opportunity.synthetic })
+    }
+    const plan = await dependencies.readPlanVersion(
+      auth.userId,
+      auth.workspaceId,
+      versionId,
+      opportunity.id
+    )
+    if (!plan) return notFound()
+    if (
+      !opportunity.synthetic &&
+      (plan.readinessState !== 'ready' || plan.approvalState !== 'approved')
+    ) {
+      return { code: -32005, message: 'Plan package is not approved for agent access' }
+    }
+    return contentResult(uri, { plan, synthetic: opportunity.synthetic })
   }
   const detail = await dependencies.readOpportunity(auth.userId, auth.workspaceId, slug)
   if (!detail) return notFound()
@@ -660,9 +728,22 @@ async function handleAuthenticatedRequest(
           mimeType: 'application/json'
         },
         {
+          uriTemplate: 'appsea://workspaces/{workspaceId}/opportunities/{slug}/report/{reportId}',
+          name: 'report version',
+          description: 'Approved or synthetic report version content.',
+          mimeType: 'application/json'
+        },
+        {
           uriTemplate: 'appsea://workspaces/{workspaceId}/opportunities/{slug}/plan-history',
           name: 'plan version history',
           description: 'Cursor-paginated plan version metadata.',
+          mimeType: 'application/json'
+        },
+        {
+          uriTemplate:
+            'appsea://workspaces/{workspaceId}/opportunities/{slug}/plan/{planPackageId}',
+          name: 'plan version',
+          description: 'Approved or synthetic coding-agent plan version content.',
           mimeType: 'application/json'
         }
       ]

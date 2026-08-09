@@ -22,6 +22,9 @@ selected reads, deterministic plan comparison, and approved Markdown exports.
 - Web routes add history, selected reads, plan comparison, and strict
   `format=json|markdown` negotiation. Markdown is on-demand and returns
   `X-AppSea-Manifest-Hash`; no new durable Markdown reference is written.
+- The authenticated MCP boundary exposes cursor-paginated report/plan history
+  metadata and addressed selected-version resources; non-synthetic bodies are
+  returned only after the existing approval/readiness gates pass.
 - Private Report and Plan pages add bounded version selectors, approved JSON /
   Markdown links, and a calm plan file-change table. The leaderboard remains
   unchanged.
@@ -37,7 +40,8 @@ Withdrawn content cannot be selected or exported. Markdown is not persisted in
 this slice because the current analysis purge queue and source-deletion path do
 not yet provide complete `report-markdown` tombstoning and backup proof. A ZIP
 transport remains intentionally deferred; MCP history now exposes metadata-only
-resources under the same scope and cursor rules.
+resources and addressed approved selected-version reads under the same scope
+and cursor rules.
 
 ## Validation
 
@@ -50,7 +54,7 @@ original validation record. Current follow-up evidence is:
 - `pnpm --filter @appsea/db test -- src/auth-repository.test.ts` plus cursor
   tests — 31 focused tests passed; the full database source suite also passed
   (189 tests).
-- `pnpm --filter @appsea/web test` — 233 web tests passed.
+- `pnpm --filter @appsea/web test` — 237 web tests passed.
 - `pnpm lint`, `pnpm typecheck`, and `pnpm build` — all 15 packages passed;
   the Next.js production build compiled and generated all routes.
 - `pnpm format:check`, `pnpm docs:check`, and `git diff --check` passed. The
@@ -79,7 +83,7 @@ resolve an id directly so versions beyond the first page remain reachable.
 
 Cursor follow-up validation: `pnpm --filter @appsea/db typecheck` and `lint`,
 `pnpm --filter @appsea/web typecheck`, the focused DB cursor/auth tests (31
-passed), and the web suite (233 passed) are green. The Temporal package test
+passed), and the web suite (237 passed) are green. The Temporal package test
 budget is now 120 seconds for both tests and hooks because workflow bundle
 startup can exceed 30 seconds under monorepo contention; the isolated workflow
 suite (31 passed) and the full repository `pnpm test` (15 packages passed) are

@@ -136,6 +136,8 @@ function dependencies(authOverride: AgentAccessTokenAuthentication = auth): McpD
     releaseRequest: vi.fn(async () => true),
     listOpportunities: vi.fn(async () => [detail.summary]),
     readOpportunity: vi.fn(async () => detail),
+    readReportVersion: vi.fn(async () => detail.report),
+    readPlanVersion: vi.fn(async () => detail.plan),
     listArtifactHistory: vi.fn(async () => artifactHistory),
     listSources: vi.fn(async () => [
       {
@@ -166,6 +168,7 @@ type TestBody = {
     contents?: Array<{ text: string }>
     tools?: Array<{ name: string }>
     resources?: Array<{ uri: string }>
+    resourceTemplates?: Array<{ uriTemplate: string }>
   }
   error?: { code: number }
 }
@@ -307,6 +310,20 @@ describe('authenticated read-only MCP boundary', () => {
       listed.result?.resources?.some((resource) => resource.uri.endsWith('/report-history'))
     ).toBe(true)
 
+    const templates = await handleMcpRequest(
+      request({ jsonrpc: '2.0', id: 'templates', method: 'resources/templates/list' }),
+      deps
+    )
+    const templateUris = (await body(templates)).result?.resourceTemplates?.map(
+      (template) => template.uriTemplate
+    )
+    expect(templateUris).toContain(
+      'appsea://workspaces/{workspaceId}/opportunities/{slug}/report/{reportId}'
+    )
+    expect(templateUris).toContain(
+      'appsea://workspaces/{workspaceId}/opportunities/{slug}/plan/{planPackageId}'
+    )
+
     const sourceResource = await handleMcpRequest(
       request({
         jsonrpc: '2.0',
@@ -377,6 +394,88 @@ describe('authenticated read-only MCP boundary', () => {
       deps
     )
     expect((await body(response)).error?.code).toBe(-32003)
+  })
+
+  it('reads an approved historical report without hydrating the opportunity detail', async () => {
+    const deps = dependencies()
+    vi.mocked(deps.readReportVersion).mockResolvedValueOnce({
+      ...detail.report,
+      approvalState: 'approved'
+    } as unknown as Awaited<ReturnType<McpDependencies['readReportVersion']>>)
+    const response = await handleMcpRequest(
+      request({
+        jsonrpc: '2.0',
+        id: 'report-version',
+        method: 'resources/read',
+        params: {
+          uri: 'appsea://workspaces/workspace%3Aone/opportunities/one/report/report%3Aone'
+        }
+      }),
+      deps
+    )
+    const payload = await body(response)
+    const value = JSON.parse(payload.result?.contents?.[0]?.text ?? '{}') as {
+      report?: { id: string; approvalState: string }
+      synthetic?: boolean
+    }
+    expect(value.report).toEqual(
+      expect.objectContaining({ id: 'report:one', approvalState: 'approved' })
+    )
+    expect(value.synthetic).toBe(false)
+    expect(deps.readReportVersion).toHaveBeenCalledWith(
+      'user:owner',
+      'workspace:one',
+      'report:one',
+      'opp:one'
+    )
+    expect(deps.readOpportunity).not.toHaveBeenCalled()
+  })
+
+  it('keeps selected historical report and plan bodies behind approval/readiness gates', async () => {
+    const deps = dependencies()
+    const draftReport = await handleMcpRequest(
+      request({
+        jsonrpc: '2.0',
+        id: 'draft-report-version',
+        method: 'resources/read',
+        params: {
+          uri: 'appsea://workspaces/workspace%3Aone/opportunities/one/report/report%3Aone'
+        }
+      }),
+      deps
+    )
+    expect((await body(draftReport)).error?.code).toBe(-32005)
+
+    vi.mocked(deps.readPlanVersion).mockResolvedValueOnce({
+      ...detail.plan,
+      readinessState: 'draft',
+      approvalState: 'reviewed'
+    })
+    const draftPlan = await handleMcpRequest(
+      request({
+        jsonrpc: '2.0',
+        id: 'draft-plan-version',
+        method: 'resources/read',
+        params: {
+          uri: 'appsea://workspaces/workspace%3Aone/opportunities/one/plan/plan%3Aone'
+        }
+      }),
+      deps
+    )
+    expect((await body(draftPlan)).error?.code).toBe(-32005)
+
+    const malformed = await handleMcpRequest(
+      request({
+        jsonrpc: '2.0',
+        id: 'malformed-version',
+        method: 'resources/read',
+        params: {
+          uri: 'appsea://workspaces/workspace%3Aone/opportunities/one/report/%21invalid'
+        }
+      }),
+      deps
+    )
+    expect((await body(malformed)).error?.code).toBe(-32602)
   })
 
   it('rejects malformed requests and acknowledges notifications without source access', async () => {

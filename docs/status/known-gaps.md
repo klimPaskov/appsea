@@ -655,8 +655,8 @@ packaging or persisted
 `report-markdown` objects. These are follow-up contracts because the existing
 object purge queue and deletion propagation must be extended before a Markdown
 object can be durable. Cursor pagination is now implemented for the private web
-history route and the authenticated MCP metadata resources; durable Markdown
-publication remains open.
+history route and the authenticated MCP history/selected-version resources;
+durable Markdown publication remains open.
 
 Production analysis private reads now carry the current report and plan
 approval states from PostgreSQL governance projections, so later review

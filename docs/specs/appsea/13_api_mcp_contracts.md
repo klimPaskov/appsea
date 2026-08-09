@@ -275,11 +275,16 @@ appsea://opportunities/{id}/report/{version}
 appsea://opportunities/{id}/plan/{version}
 appsea://workspaces/{workspaceId}/opportunities/{slug}/report-history
 appsea://workspaces/{workspaceId}/opportunities/{slug}/plan-history
+appsea://workspaces/{workspaceId}/opportunities/{slug}/report/{reportId}
+appsea://workspaces/{workspaceId}/opportunities/{slug}/plan/{planPackageId}
 appsea://sources/coverage
 appsea://skills/{name}/{version}
 ```
 
-Resources are read-only views.
+Resources are read-only views. History resources return metadata summaries;
+selected report/plan version resources hydrate only the addressed version and
+require the same approval/readiness, current-policy, deletion, object-hydration,
+and redaction gates as the private web reads.
 
 ### Read tools
 

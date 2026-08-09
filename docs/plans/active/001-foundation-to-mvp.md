@@ -739,9 +739,11 @@ export routes accept `format=json|markdown`, with deterministic on-demand
 Markdown and representation-specific audit receipts. Plan comparison is
 metadata-only (sorted file status, SHA-256, and UTF-8 byte counts). The page
 shows a visible 50-version bound when older rows exist. This slice deliberately
-does not persist `report-markdown` objects, does not add a ZIP transport, and
-does not widen MCP beyond latest artifacts; their retention/deletion and API
-design remain follow-up work.
+does not persist `report-markdown` objects or add a ZIP transport. The
+authenticated MCP boundary now exposes the same scope-filtered report/plan
+history as metadata-only resources with independent opaque cursors; selected
+content continues through the approved read path. Durable Markdown retention
+and ZIP/API design remain follow-up work.
 
 The private workspace Activity page now exposes the existing immutable audit
 projection through a bounded cursor view. It is read-only, scalar-only, and

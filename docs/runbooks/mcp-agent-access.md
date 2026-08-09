@@ -87,6 +87,8 @@ Report and plan history are available as metadata-only resources:
 ```text
 appsea://workspaces/{workspaceId}/opportunities/{slug}/report-history
 appsea://workspaces/{workspaceId}/opportunities/{slug}/plan-history
+appsea://workspaces/{workspaceId}/opportunities/{slug}/report/{reportId}
+appsea://workspaces/{workspaceId}/opportunities/{slug}/plan/{planPackageId}
 ```
 
 Append only the matching bounded query keys (`limit` plus `reportCursor` or
@@ -94,6 +96,9 @@ Append only the matching bounded query keys (`limit` plus `reportCursor` or
 follow the returned next cursor to traverse older pages. A history resource
 never hydrates report or plan bodies, and selected content continues to require
 the existing approval, readiness, deletion, policy, and redaction gates.
+Selected version resources address one report or plan ID from the history
+summaries and return that approved body only; they do not fall back to another
+version or bypass the workspace/opportunity binding.
 
 Every authenticated request also passes a PostgreSQL admission boundary from
 migration `0097_mcp_agent_access_admission.sql`. The token must still belong to
