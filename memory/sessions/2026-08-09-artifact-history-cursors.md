@@ -26,8 +26,11 @@
 - `pnpm --filter @appsea/web typecheck` and private history route suite — passed
   (route suite currently 233 total web tests).
 - `pnpm agents:sync` and `pnpm repo:check --docs-only` — passed.
+- `packages/workflows/package.json` now gives Temporal workflow tests and hooks
+  a 120-second budget; the isolated workflow suite (31 tests) and full
+  repository `pnpm test` pass under monorepo contention.
 
-## Blocker
+## Remaining environment blocker
 
 `pnpm --filter @appsea/db test:integration` could not start because
 `APPSEA_TEST_DATABASE_URL` (and the required disposable PostgreSQL test
@@ -36,7 +39,8 @@ by TypeScript/lint but requires the approved local PostgreSQL stack to execute.
 
 ## Follow-up
 
-Run the PostgreSQL integration suite and the full repository verification before
-claiming this tranche complete. MCP history resources, ZIP packaging, and
-durable `report-markdown` publication remain intentionally deferred until the
-corresponding deletion/retention/backup purge proof exists.
+Run the PostgreSQL integration suite and the full repository verification in a
+configured disposable stack before claiming operational deployment proof. MCP
+history resources, ZIP packaging, and durable `report-markdown` publication
+remain intentionally deferred until the corresponding deletion/retention/
+backup purge proof exists.

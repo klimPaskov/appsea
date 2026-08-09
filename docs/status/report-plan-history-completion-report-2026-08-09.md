@@ -78,13 +78,14 @@ resolve an id directly so versions beyond the first page remain reachable.
 
 Cursor follow-up validation: `pnpm --filter @appsea/db typecheck` and `lint`,
 `pnpm --filter @appsea/web typecheck`, the focused DB cursor/auth tests (31
-passed), and the web suite (233 passed) are green. `pnpm format:check`,
-`pnpm agents:sync`, and `pnpm repo:check --docs-only` are green. The current
-repository-wide `pnpm test` is blocked by an existing Temporal workflow test
-leaving overlapping workers after a timeout; rerunning `@appsea/workflows` in
-isolation reproduced seven worker-runtime failures. The PostgreSQL integration
-suite is also not runnable in this shell because the required disposable test
-database environment variables are absent.
+passed), and the web suite (233 passed) are green. The Temporal package test
+budget is now 120 seconds for both tests and hooks because workflow bundle
+startup can exceed 30 seconds under monorepo contention; the isolated workflow
+suite (31 passed) and the full repository `pnpm test` (15 packages passed) are
+now green. `pnpm format:check`, `pnpm agents:sync`, and
+`pnpm repo:check --docs-only` are green. The PostgreSQL integration suite is
+still not runnable in this shell because the required disposable test database
+environment variables are absent.
 
 ## Remaining gaps
 
