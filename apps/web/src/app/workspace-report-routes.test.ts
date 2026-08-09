@@ -253,6 +253,18 @@ describe('workspace report routes', () => {
     )
   })
 
+  it('keeps an active reviewed report readable for private workspace review', async () => {
+    mocks.repository.readWorkspaceReportVersionForUser.mockResolvedValue({
+      ...report,
+      approvalState: 'reviewed'
+    })
+    const response = await readReport(new Request('https://appsea.example'), {
+      params: Promise.resolve({ workspaceId: 'workspace:one', reportId: 'report:one' })
+    })
+    expect(response.status).toBe(200)
+    await expect(response.json()).resolves.toMatchObject({ data: { approvalState: 'reviewed' } })
+  })
+
   it('fails closed for unauthenticated, missing, and forbidden report reads', async () => {
     mocks.readSession.mockResolvedValueOnce(null)
     const unauthenticated = await readReport(new Request('https://appsea.example'), {

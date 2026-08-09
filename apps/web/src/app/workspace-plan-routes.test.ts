@@ -231,6 +231,18 @@ describe('workspace plan routes', () => {
     )
   })
 
+  it('keeps an active reviewed plan readable for private workspace review', async () => {
+    mocks.repository.readWorkspacePlanVersionForUser.mockResolvedValue({
+      ...plan,
+      approvalState: 'reviewed'
+    })
+    const response = await readPlan(new Request('https://appsea.example'), {
+      params: Promise.resolve({ workspaceId: 'workspace:one', planPackageId: 'plan:one' })
+    })
+    expect(response.status).toBe(200)
+    await expect(response.json()).resolves.toMatchObject({ data: { approvalState: 'reviewed' } })
+  })
+
   it('fails closed for unauthenticated, missing, and forbidden plan reads', async () => {
     mocks.readSession.mockResolvedValueOnce(null)
     const unauthenticated = await readPlan(new Request('https://appsea.example'), {

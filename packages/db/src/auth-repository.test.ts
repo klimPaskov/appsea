@@ -272,10 +272,15 @@ function externalIdentityPool(
 
 type RecordedStatement = { text: string; values: unknown[] }
 
-function objectBackedReportPool(reference: {
-  uri: string
-  contentHash: string
-}): Pool & { statements: RecordedStatement[] } {
+function objectBackedReportPool(
+  reference: {
+    uri: string
+    contentHash: string
+  },
+  approvalState: 'draft' | 'reviewed' | 'approved' = 'approved'
+): Pool & {
+  statements: RecordedStatement[]
+} {
   const statements: RecordedStatement[] = []
   const client = {
     query: async (text: string, values: unknown[] = []) => {
@@ -310,7 +315,7 @@ function objectBackedReportPool(reference: {
                 deletionReason: null
               },
               generated_at: '2026-07-24T00:00:00.000Z',
-              approval_state: 'approved',
+              approval_state: approvalState,
               manifest_hash: reference.contentHash,
               deletion_state: 'active',
               synthetic: false
@@ -1896,6 +1901,30 @@ describe('PostgresAuthRepository', () => {
     ])
   })
 
+  it('keeps active private report drafts reviewable while applying withdrawal, deletion, and policy gates', async () => {
+    const artifact = await buildFixtureResearchArtifact('2026-07-24T00:00:00.000Z')
+    const fixtureReport = generateOpportunityReport(artifact, '2026-07-24T00:00:00.000Z')
+    const report = { ...fixtureReport, synthetic: false as const, testOnly: false, transport: null }
+    const objectStore = new InMemoryObjectStore()
+    const stored = await storeOpportunityReport(objectStore, {
+      workspaceId: 'workspace:one',
+      createdAt: '2026-07-24T00:00:00.000Z',
+      report
+    })
+    const pool = objectBackedReportPool(stored, 'reviewed')
+    const read = await new PostgresAuthRepository(
+      pool,
+      objectStore
+    ).readWorkspaceReportVersionForUser('user:one', 'workspace:one', 'report:production')
+    expect(read?.approvalState).toBe('reviewed')
+    const select = pool.statements.find((entry) =>
+      entry.text.includes('FROM appsea.report_versions')
+    )
+    expect(select?.text).toContain("report.approval_state <> 'withdrawn'")
+    expect(select?.text).toContain("report.deletion_state = 'active'")
+    expect(select?.text).toContain('appsea.production_analysis_policies_collectible')
+  })
+
   it('paginates report and plan history with independent stable cursors', async () => {
     const pool = artifactHistoryPool()
     const repository = new PostgresAuthRepository(pool)
@@ -1989,6 +2018,31 @@ describe('PostgresAuthRepository', () => {
       'plan:production',
       JSON.stringify({ manifestHash: stored.contentHash, representation: 'json' })
     ])
+  })
+
+  it('keeps active private plan drafts reviewable while applying withdrawal, deletion, and policy gates', async () => {
+    const objectStore = new InMemoryObjectStore()
+    const stored = await storePlanPackage(objectStore, {
+      workspaceId: 'workspace:one',
+      createdAt: '2026-07-24T00:00:00.000Z',
+      planPackage: {
+        opportunitySlug: 'private-opportunity',
+        generatedAt: '2026-07-24T00:00:00.000Z',
+        files: [{ path: 'README.md', content: 'Reviewed plan' }]
+      }
+    })
+    const pool = objectBackedPlanPool(stored, 'reviewed')
+    const read = await new PostgresAuthRepository(
+      pool,
+      objectStore
+    ).readWorkspacePlanVersionForUser('user:one', 'workspace:one', 'plan:production')
+    expect(read?.approvalState).toBe('reviewed')
+    const select = pool.statements.find((entry) =>
+      entry.text.includes('FROM appsea.plan_package_versions')
+    )
+    expect(select?.text).toContain("plan.approval_state <> 'withdrawn'")
+    expect(select?.text).toContain("plan.deletion_state = 'active'")
+    expect(select?.text).toContain('appsea.production_analysis_policies_collectible')
   })
 
   it('renders approved plan Markdown on demand and records representation-specific audit', async () => {

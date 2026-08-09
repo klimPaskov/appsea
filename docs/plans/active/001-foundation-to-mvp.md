@@ -736,7 +736,9 @@ transition guards remain authoritative.
 The private report and plan pages now expose bounded version history from the
 existing immutable `report_versions` and `plan_package_versions` rows. Selected
 active versions reuse current-policy, deletion, object-hydration, and
-field-redaction gates; withdrawn rows are metadata-only. The report and plan
+field-redaction gates; active draft/reviewed rows remain available to
+authenticated workspace members for private review, while withdrawn rows are
+metadata-only. The report and plan
 export routes accept `format=json|markdown`, with deterministic on-demand
 Markdown and representation-specific audit receipts. Plan comparison is
 metadata-only (sorted file status, SHA-256, and UTF-8 byte counts). The page
@@ -746,8 +748,8 @@ reference, extends invalidated-analysis purge queueing, clears the report-side
 reference during source deletion, and keeps the direct owner purge function
 aligned with the full output set. The authenticated MCP boundary
 now exposes the same scope-filtered report/plan history as metadata-only
-resources with independent opaque cursors; selected content continues through
-the approved read path. ZIP/API packaging and provider-side export/backup purge
+resources with independent opaque cursors; selected MCP content adds the
+approved report and ready-plus-approved plan gates. ZIP/API packaging and provider-side export/backup purge
 remain follow-up work.
 
 The private workspace Activity page now exposes the existing immutable audit

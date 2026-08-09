@@ -84,8 +84,10 @@ header. Production analysis additionally retains a content-addressed
 an export authorization or a public leaderboard surface. The public leaderboard
 remains latest-ranked and contains no history or comparison UI.
 
-Plan history follows the same membership, current-policy, deletion, and
-approval boundaries. A plan comparison returns sorted file paths, status, SHA-256
+Plan history follows the same membership, current-policy, and deletion
+boundaries. Active draft and reviewed versions remain available to authenticated
+workspace members for private review; plan export and agent-facing MCP reads
+still require readiness plus owner approval. A plan comparison returns sorted file paths, status, SHA-256
 hashes, and UTF-8 byte counts; it never republishes a second source copy. The
 Markdown plan export is one ordered human-readable bundle of the existing six
 files, not a ZIP or a new persisted object.

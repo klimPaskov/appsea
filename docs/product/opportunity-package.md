@@ -80,6 +80,10 @@ for older rows; the compatibility `truncated` marker is true whenever either
 next cursor exists. Withdrawn versions remain metadata-only history records and
 cannot be selected for content reads or exports. A selected version is hydrated
 from the same validated, redacted object projection as the current read.
+Active draft and reviewed versions remain readable to authenticated workspace
+members so editors and owners can inspect them before approval; the private web
+read is not an export authorization. Agent-facing MCP version resources add an
+approved report gate and ready-plus-approved plan gate.
 
 The private export route returns the validated report read model only after
 approval and keeps the report's manifest hash and synthetic disclosure attached.

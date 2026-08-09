@@ -81,17 +81,17 @@ and human-corrected analyses remain authoritative. External providers stay
 disabled pending model-use, malware, DPA/egress, durable cost, and calibration
 review.
 
-The private report/plan history slice reads existing version rows through
-current-policy/deletion/redaction gates, exposes cursor-paginated metadata pages
-of up to 50 rows per artifact family plus compatibility `truncated`, selected
-reads, representation-aware JSON/Markdown audit receipts, same-opportunity plan
-comparison (sorted path/hash/bytes), and page selectors. Migrations `0120` and
-`0121` persist production `report-markdown` objects with complete references,
-extend invalidated-output purge/deletion clearing, and keep the direct owner
-purge gate aligned with the full output set; the web export still
-renders the approved redacted projection on demand. MCP exposes metadata-only
-cursor history resources plus approved selected-version reads, and ZIP/provider
-purge follow-up is explicit. See
+The private report/plan history slice reads active, non-withdrawn rows through
+current-policy/deletion/redaction gates. Members may select active drafts/reviews;
+MCP reads add approval/readiness gates. It exposes cursor-paginated metadata
+pages of up to 50 rows per artifact family, representation-aware JSON/Markdown
+audit receipts, same-opportunity plan comparison (sorted path/hash/bytes), and
+page selectors. Migrations `0120` and `0121` persist production
+`report-markdown` objects with complete references, extend invalidated-output
+purge/deletion clearing, and keep the direct owner purge gate aligned with the
+full output set; the web export still renders the approved redacted projection
+on demand. MCP history is metadata-only, and ZIP/provider purge follow-up is
+explicit. See
 `docs/status/report-plan-history-completion-report-2026-08-09.md`.
 
 ## Next production tranche
