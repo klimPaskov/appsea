@@ -9,7 +9,7 @@ security controls.
   fixes for the reported App Router, Server Action, cache, rewrite, image,
   and internal endpoint advisories.
 - Added workspace-level pnpm overrides for patched `postcss` `8.5.25`,
-  `fast-uri` `3.1.4`, and `sharp` `0.35.3`. The overrides cover transitive
+  `fast-uri` `3.1.5`, `nanoid` `3.3.17`, and `sharp` `0.35.3`. The overrides cover transitive
   dependencies pulled by Next.js and Temporal's worker bundler without
   changing AppSea application contracts.
 - Added `pnpm security:audit` and made the GitHub verification job run it
@@ -20,6 +20,8 @@ security controls.
 
 - `pnpm audit --prod --json` reports zero informational, low, moderate, high,
   or critical vulnerabilities across the current production graph.
+- The 2026-08-09 follow-up `pnpm security:audit` passed after overriding the
+  transitive PostCSS `nanoid` dependency from `3.3.16` to patched `3.3.17`.
 - Web lint, typecheck, 147 web tests, and the production build pass on Next.js
   `16.2.12`.
 - Worker lint/typecheck and 118 worker tests pass with the patched transitive

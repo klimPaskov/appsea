@@ -73,6 +73,23 @@ The manifest records:
 - approval state
 - license and retention notes
 
+## Version history and export representations
+
+Plan package versions are immutable rows linked to their opportunity and
+report. Private workspace routes expose the newest 50 active versions and set
+`truncated: true` when older metadata exists; the current slice does not hide
+that bound behind an unmarked UI. A comparison is metadata-only: sorted
+portable paths, `added`/`removed`/`changed`/`unchanged` status, SHA-256 content
+hashes, and UTF-8 byte counts. It never returns a second file body merely to
+show a diff.
+
+Approved JSON export remains the machine envelope. Approved Markdown export is
+rendered on demand from the validated, redacted package and emits one ordered
+Markdown bundle containing the six supported files, including the existing
+`04-task-graph.json` as inert text. This is intentionally not a ZIP and is not
+persisted as a `report-markdown` object until deletion and purge propagation
+are designed end to end.
+
 ## Product brief
 
 The brief answers:

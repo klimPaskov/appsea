@@ -36,14 +36,12 @@ Operated scheduler, billing, cloud purge, and provider topology remain open.
 Imported complaints, pages, reports, and model output are untrusted data; they
 cannot update code, skills, instructions, permissions, or repository memory.
 
-Manual owner-import (migrations `0089`, `0102`, `0103`, and `0104`) is the active non-fixture
-path: bounded normalized, PII-scrubbed tenant-private CSV/JSON, with only a
-batch ID in Temporal. Production connectors require the durable quota ledger;
-the bounded in-memory map is test-only. Local smoke covers intake; URL fetching
-and public sources remain disabled. Confirmed competitive observations are
-carried only into the next explicit reviewed production analysis; lineage keeps
-observation/evidence hashes, restricted claim text is masked, and rejection or
-source deletion invalidates active outputs without auto-recompute.
+Manual owner-import (`0089`, `0102`–`0104`) is the active non-fixture path:
+bounded, normalized, PII-scrubbed tenant-private CSV/JSON with only a batch ID
+in Temporal. Durable quota ledgers gate connectors; the in-memory map is
+test-only. Confirmed competitor observations enter only the next reviewed
+analysis with hash lineage and masked restricted claims; rejection/deletion
+invalidates active outputs without auto-recompute.
 Scoring preserves `opportunity-score-v0.2.0` and adds reviewed-input balanced
 `opportunity-score-v1.0.0` with risk, confidence, coverage, freshness, and
 explanations. Synthetic quality benchmarks and the versioned regression gate
@@ -56,10 +54,9 @@ preflight; the production gate also requires a bounded
 the worker stop-grace window. Remote namespace/task-queue authorization and
 hosted replacement/crash evidence remain external.
 
-Owner-import ingress reserves the workspace-scoped production admission before
-persisting rows; rejected requests leave no staged payloads, and a server-owned
-five-minute TTL bounds uncertain Temporal starts. Route/repository tests cover
-the fail-closed ordering.
+Owner-import ingress reserves workspace admission before persistence; rejected
+requests leave no staged payloads and a server-owned five-minute TTL bounds
+uncertain Temporal starts.
 
 Forward migrations `0113`–`0119` harden owner-import retention, reviewer
 independence, collectibility, lineage, policy-impact expiry, pointer repair,
@@ -67,30 +64,32 @@ and current-policy private reads/exports. Policy decay retains objects until a
 later source deletion; provider scheduler ownership and external retention
 remain release gates.
 
-The campaign `dateRange` contract is enforced across web admission, refresh,
-Temporal input, worker reconstruction, snapshots, and source-appropriate
-filtering (including owner-import published/captured fallback). Filtered runs
-emit coverage warnings; legacy snapshots remain replayable. Private reads show
-query and window beside coverage gaps.
+Campaign `dateRange` is enforced across admission, refresh, Temporal input,
+reconstruction, snapshots, and source filtering (including owner-import
+published/captured fallback). Filtered runs emit coverage warnings; private
+reads show query/window beside gaps and legacy snapshots remain replayable.
 
-Complaint analysis v0.2.0 now detects bounded instruction-like imported text,
-retains its evidence/provenance, sets deterministic `manipulationRisk` and
-`policyFlags`, labels private rows for review, and adds an artifact coverage
-gap. No content is executed or copied into repository controls; this additive
-JSONB projection requires no migration. See
+Complaint analysis v0.2.0 flags bounded instruction-like imported text with
+deterministic `manipulationRisk`/`policyFlags`, preserves provenance, labels
+private rows for review, and adds a coverage gap. No content executes or enters
+repository controls; this additive JSONB projection needs no migration. See
 `docs/status/imported-content-safety-completion-report-2026-08-06.md`.
 
-The provider-neutral `@appsea/model-gateway` boundary is now wired into the
-production-analysis activity. Workspace-bound requests carry only tenant
-identity plus fixed system/developer prompts and an explicit
-`untrusted-data` segment, route/model/prompt allowlists, secret/PII-like
-redaction, instruction refusal, bounded budgets, bounded local replay identity,
-homogeneous batch checks, structured validation, and non-sensitive summaries
-are covered by package tests. The worker records only a `model-gateway-v1`
-snapshot; deterministic and human-corrected complaint analyses remain
-authoritative. External providers remain disabled because model-use approval is
-not a caller-supplied request field; malware, provider/DPA/egress, durable
-idempotency/cost settlement, and calibration remain blockers.
+`@appsea/model-gateway` is wired into production analysis with workspace-bound
+fixed prompts, an explicit `untrusted-data` segment, allowlists, redaction,
+instruction refusal, bounded replay/budgets, validation, and non-sensitive
+summaries. The worker records only a `model-gateway-v1` snapshot; deterministic
+and human-corrected analyses remain authoritative. External providers stay
+disabled pending model-use, malware, DPA/egress, durable cost, and calibration
+review.
+
+The private report/plan history slice reads existing version rows through
+current-policy/deletion/redaction gates, exposes 50-row metadata plus
+`truncated`, selected reads, representation-aware JSON/Markdown audit receipts,
+same-opportunity plan comparison (sorted path/hash/bytes), and page selectors.
+Markdown is on-demand because durable `report-markdown` purge proof is absent;
+MCP stays latest-only and cursor/ZIP follow-ups are explicit. See
+`docs/status/report-plan-history-completion-report-2026-08-09.md`.
 
 ## Next production tranche
 

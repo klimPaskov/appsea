@@ -1,4 +1,4 @@
-import { appseaIdentifierSchema } from '@appsea/contracts'
+import { appseaIdentifierSchema, workspaceExportFormatSchema } from '@appsea/contracts'
 import {
   WorkspaceAuthorizationError,
   WorkspacePlanNotApprovedError,
@@ -17,7 +17,7 @@ export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 
 export async function GET(
-  _request: Request,
+  request: Request,
   context: { params: Promise<{ workspaceId: string; planPackageId: string }> }
 ): Promise<Response> {
   const session = await readSession()
@@ -32,7 +32,39 @@ export async function GET(
     )
   }
 
+  const formatValues = new URL(request.url).searchParams.getAll('format')
+  if (formatValues.length > 1) {
+    return Response.json(
+      { error: 'Export format may be provided only once' },
+      { status: 400, headers: privateResponseHeaders }
+    )
+  }
+  const parsedFormat = workspaceExportFormatSchema.safeParse(formatValues[0] ?? 'json')
+  if (!parsedFormat.success) {
+    return Response.json(
+      { error: 'Export format must be json or markdown' },
+      { status: 400, headers: privateResponseHeaders }
+    )
+  }
+
   try {
+    if (parsedFormat.data === 'markdown') {
+      const data = await authRepository({
+        objectStore: getObjectStore()
+      }).exportWorkspacePlanMarkdown(
+        session.user.userId,
+        parsedWorkspaceId.data,
+        parsedPlanPackageId.data
+      )
+      return new Response(data.markdown, {
+        headers: {
+          ...privateResponseHeaders,
+          'content-disposition': 'attachment; filename="appsea-plan-package.md"',
+          'content-type': 'text/markdown; charset=utf-8',
+          'x-appsea-manifest-hash': data.manifestHash
+        }
+      })
+    }
     const data = await authRepository({ objectStore: getObjectStore() }).exportWorkspacePlan(
       session.user.userId,
       parsedWorkspaceId.data,
@@ -44,7 +76,8 @@ export async function GET(
         headers: {
           ...privateResponseHeaders,
           'content-disposition': 'attachment; filename="appsea-plan-package.json"',
-          'content-type': 'application/json; charset=utf-8'
+          'content-type': 'application/json; charset=utf-8',
+          'x-appsea-manifest-hash': data.manifestHash
         }
       }
     )

@@ -14,6 +14,7 @@
 - [`status/manual-import-retention-completion-report-2026-08-06.md`](status/manual-import-retention-completion-report-2026-08-06.md)
 - [`status/imported-content-safety-completion-report-2026-08-06.md`](status/imported-content-safety-completion-report-2026-08-06.md)
 - [`status/model-gateway-completion-report-2026-08-06.md`](status/model-gateway-completion-report-2026-08-06.md)
+- [`status/report-plan-history-completion-report-2026-08-09.md`](status/report-plan-history-completion-report-2026-08-09.md)
 - [`status/worker-drain-window-completion-report-2026-08-06.md`](status/worker-drain-window-completion-report-2026-08-06.md)
 - [`status/campaign-date-window-completion-report-2026-08-06.md`](status/campaign-date-window-completion-report-2026-08-06.md)
 - [`status/report-plan-approval-ui-completion-report-2026-08-05.md`](status/report-plan-approval-ui-completion-report-2026-08-05.md)
@@ -87,6 +88,7 @@
 - [`runbooks/completion-proof.md`](runbooks/completion-proof.md)
 - [`runbooks/mcp-agent-access.md`](runbooks/mcp-agent-access.md)
 - [`runbooks/audit-history.md`](runbooks/audit-history.md)
+- [`runbooks/report-plan-history.md`](runbooks/report-plan-history.md)
 
 ## Decisions
 

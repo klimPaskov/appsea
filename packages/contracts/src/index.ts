@@ -7737,6 +7737,22 @@ export const workspaceReportExportReadModelSchema = z
   })
   .strict()
 
+const artifactManifestHashSchema = z
+  .string()
+  .length(64)
+  .regex(/^[a-f0-9]{64}$/)
+
+export const workspaceReportVersionSummarySchema = z
+  .object({
+    id: appseaIdentifierSchema,
+    version: z.string().min(1).max(80),
+    generatedAt: z.string().datetime(),
+    manifestHash: artifactManifestHashSchema,
+    approvalState: z.enum(['draft', 'reviewed', 'approved', 'withdrawn']),
+    synthetic: z.boolean()
+  })
+  .strict()
+
 export const workspacePlanReadModelSchema = z
   .object({
     id: appseaIdentifierSchema,
@@ -7763,6 +7779,55 @@ export const workspacePlanExportReadModelSchema = z
     manifestHash: z.string().regex(/^[a-f0-9]{64}$/)
   })
   .strict()
+
+export const workspacePlanVersionSummarySchema = z
+  .object({
+    id: appseaIdentifierSchema,
+    version: z.string().min(1).max(80),
+    generatedAt: z.string().datetime(),
+    manifestHash: artifactManifestHashSchema,
+    readinessState: z.enum(['draft', 'ready', 'withdrawn']),
+    approvalState: z.enum(['unreviewed', 'reviewed', 'approved', 'withdrawn']),
+    synthetic: z.boolean()
+  })
+  .strict()
+
+export const workspaceArtifactHistoryReadModelSchema = z
+  .object({
+    reports: z.array(workspaceReportVersionSummarySchema).max(50),
+    plans: z.array(workspacePlanVersionSummarySchema).max(50),
+    truncated: z.boolean().default(false)
+  })
+  .strict()
+
+export const workspacePlanFileChangeSchema = z
+  .object({
+    path: z
+      .string()
+      .min(1)
+      .max(240)
+      .refine(isPortablePlanPath, 'Plan comparison paths must be portable relative POSIX paths'),
+    status: z.enum(['added', 'removed', 'changed', 'unchanged']),
+    beforeHash: artifactManifestHashSchema.nullable(),
+    afterHash: artifactManifestHashSchema.nullable(),
+    beforeBytes: z.number().int().nonnegative().max(262_144).nullable(),
+    afterBytes: z.number().int().nonnegative().max(262_144).nullable()
+  })
+  .strict()
+
+export const workspacePlanComparisonSchema = z
+  .object({
+    from: workspacePlanVersionSummarySchema,
+    to: workspacePlanVersionSummarySchema,
+    files: z.array(workspacePlanFileChangeSchema).max(100),
+    addedCount: z.number().int().nonnegative().max(100),
+    removedCount: z.number().int().nonnegative().max(100),
+    changedCount: z.number().int().nonnegative().max(100),
+    unchangedCount: z.number().int().nonnegative().max(100)
+  })
+  .strict()
+
+export const workspaceExportFormatSchema = z.enum(['json', 'markdown'])
 
 export const workspaceOpportunityDetailReadModelSchema = z
   .object({
@@ -8615,11 +8680,19 @@ export type WorkspaceComplaintReviewReadModel = z.infer<
 export type ReportSourceCoverage = z.infer<typeof reportSourceCoverageSchema>
 export type OpportunityReport = z.infer<typeof opportunityReportSchema>
 export type WorkspaceReportReadModel = z.infer<typeof workspaceReportReadModelSchema>
+export type WorkspaceReportVersionSummary = z.infer<typeof workspaceReportVersionSummarySchema>
 export type WorkspaceReportApprovalInput = z.infer<typeof workspaceReportApprovalInputSchema>
 export type WorkspaceReportExportReadModel = z.infer<typeof workspaceReportExportReadModelSchema>
 export type WorkspacePlanReadModel = z.infer<typeof workspacePlanReadModelSchema>
+export type WorkspacePlanVersionSummary = z.infer<typeof workspacePlanVersionSummarySchema>
 export type WorkspacePlanApprovalInput = z.infer<typeof workspacePlanApprovalInputSchema>
 export type WorkspacePlanExportReadModel = z.infer<typeof workspacePlanExportReadModelSchema>
+export type WorkspaceArtifactHistoryReadModel = z.infer<
+  typeof workspaceArtifactHistoryReadModelSchema
+>
+export type WorkspacePlanFileChange = z.infer<typeof workspacePlanFileChangeSchema>
+export type WorkspacePlanComparison = z.infer<typeof workspacePlanComparisonSchema>
+export type WorkspaceExportFormat = z.infer<typeof workspaceExportFormatSchema>
 export type WorkspaceOpportunityDecisionType = z.infer<
   typeof workspaceOpportunityDecisionTypeSchema
 >

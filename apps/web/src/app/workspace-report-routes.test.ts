@@ -1,16 +1,22 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import {
+  WorkspaceAuthorizationError,
   WorkspaceReportApprovalConflictError,
   WorkspaceReportNotApprovedError,
   WorkspaceReportPermissionError
 } from '@appsea/db/auth'
-import { PATCH as updateReport } from './api/workspaces/[workspaceId]/reports/[reportId]/route'
+import {
+  GET as readReport,
+  PATCH as updateReport
+} from './api/workspaces/[workspaceId]/reports/[reportId]/route'
 import { GET as exportReport } from './api/workspaces/[workspaceId]/reports/[reportId]/export/route'
 
 const mocks = vi.hoisted(() => ({
   repository: {
     updateWorkspaceReportApproval: vi.fn(),
-    exportWorkspaceReport: vi.fn()
+    exportWorkspaceReport: vi.fn(),
+    exportWorkspaceReportMarkdown: vi.fn(),
+    readWorkspaceReportVersionForUser: vi.fn()
   },
   readSession: vi.fn(),
   requireRecentMutationStepUp: vi.fn(),
@@ -100,6 +106,8 @@ describe('workspace report routes', () => {
     mocks.sameOriginRequest.mockReturnValue(true)
     mocks.repository.updateWorkspaceReportApproval.mockReset()
     mocks.repository.exportWorkspaceReport.mockReset()
+    mocks.repository.exportWorkspaceReportMarkdown.mockReset()
+    mocks.repository.readWorkspaceReportVersionForUser.mockReset()
   })
 
   it('blocks approval until the session has recent password and MFA proof', async () => {
@@ -193,6 +201,7 @@ describe('workspace report routes', () => {
     })
     expect(response.status).toBe(200)
     expect(response.headers.get('content-disposition')).toContain('appsea-report.json')
+    expect(response.headers.get('x-appsea-manifest-hash')).toBe('a'.repeat(64))
     await expect(response.json()).resolves.toMatchObject({
       data: { manifestHash: 'a'.repeat(64), report: { approvalState: 'approved' } }
     })
@@ -202,5 +211,67 @@ describe('workspace report routes', () => {
       params: Promise.resolve({ workspaceId: 'workspace:one', reportId: 'report:one' })
     })
     expect(blocked.status).toBe(409)
+  })
+
+  it('supports approved Markdown export and rejects unknown or duplicate formats', async () => {
+    mocks.repository.exportWorkspaceReportMarkdown.mockResolvedValue({
+      report,
+      manifestHash: 'b'.repeat(64),
+      markdown: '# Opportunity report\n'
+    })
+    const markdown = await exportReport(new Request('https://appsea.example?format=markdown'), {
+      params: Promise.resolve({ workspaceId: 'workspace:one', reportId: 'report:one' })
+    })
+    expect(markdown.status).toBe(200)
+    expect(markdown.headers.get('content-type')).toContain('text/markdown')
+    expect(markdown.headers.get('content-disposition')).toContain('appsea-report.md')
+    expect(markdown.headers.get('x-appsea-manifest-hash')).toBe('b'.repeat(64))
+    await expect(markdown.text()).resolves.toContain('# Opportunity report')
+
+    const invalid = await exportReport(new Request('https://appsea.example?format=xml'), {
+      params: Promise.resolve({ workspaceId: 'workspace:one', reportId: 'report:one' })
+    })
+    expect(invalid.status).toBe(400)
+    const duplicate = await exportReport(
+      new Request('https://appsea.example?format=json&format=markdown'),
+      { params: Promise.resolve({ workspaceId: 'workspace:one', reportId: 'report:one' }) }
+    )
+    expect(duplicate.status).toBe(400)
+  })
+
+  it('reads a selected non-withdrawn report version through the private route', async () => {
+    mocks.repository.readWorkspaceReportVersionForUser.mockResolvedValue(report)
+    const response = await readReport(new Request('https://appsea.example'), {
+      params: Promise.resolve({ workspaceId: 'workspace:one', reportId: 'report:one' })
+    })
+    expect(response.status).toBe(200)
+    await expect(response.json()).resolves.toMatchObject({ data: { id: 'report:one' } })
+    expect(mocks.repository.readWorkspaceReportVersionForUser).toHaveBeenCalledWith(
+      'user:owner',
+      'workspace:one',
+      'report:one'
+    )
+  })
+
+  it('fails closed for unauthenticated, missing, and forbidden report reads', async () => {
+    mocks.readSession.mockResolvedValueOnce(null)
+    const unauthenticated = await readReport(new Request('https://appsea.example'), {
+      params: Promise.resolve({ workspaceId: 'workspace:one', reportId: 'report:one' })
+    })
+    expect(unauthenticated.status).toBe(401)
+
+    mocks.repository.readWorkspaceReportVersionForUser.mockResolvedValueOnce(null)
+    const missing = await readReport(new Request('https://appsea.example'), {
+      params: Promise.resolve({ workspaceId: 'workspace:one', reportId: 'report:one' })
+    })
+    expect(missing.status).toBe(404)
+
+    mocks.repository.readWorkspaceReportVersionForUser.mockRejectedValueOnce(
+      new WorkspaceAuthorizationError()
+    )
+    const forbidden = await readReport(new Request('https://appsea.example'), {
+      params: Promise.resolve({ workspaceId: 'workspace:one', reportId: 'report:one' })
+    })
+    expect(forbidden.status).toBe(403)
   })
 })

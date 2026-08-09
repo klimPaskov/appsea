@@ -73,21 +73,35 @@ only owners may pass or withdraw one through the step-up-protected private API.
 Private report versions move through `draft` → `reviewed` → `approved` (or
 `withdrawn`). Owners may approve or withdraw a report; owners and editors may
 mark a draft reviewed. The database records each transition as an
-identifier-only audit/outbox receipt. The private export route returns the
-validated report read model only after approval and keeps the report's manifest
-hash and synthetic disclosure attached. A successful report export also writes
-an idempotent `report.exported` audit receipt with the artifact identifier,
-manifest hash, and `json` representation; it never records report content or an
-object URI.
+identifier-only audit/outbox receipt. Authenticated opportunity routes expose a
+bounded, policy-filtered history of the 50 newest active versions (with a
+visible `truncated` marker); withdrawn versions remain metadata-only history
+records and cannot be selected for content reads or exports. A selected version
+is hydrated from the same validated, redacted object projection as the current
+read.
+
+The private export route returns the validated report read model only after
+approval and keeps the report's manifest hash and synthetic disclosure attached.
+`format=json` remains the machine package. `format=markdown` renders a
+deterministic, on-demand report document from that same redacted read model and
+returns the manifest hash in `X-AppSea-Manifest-Hash`. Both representations
+write separate idempotent `report.exported` receipts containing only the
+artifact identifier, manifest hash, and representation; no report content or
+object URI is recorded. Markdown is intentionally rendered on demand in this
+slice: the existing `report-markdown` reference is not persisted until its
+deletion/purge propagation is designed.
 
 Production analysis reads carry the linked report and plan approval states from
 their PostgreSQL governance projections. Private opportunity pages therefore
 show the actual current state (including after a later approval transition)
 instead of inferring `draft` or `unreviewed` from the immutable object payload.
 The report and plan export routes remain the authoritative approval gates. Plan
-exports use the same boundary with a `plan.exported` receipt. These receipts
-account for an approved export occurrence; they do not perform provider-side
-export retention or deletion.
+history uses the same bounded selector and offers deterministic file-level
+comparison (SHA-256 and UTF-8 byte counts, never a second source copy). Plan
+exports use the same boundary with a `plan.exported` receipt; JSON is the
+machine envelope and Markdown is a single ordered six-file bundle for human or
+agent review, not a ZIP. These receipts account for an approved export
+occurrence; they do not perform provider-side export retention or deletion.
 
 ## Lifecycle decisions
 

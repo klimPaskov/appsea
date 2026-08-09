@@ -1,16 +1,22 @@
 import Link from 'next/link'
 import { notFound, redirect } from 'next/navigation'
 import { readSession } from '../../../../../../server/auth-session'
-import { readPrivateOpportunityContext } from '../../../../../../server/private-opportunity'
+import {
+  readPrivateArtifactHistoryForUser,
+  readPrivateOpportunityContext,
+  readPrivateReportVersionForUser
+} from '../../../../../../server/private-opportunity'
 import { ArtifactApprovalActions } from '../../../../report-plan-approval-actions'
 import { WorkspaceOpportunityTabs } from '../../../../../../components/workspace-opportunity-tabs'
 
 export const dynamic = 'force-dynamic'
 
 export default async function PrivateReportPage({
-  params
+  params,
+  searchParams
 }: {
   params: Promise<{ workspaceId: string; slug: string }>
+  searchParams?: Promise<{ version?: string }>
 }) {
   const { workspaceId, slug } = await params
   const context = await readPrivateOpportunityContext(workspaceId, slug)
@@ -19,7 +25,27 @@ export default async function PrivateReportPage({
     if (!session) redirect('/login')
     notFound()
   }
-  const { detail, workspace } = context
+  const { detail: baseDetail, workspace } = context
+  const history = await readPrivateArtifactHistoryForUser(
+    context.session.user.userId,
+    workspace.workspaceId,
+    baseDetail.opportunity.id
+  )
+  const requestedVersion = (await searchParams)?.version
+  const selectedSummary = requestedVersion
+    ? history.reports.find(
+        (report) => report.id === requestedVersion && report.approvalState !== 'withdrawn'
+      )
+    : undefined
+  const selectedReport = selectedSummary
+    ? await readPrivateReportVersionForUser(
+        context.session.user.userId,
+        workspace.workspaceId,
+        selectedSummary.id,
+        baseDetail.opportunity.id
+      )
+    : baseDetail.report
+  const detail = { ...baseDetail, report: selectedReport }
   return (
     <main className="workspace-page">
       <p className="breadcrumb">
@@ -42,15 +68,56 @@ export default async function PrivateReportPage({
               : 'Not generated'}
           </span>
           {detail.report?.approvalState === 'approved' ? (
-            <a
-              className="quiet-button"
-              href={`/api/workspaces/${workspaceId}/reports/${detail.report.id}/export`}
-            >
-              Export JSON
-            </a>
+            <span className="workspace-export-links">
+              <a
+                className="quiet-button"
+                href={`/api/workspaces/${workspaceId}/reports/${detail.report.id}/export`}
+              >
+                Export JSON
+              </a>
+              <a
+                className="quiet-button"
+                href={`/api/workspaces/${workspaceId}/reports/${detail.report.id}/export?format=markdown`}
+              >
+                Export Markdown
+              </a>
+            </span>
           ) : null}
         </div>
       </div>
+      {history.reports.length > 0 ? (
+        <section className="artifact-history" aria-labelledby="report-history-heading">
+          <div>
+            <p className="label">Version history</p>
+            <h2 id="report-history-heading">Report versions</h2>
+          </div>
+          <ul>
+            {history.reports.map((version) => (
+              <li key={version.id}>
+                {version.approvalState === 'withdrawn' ? (
+                  <span>{version.version}</span>
+                ) : (
+                  <Link
+                    href={`/workspace/${workspaceId}/opportunities/${slug}/report?version=${encodeURIComponent(version.id)}`}
+                    aria-current={version.id === detail.report?.id ? 'page' : undefined}
+                  >
+                    {version.version}
+                  </Link>
+                )}
+                <span>{version.approvalState}</span>
+                <time dateTime={version.generatedAt}>
+                  {new Date(version.generatedAt).toLocaleString()}
+                </time>
+              </li>
+            ))}
+          </ul>
+          {history.truncated ? (
+            <p className="muted-note">
+              Showing the 50 most recent versions; older history is retained in PostgreSQL.
+            </p>
+          ) : null}
+        </section>
+      ) : null}
       {detail.report ? (
         <ArtifactApprovalActions
           workspaceId={workspaceId}

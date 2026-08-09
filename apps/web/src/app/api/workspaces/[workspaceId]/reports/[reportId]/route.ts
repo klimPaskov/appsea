@@ -20,6 +20,38 @@ import { getObjectStore } from '../../../../../../server/object-store'
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 
+export async function GET(
+  _request: Request,
+  context: { params: Promise<{ workspaceId: string; reportId: string }> }
+): Promise<Response> {
+  const session = await readSession()
+  if (!session) return unauthorizedResponse()
+  const path = parsePath(await context.params)
+  if (!path) return invalidRequest('Invalid report path')
+
+  try {
+    const data = await authRepository({
+      objectStore: getObjectStore()
+    }).readWorkspaceReportVersionForUser(session.user.userId, path.workspaceId, path.reportId)
+    if (!data) {
+      return Response.json(
+        { error: 'Report not found' },
+        { status: 404, headers: privateResponseHeaders }
+      )
+    }
+    return Response.json({ data }, { headers: privateResponseHeaders })
+  } catch (error) {
+    if (error instanceof WorkspaceAuthorizationError) return forbiddenResponse()
+    console.error('AppSea report version read failed', {
+      name: error instanceof Error ? error.name : 'unknown'
+    })
+    return Response.json(
+      { error: 'Unable to read report' },
+      { status: 500, headers: privateResponseHeaders }
+    )
+  }
+}
+
 function parsePath(params: {
   workspaceId: string
   reportId: string

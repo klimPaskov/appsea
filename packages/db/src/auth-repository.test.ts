@@ -1779,6 +1779,31 @@ describe('PostgresAuthRepository', () => {
     ])
   })
 
+  it('renders approved report Markdown on demand and records representation-specific audit', async () => {
+    const artifact = await buildFixtureResearchArtifact('2026-07-24T00:00:00.000Z')
+    const fixtureReport = generateOpportunityReport(artifact, '2026-07-24T00:00:00.000Z')
+    const report = { ...fixtureReport, synthetic: false as const, testOnly: false, transport: null }
+    const objectStore = new InMemoryObjectStore()
+    const stored = await storeOpportunityReport(objectStore, {
+      workspaceId: 'workspace:one',
+      createdAt: '2026-07-24T00:00:00.000Z',
+      report
+    })
+    const pool = objectBackedReportPool(stored)
+    const exported = await new PostgresAuthRepository(
+      pool,
+      objectStore
+    ).exportWorkspaceReportMarkdown('user:one', 'workspace:one', 'report:production')
+    expect(exported.markdown).toContain('# Opportunity report')
+    expect(exported.manifestHash).toBe(stored.contentHash)
+    const audit = pool.statements.find((entry) =>
+      entry.text.includes('INSERT INTO appsea.audit_events')
+    )
+    expect(audit?.values?.[5]).toBe(
+      JSON.stringify({ manifestHash: stored.contentHash, representation: 'markdown' })
+    )
+  })
+
   it('hydrates object-backed production plans before approved export', async () => {
     const objectStore = new InMemoryObjectStore()
     const stored = await storePlanPackage(objectStore, {
@@ -1809,6 +1834,32 @@ describe('PostgresAuthRepository', () => {
       'plan:production',
       JSON.stringify({ manifestHash: stored.contentHash, representation: 'json' })
     ])
+  })
+
+  it('renders approved plan Markdown on demand and records representation-specific audit', async () => {
+    const objectStore = new InMemoryObjectStore()
+    const stored = await storePlanPackage(objectStore, {
+      workspaceId: 'workspace:one',
+      createdAt: '2026-07-24T00:00:00.000Z',
+      planPackage: {
+        opportunitySlug: 'private-opportunity',
+        generatedAt: '2026-07-24T00:00:00.000Z',
+        files: [{ path: 'README.md', content: 'Reviewed plan' }]
+      }
+    })
+    const pool = objectBackedPlanPool(stored)
+    const exported = await new PostgresAuthRepository(
+      pool,
+      objectStore
+    ).exportWorkspacePlanMarkdown('user:one', 'workspace:one', 'plan:production')
+    expect(exported.markdown).toContain('# Coding-agent plan package')
+    expect(exported.manifestHash).toBe(stored.contentHash)
+    const audit = pool.statements.find((entry) =>
+      entry.text.includes('INSERT INTO appsea.audit_events')
+    )
+    expect(audit?.values?.[5]).toBe(
+      JSON.stringify({ manifestHash: stored.contentHash, representation: 'markdown' })
+    )
   })
 
   it('blocks plan export until owner approval', async () => {

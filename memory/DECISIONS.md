@@ -341,58 +341,45 @@ Production-analysis v2 starts carry an identifier-only memo; the visibility-only
 checker and reviewed manifest fail closed before v1 removal. Archive/deletion is
 an approved deployment operation, never workflow code.
 
-## 2026-08-05: Guard private decisions and auth ingress
+## 2026-08-05: Guard decisions, ingress, and cluster review
 
-Migration `0105` makes lifecycle decisions forced-RLS, append-only,
-idempotent, stale-checked, and bound to identifier-only evidence/analysis.
-Owner approval requires deep-research/report/plan gates; step-up and scalar
-receipts are required. Fixtures/MCP stay read-only. Auth mutations stream 32
-KiB and return `413` before parsing oversized bodies.
+Migrations `0105`/`0106` make lifecycle decisions and cluster curation
+forced-RLS, append-only, idempotent, stale-checked, step-up-protected, and
+identifier-only. Deep-research/report/plan gates and human cluster review stay
+required; fixtures/MCP remain read-only. Auth mutations cap bodies at 32 KiB.
 
-## 2026-08-05: Require human review for complaint clusters
+## 2026-08-06: Keep source observability and policy payloads bounded
 
-Migration `0106` records owner/editor curation in a forced-RLS append-only
-ledger with stale hashes, bounded split/merge IDs, and redaction-safe snapshots.
-Fixtures stay read-only; the gate fails closed until every non-synthetic cluster
-is reviewed or confirmed.
+`0107`–`0111` keep health/quota/alerts private and additive; missing data never
+means absence. `readCollectible` returns a hash-verified policy snapshot, and
+connectors fail closed when immutable review metadata is absent. No fetch or
+activation occurs in these reads.
 
-## 2026-08-06: Keep source observability bounded and additive
+## 2026-08-06: Audit exports and isolate instruction-like evidence
 
-Health/freshness stay private; missing observations never imply absence.
-`0107`-`0110` add bounded quota/health/alert reads and leased outbox status;
-no fetch, activation, payload, or incident mutation occurs.
+Approved report/plan exports record identifier-only receipts after hydration and
+redaction; this is accountability, not purge authority. Complaint analysis
+v0.2.0 flags instruction-like fixture/import text in `manipulationRisk` and
+`policyFlags`, preserves provenance, requires private review, and never executes
+or writes repository controls. No migration is needed.
 
-## 2026-08-06: Carry the reviewed policy payload into connector execution
+## 2026-08-06: Enforce complete reviews and policy-decay safety
 
-`readCollectible` returns hash-verified policy JSON with the activation snapshot;
-connectors compare immutable fields before requests and fail closed when absent.
-Activation remains database-owned.
-
-## 2026-08-06: Audit approved report and plan exports in the same transaction
-
-Report/plan exports record identifier-only receipts after hydration/redaction;
-this is accountability, not provider purge authority.
-
-## 2026-08-06: Isolate instruction-like evidence
-
-Complaint analysis v0.2.0 flags bounded instruction-like fixture/owner-import
-text in `manipulationRisk`/`policyFlags`; evidence/provenance remain immutable,
-private rows require review, and artifacts show a coverage gap. No migration;
-imported text cannot execute or write repository controls.
-
-## 2026-08-06: Enforce complete policy-declared reviewer sets
-
-`0114`/`0115` require one approval per role/hash;
-CFPB/Stack Exchange require legal/privacy/security while manual policies keep
-independent_operator. `0116` rejects identity reuse and centralizes
-`appsea.source_policy_has_complete_reviews`; `0117` adds scalar progress;
-`0118` closes direct activation, lease/reconciliation replay, and lineage paths.
-
-## 2026-08-06: Decay completed outputs when source policy loses collectibility
-
-`0119` adds fenced policy-impact expiry. Non-collectible
-completed analyses become non-destructive `expired`; active opportunity
-pointers are repaired or cleared; private reads/exports fail closed against
-policy. Lineage and objects remain for review; later source
-deletion uses destructive invalidation/purge, and reapproval never
+`0114`–`0118` require complete independent role/hash reviews, reject identity
+reuse, and close direct activation/replay/lineage bypasses. `0119` adds fenced
+non-destructive expiry when a completed analysis loses collectibility; pointers
+repair or clear, private reads/exports fail closed, lineage remains reviewable,
+and later source deletion performs destructive purge. Reapproval never
 auto-reactivates an expired output.
+
+## 2026-08-09: Render private Markdown on demand until purge proof exists
+
+Versioned rows already provide immutable history and lineage, so history and
+selected reads reuse membership, current-policy, deletion, hydration, redaction,
+and approval gates. Markdown renders only after that projection; persisting
+`report-markdown` waits for deletion, export-retention, and backup purge proof.
+JSON/Markdown have separate audit idempotency keys. The leaderboard and latest-
+only MCP stay unchanged; the UI shows a 50-row `truncated` bound and plan
+comparison returns only sorted path status/hash/byte metadata.
+The transitive `nanoid` high finding is pinned to patched `3.3.17`; the
+production audit is clean.

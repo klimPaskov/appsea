@@ -126,11 +126,35 @@ POST  /v1/skills/{skill_id}/rollback
 
 ### Exports
 
-```text
+````text
 POST /v1/exports
 GET  /v1/exports/{export_id}
 GET  /v1/exports/{export_id}/download
-```
+
+### Private workspace report and plan history
+
+The first web contract exposes the same bounded artifact rules behind the
+authenticated workspace boundary:
+
+```text
+GET /api/workspaces/{workspaceId}/opportunities/{slug}/history
+GET /api/workspaces/{workspaceId}/reports/{reportId}
+GET /api/workspaces/{workspaceId}/plans/{planPackageId}
+GET /api/workspaces/{workspaceId}/opportunities/{slug}/plans/compare?from={planId}&to={planId}
+GET /api/workspaces/{workspaceId}/reports/{reportId}/export?format=json|markdown
+GET /api/workspaces/{workspaceId}/plans/{planPackageId}/export?format=json|markdown
+````
+
+History returns at most 50 active, current-policy-visible summaries for each
+artifact family and includes `truncated` when older rows exist. A withdrawn
+summary is metadata-only. Selected reads exclude withdrawn/deleted rows and
+reuse object hydration and field-redaction gates. Export accepts exactly one
+format value, defaults to JSON, and requires approval; Markdown is rendered on
+demand from the redacted validated read and returns the immutable manifest hash
+in `X-AppSea-Manifest-Hash`. The compare response contains only sorted path
+status/hash/byte metadata. MCP remains latest-only in this slice.
+
+````
 
 ## Response envelope
 
@@ -144,7 +168,7 @@ GET  /v1/exports/{export_id}/download
     "warnings": []
   }
 }
-```
+````
 
 Errors:
 

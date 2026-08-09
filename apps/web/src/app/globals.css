@@ -1535,6 +1535,134 @@ a:focus-visible {
   flex: 0 0 auto;
 }
 
+.workspace-export-links {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.artifact-history {
+  display: grid;
+  grid-template-columns: minmax(180px, 0.35fr) minmax(0, 1fr);
+  gap: 28px;
+  margin-top: 28px;
+  padding: 18px 0;
+  border-top: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+}
+
+.artifact-history h2 {
+  margin: 3px 0 0;
+  color: var(--ink);
+  font-size: 19px;
+  letter-spacing: -0.02em;
+}
+
+.artifact-history ul {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.artifact-history li {
+  display: grid;
+  grid-template-columns: minmax(150px, 1fr) auto minmax(150px, auto);
+  align-items: baseline;
+  gap: 14px;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.artifact-history li a {
+  color: var(--ink);
+  text-underline-offset: 3px;
+}
+
+.artifact-history li a[aria-current='page'] {
+  font-weight: 700;
+}
+
+.artifact-history time {
+  justify-self: end;
+  font-variant-numeric: tabular-nums;
+}
+
+.plan-compare-form {
+  display: flex;
+  align-items: end;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 24px;
+}
+
+.plan-compare-form label {
+  display: grid;
+  gap: 7px;
+  min-width: 180px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.plan-compare-form select {
+  min-height: 44px;
+  padding: 0 10px;
+  border: 1px solid var(--line);
+  border-radius: 5px;
+  background: var(--surface);
+  color: var(--ink);
+  font: inherit;
+  letter-spacing: normal;
+  text-transform: none;
+}
+
+.plan-compare-form select:focus {
+  outline: 3px solid color-mix(in srgb, var(--accent) 25%, transparent);
+  border-color: var(--accent);
+}
+
+.plan-comparison {
+  margin-top: 26px;
+}
+
+.table-scroll {
+  overflow-x: auto;
+  border-top: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+}
+
+.plan-comparison table {
+  width: 100%;
+  min-width: 560px;
+  border-collapse: collapse;
+  color: var(--ink);
+  font-size: 13px;
+}
+
+.plan-comparison th,
+.plan-comparison td {
+  padding: 12px 10px;
+  border-bottom: 1px solid var(--line);
+  text-align: left;
+  vertical-align: top;
+}
+
+.plan-comparison thead th {
+  color: var(--muted);
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.plan-comparison tbody tr:last-child th,
+.plan-comparison tbody tr:last-child td {
+  border-bottom: 0;
+}
+
 .workspace-section {
   margin-top: 64px;
 }
@@ -2929,9 +3057,19 @@ a:focus-visible {
   }
 
   .detail-grid,
-  .plan-layout {
+  .plan-layout,
+  .artifact-history {
     grid-template-columns: 1fr;
     gap: 38px;
+  }
+
+  .artifact-history li {
+    grid-template-columns: 1fr auto;
+  }
+
+  .artifact-history time {
+    grid-column: 1 / -1;
+    justify-self: start;
   }
 
   .quiet-metrics {

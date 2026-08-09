@@ -24,7 +24,10 @@ AppSea is an opportunity intelligence system for software products. It turns per
 - Public `/leaderboard` and `/` share a sparse database-free view; UI captures
   audit public/private runtime and layout behavior. Captures are synthetic or
   owner content, not public market coverage.
-- Migration `0068` and `PostgresResearchCampaignOrchestrationRepository` own the durable multi-source campaign parent/child queue. The existing service admission and one-source Temporal workflow remain the child execution boundary; the lease-backed maintenance worker rechecks approved policy and reconciles child projections into private parent/campaign state. The slice is production-shaped but live source activation, deployed scheduler/Temporal ownership, and crash/retry proof remain external.
+- Migration `0068` and `PostgresResearchCampaignOrchestrationRepository` own
+  the durable multi-source parent/child queue; leased maintenance rechecks
+  policy and reconciles child projections. Live source activation, deployed
+  scheduler/Temporal ownership, and crash/retry proof remain external.
 - Migrations `0069` and `0081` plus `PostgresAgentAccessTokenRepository` own expiring, hash-only, forced-RLS agent tokens. `/api/mcp` is read-only, workspace-bound, scope-filtered, and reuses private projections; non-synthetic reports/plans require approval. Password-gated mutations require recent password step-up plus a fresh MFA marker when MFA is enabled; provider identity, secret/rate-limit deployment, and mutations without step-up remain external. Migration `0080` owns browser TOTP.
 - The post-collection production analysis workflow is `production-analysis-v2`: Temporal carries only identifiers and immutable digests, and `apps/worker` reconstructs the reviewed artifact from workspace-bound rows inside the persistence activity. New starts carry a strict history-safety memo; `apps/worker` provides a visibility-only checker and reviewed manifest for legacy v1 histories, while archive/retention remains deployment-owned.
 - `packages/model-gateway` is the provider-neutral trust boundary inside that
@@ -43,9 +46,19 @@ AppSea is an opportunity intelligence system for software products. It turns per
   MCP. Migration `0106` adds append-only cluster review events, stale hashes,
   split/merge lineage, membership updates, redaction-aware reads, and a gate
   blocker for unreviewed current clusters.
-- Migration `0083` adds a forced-RLS workspace purge-manifest ledger; `0084` repairs PostgreSQL 18 archival qualification, `0085` keeps private reads read-only, `0086` versions MFA ciphertext, and `0087` adds identifier-only dormant-account rewrap events. An archived owner can prepare a deduplicated 24-hour inventory of workspace-bound object references after password+MFA step-up; the private manifest never authorizes deletion. MFA rotation uses a reviewed current/previous-key window, bounded rewrap, and count-only status; previous-key removal remains operator-controlled.
+- Migrations `0083`–`0087` own the forced-RLS purge-manifest ledger, archival
+  qualification, read-only repair, MFA ciphertext versioning, and
+  identifier-only dormant-account rewrap. The 24-hour owner manifest never
+  authorizes deletion; MFA previous-key removal remains operator-controlled.
 - `packages/db` migrations 0008-0039 own auth/session/RLS, source quotas/tombstones, report approval, collection leases, actor attribution, and immutable policy-review evidence. The web boundary uses an HttpOnly session cookie and authorizes membership before RLS; recovery/invitation delivery remain provider-gated.
 - `packages/reports` owns the deterministic fixture opportunity report contract and composer; fixture persistence stores its content-hashed report version and links the plan package. Private report reads keep evidence, inference, recommendation, contrary evidence, and source coverage separate.
+- Private report/plan history is a read projection over existing immutable
+  version rows. The current web contract returns 50-row bounded summaries plus
+  `truncated`, selected active versions, and metadata-only plan comparisons.
+  `packages/reports` owns deterministic inert Markdown renderers; JSON and
+  Markdown exports are approved, redacted, representation-audited, and
+  Markdown is rendered on demand until `report-markdown` purge/deletion proof is
+  complete. The public leaderboard and MCP remain latest-only.
 - `apps/worker` maintenance commands use validated pure runners with bounded counters, sorted workspaces, independent budgets, and scheduler IDs; PostgreSQL remains the rerun boundary. `maintenance:loop` supervises one lease-backed pass with bounded backoff and signal-safe shutdown; deployment ownership and alerting remain external.
 - Migrations `0046`-`0052` own server-clock maintenance leases/fencing, scheduler metrics, cost/quota inspection, explicit tombstone-bound re-collection, and the direct-CFPB worker admission branch. The original lease boundary is allowlisted to four scheduler names and callable only through `appsea_maintenance`; later forward migrations extend that allowlist for source-health, delivery, and operational-alert status inspection without changing released history. Re-collection is never automatic. External source/provider/object-store effects, deployed scheduler ownership, alert routing, billing, and lock/recovery proof remain external.
 - The private source registry includes bounded connector health from jobs, active items, and deletion tombstones; raw failures and mutation controls stay outside the read boundary.

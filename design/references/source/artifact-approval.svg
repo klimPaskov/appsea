@@ -1,5 +1,5 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1440" height="520" viewBox="0 0 1440 520">
-<rect width="1440" height="520" fill="#050711" />
+<svg xmlns="http://www.w3.org/2000/svg" width="1440" height="620" viewBox="0 0 1440 620">
+<rect width="1440" height="620" fill="#050711" />
 <line x1="0" y1="76" x2="1440" y2="76" stroke="#18243a" stroke-width="1" />
 <rect x="76" y="24" width="28" height="28" rx="8" fill="#9b5cff" />
 <text x="90" y="42.5" font-family="Arial, Helvetica, sans-serif" font-size="12" font-weight="700" fill="#ffffff" text-anchor="middle">A</text>
@@ -16,4 +16,12 @@
 <text x="315" y="408" font-family="Arial, Helvetica, sans-serif" font-size="11" font-weight="650" fill="#f5f7ff" text-anchor="middle">Mark reviewed</text>
 <rect x="402" y="386" width="142" height="34" rx="5" fill="#0b1220" stroke="#f5f7ff" />
 <text x="473" y="408" font-family="Arial, Helvetica, sans-serif" font-size="11" font-weight="650" fill="#f5f7ff" text-anchor="middle">Withdraw report</text>
+<rect x="220" y="472" width="1000" height="94" rx="6" fill="#0b1220" stroke="#18243a" />
+<text x="242" y="500" font-family="Arial, Helvetica, sans-serif" font-size="10" font-weight="700" fill="#9ba8c3" letter-spacing="1.1">VERSION HISTORY</text>
+<text x="242" y="530" font-family="Arial, Helvetica, sans-serif" font-size="14" font-weight="650" fill="#f5f7ff">production-report-v2</text>
+<text x="534" y="530" font-family="Arial, Helvetica, sans-serif" font-size="12" fill="#9ba8c3">approved  ·  06 Aug 2026</text>
+<rect x="1000" y="514" width="88" height="30" rx="5" fill="#0b1220" stroke="#f5f7ff" />
+<text x="1044" y="533" font-family="Arial, Helvetica, sans-serif" font-size="10" font-weight="650" fill="#f5f7ff" text-anchor="middle">JSON</text>
+<rect x="1098" y="514" width="100" height="30" rx="5" fill="#0b1220" stroke="#f5f7ff" />
+<text x="1148" y="533" font-family="Arial, Helvetica, sans-serif" font-size="10" font-weight="650" fill="#f5f7ff" text-anchor="middle">MARKDOWN</text>
 </svg>

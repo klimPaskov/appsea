@@ -135,6 +135,12 @@ import {
   deepResearchGateSchema,
   deepResearchGateTransitionInputSchema,
   workspaceReportApprovalInputSchema,
+  workspaceReportVersionSummarySchema,
+  workspaceArtifactHistoryReadModelSchema,
+  workspacePlanComparisonSchema,
+  workspacePlanFileChangeSchema,
+  workspacePlanVersionSummarySchema,
+  workspaceExportFormatSchema,
   workspaceReportExportReadModelSchema,
   workspacePlanApprovalInputSchema,
   workspacePlanExportReadModelSchema,
@@ -2175,6 +2181,72 @@ describe('contracts', () => {
     expect(
       workspacePlanExportReadModelSchema.safeParse({ plan, manifestHash: 'a'.repeat(64) }).success
     ).toBe(true)
+  })
+
+  it('validates bounded private artifact history and deterministic plan comparisons', () => {
+    const report = workspaceReportVersionSummarySchema.parse({
+      id: 'report:one',
+      version: 'production-report-v2',
+      generatedAt: now,
+      manifestHash: 'a'.repeat(64),
+      approvalState: 'approved',
+      synthetic: false
+    })
+    const plan = workspacePlanVersionSummarySchema.parse({
+      id: 'plan:one',
+      version: 'production-plan-v2',
+      generatedAt: now,
+      manifestHash: 'b'.repeat(64),
+      readinessState: 'ready',
+      approvalState: 'approved',
+      synthetic: false
+    })
+    expect(
+      workspaceArtifactHistoryReadModelSchema.safeParse({ reports: [report], plans: [plan] })
+        .success
+    ).toBe(true)
+    expect(workspaceExportFormatSchema.safeParse('markdown').success).toBe(true)
+    expect(
+      workspacePlanComparisonSchema.safeParse({
+        from: plan,
+        to: { ...plan, id: 'plan:two', manifestHash: 'c'.repeat(64) },
+        files: [
+          {
+            path: 'README.md',
+            status: 'changed',
+            beforeHash: 'd'.repeat(64),
+            afterHash: 'e'.repeat(64),
+            beforeBytes: 12,
+            afterBytes: 14
+          }
+        ],
+        addedCount: 0,
+        removedCount: 0,
+        changedCount: 1,
+        unchangedCount: 0
+      }).success
+    ).toBe(true)
+    expect(
+      workspacePlanFileChangeSchema.safeParse({
+        path: '../escape',
+        status: 'added',
+        beforeHash: null,
+        afterHash: 'f'.repeat(64),
+        beforeBytes: null,
+        afterBytes: 1
+      }).success
+    ).toBe(false)
+    expect(
+      workspaceReportVersionSummarySchema.safeParse({
+        id: 'report:one',
+        version: 'v1',
+        generatedAt: now,
+        manifestHash: 'A'.repeat(64),
+        approvalState: 'approved',
+        synthetic: false,
+        extra: true
+      }).success
+    ).toBe(false)
   })
 
   it('keeps production output governance states explicit and bounded', () => {

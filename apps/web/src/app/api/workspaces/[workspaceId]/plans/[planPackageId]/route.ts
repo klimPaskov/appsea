@@ -20,6 +20,38 @@ import { getObjectStore } from '../../../../../../server/object-store'
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 
+export async function GET(
+  _request: Request,
+  context: { params: Promise<{ workspaceId: string; planPackageId: string }> }
+): Promise<Response> {
+  const session = await readSession()
+  if (!session) return unauthorizedResponse()
+  const path = parsePath(await context.params)
+  if (!path) return invalidRequest('Invalid plan path')
+
+  try {
+    const data = await authRepository({
+      objectStore: getObjectStore()
+    }).readWorkspacePlanVersionForUser(session.user.userId, path.workspaceId, path.planPackageId)
+    if (!data) {
+      return Response.json(
+        { error: 'Plan package not found' },
+        { status: 404, headers: privateResponseHeaders }
+      )
+    }
+    return Response.json({ data }, { headers: privateResponseHeaders })
+  } catch (error) {
+    if (error instanceof WorkspaceAuthorizationError) return forbiddenResponse()
+    console.error('AppSea plan version read failed', {
+      name: error instanceof Error ? error.name : 'unknown'
+    })
+    return Response.json(
+      { error: 'Unable to read plan' },
+      { status: 500, headers: privateResponseHeaders }
+    )
+  }
+}
+
 function parsePath(params: {
   workspaceId: string
   planPackageId: string

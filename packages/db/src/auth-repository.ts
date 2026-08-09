@@ -65,12 +65,15 @@ import {
   workspaceMembershipReadModelSchema,
   workspaceOpportunityDetailReadModelSchema,
   workspaceOpportunityReadModelSchema,
+  workspaceArtifactHistoryReadModelSchema,
   workspacePlanApprovalInputSchema,
   workspacePlanExportReadModelSchema,
   workspacePlanReadModelSchema,
+  workspacePlanVersionSummarySchema,
   workspaceReportApprovalInputSchema,
   workspaceReportExportReadModelSchema,
   workspaceReportReadModelSchema,
+  workspaceReportVersionSummarySchema,
   redactOpportunityReport,
   redactComplaintAnalysis,
   redactOpportunity,
@@ -118,14 +121,22 @@ import {
   type WorkspaceMembershipReadModel,
   type WorkspaceOpportunityDetailReadModel,
   type WorkspaceOpportunityReadModel,
+  type WorkspaceArtifactHistoryReadModel,
   type WorkspacePlanApprovalInput,
   type WorkspacePlanExportReadModel,
   type WorkspacePlanReadModel,
+  type WorkspacePlanVersionSummary,
   type WorkspaceReportApprovalInput,
   type WorkspaceReportExportReadModel,
-  type WorkspaceReportReadModel
+  type WorkspaceReportReadModel,
+  type WorkspaceReportVersionSummary
 } from '@appsea/contracts'
-import { decodeOpportunityReport, decodePlanPackage } from '@appsea/reports'
+import {
+  decodeOpportunityReport,
+  decodePlanPackage,
+  renderOpportunityReportMarkdown,
+  renderPlanPackageMarkdown
+} from '@appsea/reports'
 import type { ObjectStore } from '@appsea/object-store'
 import { contentHash, sha256 } from './hash'
 import {
@@ -173,6 +184,7 @@ function exportAuditEventId(input: {
   action: 'report.exported' | 'plan.exported'
   manifestHash: string
   actorId: string
+  representation: 'json' | 'markdown'
 }): string {
   // One receipt is retained per workspace/artifact version/actor. Replays of
   // the same approved export therefore do not create duplicate audit rows.
@@ -188,6 +200,7 @@ async function recordWorkspaceExportAudit(
     action: 'report.exported' | 'plan.exported'
     manifestHash: string
     actorId: string
+    representation: 'json' | 'markdown'
   }
 ): Promise<void> {
   const auditEventId = exportAuditEventId(input)
@@ -206,7 +219,7 @@ async function recordWorkspaceExportAudit(
       input.action,
       input.targetType,
       input.artifactId,
-      JSON.stringify({ manifestHash: input.manifestHash, representation: 'json' })
+      JSON.stringify({ manifestHash: input.manifestHash, representation: input.representation })
     ]
   )
 }
@@ -705,6 +718,7 @@ interface EvidenceRow extends QueryResultRow {
 
 interface WorkspaceReportRow extends QueryResultRow {
   report_id: string
+  opportunity_id: string
   version: string
   structured_report: unknown
   structured_object_ref: unknown
@@ -720,6 +734,7 @@ interface WorkspaceReportRow extends QueryResultRow {
 
 interface WorkspacePlanRow extends QueryResultRow {
   plan_package_id: string
+  opportunity_id: string
   report_id: string | null
   version: string
   fixture_files: unknown
@@ -1125,8 +1140,31 @@ async function mapWorkspacePlan(
   })
 }
 
+function mapWorkspaceReportVersionSummary(row: WorkspaceReportRow): WorkspaceReportVersionSummary {
+  return workspaceReportVersionSummarySchema.parse({
+    id: row.report_id,
+    version: row.version,
+    generatedAt: iso(row.generated_at),
+    manifestHash: row.manifest_hash,
+    approvalState: row.approval_state,
+    synthetic: row.synthetic
+  })
+}
+
+function mapWorkspacePlanVersionSummary(row: WorkspacePlanRow): WorkspacePlanVersionSummary {
+  return workspacePlanVersionSummarySchema.parse({
+    id: row.plan_package_id,
+    version: row.version,
+    generatedAt: iso(row.generated_at),
+    manifestHash: row.manifest_hash,
+    readinessState: row.readiness_state,
+    approvalState: row.approval_state,
+    synthetic: row.synthetic
+  })
+}
+
 const workspaceReportSelect = `
-  SELECT report.report_id, report.version, report.structured_report,
+  SELECT report.report_id, report.opportunity_id, report.version, report.structured_report,
          report.structured_object_ref, report.generated_at,
          report.approval_state, report.manifest_hash, report.deletion_state,
          report.synthetic, report_opportunity.source_run_id AS collection_run_id,
@@ -1144,7 +1182,7 @@ const workspaceReportSelect = `
      AND analysis.analysis_run_id = analysis_output.analysis_run_id`
 
 const workspacePlanSelect = `
-  SELECT plan.plan_package_id, plan.report_id, plan.version, plan.fixture_files,
+  SELECT plan.plan_package_id, plan.opportunity_id, plan.report_id, plan.version, plan.fixture_files,
          plan.package_object_ref, plan.generated_at, plan.readiness_state,
          plan.approval_state, plan.synthetic, plan.deletion_state,
          plan.manifest_hash, opportunity.slug AS opportunity_slug,
@@ -3851,9 +3889,66 @@ export class PostgresAuthRepository {
           targetType: 'report',
           action: 'report.exported',
           manifestHash: exported.manifestHash,
-          actorId: parsedUserId
+          actorId: parsedUserId,
+          representation: 'json'
         })
         return exported
+      },
+      { isolationLevel: 'SERIALIZABLE' }
+    )
+  }
+
+  async exportWorkspaceReportMarkdown(
+    userId: string,
+    workspaceId: string,
+    reportId: string
+  ): Promise<{ report: WorkspaceReportReadModel; manifestHash: string; markdown: string }> {
+    const parsedUserId = appseaIdentifierSchema.parse(userId)
+    const parsedWorkspaceId = appseaIdentifierSchema.parse(workspaceId)
+    const parsedReportId = appseaIdentifierSchema.parse(reportId)
+
+    return withAuthenticatedWorkspaceTransaction(
+      this.pool,
+      parsedUserId,
+      parsedWorkspaceId,
+      async (client) => {
+        const result = await client.query<WorkspaceReportRow>(
+          `${workspaceReportSelect}
+          WHERE report.workspace_id = $1
+            AND report.report_id = $2
+            AND report.deletion_state = 'active'
+            AND (
+              analysis.analysis_run_id IS NULL
+              OR (
+                analysis.availability_state = 'active'
+                AND appsea.production_analysis_policies_collectible(
+                  analysis.workspace_id, analysis.analysis_run_id
+                )
+              )
+            )`,
+          [parsedWorkspaceId, parsedReportId]
+        )
+        const row = result.rows[0]
+        if (!row) throw new WorkspaceReportNotFoundError()
+        if (row.approval_state !== 'approved') throw new WorkspaceReportNotApprovedError()
+        const masks = await readOutputRedactionMasks(
+          client,
+          parsedWorkspaceId,
+          row.analysis_run_id,
+          row.collection_run_id
+        )
+        const report = await mapWorkspaceReport(row, parsedWorkspaceId, this.objectStore, masks)
+        const markdown = renderOpportunityReportMarkdown(report.structuredReport)
+        await recordWorkspaceExportAudit(client, {
+          workspaceId: parsedWorkspaceId,
+          artifactId: parsedReportId,
+          targetType: 'report',
+          action: 'report.exported',
+          manifestHash: row.manifest_hash,
+          actorId: parsedUserId,
+          representation: 'markdown'
+        })
+        return { report, manifestHash: row.manifest_hash, markdown }
       },
       { isolationLevel: 'SERIALIZABLE' }
     )
@@ -4031,11 +4126,238 @@ export class PostgresAuthRepository {
           targetType: 'plan_package',
           action: 'plan.exported',
           manifestHash: exported.manifestHash,
-          actorId: parsedUserId
+          actorId: parsedUserId,
+          representation: 'json'
         })
         return exported
       },
       { isolationLevel: 'SERIALIZABLE' }
+    )
+  }
+
+  async exportWorkspacePlanMarkdown(
+    userId: string,
+    workspaceId: string,
+    planPackageId: string
+  ): Promise<{ plan: WorkspacePlanReadModel; manifestHash: string; markdown: string }> {
+    const parsedUserId = appseaIdentifierSchema.parse(userId)
+    const parsedWorkspaceId = appseaIdentifierSchema.parse(workspaceId)
+    const parsedPlanPackageId = appseaIdentifierSchema.parse(planPackageId)
+
+    return withAuthenticatedWorkspaceTransaction(
+      this.pool,
+      parsedUserId,
+      parsedWorkspaceId,
+      async (client) => {
+        const result = await client.query<WorkspacePlanRow>(
+          `${workspacePlanSelect}
+          WHERE plan.workspace_id = $1
+            AND plan.plan_package_id = $2
+            AND plan.deletion_state = 'active'
+            AND (
+              analysis.analysis_run_id IS NULL
+              OR (
+                analysis.availability_state = 'active'
+                AND appsea.production_analysis_policies_collectible(
+                  analysis.workspace_id, analysis.analysis_run_id
+                )
+              )
+            )`,
+          [parsedWorkspaceId, parsedPlanPackageId]
+        )
+        const row = result.rows[0]
+        if (!row) throw new WorkspacePlanNotFoundError()
+        if (row.approval_state !== 'approved') throw new WorkspacePlanNotApprovedError()
+        const masks = await readOutputRedactionMasks(
+          client,
+          parsedWorkspaceId,
+          row.analysis_run_id,
+          row.collection_run_id
+        )
+        const plan = await mapWorkspacePlan(row, parsedWorkspaceId, this.objectStore, masks)
+        const planPackage = planPackageSchema.parse({
+          opportunitySlug: row.opportunity_slug,
+          generatedAt: plan.generatedAt,
+          files: plan.files
+        })
+        const markdown = renderPlanPackageMarkdown(planPackage)
+        await recordWorkspaceExportAudit(client, {
+          workspaceId: parsedWorkspaceId,
+          artifactId: parsedPlanPackageId,
+          targetType: 'plan_package',
+          action: 'plan.exported',
+          manifestHash: row.manifest_hash,
+          actorId: parsedUserId,
+          representation: 'markdown'
+        })
+        return { plan, manifestHash: row.manifest_hash, markdown }
+      },
+      { isolationLevel: 'SERIALIZABLE' }
+    )
+  }
+
+  /** Read bounded version metadata without hydrating private report/plan bodies. */
+  async listWorkspaceArtifactHistoryForUser(
+    userId: string,
+    workspaceId: string,
+    opportunityId: string
+  ): Promise<WorkspaceArtifactHistoryReadModel> {
+    const parsedUserId = appseaIdentifierSchema.parse(userId)
+    const parsedWorkspaceId = appseaIdentifierSchema.parse(workspaceId)
+    const parsedOpportunityId = appseaIdentifierSchema.parse(opportunityId)
+
+    return withAuthenticatedWorkspaceTransaction(
+      this.pool,
+      parsedUserId,
+      parsedWorkspaceId,
+      async (client) => {
+        const reportRows = await client.query<WorkspaceReportRow>(
+          `${workspaceReportSelect}
+           WHERE report.workspace_id = $1
+             AND report.opportunity_id = $2
+             AND report.deletion_state = 'active'
+             AND (
+               analysis.analysis_run_id IS NULL
+               OR (
+                 analysis.availability_state = 'active'
+                 AND appsea.production_analysis_policies_collectible(
+                   analysis.workspace_id, analysis.analysis_run_id
+                 )
+               )
+             )
+           ORDER BY report.generated_at DESC, report.report_id ASC
+           LIMIT 51`,
+          [parsedWorkspaceId, parsedOpportunityId]
+        )
+        const planRows = await client.query<WorkspacePlanRow>(
+          `${workspacePlanSelect}
+           WHERE plan.workspace_id = $1
+             AND plan.opportunity_id = $2
+             AND plan.deletion_state = 'active'
+             AND (
+               analysis.analysis_run_id IS NULL
+               OR (
+                 analysis.availability_state = 'active'
+                 AND appsea.production_analysis_policies_collectible(
+                   analysis.workspace_id, analysis.analysis_run_id
+                 )
+               )
+             )
+           ORDER BY plan.generated_at DESC, plan.plan_package_id ASC
+           LIMIT 51`,
+          [parsedWorkspaceId, parsedOpportunityId]
+        )
+        return workspaceArtifactHistoryReadModelSchema.parse({
+          reports: reportRows.rows.slice(0, 50).map(mapWorkspaceReportVersionSummary),
+          plans: planRows.rows.slice(0, 50).map(mapWorkspacePlanVersionSummary),
+          truncated: reportRows.rows.length > 50 || planRows.rows.length > 50
+        })
+      },
+      { readOnly: true }
+    )
+  }
+
+  async readWorkspaceReportVersionForUser(
+    userId: string,
+    workspaceId: string,
+    reportId: string,
+    opportunityId?: string
+  ): Promise<WorkspaceReportReadModel | null> {
+    const parsedUserId = appseaIdentifierSchema.parse(userId)
+    const parsedWorkspaceId = appseaIdentifierSchema.parse(workspaceId)
+    const parsedReportId = appseaIdentifierSchema.parse(reportId)
+    const parsedOpportunityId = opportunityId
+      ? appseaIdentifierSchema.parse(opportunityId)
+      : undefined
+
+    return withAuthenticatedWorkspaceTransaction(
+      this.pool,
+      parsedUserId,
+      parsedWorkspaceId,
+      async (client) => {
+        const result = await client.query<WorkspaceReportRow>(
+          `${workspaceReportSelect}
+           WHERE report.workspace_id = $1
+             AND report.report_id = $2
+             ${parsedOpportunityId ? 'AND report.opportunity_id = $3' : ''}
+             AND report.approval_state <> 'withdrawn'
+             AND report.deletion_state = 'active'
+             AND (
+               analysis.analysis_run_id IS NULL
+               OR (
+                 analysis.availability_state = 'active'
+                 AND appsea.production_analysis_policies_collectible(
+                   analysis.workspace_id, analysis.analysis_run_id
+                 )
+               )
+             )`,
+          parsedOpportunityId
+            ? [parsedWorkspaceId, parsedReportId, parsedOpportunityId]
+            : [parsedWorkspaceId, parsedReportId]
+        )
+        const row = result.rows[0]
+        if (!row) return null
+        const masks = await readOutputRedactionMasks(
+          client,
+          parsedWorkspaceId,
+          row.analysis_run_id,
+          row.collection_run_id
+        )
+        return mapWorkspaceReport(row, parsedWorkspaceId, this.objectStore, masks)
+      },
+      { readOnly: true }
+    )
+  }
+
+  async readWorkspacePlanVersionForUser(
+    userId: string,
+    workspaceId: string,
+    planPackageId: string,
+    opportunityId?: string
+  ): Promise<WorkspacePlanReadModel | null> {
+    const parsedUserId = appseaIdentifierSchema.parse(userId)
+    const parsedWorkspaceId = appseaIdentifierSchema.parse(workspaceId)
+    const parsedPlanPackageId = appseaIdentifierSchema.parse(planPackageId)
+    const parsedOpportunityId = opportunityId
+      ? appseaIdentifierSchema.parse(opportunityId)
+      : undefined
+
+    return withAuthenticatedWorkspaceTransaction(
+      this.pool,
+      parsedUserId,
+      parsedWorkspaceId,
+      async (client) => {
+        const result = await client.query<WorkspacePlanRow>(
+          `${workspacePlanSelect}
+           WHERE plan.workspace_id = $1
+             AND plan.plan_package_id = $2
+             ${parsedOpportunityId ? 'AND plan.opportunity_id = $3' : ''}
+             AND plan.approval_state <> 'withdrawn'
+             AND plan.deletion_state = 'active'
+             AND (
+               analysis.analysis_run_id IS NULL
+               OR (
+                 analysis.availability_state = 'active'
+                 AND appsea.production_analysis_policies_collectible(
+                   analysis.workspace_id, analysis.analysis_run_id
+                 )
+               )
+             )`,
+          parsedOpportunityId
+            ? [parsedWorkspaceId, parsedPlanPackageId, parsedOpportunityId]
+            : [parsedWorkspaceId, parsedPlanPackageId]
+        )
+        const row = result.rows[0]
+        if (!row) return null
+        const masks = await readOutputRedactionMasks(
+          client,
+          parsedWorkspaceId,
+          row.analysis_run_id,
+          row.collection_run_id
+        )
+        return mapWorkspacePlan(row, parsedWorkspaceId, this.objectStore, masks)
+      },
+      { readOnly: true }
     )
   }
 

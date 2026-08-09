@@ -16,6 +16,7 @@
     "@appsea/contracts": "workspace:*",
     "@appsea/db": "workspace:*",
     "@appsea/object-store": "workspace:*",
+    "@appsea/reports": "workspace:*",
     "@appsea/research": "workspace:*",
     "@appsea/workflows": "workspace:*",
     "@temporalio/client": "1.20.2",

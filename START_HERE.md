@@ -67,7 +67,7 @@ The disposable integration smoke is `pnpm verify:local-stack`.
 - owner-only, step-up-protected workspace archival that blocks active work, preserves research lineage, and records identifier-only lifecycle receipts
 - owner-issued, expiring workspace-scoped agent tokens with hash-only persistence, recent password step-up, and conditional recent-MFA create/revoke controls
 - authenticated read-only MCP-over-HTTP access to scoped private opportunities, evidence references, source coverage, and approved report/plan artifacts
-- approved report and plan JSON exports emit deterministic, identifier-only audit receipts visible in private Activity; provider retention and purge stay outside this repository boundary
+- approved report and plan JSON plus deterministic on-demand Markdown exports emit representation-specific, identifier-only audit receipts visible in private Activity; private pages expose bounded version history and metadata-only plan comparison; provider retention and purge stay outside this repository boundary
 - owner-authorized, tenant-private CSV/JSON intake through the reviewed `manual-owner-import-v2` policy, with bounded parsing, PII scrubbing, identifier-only Temporal handoff, durable batch consumption, and owner deletion/tombstones; v1 remains historical, this is not public market coverage, and imported URLs are never fetched
 - provider-neutral password recovery mechanics with hash-only reset tokens,
   encrypted outbox delivery, fragment links, and a production kill switch

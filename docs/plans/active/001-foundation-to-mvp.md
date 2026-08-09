@@ -731,6 +731,18 @@ readiness blocker before an approval attempt. These controls are a client
 projection only; the existing same-origin API, step-up check, and database
 transition guards remain authoritative.
 
+The private report and plan pages now expose bounded version history from the
+existing immutable `report_versions` and `plan_package_versions` rows. Selected
+active versions reuse current-policy, deletion, object-hydration, and
+field-redaction gates; withdrawn rows are metadata-only. The report and plan
+export routes accept `format=json|markdown`, with deterministic on-demand
+Markdown and representation-specific audit receipts. Plan comparison is
+metadata-only (sorted file status, SHA-256, and UTF-8 byte counts). The page
+shows a visible 50-version bound when older rows exist. This slice deliberately
+does not persist `report-markdown` objects, does not add a ZIP transport, and
+does not widen MCP beyond latest artifacts; their retention/deletion and API
+design remain follow-up work.
+
 The private workspace Activity page now exposes the existing immutable audit
 projection through a bounded cursor view. It is read-only, scalar-only, and
 membership-authorized. Successful approved report and plan JSON exports now

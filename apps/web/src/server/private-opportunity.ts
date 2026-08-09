@@ -4,6 +4,7 @@ import {
   opportunitySlugSchema,
   resolveOpportunityStateForRead,
   workspaceEvidenceReadModelSchema,
+  workspaceArtifactHistoryReadModelSchema,
   workspaceOpportunityDetailReadModelSchema,
   workspaceOpportunityReadModelSchema,
   workspacePlanReadModelSchema,
@@ -12,6 +13,7 @@ import {
   type CompetitiveResearchObservation,
   type ProductionAnalysisReadModel,
   type WorkspaceOpportunityDetailReadModel,
+  type WorkspaceArtifactHistoryReadModel,
   type WorkspaceCompetitorTarget,
   type WorkspaceMembershipReadModel
 } from '@appsea/contracts'
@@ -274,4 +276,42 @@ export async function readPrivateOpportunityContext(
     getDatabasePool()
   ).listTargetsForUser(session.user.userId, parsedWorkspaceId.data, detail.opportunity.id)
   return { session, workspace, detail, competitorTargets }
+}
+
+export async function readPrivateArtifactHistoryForUser(
+  userId: string,
+  workspaceId: string,
+  opportunityId: string
+): Promise<WorkspaceArtifactHistoryReadModel> {
+  return workspaceArtifactHistoryReadModelSchema.parse(
+    await authRepository().listWorkspaceArtifactHistoryForUser(userId, workspaceId, opportunityId)
+  )
+}
+
+export async function readPrivateReportVersionForUser(
+  userId: string,
+  workspaceId: string,
+  reportId: string,
+  opportunityId: string
+) {
+  return authRepository({ objectStore: getObjectStore() }).readWorkspaceReportVersionForUser(
+    userId,
+    workspaceId,
+    reportId,
+    opportunityId
+  )
+}
+
+export async function readPrivatePlanVersionForUser(
+  userId: string,
+  workspaceId: string,
+  planPackageId: string,
+  opportunityId: string
+) {
+  return authRepository({ objectStore: getObjectStore() }).readWorkspacePlanVersionForUser(
+    userId,
+    workspaceId,
+    planPackageId,
+    opportunityId
+  )
 }

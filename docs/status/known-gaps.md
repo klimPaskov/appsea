@@ -626,7 +626,13 @@ workspace API and database, and exports are authorized only for approved,
 validated report JSON. Successful approved report and plan exports now also
 write idempotent, identifier-only `report.exported`/`plan.exported` audit
 receipts containing the manifest hash and representation, so the private
-Activity view can account for the export without exposing content. Migration
+Activity view can account for the export without exposing content. The private
+report/plan routes now expose at most 50 current-policy-visible version
+summaries (with a `truncated` indicator), selected-version reads, and a
+metadata-only plan comparison. Approved JSON and deterministic on-demand
+Markdown exports use separate representation-aware audit receipts; Markdown
+returns the manifest hash in a response header and does not persist a new
+object. Migration
 `0033` adds a first-class workspace
 seed-review registry, private list/read/create/transition routes, and a seed
 review page; the analysis-start boundary now accepts only an approved
@@ -638,11 +644,18 @@ backup propagation, destructive workspace closure, and export purge remain open.
 Export receipts do not implement provider-side retention, download revocation,
 or destructive export purge.
 Plan packages now have a separate owner/editor
-approval boundary and approved JSON export; both report and plan routes hydrate
-validated object-backed payloads before export. Source-item retention enqueue is
+approval boundary and approved JSON/Markdown export; both report and plan routes
+hydrate validated object-backed payloads before export. Source-item retention enqueue is
 implemented from the stored policy; invalidated analysis outputs now enqueue
 retention-aware local object purges, but source-wide object-store and backup
 purge remain deployment work.
+
+The current implementation intentionally does not add cursor pagination, MCP
+history resources, ZIP/download-directory packaging, or persisted
+`report-markdown` objects. These are follow-up contracts because the existing
+object purge queue and deletion propagation must be extended before a Markdown
+object can be durable. The visible bound prevents silently presenting an
+incomplete history as complete.
 
 Production analysis private reads now carry the current report and plan
 approval states from PostgreSQL governance projections, so later review

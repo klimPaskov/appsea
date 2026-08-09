@@ -73,4 +73,17 @@ Private report versions are governed separately from the public leaderboard:
 owners and editors may review a draft, only owners may approve or withdraw, and
 each transition is auditable. Export is available only for an approved report
 and contains the validated report read model plus its manifest hash; it does not
-expose raw source payloads or turn fixture data into market evidence.
+expose raw source payloads or turn fixture data into market evidence. The
+private report route provides a bounded, policy-filtered selector for the 50
+newest active versions. Withdrawn versions can remain visible as metadata-only
+history entries but cannot be selected for content or export. `format=json` is
+the machine representation; `format=markdown` is a deterministic on-demand
+render of the same redacted read model, with the manifest hash in a response
+header. The public leaderboard remains latest-ranked and contains no history or
+comparison UI.
+
+Plan history follows the same membership, current-policy, deletion, and
+approval boundaries. A plan comparison returns sorted file paths, status, SHA-256
+hashes, and UTF-8 byte counts; it never republishes a second source copy. The
+Markdown plan export is one ordered human-readable bundle of the existing six
+files, not a ZIP or a new persisted object.
