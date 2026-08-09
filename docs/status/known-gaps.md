@@ -666,7 +666,8 @@ Production analysis private reads now carry the current report and plan
 approval states from PostgreSQL governance projections, so later review
 transitions remain visible without inferring stale object defaults. Active draft
 and reviewed versions remain readable to authenticated workspace members for
-private review; withdrawn, deleted, or stale-policy rows are excluded. MCP
+private review; withdrawn, deleted, incomplete-analysis, or stale-policy rows are
+excluded. MCP
 selected report content still requires approval, selected plan content requires
 readiness plus approval, and both web export routes remain approved-only.
 

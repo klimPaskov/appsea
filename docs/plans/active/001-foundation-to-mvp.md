@@ -735,9 +735,10 @@ transition guards remain authoritative.
 
 The private report and plan pages now expose bounded version history from the
 existing immutable `report_versions` and `plan_package_versions` rows. Selected
-active versions reuse current-policy, deletion, object-hydration, and
-field-redaction gates; active draft/reviewed rows remain available to
-authenticated workspace members for private review, while withdrawn rows are
+active versions reuse completed-analysis, current-policy, deletion,
+object-hydration, and field-redaction gates; active draft/reviewed rows remain
+available to authenticated workspace members for private review, while
+withdrawn rows are
 metadata-only. The report and plan
 export routes accept `format=json|markdown`, with deterministic on-demand
 Markdown and representation-specific audit receipts. Plan comparison is

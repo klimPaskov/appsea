@@ -3776,7 +3776,8 @@ export class PostgresAuthRepository {
        AND (
          analysis.analysis_run_id IS NULL
          OR (
-           analysis.availability_state = 'active'
+           analysis.state = 'completed'
+           AND analysis.availability_state = 'active'
            AND appsea.production_analysis_policies_collectible(
              analysis.workspace_id, analysis.analysis_run_id
            )
@@ -3821,7 +3822,8 @@ export class PostgresAuthRepository {
          AND (
            analysis.analysis_run_id IS NULL
            OR (
-             analysis.availability_state = 'active'
+             analysis.state = 'completed'
+             AND analysis.availability_state = 'active'
              AND appsea.production_analysis_policies_collectible(
                analysis.workspace_id, analysis.analysis_run_id
              )
@@ -3869,7 +3871,8 @@ export class PostgresAuthRepository {
             AND (
               analysis.analysis_run_id IS NULL
               OR (
-                analysis.availability_state = 'active'
+                analysis.state = 'completed'
+                AND analysis.availability_state = 'active'
                 AND appsea.production_analysis_policies_collectible(
                   analysis.workspace_id, analysis.analysis_run_id
                 )
@@ -3928,7 +3931,8 @@ export class PostgresAuthRepository {
             AND (
               analysis.analysis_run_id IS NULL
               OR (
-                analysis.availability_state = 'active'
+                analysis.state = 'completed'
+                AND analysis.availability_state = 'active'
                 AND appsea.production_analysis_policies_collectible(
                   analysis.workspace_id, analysis.analysis_run_id
                 )
@@ -4000,7 +4004,8 @@ export class PostgresAuthRepository {
        AND (
          analysis.analysis_run_id IS NULL
          OR (
-           analysis.availability_state = 'active'
+           analysis.state = 'completed'
+           AND analysis.availability_state = 'active'
            AND appsea.production_analysis_policies_collectible(
              analysis.workspace_id, analysis.analysis_run_id
            )
@@ -4058,7 +4063,8 @@ export class PostgresAuthRepository {
          AND (
            analysis.analysis_run_id IS NULL
            OR (
-             analysis.availability_state = 'active'
+             analysis.state = 'completed'
+             AND analysis.availability_state = 'active'
              AND appsea.production_analysis_policies_collectible(
                analysis.workspace_id, analysis.analysis_run_id
              )
@@ -4106,7 +4112,8 @@ export class PostgresAuthRepository {
             AND (
               analysis.analysis_run_id IS NULL
               OR (
-                analysis.availability_state = 'active'
+                analysis.state = 'completed'
+                AND analysis.availability_state = 'active'
                 AND appsea.production_analysis_policies_collectible(
                   analysis.workspace_id, analysis.analysis_run_id
                 )
@@ -4165,7 +4172,8 @@ export class PostgresAuthRepository {
             AND (
               analysis.analysis_run_id IS NULL
               OR (
-                analysis.availability_state = 'active'
+                analysis.state = 'completed'
+                AND analysis.availability_state = 'active'
                 AND appsea.production_analysis_policies_collectible(
                   analysis.workspace_id, analysis.analysis_run_id
                 )
@@ -4245,7 +4253,8 @@ export class PostgresAuthRepository {
              AND (
                analysis.analysis_run_id IS NULL
                OR (
-                 analysis.availability_state = 'active'
+                 analysis.state = 'completed'
+                 AND analysis.availability_state = 'active'
                  AND appsea.production_analysis_policies_collectible(
                    analysis.workspace_id, analysis.analysis_run_id
                  )
@@ -4274,7 +4283,8 @@ export class PostgresAuthRepository {
              AND (
                analysis.analysis_run_id IS NULL
                OR (
-                 analysis.availability_state = 'active'
+                 analysis.state = 'completed'
+                 AND analysis.availability_state = 'active'
                  AND appsea.production_analysis_policies_collectible(
                    analysis.workspace_id, analysis.analysis_run_id
                  )
@@ -4363,7 +4373,8 @@ export class PostgresAuthRepository {
              AND (
                analysis.analysis_run_id IS NULL
                OR (
-                 analysis.availability_state = 'active'
+                 analysis.state = 'completed'
+                 AND analysis.availability_state = 'active'
                  AND appsea.production_analysis_policies_collectible(
                    analysis.workspace_id, analysis.analysis_run_id
                  )
@@ -4415,7 +4426,8 @@ export class PostgresAuthRepository {
              AND (
                analysis.analysis_run_id IS NULL
                OR (
-                 analysis.availability_state = 'active'
+                 analysis.state = 'completed'
+                 AND analysis.availability_state = 'active'
                  AND appsea.production_analysis_policies_collectible(
                    analysis.workspace_id, analysis.analysis_run_id
                  )
@@ -4460,7 +4472,8 @@ export class PostgresAuthRepository {
              AND (
                analysis.analysis_run_id IS NULL
                OR (
-                 analysis.availability_state = 'active'
+                 analysis.state = 'completed'
+                 AND analysis.availability_state = 'active'
                  AND appsea.production_analysis_policies_collectible(
                    analysis.workspace_id, analysis.analysis_run_id
                  )
@@ -4512,7 +4525,8 @@ export class PostgresAuthRepository {
              AND (
                analysis.analysis_run_id IS NULL
                OR (
-                 analysis.availability_state = 'active'
+                 analysis.state = 'completed'
+                 AND analysis.availability_state = 'active'
                  AND appsea.production_analysis_policies_collectible(
                    analysis.workspace_id, analysis.analysis_run_id
                  )
@@ -5017,7 +5031,8 @@ export class PostgresAuthRepository {
          AND (
            analysis.analysis_run_id IS NULL
            OR (
-             analysis.availability_state = 'active'
+             analysis.state = 'completed'
+             AND analysis.availability_state = 'active'
              AND appsea.production_analysis_policies_collectible(
                analysis.workspace_id, analysis.analysis_run_id
              )
@@ -5043,7 +5058,8 @@ export class PostgresAuthRepository {
          AND (
            analysis.analysis_run_id IS NULL
            OR (
-             analysis.availability_state = 'active'
+             analysis.state = 'completed'
+             AND analysis.availability_state = 'active'
              AND appsea.production_analysis_policies_collectible(
                analysis.workspace_id, analysis.analysis_run_id
              )

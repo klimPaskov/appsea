@@ -25,8 +25,8 @@ presented as public market research.
 - `pnpm test` — passed: 15 packages; current run includes 118 contract, 191
   database, 146 worker, and 239 web tests among the package totals. The selected
   version security review confirms active draft/reviewed private reads remain
-  member-scoped, while withdrawn/deleted/stale rows are excluded and export/MCP
-  agent gates remain approval-aware.
+  member-scoped, while withdrawn/deleted/incomplete/stale rows are excluded and
+  export/MCP agent gates remain approval-aware.
 - `pnpm test:backup-restore` — passed the local helper tests; the verifier now
   targets migration `0121`.
 - `pnpm worker:fixture` — passed and wrote the deterministic synthetic artifact

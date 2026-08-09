@@ -1922,6 +1922,7 @@ describe('PostgresAuthRepository', () => {
     )
     expect(select?.text).toContain("report.approval_state <> 'withdrawn'")
     expect(select?.text).toContain("report.deletion_state = 'active'")
+    expect(select?.text).toContain("analysis.state = 'completed'")
     expect(select?.text).toContain('appsea.production_analysis_policies_collectible')
   })
 
@@ -2042,6 +2043,7 @@ describe('PostgresAuthRepository', () => {
     )
     expect(select?.text).toContain("plan.approval_state <> 'withdrawn'")
     expect(select?.text).toContain("plan.deletion_state = 'active'")
+    expect(select?.text).toContain("analysis.state = 'completed'")
     expect(select?.text).toContain('appsea.production_analysis_policies_collectible')
   })
 

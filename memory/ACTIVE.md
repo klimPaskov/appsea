@@ -82,7 +82,8 @@ disabled pending model-use, malware, DPA/egress, durable cost, and calibration
 review.
 
 The private report/plan history slice reads active, non-withdrawn rows through
-current-policy/deletion/redaction gates. Members may select active drafts/reviews;
+completed-analysis/current-policy/deletion/redaction gates. Members may select
+active drafts/reviews;
 MCP reads add approval/readiness gates. It exposes cursor-paginated metadata
 pages of up to 50 rows per artifact family, representation-aware JSON/Markdown
 audit receipts, same-opportunity plan comparison (sorted path/hash/bytes), and
