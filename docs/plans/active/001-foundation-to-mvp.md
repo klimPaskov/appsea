@@ -25,7 +25,7 @@ Status: production-shaped foundation implemented and validated locally; producti
 
 Implemented:
 
-- PostgreSQL 18 schema and one hundred nineteen forward, checksummed migrations
+- PostgreSQL 18 schema and one hundred twenty forward, checksummed migrations
 - normalized source, evidence, complaint, cluster, competitor, opportunity, score, report, plan, audit, cost, deletion, outbox, and lineage tables
 - no-login owner, separate migrator, and least-privilege runtime role contract
 - forced workspace RLS and transaction-scoped workspace context
@@ -34,8 +34,8 @@ Implemented:
 - replay-safe fixture repository with concurrent idempotency conflict handling
 - populated upgrade, fresh install, privilege, RLS, provenance, policy, cross-wire, and replay tests
 - local runbook and CI persistence gate
-- isolated local PostgreSQL backup/restore runbook and CI gate; the drill
-  restores a disposable dump through all one hundred nineteen migrations and verifies
+- isolated local PostgreSQL backup/restore runbook and CI gate; the last
+  recorded drill restores a disposable dump through migration `0119` and verifies
   forced workspace RLS plus runtime/maintenance privileges without accepting a
   remote URL
 - one-command loopback private-workspace stack with migration, worker, and web
@@ -234,7 +234,8 @@ Migration `0096_opportunity_score_v1_envelope.sql` adds nullable, range-checked
 balanced v1 score fields, reviewed evidence/coverage/freshness references, and
 a private ranking index. Legacy score rows remain readable and keep `score` as
 their raw-score compatibility field. The 2026-08-06 local fresh migration and
-backup/restore drills pass through `0119`; provider backup, HA, retention, and
+backup/restore drills pass through `0119`; migration `0120` adds report-Markdown
+persistence and still needs a Docker-backed fresh/upgrade run. Provider backup, HA, retention, and
 production restore remain deployment work.
 
 Migration `0097_mcp_agent_access_admission.sql` rechecks workspace membership

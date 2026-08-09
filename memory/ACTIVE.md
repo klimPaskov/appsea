@@ -12,7 +12,7 @@ public leaderboard synthetic; no public source enabled.
 Reviewed `manual-owner-import-v2` supports tenant-private owner-authorized
 CSV/JSON without claiming public market coverage.
 
-Migrations `0027`-`0119` cover policy, deletion/leases, orchestration,
+Migrations `0027`-`0120` cover policy, deletion/leases, orchestration,
 analysis/report/plan governance, cost/alerts, object refs, archival/purge
 intent, redaction, agent tokens, MFA, complete reviews, shared collectibility,
 and policy-impact expiry. OIDC and deployment operations remain gated.

@@ -1,6 +1,9 @@
 # Production-readiness audit — 2026-08-06
 
 Status: not production-ready. This audit supersedes the 2026-08-04 audit and
+is historical as of 2026-08-06. Migration `0120` and its report-Markdown
+persistence follow-up supersede the migration-count and durable-Markdown notes
+below; Docker-backed proof for that forward migration remains open. This audit
 records the source-policy handoffs, deterministic CFPB and Stack Exchange
 review manifests, quota-headroom, source-freshness, source-health alert,
 operational-alert-status, source-policy permission-evidence, actor-bound
