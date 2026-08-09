@@ -55,7 +55,8 @@ presented as public market research.
 - `pnpm ui:capture` — passed a fresh local run on 2026-08-09 with 20 public
   captures at 1280, 1024, 768, and 480 pixels; representative leaderboard and
   opportunity and coding-plan screenshots were visually inspected. The
-  imagegen-backed plan icon is visible on the public coding-plan route. The
+  imagegen-backed plan icon is visible on the public coding-plan route; the
+  generated report icon is used on the private report route. The
   480-pixel pass uses a
   narrow desktop layout (`mobile: false`), not a mobile-emulation desktop
   capture.

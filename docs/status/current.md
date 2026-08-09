@@ -15,7 +15,8 @@
   `appsea-mark-generated.png` asset; the private evidence coverage panel also
   uses the imagegen-generated decorative `appsea-evidence-icon-generated.png`;
   the public and private coding-plan routes also use the generated
-  `appsea-plan-icon-generated.png`. These are website-only visual touches and
+  `appsea-plan-icon-generated.png`, and the private report route uses the
+  generated `appsea-report-icon-generated.png`. These are website-only visual touches and
   do not alter the staged Tauri icon pair or any research semantics.
 - Local private-workspace stack: `pnpm dev:local` starts loopback PostgreSQL,
   Temporal, and disposable MinIO, initializes the `appsea-local` bucket, applies

@@ -4,7 +4,8 @@
 
 - Repository: `4f2a6d1` on `main`, pushed to `origin/main`.
 - Previous UI tranche `1795a33` added the imagegen-backed coding-plan icon to
-  public and private plan routes, excluded withdrawn metadata-only versions
+  public and private plan routes, and this follow-up adds the generated report
+  icon to the private report route. Both exclude withdrawn metadata-only versions
   from private plan comparison selectors, added focused helper tests, and
   checked in the 2026-08-09 public capture set.
 - The logo and staged Tauri icon pair were not changed.
@@ -19,11 +20,12 @@
   pass. `pnpm format:check`, `pnpm memory:check`, and `pnpm docs:check` pass.
 - `pnpm ui:capture -- --persist` passes 20 public routes/viewports at
   1280/1024/768/480 desktop metrics (`mobile: false`); the public plan
-  screenshot visibly contains the generated icon and has no overflow/runtime
-  failures.
+  screenshot visibly contains the generated plan icon and has no
+  overflow/runtime failures; the private report icon is wired but its
+  authenticated capture remains blocked by the unavailable local stack.
 - `docs/status/current.md` and
   `docs/status/production-readiness-audit-2026-08-09.md` were refreshed to
-  report the 241-test count and generated plan icon.
+  report the 241-test count and generated plan/report icons.
 
 ## Blockers
 

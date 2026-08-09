@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import Image from 'next/image'
 import { notFound, redirect } from 'next/navigation'
 import { appseaIdentifierSchema, workspaceArtifactHistoryPageQuerySchema } from '@appsea/contracts'
 import { readSession } from '../../../../../../server/auth-session'
@@ -81,9 +82,20 @@ export default async function PrivateReportPage({
       </p>
       <WorkspaceOpportunityTabs workspaceId={workspaceId} slug={slug} active="report" />
       <div className="workspace-toolbar workspace-opportunity-heading">
-        <div>
-          <p className="eyebrow">Evidence-backed report</p>
-          <h1>{detail.opportunity.name}</h1>
+        <div className="workspace-report-heading">
+          <Image
+            className="workspace-report-icon"
+            src="/appsea-report-icon-generated.png"
+            alt=""
+            width={48}
+            height={48}
+            aria-hidden="true"
+            priority
+          />
+          <div>
+            <p className="eyebrow">Evidence-backed report</p>
+            <h1>{detail.opportunity.name}</h1>
+          </div>
         </div>
         <div className="workspace-actions">
           <span>
