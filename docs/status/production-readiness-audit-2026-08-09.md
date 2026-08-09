@@ -1,4 +1,4 @@
-# AppSea production-readiness audit — 2026-08-09
+# AppSea production-readiness audit — 2026-08-09 (refreshed 2026-08-10)
 
 Status: **incomplete; do not promote as a production market-research service**.
 
@@ -23,7 +23,7 @@ presented as public market research.
 ## Validation evidence
 
 - `pnpm test` — passed: 15 packages; current run includes 118 contract, 191
-  database, 146 worker, and 239 web tests among the package totals. The selected
+  database, 146 worker, and 241 web tests among the package totals. The selected
   version security review confirms active draft/reviewed private reads remain
   member-scoped, while withdrawn/deleted/incomplete/stale rows are excluded and
   export/MCP agent gates remain approval-aware.
@@ -45,7 +45,8 @@ presented as public market research.
   evidence-surface and imagegen icon updates; the report remains incomplete
   because deployment-owned gates are still open.
 - Repository-wide `pnpm lint`, `pnpm typecheck`, `pnpm build`, and the release
-  static verifier pass on commit `bea2692`; `pnpm format:check` and
+  static verifier pass on the validated baseline; the final web build and web
+  test pass include commit `1795a33`; `pnpm format:check` and
   `git diff --check` also pass.
 - `artifacts/ui-reference-loop/2026-08-06/public-capture-manifest.json` — 20
   captures pass title/main/runtime/overflow checks.
@@ -53,7 +54,9 @@ presented as public market research.
   authenticated captures pass the same scalar checks.
 - `pnpm ui:capture` — passed a fresh local run on 2026-08-09 with 20 public
   captures at 1280, 1024, 768, and 480 pixels; representative leaderboard and
-  opportunity screenshots were visually inspected. The 480-pixel pass uses a
+  opportunity and coding-plan screenshots were visually inspected. The
+  imagegen-backed plan icon is visible on the public coding-plan route. The
+  480-pixel pass uses a
   narrow desktop layout (`mobile: false`), not a mobile-emulation desktop
   capture.
 - `pnpm verify:backup-restore` — blocked in this environment because Docker

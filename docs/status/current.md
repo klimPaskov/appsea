@@ -4,7 +4,7 @@
 - Stage: validated fixture product with production-shaped PostgreSQL persistence and a local/CI-proven durable workflow and worker-replacement slice
 - Production-readiness: not complete; see the current [`production-readiness-audit-2026-08-09.md`](production-readiness-audit-2026-08-09.md) and the historical [`production-readiness-audit-2026-08-06.md`](production-readiness-audit-2026-08-06.md)
 - Website: implemented and freshly production-built; the current web package
-  test (239 tests), `pnpm --filter @appsea/web build`, and `pnpm smoke:web`
+  test (241 tests), `pnpm --filter @appsea/web build`, and `pnpm smoke:web`
   pass. The public route now renders only the required `Leaderboard` heading,
   rank/opportunity/complaint/score fields, and synthetic disclosure; private
   research detail remains on opportunity routes. The current full `pnpm test`
@@ -13,9 +13,10 @@
   gates remain open. Prior hosted/local Docker baselines passed on 2026-08-06,
   but current Docker-backed reruns are pending. The header uses the generated, non-text
   `appsea-mark-generated.png` asset; the private evidence coverage panel also
-  uses the imagegen-generated decorative `appsea-evidence-icon-generated.png`.
-  These are website-only visual touches and do not alter the staged Tauri icon pair
-  or any research semantics.
+  uses the imagegen-generated decorative `appsea-evidence-icon-generated.png`;
+  the public and private coding-plan routes also use the generated
+  `appsea-plan-icon-generated.png`. These are website-only visual touches and
+  do not alter the staged Tauri icon pair or any research semantics.
 - Local private-workspace stack: `pnpm dev:local` starts loopback PostgreSQL,
   Temporal, and disposable MinIO, initializes the `appsea-local` bucket, applies
   migrations with the dedicated local migrator, and runs the durable worker plus
