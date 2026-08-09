@@ -670,6 +670,9 @@ private review; withdrawn, deleted, incomplete-analysis, or stale-policy rows ar
 excluded. MCP
 selected report content still requires approval, selected plan content requires
 readiness plus approval, and both web export routes remain approved-only.
+The integration suite includes a linked incomplete-analysis regression, but its
+fresh PostgreSQL execution remains blocked by unavailable Docker in the current
+environment.
 
 ## Desktop
 

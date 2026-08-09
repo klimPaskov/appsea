@@ -752,6 +752,9 @@ now exposes the same scope-filtered report/plan history as metadata-only
 resources with independent opaque cursors; selected MCP content adds the
 approved report and ready-plus-approved plan gates. ZIP/API packaging and provider-side export/backup purge
 remain follow-up work.
+The PostgreSQL integration suite now seeds a linked `running` analysis output
+and proves private report/plan reads and history exclude it; fresh/upgrade
+execution remains pending until Docker is available.
 
 The private workspace Activity page now exposes the existing immutable audit
 projection through a bounded cursor view. It is read-only, scalar-only, and

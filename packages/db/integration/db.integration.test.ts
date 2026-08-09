@@ -4474,6 +4474,197 @@ describe.sequential('PostgreSQL fixture persistence lifecycle', () => {
     ).rejects.toBeInstanceOf(WorkspaceAuthorizationError)
   })
 
+  it('fails closed for report and plan payloads linked to an incomplete analysis', async () => {
+    const workspaceId = 'workspace-incomplete-analysis'
+    const userId = 'user:incomplete-analysis'
+    const campaignId = 'campaign-incomplete-analysis'
+    const collectionRunId = 'run-incomplete-analysis'
+    const opportunityId = 'opportunity-incomplete-analysis'
+    const scoreSnapshotId = 'score-incomplete-analysis'
+    const reportId = 'report:incomplete-analysis'
+    const planPackageId = 'plan:incomplete-analysis'
+    const analysisRunId = 'analysis-run:incomplete-analysis'
+
+    try {
+      await withOwnerClient(async (client) => {
+        await client.query('BEGIN')
+        try {
+          await client.query(
+            `INSERT INTO appsea.users
+               (user_id, email, display_name, password_hash, created_at, updated_at)
+             VALUES ($1, $2, 'Incomplete analysis reader', repeat('x', 64), $3, $3)`,
+            [userId, `${userId}@example.test`, fixedAt]
+          )
+          await client.query(
+            `INSERT INTO appsea.workspaces
+               (workspace_id, slug, display_name, visibility, fixture_only, status, created_at, updated_at)
+             VALUES ($1, $1, 'Incomplete analysis workspace', 'private', false, 'active', $2, $2)`,
+            [workspaceId, fixedAt]
+          )
+          await client.query(
+            `INSERT INTO appsea.workspace_memberships
+               (workspace_id, user_id, role, created_at, updated_at)
+             VALUES ($1, $2, 'owner', $3, $3)`,
+            [workspaceId, userId, fixedAt]
+          )
+          await client.query(
+            `INSERT INTO appsea.research_campaigns
+               (workspace_id, campaign_id, name, purpose, state, configuration, budget, synthetic,
+                created_at, updated_at)
+             VALUES ($1, $2, 'Incomplete analysis campaign', 'opportunity-research', 'completed',
+                     '{}'::jsonb, '{}'::jsonb, false, $3, $3)`,
+            [workspaceId, campaignId, fixedAt]
+          )
+          await client.query(
+            `INSERT INTO appsea.research_runs
+               (workspace_id, run_id, campaign_id, idempotency_key, mode, state, artifact_id,
+                input_hash, artifact_snapshot, requested_at, started_at, completed_at)
+             VALUES ($1, $2, $3, 'incomplete-analysis-collection-key', 'production', 'completed',
+                     'artifact-incomplete-analysis-collection', repeat('a', 64), '{}'::jsonb,
+                     $4, $4, $4)`,
+            [workspaceId, collectionRunId, campaignId, fixedAt]
+          )
+          await client.query(
+            `INSERT INTO appsea.opportunities
+               (workspace_id, opportunity_id, slug, name, one_line, thesis, audience, first_wedge,
+                complaint_count, synthetic, state, source_run_id, created_at, updated_at)
+             VALUES ($1, $2, 'incomplete-analysis-opportunity', 'Incomplete analysis opportunity',
+                     'A private integration fixture', 'A private integration thesis', 'Test users',
+                     'A test wedge', 1, false, 'researched', $3, $4, $4)`,
+            [workspaceId, opportunityId, collectionRunId, fixedAt]
+          )
+          await client.query(
+            `INSERT INTO appsea.research_run_opportunities
+               (workspace_id, run_id, opportunity_id, linked_at)
+             VALUES ($1, $2, $3, $4)`,
+            [workspaceId, collectionRunId, opportunityId, fixedAt]
+          )
+          await client.query(
+            `INSERT INTO appsea.opportunity_score_snapshots
+               (workspace_id, score_snapshot_id, opportunity_id, scoring_version, score, factors,
+                weights, input_hash, calculated_at)
+             VALUES ($1, $2, $3, 'opportunity-score-v1.0.0', 50.0, '{}'::jsonb, '{}'::jsonb,
+                     repeat('b', 64), $4)`,
+            [workspaceId, scoreSnapshotId, opportunityId, fixedAt]
+          )
+          await client.query(
+            `INSERT INTO appsea.report_versions
+               (workspace_id, report_id, opportunity_id, version, evidence_snapshot_ref,
+                structured_report, manifest_hash, approval_state, generated_at, synthetic,
+                structured_object_ref)
+             VALUES ($1, $2, $3, 'production-report-v1', 'evidence-snapshot:incomplete-analysis',
+                     '{}'::jsonb, repeat('c', 64), 'approved', $4, false,
+                     'appsea-object://' || $1 || '/report-json/' || repeat('d', 64))`,
+            [workspaceId, reportId, opportunityId, fixedAt]
+          )
+          await client.query(
+            `INSERT INTO appsea.plan_package_versions
+               (workspace_id, plan_package_id, opportunity_id, run_id, report_id, version,
+                manifest_hash, package_object_ref, fixture_files, readiness_state, approval_state,
+                synthetic, generated_at)
+             VALUES ($1, $2, $3, $4, $5, 'production-plan-v1', repeat('e', 64),
+                     'appsea-object://' || $1 || '/plan-package/' || repeat('f', 64), NULL,
+                     'ready', 'approved', false, $6)`,
+            [workspaceId, planPackageId, opportunityId, collectionRunId, reportId, fixedAt]
+          )
+          await client.query(
+            `INSERT INTO appsea.production_analysis_runs
+               (workspace_id, analysis_run_id, collection_run_id, idempotency_key,
+                analysis_version, input_hash, artifact_id, artifact_snapshot, state,
+                availability_state, seed_review_id, seed_content_hash, requested_at, started_at)
+             VALUES ($1, $2, $3, 'incomplete-analysis-run-key', 'production-analysis-v1',
+                     repeat('1', 64), 'artifact-incomplete-analysis', '{}'::jsonb, 'running',
+                     'active', 'seed-incomplete-analysis', repeat('2', 64), $4, $4)`,
+            [workspaceId, analysisRunId, collectionRunId, fixedAt]
+          )
+          await client.query(
+            `INSERT INTO appsea.research_analysis_run_outputs
+               (workspace_id, analysis_run_id, opportunity_id, score_snapshot_id, report_id,
+                plan_package_id, linked_at)
+             VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+            [
+              workspaceId,
+              analysisRunId,
+              opportunityId,
+              scoreSnapshotId,
+              reportId,
+              planPackageId,
+              fixedAt
+            ]
+          )
+          await client.query('COMMIT')
+        } catch (error) {
+          await client.query('ROLLBACK')
+          throw error
+        }
+      })
+
+      await expect(
+        authRepository.readWorkspaceReportVersionForUser(
+          userId,
+          workspaceId,
+          reportId,
+          opportunityId
+        )
+      ).resolves.toBeNull()
+      await expect(
+        authRepository.readWorkspacePlanVersionForUser(
+          userId,
+          workspaceId,
+          planPackageId,
+          opportunityId
+        )
+      ).resolves.toBeNull()
+      await expect(
+        authRepository.listWorkspaceArtifactHistoryForUser(userId, workspaceId, opportunityId, {
+          limit: 50
+        })
+      ).resolves.toMatchObject({ reports: [], plans: [], truncated: false })
+    } finally {
+      await withOwnerClient(async (client) => {
+        await client.query('BEGIN')
+        try {
+          await client.query(
+            'DELETE FROM appsea.production_analysis_runs WHERE workspace_id = $1',
+            [workspaceId]
+          )
+          await client.query('DELETE FROM appsea.plan_package_versions WHERE workspace_id = $1', [
+            workspaceId
+          ])
+          await client.query('DELETE FROM appsea.report_versions WHERE workspace_id = $1', [
+            workspaceId
+          ])
+          await client.query(
+            'DELETE FROM appsea.opportunity_score_snapshots WHERE workspace_id = $1',
+            [workspaceId]
+          )
+          await client.query(
+            'DELETE FROM appsea.research_run_opportunities WHERE workspace_id = $1',
+            [workspaceId]
+          )
+          await client.query('DELETE FROM appsea.opportunities WHERE workspace_id = $1', [
+            workspaceId
+          ])
+          await client.query('DELETE FROM appsea.research_runs WHERE workspace_id = $1', [
+            workspaceId
+          ])
+          await client.query('DELETE FROM appsea.research_campaigns WHERE workspace_id = $1', [
+            workspaceId
+          ])
+          await client.query('DELETE FROM appsea.workspace_memberships WHERE workspace_id = $1', [
+            workspaceId
+          ])
+          await client.query('DELETE FROM appsea.workspaces WHERE workspace_id = $1', [workspaceId])
+          await client.query('DELETE FROM appsea.users WHERE user_id = $1', [userId])
+          await client.query('COMMIT')
+        } catch (error) {
+          await client.query('ROLLBACK')
+          throw error
+        }
+      })
+    }
+  })
+
   it('applies idempotent field redaction without erasing provenance or immutable analysis', async () => {
     const input = await fixtureInput(
       'workspace-redaction',

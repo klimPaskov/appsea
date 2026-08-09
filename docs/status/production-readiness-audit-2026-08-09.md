@@ -27,6 +27,11 @@ presented as public market research.
   version security review confirms active draft/reviewed private reads remain
   member-scoped, while withdrawn/deleted/incomplete/stale rows are excluded and
   export/MCP agent gates remain approval-aware.
+- PostgreSQL integration coverage now includes an actual linked `running`
+  analysis-output case for report/plan selected reads and history exclusion.
+  It is authored but not executed in this environment because Docker Desktop's
+  `dockerDesktopLinuxEngine` pipe is unavailable; fresh/upgrade/RLS execution
+  evidence therefore remains open.
 - `pnpm test:backup-restore` — passed the local helper tests; the verifier now
   targets migration `0121`.
 - `pnpm worker:fixture` — passed and wrote the deterministic synthetic artifact

@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import Image from 'next/image'
 import { notFound, redirect } from 'next/navigation'
 import { readSession } from '../../../../../../server/auth-session'
 import { readPrivateOpportunityContext } from '../../../../../../server/private-opportunity'
@@ -38,8 +39,18 @@ export default async function PrivateEvidencePage({
         <strong className="workspace-score">{detail.evidence.length}</strong>
       </div>
       <section className="workspace-section" aria-labelledby="coverage-heading">
-        <div className="section-intro">
-          <h2 id="coverage-heading">Source coverage</h2>
+        <div className="section-intro evidence-section-intro">
+          <div className="evidence-heading">
+            <Image
+              src="/appsea-evidence-icon-generated.png"
+              alt=""
+              width={48}
+              height={48}
+              aria-hidden="true"
+              priority
+            />
+            <h2 id="coverage-heading">Source coverage</h2>
+          </div>
           <p>Gaps are recorded rather than interpreted as evidence of no demand.</p>
         </div>
         <ul>

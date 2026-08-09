@@ -12,8 +12,10 @@
   checks by the user-owned empty root `AGENTS.md`; deployment-only production
   gates remain open. Prior hosted/local Docker baselines passed on 2026-08-06,
   but current Docker-backed reruns are pending. The header uses the generated, non-text
-  `appsea-mark-generated.png` asset; this is a website-only brand touch and
-  does not alter the staged Tauri icon pair.
+  `appsea-mark-generated.png` asset; the private evidence coverage panel also
+  uses the imagegen-generated decorative `appsea-evidence-icon-generated.png`.
+  These are website-only visual touches and do not alter the staged Tauri icon pair
+  or any research semantics.
 - Local private-workspace stack: `pnpm dev:local` starts loopback PostgreSQL,
   Temporal, and disposable MinIO, initializes the `appsea-local` bucket, applies
   migrations with the dedicated local migrator, and runs the durable worker plus

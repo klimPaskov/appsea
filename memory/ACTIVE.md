@@ -4,7 +4,8 @@
 
 Audit: `docs/status/production-readiness-audit-2026-08-09.md`.
 `pnpm verify`/local smoke pass through `0119`; backup verifier targets
-head `0121` but last proof is `0119`. Public/private captures pass.
+head `0121` but last proof is `0119`. Captures pass; the private coverage
+panel uses an imagegen mark.
 
 AppSea remains fixture-first with production-shaped persistence, workflow,
 source policy, private workspaces, reports/plans, and maintenance.
@@ -83,16 +84,14 @@ review.
 
 The private report/plan history slice reads active, non-withdrawn rows through
 completed-analysis/current-policy/deletion/redaction gates. Members may select
-active drafts/reviews;
-MCP reads add approval/readiness gates. It exposes cursor-paginated metadata
-pages of up to 50 rows per artifact family, representation-aware JSON/Markdown
-audit receipts, same-opportunity plan comparison (sorted path/hash/bytes), and
-page selectors. Migrations `0120` and `0121` persist production
-`report-markdown` objects with complete references, extend invalidated-output
-purge/deletion clearing, and keep the direct owner purge gate aligned with the
-full output set; the web export still renders the approved redacted projection
-on demand. MCP history is metadata-only, and ZIP/provider purge follow-up is
-explicit. See
+active drafts/reviews; MCP reads add approval/readiness. Cursor metadata,
+representation-aware JSON/Markdown receipts, same-opportunity plan comparison,
+and page selectors are implemented. A real-Postgres incomplete-run integration
+case is authored; Docker execution remains pending. Migrations `0120`/`0121`
+persist production `report-markdown` objects with complete references and
+invalidation/deletion clearing; the owner purge gate stays aligned with the
+full output set, while web export renders approved redacted Markdown on demand.
+MCP history is metadata-only; ZIP/provider purge follow-up is explicit. See
 `docs/status/report-plan-history-completion-report-2026-08-09.md`.
 
 ## Next production tranche
