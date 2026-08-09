@@ -86,7 +86,7 @@ The private report/plan history slice reads active, non-withdrawn rows through
 completed-analysis/current-policy/deletion/redaction gates. Members may select
 active drafts/reviews; MCP reads add approval/readiness. Cursor metadata,
 representation-aware JSON/Markdown receipts, same-opportunity plan comparison,
-and page selectors are implemented. A real-Postgres incomplete-run integration
+and selectors omit withdrawn rows. A real-Postgres incomplete-run integration
 case is authored; Docker execution remains pending. Migrations `0120`/`0121`
 persist production `report-markdown` objects with complete references and
 invalidation/deletion clearing; the owner purge gate stays aligned with the

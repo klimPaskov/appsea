@@ -66,8 +66,10 @@ GET /api/workspaces/{workspaceId}/opportunities/{slug}/plans/compare?from={planI
 
 The route resolves both IDs under the same workspace and opportunity, then
 returns sorted file status plus SHA-256 and UTF-8 byte metadata. It never
-returns file bodies. The UI renders a small table; it is not a ZIP/directory
-export and does not replace the approved package. The authenticated MCP
+returns file bodies. The Plan page excludes withdrawn metadata-only rows from
+the compare selectors and defaults to the two newest selectable versions. The
+UI renders a small table; it is not a ZIP/directory export and does not replace
+the approved package. The authenticated MCP
 boundary exposes report/plan history metadata with the same cursor contract;
 it does not hydrate historical bodies through the history resource.
 

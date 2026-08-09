@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import Image from 'next/image'
 import { notFound, redirect } from 'next/navigation'
 import { appseaIdentifierSchema, workspaceArtifactHistoryPageQuerySchema } from '@appsea/contracts'
 import { readSession } from '../../../../../../server/auth-session'
@@ -12,6 +13,10 @@ import { planPackageSchema } from '@appsea/contracts'
 import { comparePlanPackages } from '@appsea/reports'
 import { ArtifactApprovalActions } from '../../../../report-plan-approval-actions'
 import { WorkspaceOpportunityTabs } from '../../../../../../components/workspace-opportunity-tabs'
+import {
+  defaultPlanComparisonIds,
+  selectablePlanVersions
+} from '../../../../../workspace-plan-page-helpers'
 
 export const dynamic = 'force-dynamic'
 
@@ -78,6 +83,8 @@ export default async function PrivatePlanPage({
     if (!selectedPlan) notFound()
   }
   const detail = { ...baseDetail, plan: selectedPlan }
+  const selectablePlans = selectablePlanVersions(history.plans)
+  const comparisonDefaults = defaultPlanComparisonIds(history.plans)
   const compareFrom = compareFromId ? appseaIdentifierSchema.safeParse(compareFromId) : undefined
   const compareTo = compareToId ? appseaIdentifierSchema.safeParse(compareToId) : undefined
   if (compareFrom && !compareFrom.success) notFound()
@@ -139,7 +146,16 @@ export default async function PrivatePlanPage({
       </p>
       <WorkspaceOpportunityTabs workspaceId={workspaceId} slug={slug} active="plan" />
       <div className="workspace-toolbar workspace-opportunity-heading">
-        <div>
+        <div className="workspace-plan-heading">
+          <Image
+            className="workspace-plan-icon"
+            src="/appsea-plan-icon-generated.png"
+            alt=""
+            width={48}
+            height={48}
+            aria-hidden="true"
+            priority
+          />
           <p className="eyebrow">Coding-agent plan</p>
           <h1>{detail.opportunity.name}</h1>
         </div>
@@ -226,7 +242,7 @@ export default async function PrivatePlanPage({
       ) : (
         <p className="empty-state">No coding-agent plan has been generated for this opportunity.</p>
       )}
-      {history.plans.length > 1 ? (
+      {selectablePlans.length > 1 ? (
         <section className="workspace-section" aria-labelledby="plan-compare-heading">
           <div className="section-intro">
             <h2 id="plan-compare-heading">Compare versions</h2>
@@ -237,30 +253,26 @@ export default async function PrivatePlanPage({
               From
               <select
                 name="from"
-                defaultValue={compareFrom?.success ? compareFrom.data : history.plans[1]?.id}
+                defaultValue={compareFrom?.success ? compareFrom.data : comparisonDefaults?.from}
               >
-                {history.plans
-                  .filter((version) => version.approvalState !== 'withdrawn')
-                  .map((version) => (
-                    <option key={version.id} value={version.id}>
-                      {version.version}
-                    </option>
-                  ))}
+                {selectablePlans.map((version) => (
+                  <option key={version.id} value={version.id}>
+                    {version.version}
+                  </option>
+                ))}
               </select>
             </label>
             <label>
               To
               <select
                 name="to"
-                defaultValue={compareTo?.success ? compareTo.data : history.plans[0]?.id}
+                defaultValue={compareTo?.success ? compareTo.data : comparisonDefaults?.to}
               >
-                {history.plans
-                  .filter((version) => version.approvalState !== 'withdrawn')
-                  .map((version) => (
-                    <option key={version.id} value={version.id}>
-                      {version.version}
-                    </option>
-                  ))}
+                {selectablePlans.map((version) => (
+                  <option key={version.id} value={version.id}>
+                    {version.version}
+                  </option>
+                ))}
               </select>
             </label>
             <button className="quiet-button" type="submit">

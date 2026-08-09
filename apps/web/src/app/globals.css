@@ -418,6 +418,20 @@ a:focus-visible {
   object-fit: contain;
 }
 
+.plan-heading {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-width: 0;
+}
+
+.plan-heading img {
+  flex: 0 0 auto;
+  width: 48px;
+  height: 48px;
+  object-fit: contain;
+}
+
 .complaint-list {
   margin: 0;
   padding: 0;
@@ -2913,6 +2927,25 @@ a:focus-visible {
 .workspace-opportunity-heading {
   align-items: end;
   margin-top: 54px;
+}
+
+.workspace-plan-heading {
+  display: grid;
+  grid-template-columns: 48px minmax(0, 1fr);
+  column-gap: 14px;
+  align-items: center;
+}
+
+.workspace-plan-heading .eyebrow,
+.workspace-plan-heading h1 {
+  grid-column: 2;
+}
+
+.workspace-plan-icon {
+  grid-row: 1 / span 2;
+  width: 48px;
+  height: 48px;
+  object-fit: contain;
 }
 
 .workspace-score {

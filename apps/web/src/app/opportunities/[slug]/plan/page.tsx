@@ -1,4 +1,5 @@
 import { notFound } from 'next/navigation'
+import Image from 'next/image'
 import { getOpportunity } from '@appsea/catalog'
 import { OpportunityShell } from '../../../../components/opportunity-shell'
 
@@ -23,7 +24,17 @@ export default async function PlanPage({ params }: PageProps) {
     <OpportunityShell opportunity={opportunity} active="plan">
       <section className="content-stack">
         <div className="section-intro">
-          <h2>Coding-agent package</h2>
+          <div className="plan-heading">
+            <Image
+              src="/appsea-plan-icon-generated.png"
+              alt=""
+              width={48}
+              height={48}
+              aria-hidden="true"
+              priority
+            />
+            <h2>Coding-agent package</h2>
+          </div>
           <p>A focused handoff with product, architecture, tasks, and validation.</p>
         </div>
         <div className="plan-layout">
