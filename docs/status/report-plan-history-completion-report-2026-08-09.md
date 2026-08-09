@@ -52,7 +52,9 @@ original validation record. Current follow-up evidence is:
 - `pnpm --filter @appsea/web test` — 233 web tests passed.
 - `pnpm lint`, `pnpm typecheck`, and `pnpm build` — all 15 packages passed;
   the Next.js production build compiled and generated all routes.
-- `pnpm format:check`, `pnpm repo:check`, and `git diff --check` passed.
+- `pnpm format:check`, `pnpm docs:check`, and `git diff --check` passed. The
+  full `pnpm repo:check` also passed before the final wording-only update to
+  this report.
 - `pnpm security:audit` — passed after the workspace-level `nanoid@3.3.17`
   override removed the high transitive PostCSS finding.
 - `pnpm ui:capture` — 24 public route/viewport captures passed with no runtime
