@@ -26,6 +26,11 @@ presented as public market research.
   database, 146 worker, and 237 web tests among the package totals.
 - `pnpm test:backup-restore` — passed the local helper tests; the verifier now
   targets migration `0121`.
+- `pnpm worker:fixture` — passed and wrote the deterministic synthetic artifact
+  (4 complaints, 3 clusters, score `80.3`).
+- `pnpm plan:sample` — passed and wrote the six-file synthetic coding-agent
+  package. `pnpm smoke:web` also passed the leaderboard, opportunity routes,
+  and fixture API.
 - `pnpm security:audit` — passed with no known production vulnerabilities.
 - `pnpm memory:check` — passed with 152 indexed chunks.
 - `pnpm docs:check` — passed on the prior checkpoint; rerun after this report.
