@@ -58,7 +58,7 @@ AppSea is an opportunity intelligence system for software products. It turns per
   `packages/reports` owns deterministic inert Markdown renderers; JSON and
   Markdown exports are approved, redacted, representation-audited, and
   Markdown is rendered on demand until `report-markdown` purge/deletion proof is
-  complete. The public leaderboard and MCP remain latest-only.
+  complete. Leaderboard stays sparse; MCP exposes history.
 - `apps/worker` maintenance commands use validated pure runners with bounded counters, sorted workspaces, independent budgets, and scheduler IDs; PostgreSQL remains the rerun boundary. `maintenance:loop` supervises one lease-backed pass with bounded backoff and signal-safe shutdown; deployment ownership and alerting remain external.
 - Migrations `0046`-`0052` own server-clock maintenance leases/fencing, scheduler metrics, cost/quota inspection, explicit tombstone-bound re-collection, and the direct-CFPB worker admission branch. The original lease boundary is allowlisted to four scheduler names and callable only through `appsea_maintenance`; later forward migrations extend that allowlist for source-health, delivery, and operational-alert status inspection without changing released history. Re-collection is never automatic. External source/provider/object-store effects, deployed scheduler ownership, alert routing, billing, and lock/recovery proof remain external.
 - The private source registry includes bounded connector health from jobs, active items, and deletion tombstones; raw failures and mutation controls stay outside the read boundary.

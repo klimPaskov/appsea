@@ -82,6 +82,19 @@ only with an explicit `synthetic` marker and warning; they are not market
 research. Evidence text is returned only when its allowed representation is
 `excerpt` or `fixture`; metadata-only or redacted evidence keeps text null.
 
+Report and plan history are available as metadata-only resources:
+
+```text
+appsea://workspaces/{workspaceId}/opportunities/{slug}/report-history
+appsea://workspaces/{workspaceId}/opportunities/{slug}/plan-history
+```
+
+Append only the matching bounded query keys (`limit` plus `reportCursor` or
+`planCursor`). The cursors are opaque and workspace/opportunity/family-bound;
+follow the returned next cursor to traverse older pages. A history resource
+never hydrates report or plan bodies, and selected content continues to require
+the existing approval, readiness, deletion, policy, and redaction gates.
+
 Every authenticated request also passes a PostgreSQL admission boundary from
 migration `0097_mcp_agent_access_admission.sql`. The token must still belong to
 an active member of the private workspace. The database enforces a fixed

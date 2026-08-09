@@ -88,8 +88,8 @@ current-policy/deletion/redaction gates, exposes cursor-paginated metadata pages
 of up to 50 rows per artifact family plus compatibility `truncated`, selected
 reads, representation-aware JSON/Markdown audit receipts, same-opportunity plan
 comparison (sorted path/hash/bytes), and page selectors. Markdown is on-demand
-because durable `report-markdown` purge proof is absent; MCP stays latest-only
-and ZIP follow-up is explicit. See
+because durable `report-markdown` purge proof is absent; MCP now exposes
+metadata-only cursor history resources and ZIP follow-up is explicit. See
 `docs/status/report-plan-history-completion-report-2026-08-09.md`.
 
 ## Next production tranche

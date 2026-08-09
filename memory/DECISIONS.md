@@ -378,8 +378,9 @@ Versioned rows already provide immutable history and lineage, so history and
 selected reads reuse membership, current-policy, deletion, hydration, redaction,
 and approval gates. Markdown renders only after that projection; persisting
 `report-markdown` waits for deletion, export-retention, and backup purge proof.
-JSON/Markdown have separate audit idempotency keys. The leaderboard and latest-
-only MCP stay unchanged; private web history uses independently advancing,
+JSON/Markdown have separate audit idempotency keys. The leaderboard stays
+unchanged; read-only MCP now exposes scope-filtered metadata history resources;
+private web history uses independently advancing,
 workspace/opportunity/family-bound opaque cursors with a 50-row maximum and a
 compatibility `truncated` field. Plan comparison returns only sorted path
 status/hash/byte metadata.

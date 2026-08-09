@@ -97,6 +97,33 @@ const detail = {
   }
 }
 
+const artifactHistory = {
+  reports: [
+    {
+      id: 'report:one',
+      version: 'report-v1',
+      generatedAt: '2026-08-01T00:00:00.000Z',
+      manifestHash: 'a'.repeat(64),
+      approvalState: 'approved' as const,
+      synthetic: false
+    }
+  ],
+  plans: [
+    {
+      id: 'plan:one',
+      version: 'plan-v1',
+      generatedAt: '2026-08-01T00:00:00.000Z',
+      manifestHash: 'b'.repeat(64),
+      readinessState: 'ready' as const,
+      approvalState: 'approved' as const,
+      synthetic: false
+    }
+  ],
+  nextReportCursor: 'report-next',
+  nextPlanCursor: null,
+  truncated: true
+}
+
 function dependencies(authOverride: AgentAccessTokenAuthentication = auth): McpDependencies {
   return {
     authenticate: vi.fn(async (value: string) => (value === token ? authOverride : null)),
@@ -109,6 +136,7 @@ function dependencies(authOverride: AgentAccessTokenAuthentication = auth): McpD
     releaseRequest: vi.fn(async () => true),
     listOpportunities: vi.fn(async () => [detail.summary]),
     readOpportunity: vi.fn(async () => detail),
+    listArtifactHistory: vi.fn(async () => artifactHistory),
     listSources: vi.fn(async () => [
       {
         sourceId: 'source:one',
@@ -275,6 +303,9 @@ describe('authenticated read-only MCP boundary', () => {
     expect(listed.result?.resources?.some((resource) => resource.uri.endsWith('/sources'))).toBe(
       true
     )
+    expect(
+      listed.result?.resources?.some((resource) => resource.uri.endsWith('/report-history'))
+    ).toBe(true)
 
     const sourceResource = await handleMcpRequest(
       request({
@@ -286,6 +317,66 @@ describe('authenticated read-only MCP boundary', () => {
       deps
     )
     expect((await body(sourceResource)).result?.contents?.[0]?.text).toContain('Source One')
+  })
+
+  it('exposes scope-bound cursor-paginated report history without hydrating report content', async () => {
+    const deps = dependencies()
+    const response = await handleMcpRequest(
+      request({
+        jsonrpc: '2.0',
+        id: 'report-history',
+        method: 'resources/read',
+        params: {
+          uri: 'appsea://workspaces/workspace%3Aone/opportunities/one/report-history?limit=1&reportCursor=next'
+        }
+      }),
+      deps
+    )
+    const payload = await body(response)
+    const value = JSON.parse(payload.result?.contents?.[0]?.text ?? '{}') as {
+      reports?: Array<{ id: string }>
+      plans?: unknown[]
+      nextReportCursor?: string | null
+    }
+    expect(value.reports?.map((report) => report.id)).toEqual(['report:one'])
+    expect(value.plans).toEqual([])
+    expect(value.nextReportCursor).toBe('report-next')
+    expect(deps.listArtifactHistory).toHaveBeenCalledWith(
+      'user:owner',
+      'workspace:one',
+      'opp:one',
+      { limit: 1, reportCursor: 'next', planCursor: undefined }
+    )
+    expect(deps.readOpportunity).not.toHaveBeenCalled()
+
+    const invalid = await handleMcpRequest(
+      request({
+        jsonrpc: '2.0',
+        id: 'report-history-invalid',
+        method: 'resources/read',
+        params: {
+          uri: 'appsea://workspaces/workspace%3Aone/opportunities/one/report-history?limit=1&limit=2'
+        }
+      }),
+      deps
+    )
+    expect((await body(invalid)).error?.code).toBe(-32602)
+  })
+
+  it('keeps plan history behind the plan scope and does not expose the other family', async () => {
+    const deps = dependencies({ ...auth, scopes: ['opportunities:read', 'reports:read'] })
+    const response = await handleMcpRequest(
+      request({
+        jsonrpc: '2.0',
+        id: 'plan-history-forbidden',
+        method: 'resources/read',
+        params: {
+          uri: 'appsea://workspaces/workspace%3Aone/opportunities/one/plan-history'
+        }
+      }),
+      deps
+    )
+    expect((await body(response)).error?.code).toBe(-32003)
   })
 
   it('rejects malformed requests and acknowledges notifications without source access', async () => {

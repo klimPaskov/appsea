@@ -156,7 +156,10 @@ field-redaction gates. Export accepts exactly one
 format value, defaults to JSON, and requires approval; Markdown is rendered on
 demand from the redacted validated read and returns the immutable manifest hash
 in `X-AppSea-Manifest-Hash`. The compare response contains only sorted path
-status/hash/byte metadata. MCP remains latest-only in this slice.
+status/hash/byte metadata. The authenticated MCP boundary also exposes
+scope-filtered `report-history` and `plan-history` resources with the same
+independent opaque cursors and 1..50 page bound; those resources return
+metadata only, while selected content still uses the approval/readiness gates.
 
 ````
 
@@ -270,6 +273,8 @@ appsea://opportunities/{id}
 appsea://opportunities/{id}/evidence
 appsea://opportunities/{id}/report/{version}
 appsea://opportunities/{id}/plan/{version}
+appsea://workspaces/{workspaceId}/opportunities/{slug}/report-history
+appsea://workspaces/{workspaceId}/opportunities/{slug}/plan-history
 appsea://sources/coverage
 appsea://skills/{name}/{version}
 ```

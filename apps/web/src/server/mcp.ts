@@ -4,10 +4,14 @@ import {
   mcpJsonRpcRequestSchema,
   mcpToolCallInputSchema,
   opportunitySlugSchema,
+  workspaceArtifactHistoryPageQuerySchema,
+  workspaceArtifactHistoryReadModelSchema,
   type AgentAccessTokenAuthentication,
   type AgentAccessAdmissionResult,
   type AgentAccessTokenScope,
   type McpJsonRpcId,
+  type WorkspaceArtifactHistoryPageQuery,
+  type WorkspaceArtifactHistoryReadModel,
   type WorkspaceOpportunityDetailReadModel,
   type WorkspaceOpportunityReadModel,
   type WorkspaceSourceReadModel
@@ -16,11 +20,14 @@ import { PostgresAgentAccessTokenRepository } from '@appsea/db/agent-access-toke
 import { PostgresSourcePolicyRepository } from '@appsea/db/source-policy'
 import { authRepository } from './auth-session'
 import { getDatabasePool } from './database'
-import { readPrivateOpportunityDetailForUser } from './private-opportunity'
+import {
+  readPrivateArtifactHistoryForUser,
+  readPrivateOpportunityDetailForUser
+} from './private-opportunity'
 
 export const mcpProtocolVersion = '2025-06-18'
 export const mcpServerName = 'appsea-readonly'
-export const mcpServerVersion = '0.4.0'
+export const mcpServerVersion = '0.5.0'
 
 const maxRequestBytes = 64 * 1024
 const maxResponseTextBytes = 500 * 1024
@@ -48,6 +55,12 @@ export interface McpDependencies {
     workspaceId: string,
     slug: string
   ) => Promise<WorkspaceOpportunityDetailReadModel | null>
+  listArtifactHistory: (
+    userId: string,
+    workspaceId: string,
+    opportunityId: string,
+    query: Partial<WorkspaceArtifactHistoryPageQuery>
+  ) => Promise<WorkspaceArtifactHistoryReadModel>
   listSources: (userId: string, workspaceId: string) => Promise<WorkspaceSourceReadModel[]>
 }
 
@@ -61,6 +74,8 @@ export function defaultMcpDependencies(): McpDependencies {
     listOpportunities: (userId, workspaceId) =>
       authRepository().listWorkspaceOpportunities(userId, workspaceId),
     readOpportunity: readPrivateOpportunityDetailForUser,
+    listArtifactHistory: (userId, workspaceId, opportunityId, query) =>
+      readPrivateArtifactHistoryForUser(userId, workspaceId, opportunityId, query),
     listSources: (userId, workspaceId) =>
       new PostgresSourcePolicyRepository(getDatabasePool()).listForUser(userId, workspaceId)
   }
@@ -272,6 +287,13 @@ function resourcesForWorkspace(
             'Approved or synthetic report artifact.'
           )
         )
+        resources.push(
+          resourceDescriptor(
+            resourceUri(auth.workspaceId, `${base}/report-history`),
+            `${resourceLabel}-report-history`,
+            'Cursor-paginated report version metadata; content remains on the approved read path.'
+          )
+        )
       }
       if (hasScope(auth, 'plans:read')) {
         resources.push(
@@ -279,6 +301,13 @@ function resourcesForWorkspace(
             resourceUri(auth.workspaceId, `${base}/plan`),
             `${resourceLabel}-plan`,
             'Approved or synthetic coding-agent plan package.'
+          )
+        )
+        resources.push(
+          resourceDescriptor(
+            resourceUri(auth.workspaceId, `${base}/plan-history`),
+            `${resourceLabel}-plan-history`,
+            'Cursor-paginated plan version metadata; content remains on the approved read path.'
           )
         )
       }
@@ -306,6 +335,38 @@ function isJsonRpcError(value: unknown): value is JsonRpcError {
     'message' in value &&
     typeof (value as { message?: unknown }).message === 'string'
   )
+}
+
+function historyQuery(
+  rawQuery: string,
+  family: 'reports' | 'plans'
+): WorkspaceArtifactHistoryPageQuery | null {
+  const params = new URLSearchParams(rawQuery)
+  const allowed =
+    family === 'reports' ? new Set(['limit', 'reportCursor']) : new Set(['limit', 'planCursor'])
+  const keys = [...new Set([...params.keys()])]
+  if (keys.some((key) => !allowed.has(key))) return null
+  if (keys.some((key) => params.getAll(key).length !== 1)) return null
+  const parsed = workspaceArtifactHistoryPageQuerySchema.safeParse({
+    limit: params.has('limit') ? Number(params.get('limit')) : undefined,
+    reportCursor: family === 'reports' ? (params.get('reportCursor') ?? undefined) : undefined,
+    planCursor: family === 'plans' ? (params.get('planCursor') ?? undefined) : undefined
+  })
+  return parsed.success ? parsed.data : null
+}
+
+function scopedHistory(
+  history: WorkspaceArtifactHistoryReadModel,
+  family: 'reports' | 'plans'
+): WorkspaceArtifactHistoryReadModel {
+  return workspaceArtifactHistoryReadModelSchema.parse({
+    reports: family === 'reports' ? history.reports : [],
+    plans: family === 'plans' ? history.plans : [],
+    nextReportCursor: family === 'reports' ? history.nextReportCursor : null,
+    nextPlanCursor: family === 'plans' ? history.nextPlanCursor : null,
+    truncated:
+      family === 'reports' ? Boolean(history.nextReportCursor) : Boolean(history.nextPlanCursor)
+  })
 }
 
 function notFound(): JsonRpcError {
@@ -455,25 +516,47 @@ async function readResource(
   dependencies: McpDependencies
 ): Promise<unknown | JsonRpcError> {
   if (typeof uri !== 'string' || uri.length < 1 || uri.length > 1_000) return invalidArguments()
+  if (uri.includes('#')) return invalidArguments()
+  const separator = uri.indexOf('?')
+  const path = separator === -1 ? uri : uri.slice(0, separator)
+  const rawQuery = separator === -1 ? '' : uri.slice(separator + 1)
   const match =
-    /^appsea:\/\/workspaces\/([^/]+)\/(sources|opportunities\/([^/]+)(?:\/(evidence|report|plan))?)$/.exec(
-      uri
+    /^appsea:\/\/workspaces\/([^/]+)\/(sources|opportunities\/([^/]+)(?:\/(evidence|report|plan|report-history|plan-history))?)$/.exec(
+      path
     )
   if (!match) return notFound()
   const workspaceId = decodeUriPart(match[1] ?? '')
   if (!workspaceId || workspaceId !== auth.workspaceId) return forbidden()
   const kind = match[2]
   if (kind === 'sources') {
+    if (rawQuery) return invalidArguments()
     if (!hasScope(auth, 'sources:read')) return forbidden()
     const sources = await dependencies.listSources(auth.userId, auth.workspaceId)
     return contentResult(uri, { sources })
   }
   const slug = decodeUriPart(match[3] ?? '')
   if (!slug) return notFound()
+  const subresource = match[4]
+  if (subresource === 'report-history' || subresource === 'plan-history') {
+    const family = subresource === 'report-history' ? 'reports' : 'plans'
+    if (!hasScope(auth, family === 'reports' ? 'reports:read' : 'plans:read')) return forbidden()
+    const query = historyQuery(rawQuery, family)
+    if (!query) return invalidArguments()
+    const opportunities = await dependencies.listOpportunities(auth.userId, auth.workspaceId)
+    const opportunity = opportunities.find((candidate) => candidate.slug === slug)
+    if (!opportunity) return notFound()
+    const history = await dependencies.listArtifactHistory(
+      auth.userId,
+      auth.workspaceId,
+      opportunity.id,
+      query
+    )
+    return contentResult(uri, scopedHistory(history, family))
+  }
   const detail = await dependencies.readOpportunity(auth.userId, auth.workspaceId, slug)
   if (!detail) return notFound()
-  const subresource = match[4]
   if (!subresource) {
+    if (rawQuery) return invalidArguments()
     if (!hasScope(auth, 'opportunities:read')) return forbidden()
     return contentResult(uri, {
       opportunity: detail.opportunity,
@@ -485,6 +568,7 @@ async function readResource(
     })
   }
   if (subresource === 'evidence') {
+    if (rawQuery) return invalidArguments()
     if (!hasScope(auth, 'evidence:read')) return forbidden()
     const value = await callTool(
       auth,
@@ -497,6 +581,7 @@ async function readResource(
     return isJsonRpcError(value) ? value : contentResult(uri, value)
   }
   if (subresource === 'report') {
+    if (rawQuery) return invalidArguments()
     if (!hasScope(auth, 'reports:read')) return forbidden()
     const value = await callTool(
       auth,
@@ -509,6 +594,7 @@ async function readResource(
     return isJsonRpcError(value) ? value : contentResult(uri, value)
   }
   if (subresource === 'plan') {
+    if (rawQuery) return invalidArguments()
     if (!hasScope(auth, 'plans:read')) return forbidden()
     const value = await callTool(
       auth,
@@ -565,6 +651,18 @@ async function handleAuthenticatedRequest(
           uriTemplate: 'appsea://workspaces/{workspaceId}/opportunities/{slug}',
           name: 'opportunity package',
           description: 'Workspace-bound opportunity package resources.',
+          mimeType: 'application/json'
+        },
+        {
+          uriTemplate: 'appsea://workspaces/{workspaceId}/opportunities/{slug}/report-history',
+          name: 'report version history',
+          description: 'Cursor-paginated report version metadata.',
+          mimeType: 'application/json'
+        },
+        {
+          uriTemplate: 'appsea://workspaces/{workspaceId}/opportunities/{slug}/plan-history',
+          name: 'plan version history',
+          description: 'Cursor-paginated plan version metadata.',
           mimeType: 'application/json'
         }
       ]

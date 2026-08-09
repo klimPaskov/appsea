@@ -36,7 +36,8 @@ collectibility, deletion state, object hydration, and field-level redaction.
 Withdrawn content cannot be selected or exported. Markdown is not persisted in
 this slice because the current analysis purge queue and source-deletion path do
 not yet provide complete `report-markdown` tombstoning and backup proof. A ZIP
-transport and MCP history resources are also intentionally deferred.
+transport remains intentionally deferred; MCP history now exposes metadata-only
+resources under the same scope and cursor rules.
 
 ## Validation
 
@@ -89,9 +90,9 @@ environment variables are absent.
 
 ## Remaining gaps
 
-- MCP history resources, ZIP/download-directory packaging, and durable
-  `report-markdown` object publication remain deferred until deletion,
-  retention, and backup purge proof covers that object kind.
+- ZIP/download-directory packaging and durable `report-markdown` object
+  publication remain deferred until deletion, retention, and backup purge proof
+  covers that object kind.
 - Provider-side export retention, deletion, backup purge, and hosted deployment
   evidence remain external release gates.
 - No third-party public complaint connector is active; fixture and owner-import

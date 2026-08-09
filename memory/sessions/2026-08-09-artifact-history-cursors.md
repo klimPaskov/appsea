@@ -39,8 +39,8 @@ by TypeScript/lint but requires the approved local PostgreSQL stack to execute.
 
 ## Follow-up
 
-Run the PostgreSQL integration suite and the full repository verification in a
-configured disposable stack before claiming operational deployment proof. MCP
-history resources, ZIP packaging, and durable `report-markdown` publication
-remain intentionally deferred until the corresponding deletion/retention/
-backup purge proof exists.
+Run the PostgreSQL integration suite in a configured disposable stack before
+claiming operational deployment proof. ZIP packaging and durable
+`report-markdown` publication remain intentionally deferred until the
+corresponding deletion/retention/backup purge proof exists; MCP now exposes
+scope-filtered metadata history resources with the same cursor contract.
