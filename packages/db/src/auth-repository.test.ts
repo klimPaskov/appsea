@@ -1097,6 +1097,10 @@ function workspacePurgeManifestPool(options: { owner?: boolean; archived?: boole
     {
       uri: `appsea-object://workspace:one/plan-package/${'b'.repeat(64)}`,
       kind: 'plan-package'
+    },
+    {
+      uri: `appsea-object://workspace:one/report-markdown/${'c'.repeat(64)}`,
+      kind: 'report-markdown'
     }
   ]
   const row = {
@@ -1702,6 +1706,11 @@ describe('PostgresAuthRepository', () => {
           entry.values[0] === 'workspace:one'
       )
     ).toBe(true)
+    expect(
+      inspected.statements.some((entry) =>
+        entry.text.includes('analysis.report_markdown_object_ref IS NOT NULL')
+      )
+    ).toBe(true)
     await expect(
       new PostgresAuthRepository(
         workspacePurgeReadinessPool({ owner: false }).pool
@@ -1766,14 +1775,20 @@ describe('PostgresAuthRepository', () => {
       })
     ).resolves.toMatchObject({
       workspaceId: 'workspace:one',
-      objectCount: 2,
+      objectCount: 3,
       objects: [
         expect.objectContaining({ kind: 'report-json' }),
-        expect.objectContaining({ kind: 'plan-package' })
+        expect.objectContaining({ kind: 'plan-package' }),
+        expect.objectContaining({ kind: 'report-markdown' })
       ]
     })
     expect(
       prepared.statements.some((entry) => entry.text.includes('create_workspace_purge_manifest'))
+    ).toBe(true)
+    expect(
+      prepared.statements.some((entry) =>
+        entry.text.includes('analysis.report_markdown_object_ref')
+      )
     ).toBe(true)
     await expect(
       repository.readWorkspacePurgeManifest('user:owner', 'workspace:one')

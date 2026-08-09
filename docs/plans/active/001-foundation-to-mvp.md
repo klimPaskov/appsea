@@ -25,7 +25,7 @@ Status: production-shaped foundation implemented and validated locally; producti
 
 Implemented:
 
-- PostgreSQL 18 schema and one hundred twenty forward, checksummed migrations
+- PostgreSQL 18 schema and one hundred twenty-one forward, checksummed migrations
 - normalized source, evidence, complaint, cluster, competitor, opportunity, score, report, plan, audit, cost, deletion, outbox, and lineage tables
 - no-login owner, separate migrator, and least-privilege runtime role contract
 - forced workspace RLS and transaction-scoped workspace context
@@ -234,9 +234,10 @@ Migration `0096_opportunity_score_v1_envelope.sql` adds nullable, range-checked
 balanced v1 score fields, reviewed evidence/coverage/freshness references, and
 a private ranking index. Legacy score rows remain readable and keep `score` as
 their raw-score compatibility field. The 2026-08-06 local fresh migration and
-backup/restore drills pass through `0119`; migration `0120` adds report-Markdown
-persistence and still needs a Docker-backed fresh/upgrade run. Provider backup, HA, retention, and
-production restore remain deployment work.
+backup/restore drills pass through `0119`; migrations `0120` and `0121` add
+report-Markdown persistence and purge-gate lineage and still need a Docker-backed
+fresh/upgrade run. Provider backup, HA, retention, and production restore remain
+deployment work.
 
 Migration `0097_mcp_agent_access_admission.sql` rechecks workspace membership
 for bearer authentication and adds a forced-RLS request-lease projection. The
@@ -739,10 +740,11 @@ field-redaction gates; withdrawn rows are metadata-only. The report and plan
 export routes accept `format=json|markdown`, with deterministic on-demand
 Markdown and representation-specific audit receipts. Plan comparison is
 metadata-only (sorted file status, SHA-256, and UTF-8 byte counts). The page
-shows a visible 50-version bound when older rows exist. Migration `0120` now
-persists the deterministic production `report-markdown` object with a complete
-reference, extends invalidated-analysis purge queueing, and clears the
-report-side reference during source deletion. The authenticated MCP boundary
+shows a visible 50-version bound when older rows exist. Migrations `0120` and
+`0121` persist the deterministic production `report-markdown` object with a complete
+reference, extends invalidated-analysis purge queueing, clears the report-side
+reference during source deletion, and keeps the direct owner purge function
+aligned with the full output set. The authenticated MCP boundary
 now exposes the same scope-filtered report/plan history as metadata-only
 resources with independent opaque cursors; selected content continues through
 the approved read path. ZIP/API packaging and provider-side export/backup purge

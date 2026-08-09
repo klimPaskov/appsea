@@ -652,10 +652,11 @@ purge remain deployment work.
 
 The current implementation intentionally does not add ZIP/download-directory
 packaging. Production analysis now persists deterministic `report-markdown`
-objects through migration `0120`: the report and analysis-run rows retain the
-complete reference, invalidated-output purge queueing includes the Markdown
-kind, and source-deletion propagation clears the report projection after the
-queue captures the reference. Cursor pagination is implemented for the private
+objects through migrations `0120`/`0121`: the report and analysis-run rows retain
+the complete reference, invalidated-output purge queueing includes the Markdown
+kind, source-deletion propagation clears the report projection after the queue
+captures the reference, and the direct owner purge gate counts the Markdown
+reference. Cursor pagination is implemented for the private
 web history route and the authenticated MCP history/selected-version resources;
 provider-side export/backup purge remains open.
 

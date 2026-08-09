@@ -2700,6 +2700,7 @@ export class PostgresAuthRepository {
                     WHERE analysis.workspace_id = workspace.workspace_id
                       AND (analysis.artifact_object_ref IS NOT NULL
                            OR analysis.report_object_ref IS NOT NULL
+                           OR analysis.report_markdown_object_ref IS NOT NULL
                            OR analysis.plan_object_ref IS NOT NULL))
                     AS analysis_object_reference_count,
                   (SELECT count(*) FROM appsea.report_versions report
@@ -2833,6 +2834,7 @@ export class PostgresAuthRepository {
                      jsonb_build_array(
                        analysis.artifact_object_ref,
                        analysis.report_object_ref,
+                       analysis.report_markdown_object_ref,
                        analysis.plan_object_ref
                      )
                    ) AS output(object_ref)

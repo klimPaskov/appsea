@@ -50,9 +50,10 @@ identity, manifest hash, actor binding, and representation. Provider download
 retention and destructive purge remain deployment responsibilities.
 
 Production analysis now also stores the same deterministic Markdown as a
-content-addressed `report-markdown` object. Migration `0120` keeps the complete
-object reference on the report and analysis-run rows, extends the invalidated-
-analysis purge queue, and clears the report projection during source deletion.
+content-addressed `report-markdown` object. Migrations `0120` and `0121` keep the
+complete object reference on the report and analysis-run rows, extend the
+invalidated-analysis purge queue, clear the report projection during source
+deletion, and keep the direct owner purge gate aligned with the full output set.
 The web export still renders the approved, redacted projection on demand so
 historical exports do not bypass governance. ZIP/download-directory packaging
 and provider-side backup/export purge remain deployment follow-up.

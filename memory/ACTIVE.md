@@ -12,10 +12,10 @@ public leaderboard synthetic; no public source enabled.
 Reviewed `manual-owner-import-v2` supports tenant-private owner-authorized
 CSV/JSON without claiming public market coverage.
 
-Migrations `0027`-`0120` cover policy, deletion/leases, orchestration,
+Migrations `0027`-`0121` cover policy, deletion/leases, orchestration,
 analysis/report/plan governance, cost/alerts, object refs, archival/purge
-intent, redaction, agent tokens, MFA, complete reviews, shared collectibility,
-and policy-impact expiry. OIDC and deployment operations remain gated.
+intent, redaction, agent/MFA/review, shared collectibility,
+and policy-impact expiry.
 
 Fixture is the persisted path. Production collection and
 analysis v2 are policy-gated/replay-safe; CFPB and Stack Exchange remain
@@ -57,8 +57,8 @@ requests leave no staged payloads and a server-owned five-minute TTL bounds
 uncertain Temporal starts.
 
 Forward migrations `0113`–`0119` harden owner-import retention, reviewer
-independence, collectibility, lineage, policy-impact expiry, pointer repair,
-and current-policy private reads/exports. Policy decay retains objects until a
+independence, collectibility, lineage, policy impact, pointer repair, and
+current-policy private reads/exports. Policy decay retains objects until a
 later source deletion; provider scheduler ownership and external retention
 remain release gates.
 
@@ -85,9 +85,10 @@ The private report/plan history slice reads existing version rows through
 current-policy/deletion/redaction gates, exposes cursor-paginated metadata pages
 of up to 50 rows per artifact family plus compatibility `truncated`, selected
 reads, representation-aware JSON/Markdown audit receipts, same-opportunity plan
-comparison (sorted path/hash/bytes), and page selectors. Migration `0120` now
-persists production `report-markdown` objects with complete references and
-extends invalidated-output purge/deletion clearing; the web export still
+comparison (sorted path/hash/bytes), and page selectors. Migrations `0120` and
+`0121` persist production `report-markdown` objects with complete references,
+extend invalidated-output purge/deletion clearing, and keep the direct owner
+purge gate aligned with the full output set; the web export still
 renders the approved redacted projection on demand. MCP exposes metadata-only
 cursor history resources plus approved selected-version reads, and ZIP/provider
 purge follow-up is explicit. See

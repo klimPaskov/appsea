@@ -6214,7 +6214,8 @@ describe.sequential('PostgreSQL fixture persistence lifecycle', () => {
     const workspaceId = 'workspace-purge-manifest'
     const ownerId = 'user:purge-manifest-owner'
     const editorId = 'user:purge-manifest-editor'
-    const emptyObjects: never[] = []
+    const reportMarkdownUri = `appsea-object://${workspaceId}/report-markdown/${'a'.repeat(64)}`
+    const expectedObjects = [{ uri: reportMarkdownUri, kind: 'report-markdown' }]
 
     try {
       await withOwnerClient(async (client) => {
@@ -6238,6 +6239,40 @@ describe.sequential('PostgreSQL fixture persistence lifecycle', () => {
            VALUES ($1, $2, 'owner', $3, $3), ($1, $4, 'editor', $3, $3)`,
           [workspaceId, ownerId, fixedAt, editorId]
         )
+        await client.query(
+          `INSERT INTO appsea.research_campaigns
+             (workspace_id, campaign_id, name, purpose, state, configuration, budget, synthetic,
+              created_at, updated_at)
+           VALUES ($1, 'purge-manifest-campaign', 'Purge manifest campaign', 'deletion',
+                   'completed', '{}', '{}', false, $2, $2)`,
+          [workspaceId, fixedAt]
+        )
+        await client.query(
+          `INSERT INTO appsea.research_runs
+             (workspace_id, run_id, campaign_id, idempotency_key, mode, state, artifact_id,
+              input_hash, artifact_snapshot, requested_at, started_at, completed_at)
+           VALUES ($1, 'purge-manifest-run', 'purge-manifest-campaign',
+                   'purge-manifest-run-idempotency', 'production', 'completed',
+                   'purge-manifest-artifact', repeat('b', 64), '{}', $2, $2, $2)`,
+          [workspaceId, fixedAt]
+        )
+        await client.query(
+          `INSERT INTO appsea.production_analysis_runs
+             (workspace_id, analysis_run_id, collection_run_id, idempotency_key,
+              analysis_version, input_hash, artifact_id, artifact_snapshot,
+              report_markdown_object_ref, state, availability_state, seed_review_id,
+              seed_content_hash, requested_at, started_at)
+           VALUES ($1, 'purge-manifest-analysis', 'purge-manifest-run',
+                   'purge-manifest-analysis-idempotency', 'production-analysis-v1',
+                   repeat('c', 64), 'purge-manifest-analysis-artifact', '{}',
+                   jsonb_build_object(
+                     'version', 1,
+                     'uri', $2,
+                     'workspaceId', $1,
+                     'kind', 'report-markdown'
+                   ), 'partial', 'active', 'purge-manifest-seed', repeat('d', 64), $3, $3)`,
+          [workspaceId, reportMarkdownUri, fixedAt]
+        )
       })
 
       await expect(
@@ -6251,15 +6286,15 @@ describe.sequential('PostgreSQL fixture persistence lifecycle', () => {
       })
       expect(first).toMatchObject({
         workspaceId,
-        objectCount: 0,
-        objects: [],
+        objectCount: 1,
+        objects: expectedObjects,
         externalRequirements: [
           'cloud_object_store_purge',
           'export_retention_purge',
           'backup_deletion_verification'
         ]
       })
-      expect(first.manifestHash).toBe(contentHash({ workspaceId, objects: emptyObjects }))
+      expect(first.manifestHash).toBe(contentHash({ workspaceId, objects: expectedObjects }))
 
       const replay = await authRepository.prepareWorkspacePurgeManifest(ownerId, workspaceId, {
         confirmation: 'PREPARE WORKSPACE PURGE MANIFEST'
@@ -6312,6 +6347,15 @@ describe.sequential('PostgreSQL fixture persistence lifecycle', () => {
         ])
         await client.query('DELETE FROM appsea.audit_events WHERE workspace_id = $1', [workspaceId])
         await client.query('DELETE FROM appsea.workspace_memberships WHERE workspace_id = $1', [
+          workspaceId
+        ])
+        await client.query('DELETE FROM appsea.production_analysis_runs WHERE workspace_id = $1', [
+          workspaceId
+        ])
+        await client.query('DELETE FROM appsea.research_runs WHERE workspace_id = $1', [
+          workspaceId
+        ])
+        await client.query('DELETE FROM appsea.research_campaigns WHERE workspace_id = $1', [
           workspaceId
         ])
         await client.query('DELETE FROM appsea.workspaces WHERE workspace_id = $1', [workspaceId])

@@ -133,7 +133,8 @@ describe('database foundation', () => {
       '0117',
       '0118',
       '0119',
-      '0120'
+      '0120',
+      '0121'
     ])
     expect(migrations[0]?.checksum).toMatch(/^[a-f0-9]{64}$/)
     expect(migrations[0]?.sql).toContain('CREATE TABLE appsea.evidence_records')
@@ -411,6 +412,15 @@ describe('database foundation', () => {
     expect(reportMarkdownMigration?.sql).toContain("'report-markdown'")
     expect(reportMarkdownMigration?.sql).toContain(
       'CREATE OR REPLACE FUNCTION appsea.enqueue_invalidated_production_analysis_objects'
+    )
+    const workspacePurgeMarkdownMigration = migrations.find(
+      (migration) => migration.version === '0121'
+    )
+    expect(workspacePurgeMarkdownMigration?.sql).toContain(
+      'CREATE OR REPLACE FUNCTION appsea.request_workspace_purge'
+    )
+    expect(workspacePurgeMarkdownMigration?.sql).toContain(
+      'analysis.report_markdown_object_ref IS NOT NULL'
     )
     const productionAdmissionReleaseMigration = migrations.find(
       (migration) => migration.version === '0112'
@@ -1184,7 +1194,7 @@ describe('database foundation', () => {
     expect(agentAccessTokenMigration?.sql).toContain(
       'GRANT EXECUTE ON FUNCTION appsea.issue_agent_access_token'
     )
-  })
+  }, 15_000)
 
   it('requires verified TLS for production database connections', () => {
     expect(() =>
