@@ -33,6 +33,11 @@ presented as public market research.
   captures pass title/main/runtime/overflow checks.
 - `artifacts/ui-reference-loop/2026-08-06/private-capture-manifest.json` — 36
   authenticated captures pass the same scalar checks.
+- `pnpm ui:capture` — passed a fresh local run on 2026-08-09 with 20 public
+  captures at 1280, 1024, 768, and 480 pixels; representative leaderboard and
+  opportunity screenshots were visually inspected. The 480-pixel pass uses a
+  narrow desktop layout (`mobile: false`), not a mobile-emulation desktop
+  capture.
 - `pnpm verify:backup-restore` — blocked in this environment because Docker
   Desktop's `dockerDesktopLinuxEngine` pipe is unavailable; this is not fresh
   migration or restore evidence.
