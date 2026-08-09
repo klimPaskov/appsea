@@ -1,9 +1,11 @@
 import {
   opportunityReportSchema,
   planPackageSchema,
+  type ObjectReference,
   type OpportunityReport,
   type PlanPackage
 } from '@appsea/contracts'
+import type { ObjectStore, ObjectStorePutInput } from '@appsea/object-store'
 import { hashPlanPackageFileContent } from './plan-comparison'
 
 /**
@@ -241,6 +243,27 @@ export function renderOpportunityReportMarkdown(reportInput: OpportunityReport):
     .join('\n')
     .replace(/\n{3,}/g, '\n\n')
     .trimEnd()}\n`
+}
+
+/** Encode the deterministic report Markdown for a content-addressed object. */
+export function encodeOpportunityReportMarkdown(reportInput: OpportunityReport): Uint8Array {
+  return new TextEncoder().encode(renderOpportunityReportMarkdown(reportInput))
+}
+
+/** Persist report Markdown without exposing a raw source payload to callers. */
+export function storeOpportunityReportMarkdown(
+  store: ObjectStore,
+  input: Omit<ObjectStorePutInput, 'kind' | 'body' | 'contentType'> & {
+    report: OpportunityReport
+  }
+): Promise<ObjectReference> {
+  const { report, ...objectInput } = input
+  return store.put({
+    ...objectInput,
+    kind: 'report-markdown',
+    body: encodeOpportunityReportMarkdown(report),
+    contentType: 'text/markdown; charset=utf-8'
+  })
 }
 
 function sortedFiles(planPackage: PlanPackage): PlanPackage['files'] {

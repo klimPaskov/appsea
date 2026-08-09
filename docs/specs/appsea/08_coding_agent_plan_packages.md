@@ -87,9 +87,10 @@ show a diff.
 Approved JSON export remains the machine envelope. Approved Markdown export is
 rendered on demand from the validated, redacted package and emits one ordered
 Markdown bundle containing the six supported files, including the existing
-`04-task-graph.json` as inert text. This is intentionally not a ZIP and is not
-persisted as a `report-markdown` object until deletion and purge propagation
-are designed end to end.
+`04-task-graph.json` as inert text. This is intentionally not a ZIP. Production
+analysis report Markdown is persisted separately as a `report-markdown` object
+for retention/deletion lineage; plan Markdown remains the export bundle and is
+not a second persisted plan object.
 
 ## Product brief
 

@@ -4,15 +4,13 @@
 
 Audit: `docs/status/production-readiness-audit-2026-08-06.md`.
 `pnpm verify` and local PostgreSQL/Temporal/MinIO smoke pass through migration
-`0119`; public/private captures pass against the disposable stack. The
-leaderboard remains sparse.
+`0119`; public/private captures pass against the disposable stack.
 
-AppSea remains fixture-first with production-shaped PostgreSQL, Temporal,
-source-policy, private-workspace, report/plan, and maintenance boundaries. The
-public leaderboard is synthetic and sparse; no third-party public source is
-enabled. Reviewed `manual-owner-import-v2` supports tenant-private
-owner-authorized CSV/JSON without claiming public market coverage; v1 is
-historical.
+AppSea remains fixture-first with production-shaped persistence, workflow,
+source policy, private workspaces, reports/plans, and maintenance.
+public leaderboard synthetic; no public source enabled.
+Reviewed `manual-owner-import-v2` supports tenant-private owner-authorized
+CSV/JSON without claiming public market coverage.
 
 Migrations `0027`-`0119` cover policy, deletion/leases, orchestration,
 analysis/report/plan governance, cost/alerts, object refs, archival/purge
@@ -87,10 +85,12 @@ The private report/plan history slice reads existing version rows through
 current-policy/deletion/redaction gates, exposes cursor-paginated metadata pages
 of up to 50 rows per artifact family plus compatibility `truncated`, selected
 reads, representation-aware JSON/Markdown audit receipts, same-opportunity plan
-comparison (sorted path/hash/bytes), and page selectors. Markdown is on-demand
-because durable `report-markdown` purge proof is absent; MCP now exposes
-metadata-only cursor history resources plus approved selected-version reads,
-and ZIP follow-up is explicit. See
+comparison (sorted path/hash/bytes), and page selectors. Migration `0120` now
+persists production `report-markdown` objects with complete references and
+extends invalidated-output purge/deletion clearing; the web export still
+renders the approved redacted projection on demand. MCP exposes metadata-only
+cursor history resources plus approved selected-version reads, and ZIP/provider
+purge follow-up is explicit. See
 `docs/status/report-plan-history-completion-report-2026-08-09.md`.
 
 ## Next production tranche

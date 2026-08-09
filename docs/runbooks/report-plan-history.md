@@ -49,9 +49,13 @@ before rendering. Export audit rows contain only the workspace/artifact
 identity, manifest hash, actor binding, and representation. Provider download
 retention and destructive purge remain deployment responsibilities.
 
-Markdown is rendered on demand. Do not add a `report-markdown` object reference
-or claim durable Markdown retention without extending source deletion,
-analysis-object purge, workspace purge, and backup verification together.
+Production analysis now also stores the same deterministic Markdown as a
+content-addressed `report-markdown` object. Migration `0120` keeps the complete
+object reference on the report and analysis-run rows, extends the invalidated-
+analysis purge queue, and clears the report projection during source deletion.
+The web export still renders the approved, redacted projection on demand so
+historical exports do not bypass governance. ZIP/download-directory packaging
+and provider-side backup/export purge remain deployment follow-up.
 
 ## Compare plan versions
 

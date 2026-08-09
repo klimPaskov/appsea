@@ -791,7 +791,12 @@ export {
   storeOpportunityReport
 } from './report-object'
 
-export { renderOpportunityReportMarkdown, renderPlanPackageMarkdown } from './markdown'
+export {
+  encodeOpportunityReportMarkdown,
+  renderOpportunityReportMarkdown,
+  renderPlanPackageMarkdown,
+  storeOpportunityReportMarkdown
+} from './markdown'
 export {
   comparePlanPackages,
   hashPlanPackageFileContent,

@@ -79,8 +79,10 @@ newest active versions. Withdrawn versions can remain visible as metadata-only
 history entries but cannot be selected for content or export. `format=json` is
 the machine representation; `format=markdown` is a deterministic on-demand
 render of the same redacted read model, with the manifest hash in a response
-header. The public leaderboard remains latest-ranked and contains no history or
-comparison UI.
+header. Production analysis additionally retains a content-addressed
+`report-markdown` object for deletion/retention workflows; that object is not
+an export authorization or a public leaderboard surface. The public leaderboard
+remains latest-ranked and contains no history or comparison UI.
 
 Plan history follows the same membership, current-policy, deletion, and
 approval boundaries. A plan comparison returns sorted file paths, status, SHA-256

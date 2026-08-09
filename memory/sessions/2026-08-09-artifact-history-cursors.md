@@ -41,7 +41,9 @@ by TypeScript/lint but requires the approved local PostgreSQL stack to execute.
 
 Run the PostgreSQL integration suite in a configured disposable stack before
 claiming operational deployment proof. ZIP packaging and durable
-`report-markdown` publication remain intentionally deferred until the
-corresponding deletion/retention/backup purge proof exists; MCP now exposes
+`report-markdown` publication is now persisted for production analysis through
+migration `0120`; the complete reference enters the invalidated-output purge
+queue and source deletion clears the report projection. ZIP packaging and
+provider-side export/backup purge remain intentionally deferred. MCP exposes
 scope-filtered metadata history plus addressed approved selected-version
 resources with the same cursor contract.

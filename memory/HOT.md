@@ -16,7 +16,9 @@
   reads cannot schedule, activate, mutate quota, or infer absence.
 - Production collection persists policy-bound evidence, gaps, cost, and
   lineage; private reads use `/workspace/:workspaceId/research/:runId`; outputs
-  use object storage. Reports/plans preserve provenance, approvals, and gaps.
+  use object storage. Reports/plans preserve provenance, approvals, gaps, and
+  production report Markdown object references; provider-side purge remains
+  external.
 - Public `/leaderboard` and `/` share the sparse fixture view; private captures
   need Docker services.
 - Production opportunities stay `candidate` until the explicit deep-research

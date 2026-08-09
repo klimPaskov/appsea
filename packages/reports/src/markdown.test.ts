@@ -1,7 +1,13 @@
 import { describe, expect, it } from 'vitest'
 import { buildFixtureResearchArtifact } from '@appsea/research'
+import { InMemoryObjectStore } from '@appsea/object-store'
 import { generateOpportunityReport } from './index'
-import { renderOpportunityReportMarkdown, renderPlanPackageMarkdown } from './markdown'
+import {
+  encodeOpportunityReportMarkdown,
+  renderOpportunityReportMarkdown,
+  renderPlanPackageMarkdown,
+  storeOpportunityReportMarkdown
+} from './markdown'
 
 describe('report Markdown rendering', () => {
   it('renders synthetic and representation disclosures deterministically', async () => {
@@ -52,5 +58,23 @@ describe('report Markdown rendering', () => {
     expect(markdown).toContain('# Execute')
     expect(markdown).not.toMatch(/^# Execute$/m)
     expect(markdown).not.toMatch(/^\[click\]/m)
+  })
+
+  it('encodes and stores the exact deterministic Markdown as a report-markdown object', async () => {
+    const artifact = await buildFixtureResearchArtifact('2026-07-10T00:00:00.000Z')
+    const report = generateOpportunityReport(artifact, '2026-07-10T00:00:00.000Z')
+    const store = new InMemoryObjectStore()
+    const reference = await storeOpportunityReportMarkdown(store, {
+      workspaceId: 'workspace:markdown',
+      createdAt: report.generatedAt,
+      retentionUntil: '2026-08-10T00:00:00.000Z',
+      report
+    })
+    const expected = encodeOpportunityReportMarkdown(report)
+    const stored = await store.get('workspace:markdown', reference)
+
+    expect(reference.kind).toBe('report-markdown')
+    expect(reference.contentType).toBe('text/markdown; charset=utf-8')
+    expect(stored?.body).toEqual(expected)
   })
 })

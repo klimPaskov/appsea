@@ -6072,7 +6072,7 @@ describe.sequential('PostgreSQL fixture persistence lifecycle', () => {
     const workspaceId = 'workspace-object-purge'
     const analysisRunId = 'analysis-run-object-purge'
     const fixedReference = (
-      kind: 'workflow-artifact' | 'report-json' | 'plan-package',
+      kind: 'workflow-artifact' | 'report-json' | 'report-markdown' | 'plan-package',
       hash: string
     ) => ({
       version: 1,
@@ -6081,7 +6081,12 @@ describe.sequential('PostgreSQL fixture persistence lifecycle', () => {
       kind,
       contentHash: hash,
       byteLength: 1,
-      contentType: kind === 'report-json' ? 'application/json' : 'application/octet-stream',
+      contentType:
+        kind === 'report-json'
+          ? 'application/json'
+          : kind === 'report-markdown'
+            ? 'text/markdown; charset=utf-8'
+            : 'application/octet-stream',
       createdAt: fixedAt,
       retentionUntil: fixedAt,
       deletionState: 'active',
@@ -6090,6 +6095,7 @@ describe.sequential('PostgreSQL fixture persistence lifecycle', () => {
     })
     const artifactReference = fixedReference('workflow-artifact', 'a'.repeat(64))
     const reportReference = fixedReference('report-json', 'b'.repeat(64))
+    const reportMarkdownReference = fixedReference('report-markdown', 'd'.repeat(64))
     const planReference = fixedReference('plan-package', 'c'.repeat(64))
 
     try {
@@ -6123,17 +6129,19 @@ describe.sequential('PostgreSQL fixture persistence lifecycle', () => {
             `INSERT INTO appsea.production_analysis_runs
                (workspace_id, analysis_run_id, collection_run_id, idempotency_key,
                 analysis_version, input_hash, artifact_id, artifact_snapshot,
-                artifact_object_ref, report_object_ref, plan_object_ref, state,
+                 artifact_object_ref, report_object_ref, report_markdown_object_ref,
+                 plan_object_ref, state,
                 availability_state, seed_review_id, seed_content_hash, requested_at, started_at)
              VALUES ($1, $2, 'run-object-purge', 'object-purge-analysis-idempotency',
                      'production-analysis-v1', repeat('e', 64), 'artifact-object-purge-analysis', '{}',
-                     $3::jsonb, $4::jsonb, $5::jsonb, 'running', 'active',
-                     'seed-object-purge', repeat('f', 64), $6, $6)`,
+                      $3::jsonb, $4::jsonb, $5::jsonb, $6::jsonb, 'running', 'active',
+                      'seed-object-purge', repeat('f', 64), $7, $7)`,
             [
               workspaceId,
               analysisRunId,
               JSON.stringify(artifactReference),
               JSON.stringify(reportReference),
+              JSON.stringify(reportMarkdownReference),
               JSON.stringify(planReference),
               fixedAt
             ]
@@ -6166,11 +6174,12 @@ describe.sequential('PostgreSQL fixture persistence lifecycle', () => {
           ),
         { readOnly: true }
       )
-      expect(queued.rows).toHaveLength(3)
+      expect(queued.rows).toHaveLength(4)
       expect(queued.rows.every((row) => row.state === 'pending')).toBe(true)
       expect(queued.rows.map((row) => row.object_kind)).toEqual([
         'plan-package',
         'report-json',
+        'report-markdown',
         'workflow-artifact'
       ])
     } finally {

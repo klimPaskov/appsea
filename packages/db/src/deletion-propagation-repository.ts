@@ -655,6 +655,7 @@ export class PostgresDeletionPropagationRepository {
                 )
               ),
               markdown_object_ref = NULL,
+              markdown_object_reference = NULL,
               deletion_state = 'source_deleted',
               deletion_tombstone_id = $4
         WHERE report.workspace_id = $1

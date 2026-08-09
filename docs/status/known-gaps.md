@@ -651,12 +651,13 @@ retention-aware local object purges, but source-wide object-store and backup
 purge remain deployment work.
 
 The current implementation intentionally does not add ZIP/download-directory
-packaging or persisted
-`report-markdown` objects. These are follow-up contracts because the existing
-object purge queue and deletion propagation must be extended before a Markdown
-object can be durable. Cursor pagination is now implemented for the private web
-history route and the authenticated MCP history/selected-version resources;
-durable Markdown publication remains open.
+packaging. Production analysis now persists deterministic `report-markdown`
+objects through migration `0120`: the report and analysis-run rows retain the
+complete reference, invalidated-output purge queueing includes the Markdown
+kind, and source-deletion propagation clears the report projection after the
+queue captures the reference. Cursor pagination is implemented for the private
+web history route and the authenticated MCP history/selected-version resources;
+provider-side export/backup purge remains open.
 
 Production analysis private reads now carry the current report and plan
 approval states from PostgreSQL governance projections, so later review

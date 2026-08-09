@@ -160,6 +160,9 @@ status/hash/byte metadata. The authenticated MCP boundary also exposes
 scope-filtered `report-history` and `plan-history` resources with the same
 independent opaque cursors and 1..50 page bound; those resources return
 metadata only, while selected content still uses the approval/readiness gates.
+Production analysis may retain a separate content-addressed report Markdown
+object for purge lineage, but neither the web export nor MCP resource exposes
+that object URI or bypasses approval and redaction.
 
 ````
 

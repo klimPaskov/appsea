@@ -372,18 +372,21 @@ repair or clear, private reads/exports fail closed, lineage remains reviewable,
 and later source deletion performs destructive purge. Reapproval never
 auto-reactivates an expired output.
 
-## 2026-08-09: Render private Markdown on demand until purge proof exists
+## 2026-08-09: Keep private Markdown governed and paginated
 
-Versioned rows already provide immutable history and lineage, so history and
-selected reads reuse membership, current-policy, deletion, hydration, redaction,
-and approval gates. Markdown renders only after that projection; persisting
-`report-markdown` waits for deletion, export-retention, and backup purge proof.
-JSON/Markdown have separate audit idempotency keys. The leaderboard stays
-unchanged; read-only MCP now exposes scope-filtered metadata history and
-approved selected-version resources;
-private web history uses independently advancing,
-workspace/opportunity/family-bound opaque cursors with a 50-row maximum and a
-compatibility `truncated` field. Plan comparison returns only sorted path
-status/hash/byte metadata.
-The transitive `nanoid` high finding is pinned to patched `3.3.17`; the
-production audit is clean.
+History/selected reads retain membership, policy, deletion, hydration, redaction,
+and approval gates. JSON/Markdown use separate audit keys; leaderboard is
+unchanged. MCP exposes scoped metadata and approved reads; web history uses
+opaque cursors, max 50, and `truncated`; plan comparison is sorted
+path/status/hash/bytes. Patched `nanoid`; production audit clean.
+
+## 2026-08-09: Persist production report Markdown with the purge lineage
+
+Migration `0120` adds a complete `report-markdown` ObjectReference to
+production analysis runs and report versions. The invalidated-analysis purge
+queue captures the fourth analysis output before source-deletion propagation
+clears both the legacy URI and full reference from the report projection.
+Existing rows remain readable with a nullable reference; ZIP packaging and
+provider-side export/backup deletion remain separate deployment work. The web
+export continues to render the approved, redacted projection on demand so
+persisted storage never bypasses governance.

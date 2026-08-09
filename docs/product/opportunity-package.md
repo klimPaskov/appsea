@@ -88,9 +88,11 @@ deterministic, on-demand report document from that same redacted read model and
 returns the manifest hash in `X-AppSea-Manifest-Hash`. Both representations
 write separate idempotent `report.exported` receipts containing only the
 artifact identifier, manifest hash, and representation; no report content or
-object URI is recorded. Markdown is intentionally rendered on demand in this
-slice: the existing `report-markdown` reference is not persisted until its
-deletion/purge propagation is designed.
+object URI is recorded in the audit receipt. Production analysis also stores
+the deterministic Markdown as a content-addressed `report-markdown` object
+with a complete deletion/purge reference. The web representation remains
+rendered on demand from the approved redacted projection and never bypasses
+that gate.
 
 Production analysis reads carry the linked report and plan approval states from
 their PostgreSQL governance projections. Private opportunity pages therefore

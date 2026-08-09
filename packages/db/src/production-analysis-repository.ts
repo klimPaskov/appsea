@@ -32,6 +32,7 @@ import {
   decodePlanPackage,
   generateOpportunityReport,
   generateProductionPlanPackage,
+  storeOpportunityReportMarkdown,
   storeOpportunityReport,
   storePlanPackage
 } from '@appsea/reports'
@@ -68,6 +69,7 @@ interface AnalysisRunRow extends QueryResultRow {
   artifact_snapshot: unknown
   artifact_object_ref: unknown
   report_object_ref: unknown
+  report_markdown_object_ref: unknown
   plan_object_ref: unknown
   state: string
   activity_attempts: number
@@ -487,7 +489,7 @@ async function readRun(
     `SELECT analysis.workspace_id, analysis.analysis_run_id, analysis.collection_run_id,
             analysis.idempotency_key,
             input_hash, artifact_id, artifact_snapshot, artifact_object_ref,
-            report_object_ref, plan_object_ref, state, availability_state,
+            report_object_ref, report_markdown_object_ref, plan_object_ref, state, availability_state,
             analysis.activity_attempts,
             opportunity_id, score_snapshot_id, report_id, plan_package_id,
             (SELECT report.approval_state
@@ -521,7 +523,8 @@ async function readRunByIdempotency(
     `SELECT analysis.workspace_id, analysis.analysis_run_id, analysis.collection_run_id,
             analysis.idempotency_key, analysis.input_hash, analysis.artifact_id,
             analysis.artifact_snapshot, analysis.artifact_object_ref,
-            analysis.report_object_ref, analysis.plan_object_ref, analysis.state,
+            analysis.report_object_ref, analysis.report_markdown_object_ref,
+            analysis.plan_object_ref, analysis.state,
             analysis.availability_state, analysis.activity_attempts,
             analysis.opportunity_id,
             analysis.score_snapshot_id, analysis.report_id, analysis.plan_package_id,
@@ -1542,6 +1545,14 @@ export class PostgresProductionAnalysisRepository {
           result.reportObjectRef,
           result.analysisRunId
         ),
+        run.report_markdown_object_ref
+          ? assertObjectReferenceAvailable(
+              this.objectStore,
+              parsed.workspaceId,
+              parseReference(run.report_markdown_object_ref, 'report Markdown object reference'),
+              result.analysisRunId
+            )
+          : Promise.resolve(),
         assertObjectReferenceAvailable(
           this.objectStore,
           parsed.workspaceId,
@@ -1581,6 +1592,7 @@ export class PostgresProductionAnalysisRepository {
 
     let artifactRef: ObjectReference
     let reportRef: ObjectReference
+    let reportMarkdownRef: ObjectReference
     let planRef: ObjectReference
     try {
       artifactRef = await this.objectStore.put({
@@ -1592,6 +1604,12 @@ export class PostgresProductionAnalysisRepository {
         retentionUntil: retention
       })
       reportRef = await storeOpportunityReport(this.objectStore, {
+        workspaceId: parsed.workspaceId,
+        createdAt: parsed.artifact.createdAt,
+        retentionUntil: retention,
+        report
+      })
+      reportMarkdownRef = await storeOpportunityReportMarkdown(this.objectStore, {
         workspaceId: parsed.workspaceId,
         createdAt: parsed.artifact.createdAt,
         retentionUntil: retention,
@@ -1968,9 +1986,10 @@ export class PostgresProductionAnalysisRepository {
           await client.query(
             `INSERT INTO appsea.report_versions
              (workspace_id, report_id, opportunity_id, version, evidence_snapshot_ref,
-              structured_report, structured_object_ref, manifest_hash, approval_state,
+              structured_report, structured_object_ref, markdown_object_ref,
+              markdown_object_reference, manifest_hash, approval_state,
               generated_at, synthetic)
-           VALUES ($1, $2, $3, $4, $5, $6::jsonb, $7, $8, 'draft', $9, false)
+           VALUES ($1, $2, $3, $4, $5, $6::jsonb, $7, $8, $9::jsonb, $10, 'draft', $11, false)
            ON CONFLICT DO NOTHING`,
             [
               parsed.workspaceId,
@@ -1988,6 +2007,8 @@ export class PostgresProductionAnalysisRepository {
                 objectRef: reportRef.uri
               }),
               reportRef.uri,
+              reportMarkdownRef.uri,
+              JSON.stringify(reportMarkdownRef),
               reportManifestHash,
               completedAt
             ]
@@ -2073,12 +2094,13 @@ export class PostgresProductionAnalysisRepository {
                 SET artifact_snapshot = $3::jsonb,
                     artifact_object_ref = $4::jsonb,
                     report_object_ref = $5::jsonb,
-                    plan_object_ref = $6::jsonb,
+                    report_markdown_object_ref = $6::jsonb,
+                    plan_object_ref = $7::jsonb,
                     state = 'completed', availability_state = 'active',
-                    opportunity_id = $7, score_snapshot_id = $8, report_id = $9,
-                    plan_package_id = $10, coverage_gaps = $11, warnings = $12,
-                    completed_at = $13,
-                    activity_attempts = GREATEST(activity_attempts, $14),
+                    opportunity_id = $8, score_snapshot_id = $9, report_id = $10,
+                    plan_package_id = $11, coverage_gaps = $12, warnings = $13,
+                    completed_at = $14,
+                    activity_attempts = GREATEST(activity_attempts, $15),
                     failure_code = NULL, failure_summary = NULL
               WHERE workspace_id = $1 AND analysis_run_id = $2`,
             [
@@ -2087,6 +2109,7 @@ export class PostgresProductionAnalysisRepository {
               JSON.stringify(snapshot),
               JSON.stringify(artifactRef),
               JSON.stringify(reportRef),
+              JSON.stringify(reportMarkdownRef),
               JSON.stringify(planRef),
               opportunityId,
               scoreSnapshotId,

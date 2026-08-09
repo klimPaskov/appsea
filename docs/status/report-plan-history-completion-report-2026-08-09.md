@@ -101,3 +101,11 @@ environment variables are absent.
   evidence remain external release gates.
 - No third-party public complaint connector is active; fixture and owner-import
   data remain explicitly non-public market research.
+
+## Superseding persistence follow-up
+
+The later `report-markdown-persistence-completion-report-2026-08-09.md`
+supersedes only the durable-Markdown bullet above: migration `0120` now stores
+production report Markdown and carries its complete reference through
+invalidation and source-deletion purge queueing. ZIP packaging and
+provider-side export/backup deletion remain open.
