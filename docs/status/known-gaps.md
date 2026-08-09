@@ -630,10 +630,10 @@ Activity view can account for the export without exposing content. The private
 report/plan routes now expose cursor-paginated pages of at most 50
 current-policy-visible version summaries, selected-version reads, and a
 metadata-only plan comparison. Approved JSON and deterministic on-demand
-Markdown exports use separate representation-aware audit receipts; Markdown
-returns the manifest hash in a response header and does not persist a new
-object. Migration
-`0033` adds a first-class workspace
+Markdown exports use separate representation-aware audit receipts; an export
+request returns the manifest hash in a response header and does not create a
+new object. Production-analysis persistence is described in the next paragraph.
+Migration `0033` adds a first-class workspace
 seed-review registry, private list/read/create/transition routes, and a seed
 review page; the analysis-start boundary now accepts only an approved
 `seedReviewId`. Production analysis persistence, opt-in post-collection

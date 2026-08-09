@@ -1,5 +1,10 @@
 # Report and plan history tranche
 
+Historical scope note: this report describes the history/export implementation
+before the later durable report-Markdown persistence follow-up. Statements below
+that say Markdown was not persisted are superseded by migrations `0120` and
+`0121` and the dedicated persistence completion report.
+
 ## Scope
 
 This tranche closes the private artifact-history and export-format gap without

@@ -6281,6 +6281,25 @@ describe.sequential('PostgreSQL fixture persistence lifecycle', () => {
         })
       ).resolves.toMatchObject({ state: 'archived', activeWorkCount: 0 })
 
+      const purgeGate = await withWorkspaceTransaction(servicePool, workspaceId, async (client) => {
+        await client.query("SELECT set_config('appsea.auth_user_id', $1, true)", [ownerId])
+        return client.query<{
+          state: string
+          readiness_snapshot: { analysisObjectReferenceCount?: number; blockers?: string[] }
+        }>(
+          `SELECT state, readiness_snapshot
+               FROM appsea.request_workspace_purge($1, $2)`,
+          [workspaceId, ownerId]
+        )
+      })
+      expect(purgeGate.rows[0]).toMatchObject({
+        state: 'blocked',
+        readiness_snapshot: {
+          analysisObjectReferenceCount: 1,
+          blockers: expect.arrayContaining(['analysis_objects'])
+        }
+      })
+
       const first = await authRepository.prepareWorkspacePurgeManifest(ownerId, workspaceId, {
         confirmation: 'PREPARE WORKSPACE PURGE MANIFEST'
       })
@@ -6340,6 +6359,9 @@ describe.sequential('PostgreSQL fixture persistence lifecycle', () => {
       await withOwnerClient(async (client) => {
         await client.query("SELECT set_config('appsea.workspace_id', $1, false)", [workspaceId])
         await client.query('DELETE FROM appsea.workspace_purge_manifests WHERE workspace_id = $1', [
+          workspaceId
+        ])
+        await client.query('DELETE FROM appsea.workspace_purge_requests WHERE workspace_id = $1', [
           workspaceId
         ])
         await client.query('DELETE FROM appsea.outbox_events WHERE workspace_id = $1', [
