@@ -21,6 +21,10 @@ describe('report Markdown rendering', () => {
     expect(first).toContain('Fixture data is synthetic and proves package shape only')
     expect(first).toContain('Allowed excerpt:')
     expect(first).toContain('Representation: "fixture"')
+    expect(first).toContain('Author coverage status: "unavailable"')
+    expect(first).toContain(
+      'Synthetic fixture observations do not provide author identity coverage'
+    )
   })
 
   it('keeps hostile report values inert and does not render restricted excerpts', async () => {

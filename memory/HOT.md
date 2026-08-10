@@ -8,9 +8,9 @@
   security/commercial review; Stack Exchange needs first-party written consent
   or a commercial exception. Migration `0111` stores its required reference on
   the immutable approval row and the CLI fails closed without it.
-  `manual-owner-import-v2` is active: owner-attested,
-  tenant-private CSV/JSON, no URL fetch or public coverage; competitor/contrary
-  claims start unreviewed.
+  `manual-owner-import-v3` is active: owner-attested, tenant-private CSV/JSON,
+  no URL fetch or public coverage; optional author keys become workspace-scoped
+  opaque fingerprints only, and competitor/contrary claims start unreviewed.
 - Source registry health is private/read-only; freshness and quota headroom are
   bounded. Migrations `0108`/`0109` add maintenance-only scalar health alerts;
   reads cannot schedule, activate, mutate quota, or infer absence.

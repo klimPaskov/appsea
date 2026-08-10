@@ -6974,7 +6974,7 @@ describe.sequential('PostgreSQL fixture persistence lifecycle', () => {
         batchId,
         campaignId,
         sourceId: 'manual-owner-import',
-        policyVersion: 'manual-owner-import-v2',
+        policyVersion: 'manual-owner-import-v3',
         purpose: 'opportunity-research',
         requestedDisplayMode: 'excerpt',
         idempotencyDigest: 'a'.repeat(64),
@@ -7003,7 +7003,7 @@ describe.sequential('PostgreSQL fixture persistence lifecycle', () => {
           batchId: 'batch:manual-import-viewer',
           campaignId,
           sourceId: 'manual-owner-import',
-          policyVersion: 'manual-owner-import-v2',
+          policyVersion: 'manual-owner-import-v3',
           purpose: 'opportunity-research',
           requestedDisplayMode: 'excerpt',
           idempotencyDigest: 'c'.repeat(64),
@@ -7025,7 +7025,7 @@ describe.sequential('PostgreSQL fixture persistence lifecycle', () => {
           batchId,
           campaignId,
           sourceId: 'manual-owner-import',
-          policyVersion: 'manual-owner-import-v2',
+          policyVersion: 'manual-owner-import-v3',
           purpose: 'opportunity-research',
           requestedDisplayMode: 'excerpt',
           idempotencyDigest: 'a'.repeat(64),
@@ -7045,7 +7045,7 @@ describe.sequential('PostgreSQL fixture persistence lifecycle', () => {
         manualImports.readForCollection({
           workspaceId,
           batchId,
-          policyVersion: 'manual-owner-import-v2',
+          policyVersion: 'manual-owner-import-v3',
           runId,
           limit: 10
         })
@@ -7056,7 +7056,7 @@ describe.sequential('PostgreSQL fixture persistence lifecycle', () => {
           workspaceId,
           batchId,
           campaignId,
-          policyVersion: 'manual-owner-import-v2',
+          policyVersion: 'manual-owner-import-v3',
           runId,
           observedAt: laterAt
         })
@@ -7069,7 +7069,7 @@ describe.sequential('PostgreSQL fixture persistence lifecycle', () => {
         manualImports.readForCollection({
           workspaceId,
           batchId,
-          policyVersion: 'manual-owner-import-v2',
+          policyVersion: 'manual-owner-import-v3',
           runId,
           limit: 10
         })
@@ -7129,7 +7129,7 @@ describe.sequential('PostgreSQL fixture persistence lifecycle', () => {
           batchId: expiredBatchId,
           campaignId,
           sourceId: 'manual-owner-import',
-          policyVersion: 'manual-owner-import-v2',
+          policyVersion: 'manual-owner-import-v3',
           purpose: 'opportunity-research',
           requestedDisplayMode: 'excerpt',
           idempotencyDigest: 'e'.repeat(64),

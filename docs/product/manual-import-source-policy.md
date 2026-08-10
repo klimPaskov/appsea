@@ -12,13 +12,14 @@ This policy is not approval of CFPB, Stack Exchange, social media, review sites,
 - Text-like fields are whitespace-normalized and scrub common email, phone, payment-number, and secret/token patterns before persistence. Raw upload bytes are not retained.
 - HTTP(S) locators may be retained for attribution and inspection, but AppSea never fetches a URL from an import.
 - Imported text is untrusted evidence. Bounded instruction-like patterns are marked for human review; the text and provenance remain retained, but the content is never executed or copied into code, skills, instructions, permissions, or repository memory.
+- Optional `author_key`, `author_id`, or `author_fingerprint` input is accepted only as an opaque source key. The parser requires the authenticated workspace namespace and immediately stores a domain-separated SHA-256 fingerprint; raw keys, emails, URLs, and whitespace-bearing identity strings are rejected and never staged.
 - The route reserves the workspace-scoped production workflow admission before persisting normalized rows; rejected rate/concurrency attempts do not write staged payloads. If bounded staging fails, only a newly admitted still-reserved row is released through the authenticated actor-bound function. Replayed, consumed, or expired reservations are never released optimistically; a reservation whose Temporal start outcome is uncertain expires through the server-owned five-minute TTL.
 - Temporal receives only an identifier-only `manualImportBatchId`; complaint payloads remain in the private PostgreSQL staging boundary.
 - The private workspace screen at `/workspace/{workspaceId}/imports` exposes the same owner staging and deletion boundary without displaying raw staged rows; members can inspect batch metadata and follow completed collection runs.
 
-The current source policy is versioned as `manual-owner-import-v2`, uses excerpt display mode, has a 30-day staging retention expectation, supports tombstone propagation, and is operationally on demand rather than a collection schedule. A leased source-maintenance pass now automatically clears staged or consumed batches after that policy window, records a fixed retention-expiry audit event, and queues downstream tombstones before deletion propagation. Its legacy policy payload does not declare a freshness SLA, so the registry keeps freshness `unknown` until a new reviewed policy version adds one. Version `v1` remains immutable for historical batches but is no longer the current collection snapshot. Owner-requested deletion still clears staged payloads immediately; both paths let the existing deletion worker redact downstream source/evidence/report/plan projections.
+The current source policy is versioned as `manual-owner-import-v3`, uses excerpt display mode, has a 30-day staging retention expectation, supports tombstone propagation, and is operationally on demand rather than a collection schedule. Migration `0122` adds the reviewed workspace-opaque author capability and clears its digest on source deletion or explicit author-field redaction. A leased source-maintenance pass now automatically clears staged or consumed batches after that policy window, records a fixed retention-expiry audit event, and queues downstream tombstones before deletion propagation. Its immutable policy payload does not declare a freshness SLA, so the registry keeps freshness `unknown`. Versions `v1` and `v2` remain immutable for historical batches but are no longer the current collection snapshot. Owner-requested deletion still clears staged payloads immediately; both paths let the existing deletion worker redact downstream source/evidence/report/plan projections.
 
-Version `v2` additionally permits the private purposes `competitor-research` and
+Version `v3` retains the private purposes `competitor-research` and
 `contrary-evidence`. Those purposes do not turn an owner export into public
 market research: each observation must point to retained evidence and remains
 unreviewed until an editor or owner confirms or rejects the bounded claim.
@@ -28,6 +29,11 @@ copies the observation and evidence hashes into an append-only analysis lineage
 record and exposes the claim in the private report and coding plan. Rejected,
 deleted, stale, or policy-mismatched observations stay out of outputs and are
 shown as coverage gaps; review does not trigger an autonomous rerun.
+
+Reports compute unique-author coverage only from retained opaque fingerprints.
+They disclose the identified-observation count, a unique count when available,
+and a partial/unavailable gap; complaint volume and near-duplicate relationships
+never infer people.
 
 ## Coverage and evidence
 

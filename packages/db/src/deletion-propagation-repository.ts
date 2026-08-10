@@ -478,6 +478,7 @@ export class PostgresDeletionPropagationRepository {
     const sourceItems = await client.query(
       `UPDATE appsea.source_items source_item
           SET raw_object_ref = NULL,
+              author_fingerprint = NULL,
               deletion_state = 'source_deleted',
               deletion_tombstone_id = $4
         WHERE source_item.workspace_id = $1

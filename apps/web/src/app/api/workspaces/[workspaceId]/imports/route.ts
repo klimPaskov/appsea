@@ -196,7 +196,8 @@ export async function POST(
   try {
     parsedImport = parseManualImportContent(body.content, {
       format: body.format,
-      defaultQuery: query
+      defaultQuery: query,
+      authorNamespace: parsedWorkspaceId.data
     })
   } catch (error) {
     return Response.json(

@@ -101,7 +101,7 @@ pnpm verify:backup-restore
 ```
 
 The drill restores the local schema into a temporary database, checks that the
-latest migration is the checked-in head (`0121`), forced RLS, and role
+latest migration is the checked-in head (`0122`), forced RLS, and role
 privileges, then drops the target and temporary dump. It is not production
 backup, HA, or failover proof. A prior successful run through `0119` is
 historical until the Docker-backed drill is rerun after later migrations.

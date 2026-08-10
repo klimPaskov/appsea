@@ -42,6 +42,8 @@ export interface ManualImportParseOptions {
   format: ManualImportFormat
   defaultQuery?: string
   now?: string
+  /** Workspace identifier used as the domain-separation namespace for author keys. */
+  authorNamespace?: string
 }
 
 export interface ManualImportParseResult {
@@ -87,7 +89,9 @@ function normalizeHeader(value: string): string {
     .replace(/^_+|_+$/g, '')
 }
 
-const headerAliases: Record<string, keyof ManualImportRecord> = {
+type ManualImportRawField = keyof ManualImportRecord | 'authorKey'
+
+const headerAliases: Record<string, ManualImportRawField> = {
   id: 'sourceRecordId',
   record_id: 'sourceRecordId',
   source_id: 'sourceRecordId',
@@ -116,7 +120,11 @@ const headerAliases: Record<string, keyof ManualImportRecord> = {
   message: 'text',
   narrative: 'text',
   language: 'language',
-  lang: 'language'
+  lang: 'language',
+  author_key: 'authorKey',
+  author_id: 'authorKey',
+  author_fingerprint: 'authorKey',
+  author: 'authorKey'
 }
 
 function byteLength(value: string): number {
@@ -125,6 +133,29 @@ function byteLength(value: string): number {
 
 function normalizeText(value: string): string {
   return value.replace(/\0/g, ' ').replace(/\s+/g, ' ').trim()
+}
+
+const authorFingerprintWarning =
+  'Author keys were reduced to workspace-scoped opaque SHA-256 fingerprints; raw author identifiers are not retained.'
+
+function workspaceAuthorFingerprint(
+  rawValue: string,
+  namespace: string | undefined
+): string | null {
+  const value = normalizeText(rawValue)
+  if (!value) return null
+  if (!namespace) {
+    throw new ManualImportRowError('author key requires a workspace author namespace')
+  }
+  if (!/^[a-z][a-z0-9_:-]{2,159}$/.test(namespace)) {
+    throw new ManualImportRowError('author namespace is invalid')
+  }
+  if (value.length > 160 || !/^[A-Za-z0-9][A-Za-z0-9._:-]{0,159}$/.test(value)) {
+    throw new ManualImportRowError('author key must be a bounded opaque identifier')
+  }
+  return createHash('sha256')
+    .update(`appsea-author-fingerprint-v1:${namespace}:${value}`, 'utf8')
+    .digest('hex')
 }
 
 function redactSensitiveText(value: string): { value: string; changed: boolean } {
@@ -292,7 +323,8 @@ function mappedCsvRecords(content: string): Record<string, unknown>[] {
 function mapManualRecord(
   raw: Record<string, unknown>,
   ordinal: number,
-  options: Required<Pick<ManualImportParseOptions, 'defaultQuery' | 'now'>>,
+  options: Required<Pick<ManualImportParseOptions, 'defaultQuery' | 'now'>> &
+    Pick<ManualImportParseOptions, 'authorNamespace'>,
   warnings: string[]
 ): ManualImportRecord {
   const text = redactSensitiveText(stringValue(raw.text))
@@ -322,6 +354,15 @@ function mapManualRecord(
   if (text.changed || product.changed || company.changed || feature.changed || category.changed) {
     warnings.push(`Row ${ordinal}: one or more text fields were PII-scrubbed.`)
   }
+  const authorFingerprint = workspaceAuthorFingerprint(
+    stringValue(
+      raw.authorKey ?? raw.author_key ?? raw.author_id ?? raw.author_fingerprint ?? raw.author
+    ),
+    options.authorNamespace
+  )
+  if (authorFingerprint && !warnings.includes(authorFingerprintWarning)) {
+    warnings.push(authorFingerprintWarning)
+  }
   return manualImportRecordSchema.parse({
     sourceRecordId,
     canonicalLocator,
@@ -333,7 +374,8 @@ function mapManualRecord(
     feature: feature.value,
     category: category.value,
     text: text.value,
-    language
+    language,
+    ...(authorFingerprint ? { authorFingerprint } : {})
   })
 }
 
@@ -349,13 +391,24 @@ export function parseManualImportContent(
   const now = input.now ?? new Date().toISOString()
   if (!Number.isFinite(Date.parse(now))) throw new Error('Import timestamp is invalid')
   const defaultQuery = normalizeText(input.defaultQuery ?? '') || 'owner-authorized-import'
+  const authorNamespace = input.authorNamespace?.trim()
+  if (authorNamespace && !/^[a-z][a-z0-9_:-]{2,159}$/.test(authorNamespace)) {
+    throw new Error('Import author namespace is invalid')
+  }
   const rawRecords = format === 'csv' ? mappedCsvRecords(content) : objectRecords(content)
   const warnings = [...manualImportWarnings]
   let rejectedCount = 0
   const records: ManualImportRecord[] = []
   rawRecords.forEach((raw, index) => {
     try {
-      records.push(mapManualRecord(raw, index + 1, { defaultQuery, now }, warnings))
+      records.push(
+        mapManualRecord(
+          raw,
+          index + 1,
+          { defaultQuery, now, ...(authorNamespace ? { authorNamespace } : {}) },
+          warnings
+        )
+      )
     } catch (error) {
       rejectedCount += 1
       if (warnings.length < 500) {
@@ -414,6 +467,7 @@ function mapManualComplaint(batchId: string, record: ManualImportRecord): Compla
     category: record.category,
     text: record.text,
     language: record.language,
+    ...(record.authorFingerprint ? { authorFingerprint: record.authorFingerprint } : {}),
     synthetic: false,
     redacted: true,
     allowedRepresentation: 'excerpt'

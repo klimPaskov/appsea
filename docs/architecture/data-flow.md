@@ -58,9 +58,11 @@ before either status source is queried.
 4. An approved connector emits bounded observations with source metadata; raw
    provider payloads stop at the connector boundary.
    The `manual-owner-import` connector is the owner-authorized exception (current
-   policy `manual-owner-import-v2`; v1 is historical): an
+   policy `manual-owner-import-v3`; v1/v2 are historical): an
    authenticated owner first stages normalized, PII-scrubbed CSV/JSON rows in
-   PostgreSQL, and the workflow carries only the staged `manualImportBatchId`.
+   PostgreSQL. Optional author keys are domain-separated with the workspace
+   namespace into opaque SHA-256 fingerprints before staging, and the workflow
+   carries only the staged `manualImportBatchId`.
    No imported URL is fetched and no raw upload bytes enter Temporal history.
 5. The source registry gate checks the active policy version, purpose, quota,
    display mode, and deletion obligations.

@@ -634,6 +634,7 @@ export class PostgresProductionCollectionRepository {
         source_item_id: string
         source_record_id: string
         canonical_locator: string | null
+        author_fingerprint: string | null
         normalized_text: string
         language: string
         product_candidate: string
@@ -653,6 +654,7 @@ export class PostgresProductionCollectionRepository {
       `SELECT complaint.complaint_id, evidence.evidence_id,
                   evidence.content_hash AS evidence_hash, evidence.source_item_id,
                   source_item.source_record_id, source_item.canonical_locator,
+                  source_item.author_fingerprint,
                   evidence.normalized_text,
                   evidence.language, evidence.product_candidate,
                    evidence.company_candidate, evidence.feature_candidate,
@@ -734,6 +736,7 @@ export class PostgresProductionCollectionRepository {
         sourceId: snapshot.sourceId,
         sourceRecordId: row.source_record_id,
         canonicalLocator: row.canonical_locator,
+        ...(row.author_fingerprint ? { authorFingerprint: row.author_fingerprint } : {}),
         capturedAt: asIso(row.captured_at),
         publishedAt: row.published_at === null ? null : asIso(row.published_at),
         query: snapshot.query || 'reviewed collection',
@@ -1027,6 +1030,7 @@ export class PostgresProductionCollectionRepository {
               publishedAt: complaint.publishedAt,
               query: complaint.query,
               canonicalLocator: complaint.canonicalLocator,
+              authorFingerprint: complaint.authorFingerprint ?? null,
               product: complaint.product,
               company: complaint.company,
               feature: complaint.feature,
@@ -1039,9 +1043,9 @@ export class PostgresProductionCollectionRepository {
                (workspace_id, source_item_id, source_id, source_policy_version,
                 source_record_id, canonical_locator, query_route, content_hash,
                 captured_at, published_at, synthetic, created_at, collection_purpose,
-                requested_display_mode,
-                recollection_tombstone_id)
-             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, false, $9, $11, $12, $13)
+                requested_display_mode, recollection_tombstone_id,
+                author_fingerprint)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, false, $9, $11, $12, $13, $14)
              ON CONFLICT (workspace_id, source_id, source_record_id)
                WHERE deletion_state = 'active' DO NOTHING`,
               [
@@ -1057,7 +1061,8 @@ export class PostgresProductionCollectionRepository {
                 complaint.publishedAt,
                 parsed.request.purpose,
                 parsed.request.requestedDisplayMode,
-                parsed.request.recollectionTombstoneId ?? null
+                parsed.request.recollectionTombstoneId ?? null,
+                complaint.authorFingerprint ?? null
               ]
             )
             const storedSourceItem = await client.query<
@@ -1065,6 +1070,7 @@ export class PostgresProductionCollectionRepository {
                 source_item_id: string
                 content_hash: string
                 canonical_locator: string | null
+                author_fingerprint: string | null
                 source_policy_version: string
                 collection_purpose: string
                 requested_display_mode: string
@@ -1072,7 +1078,7 @@ export class PostgresProductionCollectionRepository {
                 recollection_tombstone_id: string | null
               }
             >(
-              `SELECT source_item_id, content_hash, canonical_locator, source_policy_version,
+              `SELECT source_item_id, content_hash, canonical_locator, author_fingerprint, source_policy_version,
                       collection_purpose, requested_display_mode, deletion_state,
                       recollection_tombstone_id
                  FROM appsea.source_items
@@ -1086,6 +1092,7 @@ export class PostgresProductionCollectionRepository {
               !storedSourceItemRow ||
               storedSourceItemRow.content_hash !== sourceItemHash ||
               storedSourceItemRow.canonical_locator !== complaint.canonicalLocator ||
+              storedSourceItemRow.author_fingerprint !== (complaint.authorFingerprint ?? null) ||
               storedSourceItemRow.source_policy_version !== parsed.request.policyVersion ||
               storedSourceItemRow.collection_purpose !== parsed.request.purpose ||
               storedSourceItemRow.requested_display_mode !== parsed.request.requestedDisplayMode ||

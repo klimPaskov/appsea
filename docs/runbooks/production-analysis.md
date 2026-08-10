@@ -43,7 +43,7 @@ after a durable worker starts.
 ### Confirmed competitive observations
 
 The private Competitors route accepts owner/editor observations from the
-reviewed `manual-owner-import-v2` policy. A claim remains unreviewed until an
+reviewed `manual-owner-import-v3` policy. A claim remains unreviewed until an
 editor or owner confirms it. After confirmation, start the existing reviewed
 production analysis explicitly for the collection run; the worker reads the
 workspace-bound snapshot immediately before persistence. It includes only

@@ -91,6 +91,10 @@ export function renderOpportunityReportMarkdown(reportInput: OpportunityReport):
     `- Retained observations: ${report.evidence.complaintCount}`,
     `- Complaint clusters: ${report.evidence.clusterCount}`,
     `- Observation records rendered: ${report.evidence.observations.length}`,
+    `- Author coverage status: ${inertValue(report.evidence.authorCoverage.status)}`,
+    `- Observations with opaque author keys: ${report.evidence.authorCoverage.identifiedObservationCount}`,
+    `- Unique opaque authors: ${report.evidence.authorCoverage.uniqueAuthorCount === null ? 'not available' : report.evidence.authorCoverage.uniqueAuthorCount}`,
+    `- Author coverage gap: ${inertValue(report.evidence.authorCoverage.gap)}`,
     ''
   ]
 

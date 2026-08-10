@@ -1,0 +1,348 @@
+{
+  "generatedAt": "2026-08-10T05:57:10.541Z",
+  "baseUrl": "http://127.0.0.1:4313",
+  "output": "C:\\Users\\klimp\\Documents\\Projects\\appsea\\artifacts\\ui-reference-loop\\2026-08-10",
+  "captures": [
+    {
+      "filename": "leaderboard-desktop-1280.png",
+      "route": "/leaderboard",
+      "viewport": {
+        "id": "desktop-1280",
+        "width": 1280,
+        "height": 900
+      },
+      "audit": {
+        "status": "ok",
+        "failures": [],
+        "hasRuntimeError": false,
+        "hasMain": true,
+        "innerWidth": 1280,
+        "scrollWidth": 1280
+      }
+    },
+    {
+      "filename": "leaderboard-desktop-1024.png",
+      "route": "/leaderboard",
+      "viewport": {
+        "id": "desktop-1024",
+        "width": 1024,
+        "height": 768
+      },
+      "audit": {
+        "status": "ok",
+        "failures": [],
+        "hasRuntimeError": false,
+        "hasMain": true,
+        "innerWidth": 1024,
+        "scrollWidth": 1024
+      }
+    },
+    {
+      "filename": "leaderboard-desktop-768.png",
+      "route": "/leaderboard",
+      "viewport": {
+        "id": "desktop-768",
+        "width": 768,
+        "height": 900
+      },
+      "audit": {
+        "status": "ok",
+        "failures": [],
+        "hasRuntimeError": false,
+        "hasMain": true,
+        "innerWidth": 768,
+        "scrollWidth": 768
+      }
+    },
+    {
+      "filename": "leaderboard-mobile-480.png",
+      "route": "/leaderboard",
+      "viewport": {
+        "id": "mobile-480",
+        "width": 480,
+        "height": 900
+      },
+      "audit": {
+        "status": "ok",
+        "failures": [],
+        "hasRuntimeError": false,
+        "hasMain": true,
+        "innerWidth": 480,
+        "scrollWidth": 480
+      }
+    },
+    {
+      "filename": "opportunity-desktop-1280.png",
+      "route": "/opportunities/inbox-relay",
+      "viewport": {
+        "id": "desktop-1280",
+        "width": 1280,
+        "height": 900
+      },
+      "audit": {
+        "status": "ok",
+        "failures": [],
+        "hasRuntimeError": false,
+        "hasMain": true,
+        "innerWidth": 1280,
+        "scrollWidth": 1280
+      }
+    },
+    {
+      "filename": "opportunity-desktop-1024.png",
+      "route": "/opportunities/inbox-relay",
+      "viewport": {
+        "id": "desktop-1024",
+        "width": 1024,
+        "height": 768
+      },
+      "audit": {
+        "status": "ok",
+        "failures": [],
+        "hasRuntimeError": false,
+        "hasMain": true,
+        "innerWidth": 1024,
+        "scrollWidth": 1024
+      }
+    },
+    {
+      "filename": "opportunity-desktop-768.png",
+      "route": "/opportunities/inbox-relay",
+      "viewport": {
+        "id": "desktop-768",
+        "width": 768,
+        "height": 900
+      },
+      "audit": {
+        "status": "ok",
+        "failures": [],
+        "hasRuntimeError": false,
+        "hasMain": true,
+        "innerWidth": 768,
+        "scrollWidth": 768
+      }
+    },
+    {
+      "filename": "opportunity-mobile-480.png",
+      "route": "/opportunities/inbox-relay",
+      "viewport": {
+        "id": "mobile-480",
+        "width": 480,
+        "height": 900
+      },
+      "audit": {
+        "status": "ok",
+        "failures": [],
+        "hasRuntimeError": false,
+        "hasMain": true,
+        "innerWidth": 480,
+        "scrollWidth": 480
+      }
+    },
+    {
+      "filename": "complaints-desktop-1280.png",
+      "route": "/opportunities/inbox-relay/complaints",
+      "viewport": {
+        "id": "desktop-1280",
+        "width": 1280,
+        "height": 900
+      },
+      "audit": {
+        "status": "ok",
+        "failures": [],
+        "hasRuntimeError": false,
+        "hasMain": true,
+        "innerWidth": 1280,
+        "scrollWidth": 1280
+      }
+    },
+    {
+      "filename": "complaints-desktop-1024.png",
+      "route": "/opportunities/inbox-relay/complaints",
+      "viewport": {
+        "id": "desktop-1024",
+        "width": 1024,
+        "height": 768
+      },
+      "audit": {
+        "status": "ok",
+        "failures": [],
+        "hasRuntimeError": false,
+        "hasMain": true,
+        "innerWidth": 1024,
+        "scrollWidth": 1024
+      }
+    },
+    {
+      "filename": "complaints-desktop-768.png",
+      "route": "/opportunities/inbox-relay/complaints",
+      "viewport": {
+        "id": "desktop-768",
+        "width": 768,
+        "height": 900
+      },
+      "audit": {
+        "status": "ok",
+        "failures": [],
+        "hasRuntimeError": false,
+        "hasMain": true,
+        "innerWidth": 768,
+        "scrollWidth": 768
+      }
+    },
+    {
+      "filename": "complaints-mobile-480.png",
+      "route": "/opportunities/inbox-relay/complaints",
+      "viewport": {
+        "id": "mobile-480",
+        "width": 480,
+        "height": 900
+      },
+      "audit": {
+        "status": "ok",
+        "failures": [],
+        "hasRuntimeError": false,
+        "hasMain": true,
+        "innerWidth": 480,
+        "scrollWidth": 480
+      }
+    },
+    {
+      "filename": "competitors-desktop-1280.png",
+      "route": "/opportunities/inbox-relay/competitors",
+      "viewport": {
+        "id": "desktop-1280",
+        "width": 1280,
+        "height": 900
+      },
+      "audit": {
+        "status": "ok",
+        "failures": [],
+        "hasRuntimeError": false,
+        "hasMain": true,
+        "innerWidth": 1280,
+        "scrollWidth": 1280
+      }
+    },
+    {
+      "filename": "competitors-desktop-1024.png",
+      "route": "/opportunities/inbox-relay/competitors",
+      "viewport": {
+        "id": "desktop-1024",
+        "width": 1024,
+        "height": 768
+      },
+      "audit": {
+        "status": "ok",
+        "failures": [],
+        "hasRuntimeError": false,
+        "hasMain": true,
+        "innerWidth": 1024,
+        "scrollWidth": 1024
+      }
+    },
+    {
+      "filename": "competitors-desktop-768.png",
+      "route": "/opportunities/inbox-relay/competitors",
+      "viewport": {
+        "id": "desktop-768",
+        "width": 768,
+        "height": 900
+      },
+      "audit": {
+        "status": "ok",
+        "failures": [],
+        "hasRuntimeError": false,
+        "hasMain": true,
+        "innerWidth": 768,
+        "scrollWidth": 768
+      }
+    },
+    {
+      "filename": "competitors-mobile-480.png",
+      "route": "/opportunities/inbox-relay/competitors",
+      "viewport": {
+        "id": "mobile-480",
+        "width": 480,
+        "height": 900
+      },
+      "audit": {
+        "status": "ok",
+        "failures": [],
+        "hasRuntimeError": false,
+        "hasMain": true,
+        "innerWidth": 480,
+        "scrollWidth": 480
+      }
+    },
+    {
+      "filename": "plan-desktop-1280.png",
+      "route": "/opportunities/inbox-relay/plan",
+      "viewport": {
+        "id": "desktop-1280",
+        "width": 1280,
+        "height": 900
+      },
+      "audit": {
+        "status": "ok",
+        "failures": [],
+        "hasRuntimeError": false,
+        "hasMain": true,
+        "innerWidth": 1280,
+        "scrollWidth": 1280
+      }
+    },
+    {
+      "filename": "plan-desktop-1024.png",
+      "route": "/opportunities/inbox-relay/plan",
+      "viewport": {
+        "id": "desktop-1024",
+        "width": 1024,
+        "height": 768
+      },
+      "audit": {
+        "status": "ok",
+        "failures": [],
+        "hasRuntimeError": false,
+        "hasMain": true,
+        "innerWidth": 1024,
+        "scrollWidth": 1024
+      }
+    },
+    {
+      "filename": "plan-desktop-768.png",
+      "route": "/opportunities/inbox-relay/plan",
+      "viewport": {
+        "id": "desktop-768",
+        "width": 768,
+        "height": 900
+      },
+      "audit": {
+        "status": "ok",
+        "failures": [],
+        "hasRuntimeError": false,
+        "hasMain": true,
+        "innerWidth": 768,
+        "scrollWidth": 768
+      }
+    },
+    {
+      "filename": "plan-mobile-480.png",
+      "route": "/opportunities/inbox-relay/plan",
+      "viewport": {
+        "id": "mobile-480",
+        "width": 480,
+        "height": 900
+      },
+      "audit": {
+        "status": "ok",
+        "failures": [],
+        "hasRuntimeError": false,
+        "hasMain": true,
+        "innerWidth": 480,
+        "scrollWidth": 480
+      }
+    }
+  ],
+  "privateRoutes": "Not captured: authenticated PostgreSQL/Temporal stack is required."
+}

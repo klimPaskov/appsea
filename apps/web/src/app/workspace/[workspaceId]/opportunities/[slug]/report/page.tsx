@@ -184,6 +184,13 @@ export default async function PrivateReportPage({
                 is inferred.
               </p>
             ) : null}
+            <p className="complaint-meta">
+              Author coverage: {detail.report.structuredReport.evidence.authorCoverage.status} ·{' '}
+              {detail.report.structuredReport.evidence.authorCoverage.uniqueAuthorCount === null
+                ? 'unique-author count unavailable'
+                : `${detail.report.structuredReport.evidence.authorCoverage.uniqueAuthorCount} unique opaque source identities`}{' '}
+              · {detail.report.structuredReport.evidence.authorCoverage.gap}
+            </p>
             <ul className="complaint-list">
               {detail.report.structuredReport.evidence.observations.map((observation) => (
                 <li key={observation.evidenceId}>

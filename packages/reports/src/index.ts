@@ -87,6 +87,37 @@ export function generateOpportunityReport(
     observationCount: sourceCounts.get(policy.sourceId) ?? 0,
     synthetic: artifact.mode === 'fixture'
   }))
+  const authorFingerprints = artifact.complaints
+    .filter((complaint) => !complaint.synthetic)
+    .map((complaint) => complaint.authorFingerprint)
+    .filter((fingerprint): fingerprint is string => Boolean(fingerprint))
+  const nonSyntheticObservationCount = artifact.complaints.filter(
+    (complaint) => !complaint.synthetic
+  ).length
+  const authorCoverageStatus =
+    authorFingerprints.length === 0
+      ? 'unavailable'
+      : authorFingerprints.length === nonSyntheticObservationCount
+        ? 'available'
+        : 'partial'
+  const authorCoverageGap =
+    authorCoverageStatus === 'available'
+      ? 'Counts use only explicit, workspace-scoped opaque author keys from the approved source.'
+      : authorCoverageStatus === 'partial'
+        ? 'Some retained observations lack an approved source-provided author key; complaint volume is not treated as an author count.'
+        : artifact.mode === 'fixture'
+          ? 'Synthetic fixture observations do not provide author identity coverage and cannot support a unique-author claim.'
+          : 'The approved source did not provide a retained author identity signal for these observations.'
+  const authorCoverage = {
+    status: authorCoverageStatus,
+    identifiedObservationCount: authorFingerprints.length,
+    uniqueAuthorCount: authorFingerprints.length > 0 ? new Set(authorFingerprints).size : null,
+    gap: authorCoverageGap
+  } as const
+  const coverageGaps =
+    authorCoverageStatus === 'available'
+      ? artifact.coverageGaps
+      : [...new Set([...artifact.coverageGaps, authorCoverageGap])]
   const evidenceConfidence = scoreConfidence(artifact.opportunity.scoreSnapshot)
   const confidence =
     evidenceConfidence >= 0.7 ? 'high' : evidenceConfidence >= 0.4 ? 'medium' : 'low'
@@ -116,6 +147,7 @@ export function generateOpportunityReport(
     evidence: {
       complaintCount: artifact.complaints.length,
       clusterCount: artifact.clusters.length,
+      authorCoverage,
       deduplication: artifact.deduplication,
       observations,
       clusters: artifact.clusters.map((cluster) => ({
@@ -133,6 +165,9 @@ export function generateOpportunityReport(
       rationale: [
         `${artifact.complaints.length} retained observations form ${artifact.clusters.length} complaint clusters.`,
         scoreRationale,
+        authorCoverageStatus === 'available'
+          ? `Unique-author coverage is available for ${authorCoverage.uniqueAuthorCount} explicit opaque source identities.`
+          : authorCoverageGap,
         ...(artifact.deduplication.some((decision) => decision.decision === 'review-required')
           ? [
               `${artifact.deduplication.filter((decision) => decision.decision === 'review-required').length} near-duplicate candidate(s) remain retained pending human review; no unique-author count is inferred.`
@@ -169,7 +204,7 @@ export function generateOpportunityReport(
       ]
     },
     coverage: {
-      gaps: artifact.coverageGaps,
+      gaps: coverageGaps,
       sources
     },
     ...(qualitySnapshot ? { qualitySnapshot } : {}),

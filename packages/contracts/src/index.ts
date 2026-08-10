@@ -68,6 +68,56 @@ export const sourceDeletionPolicySchema = z
   .strict()
 
 /**
+ * Privacy-preserving author identity capabilities declared by a reviewed
+ * source policy. Raw author identifiers are never part of the complaint
+ * contract; an enabled source may retain only a workspace-scoped opaque
+ * fingerprint for independent-author counting.
+ */
+export const sourceAuthorIdentitySchema = z
+  .object({
+    mode: z.enum(['unavailable', 'workspace-opaque']),
+    inputFields: z
+      .array(z.enum(['author_key', 'author_id', 'author_fingerprint']))
+      .max(3)
+      .refine(
+        (fields) => new Set(fields).size === fields.length,
+        'Author input fields must be unique'
+      ),
+    retention: z.enum(['none', 'fingerprint-only']),
+    hashing: z.enum(['none', 'workspace-scoped-sha256'])
+  })
+  .strict()
+  .superRefine((value, context) => {
+    if (value.mode === 'workspace-opaque') {
+      if (value.inputFields.length === 0) {
+        context.addIssue({
+          code: 'custom',
+          path: ['inputFields'],
+          message: 'Workspace-opaque author identity requires at least one accepted input field'
+        })
+      }
+      if (value.retention !== 'fingerprint-only' || value.hashing !== 'workspace-scoped-sha256') {
+        context.addIssue({
+          code: 'custom',
+          path: [],
+          message:
+            'Workspace-opaque author identity must use fingerprint-only retention and workspace-scoped SHA-256'
+        })
+      }
+    } else if (
+      value.inputFields.length > 0 ||
+      value.retention !== 'none' ||
+      value.hashing !== 'none'
+    ) {
+      context.addIssue({
+        code: 'custom',
+        path: [],
+        message: 'Unavailable author identity cannot declare input fields, retention, or hashing'
+      })
+    }
+  })
+
+/**
  * Operational freshness expectations are part of the reviewed source policy,
  * but remain optional so legacy immutable policy payloads keep their original
  * content hashes. On-demand sources intentionally do not pretend to have a
@@ -167,6 +217,8 @@ export const sourcePolicySchema = z.object({
   policyOwner: z.string().min(1).max(160).default('unassigned'),
   policyDocumentRef: policyDocumentRefSchema.nullable().default(null),
   expiresAt: z.string().datetime().nullable().default(null),
+  // Optional so legacy immutable policy payloads retain their original hash.
+  authorIdentity: sourceAuthorIdentitySchema.optional(),
   freshness: sourceFreshnessPolicySchema.optional(),
   quota: sourceQuotaSchema.default({
     requestsPerMinute: 60,
@@ -209,10 +261,26 @@ export const complaintSchema = z.object({
   synthetic: z.boolean(),
   redacted: z.boolean(),
   allowedRepresentation: z.enum(['excerpt', 'metadata-only', 'aggregate-only', 'fixture']),
+  /** Workspace-scoped opaque source identity; never a raw author identifier. */
+  authorFingerprint: z
+    .string()
+    .length(64)
+    .regex(/^[a-f0-9]{64}$/)
+    .optional(),
   /** Fields removed from the current display projection after collection. */
   redactedFields: z
-    .array(z.enum(['text', 'product', 'company', 'feature', 'category', 'canonicalLocator']))
-    .max(6)
+    .array(
+      z.enum([
+        'text',
+        'product',
+        'company',
+        'feature',
+        'category',
+        'canonicalLocator',
+        'authorFingerprint'
+      ])
+    )
+    .max(7)
     .optional()
 })
 
@@ -222,7 +290,8 @@ export const evidenceRedactionFieldSchema = z.enum([
   'company',
   'feature',
   'category',
-  'canonicalLocator'
+  'canonicalLocator',
+  'authorFingerprint'
 ])
 
 export const evidenceRedactionReasonSchema = z.enum([
@@ -982,7 +1051,13 @@ export const manualImportRecordSchema = z
     feature: z.string().min(1).max(240),
     category: z.string().min(1).max(240),
     text: z.string().min(1).max(20_000),
-    language: z.string().min(2).max(16)
+    language: z.string().min(2).max(16),
+    /** Only the workspace-scoped opaque digest is staged; raw author keys are discarded. */
+    authorFingerprint: z
+      .string()
+      .length(64)
+      .regex(/^[a-f0-9]{64}$/)
+      .optional()
   })
   .strict()
 
@@ -1055,7 +1130,7 @@ export const manualImportDeletionResultSchema = z
 export const evidenceRedactionInputSchema = z
   .object({
     redactionId: appseaIdentifierSchema,
-    fields: z.array(evidenceRedactionFieldSchema).min(1).max(6),
+    fields: z.array(evidenceRedactionFieldSchema).min(1).max(7),
     reason: evidenceRedactionReasonSchema
   })
   .strict()
@@ -1073,7 +1148,7 @@ export const evidenceRedactionResultSchema = z
   .object({
     redactionId: appseaIdentifierSchema,
     evidenceId: appseaIdentifierSchema,
-    fields: z.array(evidenceRedactionFieldSchema).min(1).max(6),
+    fields: z.array(evidenceRedactionFieldSchema).min(1).max(7),
     reason: evidenceRedactionReasonSchema,
     redactedAt: z.string().datetime(),
     replayed: z.boolean()
@@ -1084,7 +1159,7 @@ export const workspaceEvidenceRedactionInputSchema = z
   .object({
     evidenceId: appseaIdentifierSchema,
     redactionId: appseaIdentifierSchema,
-    fields: z.array(evidenceRedactionFieldSchema).min(1).max(6),
+    fields: z.array(evidenceRedactionFieldSchema).min(1).max(7),
     reason: evidenceRedactionReasonSchema
   })
   .strict()
@@ -2951,6 +3026,19 @@ export const reportSourceCoverageSchema = z
   })
   .strict()
 
+/**
+ * Coverage of explicit, source-provided author keys. A missing fingerprint is
+ * a visible gap; complaint volume is never silently treated as author count.
+ */
+export const reportAuthorCoverageSchema = z
+  .object({
+    status: z.enum(['available', 'partial', 'unavailable']),
+    identifiedObservationCount: z.number().int().nonnegative(),
+    uniqueAuthorCount: z.number().int().nonnegative().nullable(),
+    gap: z.string().min(1).max(500)
+  })
+  .strict()
+
 export const opportunityReportObservationSchema = z
   .object({
     evidenceId: appseaIdentifierSchema,
@@ -2994,6 +3082,12 @@ export const opportunityReportSchema = z
       .object({
         complaintCount: z.number().int().nonnegative(),
         clusterCount: z.number().int().nonnegative(),
+        authorCoverage: reportAuthorCoverageSchema.default({
+          status: 'unavailable',
+          identifiedObservationCount: 0,
+          uniqueAuthorCount: null,
+          gap: 'No approved source-provided author identity signal was retained.'
+        }),
         deduplication: z.array(complaintDeduplicationDecisionSchema).max(10_000).default([]),
         observations: z.array(opportunityReportObservationSchema).max(5_000),
         clusters: z.array(
@@ -4180,7 +4274,7 @@ export const productionCollectionEvidenceReadModelSchema = z
     analysis: complaintAnalysisSchema,
     synthetic: z.literal(false),
     redacted: z.boolean(),
-    redactedFields: z.array(evidenceRedactionFieldSchema).max(6).optional(),
+    redactedFields: z.array(evidenceRedactionFieldSchema).max(7).optional(),
     allowedRepresentation: z.enum(['excerpt', 'metadata-only', 'aggregate-only']),
     capturedAt: z.string().datetime(),
     publishedAt: z.string().datetime().nullable()
@@ -7661,7 +7755,7 @@ export const workspaceEvidenceReadModelSchema = z
     deduplication: complaintDeduplicationDecisionSchema.nullable().default(null),
     synthetic: z.boolean(),
     redacted: z.boolean(),
-    redactedFields: z.array(evidenceRedactionFieldSchema).max(6).optional(),
+    redactedFields: z.array(evidenceRedactionFieldSchema).max(7).optional(),
     allowedRepresentation: z.enum(['excerpt', 'metadata-only', 'aggregate-only', 'fixture']),
     capturedAt: z.string().datetime(),
     publishedAt: z.string().datetime().nullable()
@@ -7970,7 +8064,9 @@ function redactedFieldsWith(
 }
 
 function hasNarrativeRedaction(masks: readonly EvidenceRedactionMask[]): boolean {
-  return masks.some((mask) => mask.fields.some((field) => field !== 'canonicalLocator'))
+  return masks.some((mask) =>
+    mask.fields.some((field) => field !== 'canonicalLocator' && field !== 'authorFingerprint')
+  )
 }
 
 /** Mask opportunity narratives when a linked evidence field is private. */
@@ -8023,6 +8119,7 @@ export function redactComplaint(complaint: Complaint, mask: EvidenceRedactionMas
     ...(fields.has('feature') ? { feature: evidenceRedactionMarker } : {}),
     ...(fields.has('category') ? { category: evidenceRedactionMarker } : {}),
     ...(fields.has('canonicalLocator') ? { canonicalLocator: null } : {}),
+    ...(fields.has('authorFingerprint') ? { authorFingerprint: undefined } : {}),
     redacted: true,
     redactedFields: redactedFieldsWith(complaint.redactedFields, fields)
   })
@@ -8106,6 +8203,22 @@ export function redactOpportunityReport(
       : report.opportunity,
     evidence: {
       ...report.evidence,
+      authorCoverage: (() => {
+        const authorFingerprintRedacted = report.evidence.observations.some((observation) => {
+          const fields = byEvidenceId.get(observation.evidenceId)
+          return fields?.has('authorFingerprint') === true
+        })
+        if (!authorFingerprintRedacted) return report.evidence.authorCoverage
+        return {
+          ...report.evidence.authorCoverage,
+          status:
+            report.evidence.authorCoverage.identifiedObservationCount > 0
+              ? 'partial'
+              : 'unavailable',
+          uniqueAuthorCount: null,
+          gap: 'One or more opaque author fingerprints were redacted from this private projection.'
+        }
+      })(),
       observations: report.evidence.observations.map((observation) => {
         const fields = byEvidenceId.get(observation.evidenceId)
         if (!fields) return observation
@@ -8188,6 +8301,7 @@ export function redactPlanPackage(
 }
 
 export type SourcePolicy = z.infer<typeof sourcePolicySchema>
+export type SourceAuthorIdentity = z.infer<typeof sourceAuthorIdentitySchema>
 export type SourceQuota = z.infer<typeof sourceQuotaSchema>
 export type SourceDeletionPolicy = z.infer<typeof sourceDeletionPolicySchema>
 export type SourceFreshnessPolicy = z.infer<typeof sourceFreshnessPolicySchema>
@@ -8708,6 +8822,7 @@ export type WorkspaceComplaintReviewReadModel = z.infer<
   typeof workspaceComplaintReviewReadModelSchema
 >
 export type ReportSourceCoverage = z.infer<typeof reportSourceCoverageSchema>
+export type ReportAuthorCoverage = z.infer<typeof reportAuthorCoverageSchema>
 export type OpportunityReport = z.infer<typeof opportunityReportSchema>
 export type WorkspaceReportReadModel = z.infer<typeof workspaceReportReadModelSchema>
 export type WorkspaceReportVersionSummary = z.infer<typeof workspaceReportVersionSummarySchema>

@@ -4,9 +4,11 @@ Imported evidence is data, never instruction.
 
 The `manual-owner-import` source is a tenant-private, owner-attested intake
 path, not third-party source approval. The current immutable policy snapshot is
-`manual-owner-import-v2`; v1 remains historical. The API accepts only bounded CSV/JSON,
+`manual-owner-import-v3`; v1/v2 remain historical. The API accepts only bounded CSV/JSON,
 maps an allow-listed field set, scrubs common PII/secret patterns, and drops
-raw upload bytes. Unknown fields and text instructions are never executed or
+raw upload bytes. Optional author keys are reduced to workspace-scoped opaque
+SHA-256 fingerprints before staging; raw author identities are never retained.
+Unknown fields and text instructions are never executed or
 copied into code, skills, instructions, permissions, or repository memory.
 The deterministic complaint-analysis safety projection
 (`complaint-analysis-v0.2.0`) also marks instruction-like text with

@@ -9,7 +9,8 @@ const fieldOptions: Array<{ value: EvidenceRedactionField; label: string }> = [
   { value: 'company', label: 'Company candidate' },
   { value: 'feature', label: 'Feature candidate' },
   { value: 'category', label: 'Category candidate' },
-  { value: 'canonicalLocator', label: 'Canonical source locator' }
+  { value: 'canonicalLocator', label: 'Canonical source locator' },
+  { value: 'authorFingerprint', label: 'Opaque author fingerprint' }
 ]
 
 const reasonOptions: Array<{ value: EvidenceRedactionReason; label: string }> = [

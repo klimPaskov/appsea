@@ -134,7 +134,8 @@ describe('database foundation', () => {
       '0118',
       '0119',
       '0120',
-      '0121'
+      '0121',
+      '0122'
     ])
     expect(migrations[0]?.checksum).toMatch(/^[a-f0-9]{64}$/)
     expect(migrations[0]?.sql).toContain('CREATE TABLE appsea.evidence_records')
@@ -422,6 +423,11 @@ describe('database foundation', () => {
     expect(workspacePurgeMarkdownMigration?.sql).toContain(
       'analysis.report_markdown_object_ref IS NOT NULL'
     )
+    const authorFingerprintMigration = migrations.find((migration) => migration.version === '0122')
+    expect(authorFingerprintMigration?.sql).toContain('ADD COLUMN author_fingerprint')
+    expect(authorFingerprintMigration?.sql).toContain('manual-owner-import-v3')
+    expect(authorFingerprintMigration?.sql).toContain('workspace-scoped-sha256')
+    expect(authorFingerprintMigration?.sql).toContain('authorFingerprint')
     const productionAdmissionReleaseMigration = migrations.find(
       (migration) => migration.version === '0112'
     )

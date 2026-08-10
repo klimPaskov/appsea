@@ -56,13 +56,16 @@ controls never cross the read boundary. Pending, expired, or non-collectible
 policies remain blocked or unknown, and the projection cannot reserve, settle,
 release, refund, or retry a request.
 
-The `manual-owner-import-v2` policy is the reviewed internal owner-authorized
+The `manual-owner-import-v3` policy is the reviewed internal owner-authorized
 exception. It accepts a bounded CSV/JSON export only after an owner attestation,
 stores normalized PII-scrubbed rows in the private workspace, and never fetches
 imported URLs. Its `competitor-research` and `contrary-evidence` purposes feed
 only private, separately reviewed observations. Its evidence is tenant-private
 and must not be described as public market coverage; deletion clears staged
-payloads and emits tombstones. The `v1` snapshot remains immutable for history.
+payloads and emits tombstones. Optional source author keys become only
+workspace-scoped opaque fingerprints, and report author coverage is marked
+available/partial/unavailable rather than inferred from complaint volume. The
+`v1` and `v2` snapshots remain immutable for history.
 
 Approved-source collection checkpoints expose the recorded source policy,
 observation counts, coverage gaps, and policy-allowed evidence only inside the

@@ -4,16 +4,18 @@
 
 Audit: `docs/status/production-readiness-audit-2026-08-09.md`.
 `pnpm verify`/local smoke pass through `0119`; backup verifier targets
-head `0121` but last proof is `0119`. Captures pass; the private coverage
+head `0122` but last proof is `0119`. Captures pass; the private coverage
 panel uses an imagegen mark.
 
 AppSea remains fixture-first with production-shaped persistence, workflow,
-source policy, private workspaces, reports/plans, and maintenance.
-public leaderboard synthetic; no public source enabled.
-Reviewed `manual-owner-import-v2` supports tenant-private owner-authorized
-CSV/JSON without claiming public market coverage.
+source policy, private workspaces, reports/plans, and maintenance; the public
+leaderboard is synthetic and no public source is enabled.
+Reviewed `manual-owner-import-v3` supports tenant-private owner-authorized
+CSV/JSON without claiming public market coverage. Optional author keys are
+reduced to workspace-scoped opaque SHA-256 fingerprints; raw identity is never
+staged, and reports disclose author coverage gaps.
 
-Migrations `0027`-`0121` cover policy, deletion/leases, orchestration,
+Migrations `0027`-`0122` cover policy, deletion/leases, orchestration,
 analysis/report/plan governance, cost/alerts, object refs, archival/purge
 intent, redaction, agent/MFA/review, shared collectibility,
 and policy-impact expiry.
@@ -25,14 +27,14 @@ AUP/written-consent blocker. Reports/plans preserve provenance,
 coverage gaps, approval state, synthetic disclosure, and object references.
 
 Authentication uses scrypt sessions, membership/RLS, MFA/governance step-up,
-closure/archival, and scoped read-only agent tokens. OIDC, delivery, retention,
-egress, and deployment operations remain external.
+closure/archival, and scoped read-only agent tokens. OIDC, delivery, egress,
+retention, and deployment operations remain external.
 
 Workers have server-clock leases, fenced mutations, retries, recovery, metrics,
 and signed alerts; `alerts:loop` supervises scans, delivery, and outbox status.
-Operated scheduler, billing, cloud purge, and provider topology remain open.
+Scheduler, billing, cloud purge, and provider topology remain open.
 
-Imported complaints, pages, reports, and model output are untrusted data; they
+Imported complaints, pages, reports, and model output are untrusted data and
 cannot update code, skills, instructions, permissions, or repository memory.
 
 Manual owner-import (`0089`, `0102`–`0104`) is the active non-fixture path:
@@ -82,17 +84,12 @@ and human-corrected analyses remain authoritative. External providers stay
 disabled pending model-use, malware, DPA/egress, durable cost, and calibration
 review.
 
-The private report/plan history slice reads active, non-withdrawn rows through
-completed-analysis/current-policy/deletion/redaction gates. Members may select
-active drafts/reviews; MCP reads add approval/readiness. Cursor metadata,
-representation-aware JSON/Markdown receipts, same-opportunity plan comparison,
-and selectors omit withdrawn rows. A real-Postgres incomplete-run integration
-case is authored; Docker execution remains pending. Migrations `0120`/`0121`
-persist production `report-markdown` objects with complete references and
-invalidation/deletion clearing; the owner purge gate stays aligned with the
-full output set, while web export renders approved redacted Markdown on demand.
-MCP history is metadata-only; ZIP/provider purge follow-up is explicit. See
-`docs/status/report-plan-history-completion-report-2026-08-09.md`.
+Private report/plan history is cursor-bounded and policy/deletion/redaction
+gated; selected reads and exports remain approval-aware. A real-Postgres
+incomplete-run case is authored, but Docker execution is pending. Migrations
+`0120`/`0121` persist Markdown objects and purge lineage; `0122` adds the
+reviewed owner-import author-fingerprint path and deletion/redaction clearing.
+MCP history is metadata-only; ZIP/provider purge follow-up is explicit.
 
 ## Next production tranche
 

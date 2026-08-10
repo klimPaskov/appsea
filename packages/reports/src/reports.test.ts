@@ -100,7 +100,8 @@ function buildProductionArtifact() {
           language: 'en',
           synthetic: false,
           redacted: true,
-          allowedRepresentation: 'excerpt'
+          allowedRepresentation: 'excerpt',
+          authorFingerprint: 'a'.repeat(64)
         }
       ],
       competitiveResearch: {
@@ -246,7 +247,17 @@ describe('opportunity report generation', () => {
     expect(report.inference.scoreSnapshot).toEqual(artifact.opportunity.scoreSnapshot)
     expect(report.qualitySnapshot?.schemaVersion).toBe('research-quality-v1.0.0')
     expect(report.inference.qualitySnapshot?.provenance.sourceCoverage).toBe('not-derived')
-    expect(report.coverage.gaps).toEqual(artifact.coverageGaps)
+    expect(report.coverage.gaps).toEqual(
+      expect.arrayContaining([
+        ...artifact.coverageGaps,
+        'Synthetic fixture observations do not provide author identity coverage and cannot support a unique-author claim.'
+      ])
+    )
+    expect(report.evidence.authorCoverage).toMatchObject({
+      status: 'unavailable',
+      identifiedObservationCount: 0,
+      uniqueAuthorCount: null
+    })
     expect(report.recommendation.nextSteps.length).toBeGreaterThan(0)
   })
 
@@ -260,6 +271,11 @@ describe('opportunity report generation', () => {
     expect(report.coverage.gaps).toContain(
       'This analysis was composed from a test-only offline transport and cannot support market conclusions.'
     )
+    expect(report.evidence.authorCoverage).toMatchObject({
+      status: 'available',
+      identifiedObservationCount: 1,
+      uniqueAuthorCount: 1
+    })
     expect(report.competitiveResearch?.observations[0]?.observationId).toBe(
       'observation:report-competitor'
     )

@@ -8,15 +8,17 @@ Production complaint analysis is intentionally a `candidate`, not a
 `researched` opportunity, until the explicit deep-research gate passes. The
 private read boundary repairs legacy non-synthetic `researched` rows through
 migration `0100`; reviewed seeds and generated reports remain insufficient by
-themselves. Source-backed competitor/contrary research, unique-author
-estimation, copied-content and manipulation checks, and independent policy
-approval remain open. Migration `0101` and the private gate API now persist the
+themselves. Source-backed competitor/contrary research, copied-content and
+manipulation checks, and independent policy approval remain open. Manual-import
+v3 now provides privacy-safe unique-author coverage when explicit opaque keys
+are present; fixture and third-party paths still have an author-coverage gap.
+Migration `0101` and the private gate API now persist the
 reviewed checklist and expose deterministic blockers; the private competitors
 route now lets editors submit that checklist and owners attempt or withdraw
 promotion. The current disabled source registry still means no production gate
 can honestly pass here.
 
-The reviewed `manual-owner-import-v2` policy now supports tenant-private
+The reviewed `manual-owner-import-v3` policy now supports tenant-private
 `competitor-research` and `contrary-evidence` purposes. Editors and owners can
 submit an evidence-linked observation from the private Competitors route, but
 each claim starts unreviewed and the import still cannot establish public
@@ -145,9 +147,11 @@ and production deployment controls remain absent.
 
 Complaint observations now carry a deterministic, versioned classification and
 entity-resolution snapshot with severity and uncertainty fields. The rules are
-not a trained classifier, do not estimate unique authors, and intentionally
-leave substitute/competitor resolution unresolved until separately reviewed
-permitted research is available. Private opportunity reads now expose a
+not a trained classifier and intentionally leave substitute/competitor
+resolution unresolved until separately reviewed permitted research is available.
+Manual-import v3 can count only explicit workspace-scoped opaque author
+fingerprints; fixture, third-party, and missing-key observations remain visible
+as unavailable/partial author coverage rather than inferred people. Private opportunity reads now expose a
 competitive-research status and provenance record, and a private competitors /
 contrary-signals page keeps reviewed seed values separate from source-backed
 research. Migration `0059` adds a policy-gated, human-reviewable observation
@@ -415,7 +419,7 @@ in-memory/filesystem adapters plus a signed S3-compatible adapter wired through
 the shared environment factory. Migration `0043` adds the durable
 invalidated-output purge queue. Provider encryption, lifecycle/versioning,
 least-privilege credential deployment, destructive workspace/object/backup
-purge remain open. The backup/restore verifier targets migration `0121`, while
+purge remain open. The backup/restore verifier targets migration `0122`, while
 the last successful local proof remains historical through `0119`; the Docker
 fresh/upgrade rerun and provider encryption, lifecycle, and restore evidence
 remain open. Owner workspace archival and

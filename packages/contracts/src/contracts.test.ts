@@ -92,6 +92,7 @@ import {
   researchCampaignOrchestrationHistoryPageSchema,
   researchCampaignOrchestrationCancelResultSchema,
   sourcePolicySchema,
+  sourceAuthorIdentitySchema,
   sourceFreshnessPolicySchema,
   workspaceSourceQuotaHeadroomReadModelSchema,
   sourcePolicyApprovalInputSchema,
@@ -733,6 +734,33 @@ describe('contracts', () => {
       reviewedAt: now
     })
     expect(legacy.freshness).toBeUndefined()
+  })
+
+  it('keeps author identity source-policy metadata explicit and privacy-minimized', () => {
+    expect(
+      sourceAuthorIdentitySchema.safeParse({
+        mode: 'workspace-opaque',
+        inputFields: ['author_key', 'author_id', 'author_fingerprint'],
+        retention: 'fingerprint-only',
+        hashing: 'workspace-scoped-sha256'
+      }).success
+    ).toBe(true)
+    expect(
+      sourceAuthorIdentitySchema.safeParse({
+        mode: 'workspace-opaque',
+        inputFields: [],
+        retention: 'fingerprint-only',
+        hashing: 'workspace-scoped-sha256'
+      }).success
+    ).toBe(false)
+    expect(
+      sourceAuthorIdentitySchema.safeParse({
+        mode: 'unavailable',
+        inputFields: ['author_key'],
+        retention: 'none',
+        hashing: 'none'
+      }).success
+    ).toBe(false)
   })
 
   it('validates optional source-policy reviewer role requirements', () => {
@@ -1985,6 +2013,16 @@ describe('contracts', () => {
       fields: ['text']
     }) as typeof productionComplaint
     expect(maskedProductionComplaint.evidenceId).toBe('evidence:one')
+    const authorComplaint = {
+      ...productionComplaint,
+      authorFingerprint: 'a'.repeat(64)
+    }
+    const maskedAuthorComplaint = redactComplaint(authorComplaint, {
+      evidenceId: 'evidence:one',
+      fields: ['authorFingerprint']
+    }) as typeof authorComplaint
+    expect(maskedAuthorComplaint.authorFingerprint).toBeUndefined()
+    expect(maskedAuthorComplaint.redactedFields).toContain('authorFingerprint')
 
     const analysis = redactComplaintAnalysis(
       validFixturePersistenceInput.artifact.analyses[0]!,

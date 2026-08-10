@@ -16,11 +16,11 @@ ranked opportunities, and coding-agent planning packages.
 - `packages/db` owns PostgreSQL 18 migrations, transaction-scoped workspace RLS, and persistence repositories.
 - Local and CI PostgreSQL use a no-login owner, separate migrator, and non-owner runtime role. Production provisioning remains external and unimplemented.
 - `scripts/run_db_backup_restore.mjs` checks RLS/least privilege and targets
-  head `0121`; last successful proof is `0119`; Docker rerun pending. It is not
+  head `0122`; last successful proof is `0119`; Docker rerun pending. It is not
   provider HA/restore evidence.
 - Temporal/client hashing belongs to `packages/workflows`; worker activities to
   `apps/worker`; RLS persistence to `packages/db`. Local proof passes through
-  `0119`; `0120`/`0121` need a fresh/upgrade rerun; deployment security, HA, object
+  `0119`; `0120`/`0121`/`0122` need a fresh/upgrade rerun; deployment security, HA, object
   purge, and workflow operations remain external.
 - Campaign cancellation is a durable control boundary: migrations `0070`/`0071` store owner/editor intent before Temporal for multi-source and one-source runs; the worker retries external cancellation, while each workflow owns safe reconciliation.
 - Private campaign history uses strict bounded cursor pages ordered by request timestamp plus stable identifier; only the validated boundary crosses private APIs. The public leaderboard is unaffected.

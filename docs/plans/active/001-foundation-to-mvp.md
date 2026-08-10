@@ -25,7 +25,7 @@ Status: production-shaped foundation implemented and validated locally; producti
 
 Implemented:
 
-- PostgreSQL 18 schema and one hundred twenty-one forward, checksummed migrations
+- PostgreSQL 18 schema and one hundred twenty-two forward, checksummed migrations
 - normalized source, evidence, complaint, cluster, competitor, opportunity, score, report, plan, audit, cost, deletion, outbox, and lineage tables
 - no-login owner, separate migrator, and least-privilege runtime role contract
 - forced workspace RLS and transaction-scoped workspace context
@@ -78,11 +78,16 @@ Implemented:
   owner pass/withdraw actions; the API and database remain authoritative and
   still reject incomplete or stale evidence.
 - migration `0102_manual_owner_import_v2.sql` advances owner-authorized intake
-  without rewriting v1 history. The current v2 policy permits private
+  without rewriting v1 history; migration `0122_manual_import_author_fingerprints.sql`
+  adds the current v3 snapshot without rewriting v1/v2 history. The current v3 policy permits private
   `competitor-research` and `contrary-evidence` purposes, and the Competitors
   route exposes an evidence-linked observation form whose claims remain
   unreviewed until editor/owner review. This remains tenant-private and does
   not activate a public source.
+- Migration `0122` also declares the v3 author-identity capability: accepted
+  author keys are immediately reduced to workspace-scoped opaque SHA-256
+  fingerprints, source deletion/redaction clears them, and reports expose
+  unique-author coverage only when the retained signal is complete enough.
 - migration `0103_competitor_observation_contrary_purpose.sql` keeps the same
   provenance/evidence/review trigger while accepting the explicit private
   `contrary-evidence` collection purpose.
@@ -235,7 +240,8 @@ balanced v1 score fields, reviewed evidence/coverage/freshness references, and
 a private ranking index. Legacy score rows remain readable and keep `score` as
 their raw-score compatibility field. The 2026-08-06 local fresh migration and
 backup/restore drills pass through `0119`; migrations `0120` and `0121` add
-report-Markdown persistence and purge-gate lineage and still need a Docker-backed
+report-Markdown persistence and purge-gate lineage, while `0122` adds the
+privacy-safe owner-import author-fingerprint boundary; these still need a Docker-backed
 fresh/upgrade run. Provider backup, HA, retention, and production restore remain
 deployment work.
 

@@ -76,7 +76,13 @@ describe('connector policy gate', () => {
   })
 
   it('keeps the current owner-import policy private and purpose-bounded', () => {
-    expect(manualOwnerImportPolicyVersion).toBe('manual-owner-import-v2')
+    expect(manualOwnerImportPolicyVersion).toBe('manual-owner-import-v3')
+    expect(manualOwnerImportSourcePolicy.authorIdentity).toEqual({
+      mode: 'workspace-opaque',
+      inputFields: ['author_key', 'author_id', 'author_fingerprint'],
+      retention: 'fingerprint-only',
+      hashing: 'workspace-scoped-sha256'
+    })
     expect(manualOwnerImportSourcePolicy.freshness).toBeUndefined()
     expect(manualOwnerImportSourcePolicy.permittedPurposes).toEqual(
       expect.arrayContaining(['competitor-research', 'contrary-evidence'])
@@ -177,6 +183,81 @@ describe('connector policy gate', () => {
     expect(parsed.records[0]?.text).not.toContain('jane@example.com')
     expect(parsed.records[0]?.text).toContain('[redacted-email]')
     expect(parsed.warnings).toContain('AppSea does not fetch URLs from imported records.')
+  })
+
+  it('reduces authorized author keys to workspace-scoped opaque fingerprints', () => {
+    const parsed = parseManualImportContent(
+      JSON.stringify([
+        {
+          id: 'ticket-1',
+          author_key: 'support-agent-42',
+          text: 'The handoff history disappears.',
+          captured_at: '2026-08-01T00:00:00Z'
+        },
+        {
+          id: 'ticket-2',
+          author_id: 'support-agent-42',
+          text: 'The same person reports another issue.',
+          captured_at: '2026-08-01T00:00:00Z'
+        }
+      ]),
+      {
+        format: 'json',
+        now: '2026-08-03T00:00:00.000Z',
+        authorNamespace: 'workspace:one'
+      }
+    )
+    expect(parsed.records).toHaveLength(2)
+    expect(parsed.records[0]?.authorFingerprint).toMatch(/^[a-f0-9]{64}$/)
+    expect(parsed.records[0]?.authorFingerprint).toBe(parsed.records[1]?.authorFingerprint)
+    expect(JSON.stringify(parsed.records)).not.toContain('support-agent-42')
+    expect(parsed.warnings).toContain(
+      'Author keys were reduced to workspace-scoped opaque SHA-256 fingerprints; raw author identifiers are not retained.'
+    )
+  })
+
+  it('rejects author keys that look like email addresses, URLs, or unscoped input', () => {
+    const invalid = parseManualImportContent(
+      JSON.stringify([
+        {
+          id: 'email',
+          author_key: 'person@example.com',
+          text: 'A valid complaint',
+          captured_at: '2026-08-01T00:00:00Z'
+        },
+        {
+          id: 'url',
+          author_key: 'https://example.com/person',
+          text: 'Another valid complaint',
+          captured_at: '2026-08-01T00:00:00Z'
+        },
+        {
+          id: 'valid',
+          text: 'A valid complaint without an author key',
+          captured_at: '2026-08-01T00:00:00Z'
+        }
+      ]),
+      {
+        format: 'json',
+        now: '2026-08-03T00:00:00.000Z',
+        authorNamespace: 'workspace:one'
+      }
+    )
+    expect(invalid.records).toHaveLength(1)
+    expect(invalid.rejectedCount).toBe(2)
+    expect(() =>
+      parseManualImportContent(
+        JSON.stringify([
+          {
+            id: 'unscoped',
+            author_key: 'support-agent-42',
+            text: 'A valid complaint',
+            captured_at: '2026-08-01T00:00:00Z'
+          }
+        ]),
+        { format: 'json', now: '2026-08-03T00:00:00.000Z' }
+      )
+    ).toThrow(/no valid complaint records/)
   })
 
   it('keeps instruction-shaped import text as inert evidence with an explicit safety warning', () => {

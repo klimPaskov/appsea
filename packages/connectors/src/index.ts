@@ -156,6 +156,8 @@ function freezePolicy(policy: SourcePolicy): SourcePolicy {
   Object.freeze(policy.permittedPurposes)
   Object.freeze(policy.coverageNotes)
   if (policy.requiredReviewerRoles) Object.freeze(policy.requiredReviewerRoles)
+  if (policy.authorIdentity) Object.freeze(policy.authorIdentity.inputFields)
+  if (policy.authorIdentity) Object.freeze(policy.authorIdentity)
   if (policy.freshness) Object.freeze(policy.freshness)
   Object.freeze(policy.quota)
   Object.freeze(policy.deletion)
@@ -197,6 +199,7 @@ function reviewedPolicyContract(policy: SourcePolicy): unknown {
     coverageNotes: policy.coverageNotes,
     policyOwner: policy.policyOwner,
     policyDocumentRef: policy.policyDocumentRef,
+    authorIdentity: policy.authorIdentity ?? null,
     freshness: policy.freshness ?? null,
     quota: policy.quota,
     deletion: policy.deletion
@@ -464,7 +467,7 @@ const stackExchangeSourcePolicy = freezePolicy(
 export { stackExchangeSourcePolicy }
 
 /** Current immutable policy snapshot used by owner-authorized private imports. */
-export const manualOwnerImportPolicyVersion = 'manual-owner-import-v2' as const
+export const manualOwnerImportPolicyVersion = 'manual-owner-import-v3' as const
 
 /**
  * Owner-authorized tenant-private imports are the first usable non-fixture
@@ -499,6 +502,8 @@ export const manualOwnerImportSourcePolicy = freezePolicy(
       'Competitor and contrary-signal claims are private owner-attested research and require separate human observation review.',
       'The operator must attest that the workspace is authorized to analyze the imported records.',
       'Only normalized, PII-scrubbed complaint fields are retained; raw upload bytes are discarded.',
+      'If an authorized export supplies an author key, only a workspace-scoped SHA-256 fingerprint is retained; raw author identifiers are discarded.',
+      'Author fingerprints are used only for bounded independent-author counts and are cleared by source deletion or explicit author-field redaction.',
       'URL fields are retained only as validated HTTP(S) locators and are never fetched by AppSea.',
       'Deleting a batch clears staged records and propagates tombstones through downstream evidence.'
     ],
@@ -507,6 +512,12 @@ export const manualOwnerImportSourcePolicy = freezePolicy(
     policyDocumentRef:
       'https://github.com/klimPaskov/appsea/blob/main/docs/product/manual-import-source-policy.md',
     expiresAt: '2026-11-05T00:00:00.000Z',
+    authorIdentity: {
+      mode: 'workspace-opaque',
+      inputFields: ['author_key', 'author_id', 'author_fingerprint'],
+      retention: 'fingerprint-only',
+      hashing: 'workspace-scoped-sha256'
+    },
     quota: {
       requestsPerMinute: 60,
       maxRecordsPerRequest: 5_000,
