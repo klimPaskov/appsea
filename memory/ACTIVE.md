@@ -4,8 +4,8 @@
 
 Audit: `docs/status/production-readiness-audit-2026-08-09.md`.
 `pnpm verify`/local smoke pass through `0119`; backup verifier targets
-head `0122` but last proof is `0119`. Captures pass; the private coverage
-panel uses an imagegen mark.
+head `0122` but last proof is `0119`. Captures pass; private evidence and
+report sections use imagegen-generated coverage and market-signal marks.
 
 AppSea remains fixture-first with production-shaped persistence, workflow,
 source policy, private workspaces, reports/plans, and maintenance; the public

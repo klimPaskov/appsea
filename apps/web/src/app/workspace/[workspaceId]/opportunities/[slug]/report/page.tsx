@@ -169,8 +169,18 @@ export default async function PrivateReportPage({
             <p className="fixture-note">Synthetic fixture report — not market research.</p>
           ) : null}
           <section className="workspace-section" aria-labelledby="report-evidence-heading">
-            <div className="section-intro">
-              <h2 id="report-evidence-heading">Evidence</h2>
+            <div className="section-intro evidence-section-intro">
+              <div className="evidence-heading">
+                <Image
+                  src="/appsea-source-coverage-icon-generated.png"
+                  alt=""
+                  width={48}
+                  height={48}
+                  aria-hidden="true"
+                  priority
+                />
+                <h2 id="report-evidence-heading">Evidence</h2>
+              </div>
               <p>
                 {detail.report.structuredReport.evidence.complaintCount} retained observations
                 across {detail.report.structuredReport.evidence.clusterCount} clusters.
@@ -207,8 +217,18 @@ export default async function PrivateReportPage({
           </section>
           {detail.report.structuredReport.competitiveResearch ? (
             <section className="workspace-section" aria-labelledby="report-competitive-heading">
-              <div className="section-intro">
-                <h2 id="report-competitive-heading">Confirmed competitive evidence</h2>
+              <div className="section-intro evidence-section-intro">
+                <div className="evidence-heading">
+                  <Image
+                    src="/appsea-market-signals-icon-generated.png"
+                    alt=""
+                    width={48}
+                    height={48}
+                    aria-hidden="true"
+                    priority
+                  />
+                  <h2 id="report-competitive-heading">Confirmed competitive evidence</h2>
+                </div>
                 <p>
                   Evidence-linked observations included in this explicit reviewed analysis run. They
                   remain tenant-private and do not represent broad market coverage.
