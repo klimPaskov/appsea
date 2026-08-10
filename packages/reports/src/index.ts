@@ -851,3 +851,9 @@ export {
   type PlanExportBundleInput,
   type ReportExportBundleInput
 } from './export-bundle'
+export {
+  buildExpandedPlanPackageFiles,
+  expandedPlanPackagePaths,
+  type ExpandedPlanPackageFile,
+  type ExpandedPlanPackageInput
+} from './expanded-plan-package'

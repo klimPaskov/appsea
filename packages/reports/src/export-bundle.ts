@@ -8,6 +8,7 @@ import {
 import { encodePlanPackage } from './plan-object'
 import { encodeOpportunityReport } from './report-object'
 import { renderOpportunityReportMarkdown, renderPlanPackageMarkdown } from './markdown'
+import { buildExpandedPlanPackageFiles } from './expanded-plan-package'
 
 const maxBundleBytes = 16 * 1024 * 1024
 const maxBundleFiles = 128
@@ -47,6 +48,7 @@ export interface PlanExportBundleInput {
   approvalState: 'unreviewed' | 'reviewed' | 'approved' | 'withdrawn'
   synthetic: boolean
   coverageGaps?: readonly string[]
+  report?: OpportunityReport | null
 }
 
 function utf8(value: string): Uint8Array {
@@ -248,7 +250,7 @@ function bundleReadme(input: {
         : '2. `plan.md` — human-readable package rendering.',
       input.artifactType === 'report'
         ? '3. `report.json` — validated machine representation.'
-        : '3. `plan.json` — validated machine representation, followed by the six plan files.',
+        : '3. `plan.json` — legacy machine representation, followed by the six plan files and the complete `package/` 08_spec-compatible directory.',
       '',
       '## Files',
       ...input.filePaths.map((path, index) => `${index + 1}. \`${path}\``),
@@ -328,13 +330,27 @@ export function buildOpportunityReportExportBundle(
 
 export function buildPlanPackageExportBundle(input: PlanExportBundleInput): ExportBundleResult {
   const plan = input.plan
+  const expandedFiles = buildExpandedPlanPackageFiles({
+    plan,
+    report: input.report ?? null,
+    sourceManifestHash: input.manifestHash,
+    synthetic: input.synthetic,
+    coverageGaps: input.coverageGaps ?? []
+  })
+  const expandedManifest = JSON.parse(
+    expandedFiles.find((file) => file.path === 'manifest.json')?.content ?? '{}'
+  ) as { coverageGaps?: unknown }
+  const coverageGaps = Array.isArray(expandedManifest.coverageGaps)
+    ? expandedManifest.coverageGaps.filter((gap): gap is string => typeof gap === 'string')
+    : []
   const packageFiles = [...plan.files].sort((left, right) =>
     left.path < right.path ? -1 : left.path > right.path ? 1 : 0
   )
   const files: ExportBundleFileInput[] = [
     { path: 'plan.json', content: encodePlanPackage(plan) },
     { path: 'plan.md', content: renderPlanPackageMarkdown(plan) },
-    ...packageFiles.map((file) => ({ path: `plan/${file.path}`, content: file.content }))
+    ...packageFiles.map((file) => ({ path: `plan/${file.path}`, content: file.content })),
+    ...expandedFiles.map((file) => ({ path: `package/${file.path}`, content: file.content }))
   ]
   files.unshift({
     path: 'README.md',
@@ -360,7 +376,7 @@ export function buildPlanPackageExportBundle(input: PlanExportBundleInput): Expo
       approvalState: input.approvalState,
       readinessState: input.readinessState,
       synthetic: input.synthetic,
-      coverageGaps: input.coverageGaps ? [...input.coverageGaps] : []
+      coverageGaps
     },
     files
   )

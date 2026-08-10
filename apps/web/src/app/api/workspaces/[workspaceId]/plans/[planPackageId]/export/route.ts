@@ -3,7 +3,8 @@ import {
   WorkspaceAuthorizationError,
   WorkspacePlanNotApprovedError,
   WorkspacePlanNotReadyError,
-  WorkspacePlanNotFoundError
+  WorkspacePlanNotFoundError,
+  WorkspacePlanReportNotApprovedError
 } from '@appsea/db/auth'
 import {
   authRepository,
@@ -118,6 +119,12 @@ export async function GET(
     if (error instanceof WorkspacePlanNotReadyError) {
       return Response.json(
         { error: 'Only ready plans can be exported' },
+        { status: 409, headers: privateResponseHeaders }
+      )
+    }
+    if (error instanceof WorkspacePlanReportNotApprovedError) {
+      return Response.json(
+        { error: 'The linked report must be approved before the plan can be exported' },
         { status: 409, headers: privateResponseHeaders }
       )
     }

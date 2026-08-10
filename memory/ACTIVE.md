@@ -3,9 +3,8 @@
 ## State
 
 Audit: `docs/status/production-readiness-audit-2026-08-09.md`.
-`pnpm verify`/local smoke pass through `0119`; backup verifier targets
-head `0122` but last proof is `0119`. Captures pass; private evidence and
-report sections use imagegen-generated coverage and market-signal marks.
+`pnpm verify`/local smoke pass through `0119`; backup verifier targets `0122`
+but last proof is `0119`. Captures pass; private sections use imagegen marks.
 
 AppSea remains fixture-first with production-shaped persistence, workflow,
 source policy, private workspaces, reports/plans, and maintenance; the public
@@ -70,10 +69,10 @@ reconstruction, snapshots, and source filtering (including owner-import
 published/captured fallback). Filtered runs emit coverage warnings; private
 reads show query/window beside gaps and legacy snapshots remain replayable.
 
-Complaint analysis v0.2.0 flags bounded instruction-like imported text with
+Complaint analysis v0.2.0 flags instruction-like imported text with
 deterministic `manipulationRisk`/`policyFlags`, preserves provenance, labels
 private rows for review, and adds a coverage gap. No content executes or enters
-repository controls; this additive JSONB projection needs no migration. See
+repository controls; no migration is needed. See
 `docs/status/imported-content-safety-completion-report-2026-08-06.md`.
 
 `@appsea/model-gateway` is wired into production analysis with workspace-bound
@@ -90,8 +89,10 @@ incomplete-run case is authored, but Docker execution is pending. Migrations
 `0120`/`0121` persist Markdown objects and purge lineage; `0122` adds the
 reviewed owner-import author-fingerprint path and deletion/redaction clearing.
 MCP history is metadata-only; bounded on-demand ZIP v1 is implemented with
-representation-specific audit receipts. The complete 08_spec directory bundle
-and provider purge remain explicit follow-up work.
+representation-specific audit receipts. Plan ZIPs retain the six compatibility
+files and add a complete 08_spec-compatible `package/` directory assembled
+from hydrated/redacted models, with explicit coverage gaps. Provider purge
+remains explicit follow-up work.
 
 ## Next production tranche
 

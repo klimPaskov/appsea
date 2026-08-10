@@ -80,14 +80,25 @@ describe('deterministic export bundles', () => {
     const files = readStoredZip(result.bytes)
     expect([...files.keys()]).toContain('plan/README.md')
     expect([...files.keys()]).toContain('plan/04-task-graph.json')
+    expect([...files.keys()]).toContain('package/README.md')
+    expect([...files.keys()]).toContain('package/machine/plan.json')
+    expect([...files.keys()]).toContain('package/evidence/source_coverage.json')
     expect([...files.keys()].some((path) => path.includes('..'))).toBe(false)
     expect(new TextDecoder().decode(files.get('plan/README.md'))).toContain(hostile)
+    const expandedManifest = JSON.parse(
+      new TextDecoder().decode(files.get('package/manifest.json'))
+    ) as { files: Array<{ path: string }>; coverageGaps: string[] }
+    expect(expandedManifest.files).toHaveLength(36)
+    expect(expandedManifest.files.map((file) => file.path)).toContain('delivery/task_graph.json')
+    expect(expandedManifest.coverageGaps).toContain(
+      'The linked approved report was unavailable in this package context; no market claim is inferred.'
+    )
     const manifest = workspaceExportBundleManifestSchema.parse(
       JSON.parse(new TextDecoder().decode(files.get('manifest.json')))
     )
     expect(manifest.artifactType).toBe('plan-package')
     expect(manifest.readinessState).toBe('ready')
-    expect(manifest.coverageGaps).toEqual(['Synthetic fixture only'])
+    expect(manifest.coverageGaps).toContain('Synthetic fixture only')
   })
 
   it('rejects unsafe or duplicate archive paths before producing bytes', () => {

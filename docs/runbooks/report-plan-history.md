@@ -55,8 +55,10 @@ complete object reference on the report and analysis-run rows, extend the
 invalidated-analysis purge queue, clear the report projection during source
 deletion, and keep the direct owner purge gate aligned with the full output set.
 The web export still renders the approved, redacted projection on demand so
-historical exports do not bypass governance. ZIP/download-directory packaging
-and provider-side backup/export purge remain deployment follow-up.
+historical exports do not bypass governance. Plan ZIPs include the legacy
+compatibility files and the complete 08_spec-compatible `package/` directory;
+missing dimensions remain explicit coverage gaps. Provider-side backup/export
+purge remains deployment follow-up.
 
 ## Compare plan versions
 
@@ -68,8 +70,8 @@ The route resolves both IDs under the same workspace and opportunity, then
 returns sorted file status plus SHA-256 and UTF-8 byte metadata. It never
 returns file bodies. The Plan page excludes withdrawn metadata-only rows from
 the compare selectors and defaults to the two newest selectable versions. The
-UI renders a small table; it is not a ZIP/directory export and does not replace
-the approved package. The authenticated MCP
+UI renders a small table; it does not replace the approved package or its
+on-demand ZIP/directory export. The authenticated MCP
 boundary exposes report/plan history metadata with the same cursor contract;
 it does not hydrate historical bodies through the history resource.
 

@@ -313,10 +313,9 @@ remain blocked for operator inspection.
 ## 2026-08-02: Keep evidence redaction as a provenance-preserving projection
 
 Migration `0067` adds an editor/owner-only, run-bound redaction receipt. It
-retains source/policy lineage, hashes, and immutable analysis snapshots while
-masking selected current display fields across private reads/exports; derived
-objects are not rewritten. Text masking requires prior raw-object deletion;
-receipts replay idempotently and conflict on reuse.
+retains lineage/hashes and immutable snapshots while masking current private
+reads/exports; derived objects are not rewritten. Text masking requires raw
+object deletion; receipts replay idempotently and conflict on reuse.
 
 ## 2026-08-03: Persist purge intent without authorizing deletion
 
@@ -351,17 +350,16 @@ required; fixtures/MCP remain read-only. Auth mutations cap bodies at 32 KiB.
 ## 2026-08-06: Keep source observability and policy payloads bounded
 
 `0107`–`0111` keep health/quota/alerts private and additive; missing data never
-means absence. `readCollectible` returns a hash-verified policy snapshot, and
-connectors fail closed when immutable review metadata is absent. No fetch or
-activation occurs in these reads.
+means absence. `readCollectible` returns a hash-verified policy snapshot;
+connectors fail closed without immutable review metadata and never fetch or
+activate sources in these reads.
 
 ## 2026-08-06: Audit exports and isolate instruction-like evidence
 
 Approved report/plan exports record identifier-only receipts after hydration and
 redaction; this is accountability, not purge authority. Complaint analysis
-v0.2.0 flags instruction-like fixture/import text in `manipulationRisk` and
-`policyFlags`, preserves provenance, requires private review, and never executes
-or writes repository controls. No migration is needed.
+v0.2.0 flags instruction-like imported text in `manipulationRisk`/`policyFlags`,
+preserves provenance, requires private review, and never executes it.
 
 ## 2026-08-06: Enforce complete reviews and policy-decay safety
 
@@ -375,18 +373,22 @@ auto-reactivates an expired output.
 ## 2026-08-09: Keep private Markdown governed and paginated
 
 History/selected reads retain membership, policy, deletion, hydration, redaction,
-and approval gates. JSON/Markdown use separate audit keys; leaderboard is
-unchanged. MCP exposes scoped metadata and approved reads; web history uses
-opaque cursors, max 50, and `truncated`; plan comparison is sorted
-path/status/hash/bytes. Patched `nanoid`; production audit clean.
+and approval gates. JSON/Markdown use separate audit keys; MCP exposes scoped
+metadata and approved reads; web history uses opaque cursors (max 50) and
+`truncated`; plan comparison is sorted path/status/hash/bytes.
 
 ## 2026-08-09: Persist production report Markdown with the purge lineage
 
-Migration `0120` adds a complete `report-markdown` ObjectReference to
-production analysis runs and report versions. The invalidated-analysis purge
-queue captures the fourth analysis output before source-deletion propagation
-clears both the legacy URI and full reference from the report projection.
-Existing rows remain readable with a nullable reference; ZIP packaging and
-provider-side export/backup deletion remain separate deployment work. The web
-export continues to render the approved, redacted projection on demand so
-persisted storage never bypasses governance.
+Migration `0120`/`0121` adds a complete `report-markdown` ObjectReference to
+analysis/report rows, carries it through invalidation purge queueing, source
+deletion, and owner purge gates. Existing rows remain nullable; web export
+still renders the approved redacted projection on demand, while provider purge
+remains deployment work.
+
+## 2026-08-10: Expand plan ZIPs without inventing evidence
+
+The approved on-demand plan ZIP retains six-file compatibility and adds the
+complete 08_spec-compatible `package/` dir. It is rendered from
+hydrated/redacted models; the nested manifest hashes payloads and records
+coverage gaps. A linked report must be approved when referenced. The directory
+is not persisted; provider export/download/backup purge remains deployment work.

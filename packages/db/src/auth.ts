@@ -45,6 +45,7 @@ export {
   WorkspacePlanApprovalConflictError,
   WorkspacePlanNotApprovedError,
   WorkspacePlanNotReadyError,
+  WorkspacePlanReportNotApprovedError,
   WorkspacePlanNotFoundError,
   WorkspacePlanPermissionError,
   PostgresAuthRepository,

@@ -4,6 +4,7 @@ import {
   WorkspacePlanApprovalConflictError,
   WorkspacePlanNotApprovedError,
   WorkspacePlanNotReadyError,
+  WorkspacePlanReportNotApprovedError,
   WorkspacePlanPermissionError
 } from '@appsea/db/auth'
 import {
@@ -248,6 +249,19 @@ describe('workspace plan routes', () => {
     })
     expect(response.status).toBe(409)
     await expect(response.json()).resolves.toEqual({ error: 'Only ready plans can be exported' })
+  })
+
+  it('blocks export when the linked report is not approved', async () => {
+    mocks.repository.exportWorkspacePlanBundle.mockRejectedValue(
+      new WorkspacePlanReportNotApprovedError()
+    )
+    const response = await exportPlan(new Request('https://appsea.example?format=zip'), {
+      params: Promise.resolve({ workspaceId: 'workspace:one', planPackageId: 'plan:one' })
+    })
+    expect(response.status).toBe(409)
+    await expect(response.json()).resolves.toEqual({
+      error: 'The linked report must be approved before the plan can be exported'
+    })
   })
 
   it('reads a selected non-withdrawn plan version through the private route', async () => {

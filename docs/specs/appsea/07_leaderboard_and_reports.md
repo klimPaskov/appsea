@@ -95,6 +95,7 @@ still require readiness plus owner approval. A plan comparison returns sorted fi
 hashes, and UTF-8 byte counts; it never republishes a second source copy. The
 Markdown plan export is one ordered human-readable bundle of the existing six
 files. `format=zip` adds the bounded `appsea-export-bundle-v1` archive with
-README, manifest, plan JSON/Markdown, and the six validated files under
-`plan/`; it is deterministic and generated on demand, not a new persisted
-object or the full 08_spec directory layout.
+README, manifest, plan JSON/Markdown, the six validated files under `plan/`,
+and the complete 08_spec-compatible directory under `package/`. It is
+deterministic and generated on demand, not a new persisted object. Missing
+live dimensions remain explicit coverage gaps in the package.

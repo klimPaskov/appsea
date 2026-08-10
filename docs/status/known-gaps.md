@@ -658,17 +658,19 @@ purge remain deployment work.
 
 The current implementation provides a bounded, deterministic on-demand
 `appsea-export-bundle-v1` ZIP for approved reports and ready-plus-approved plans.
-It contains a README, manifest, validated redacted JSON/Markdown, and (for
-plans) the six supported files under `plan/`; it is not the complete 08_spec
-directory bundle and is not persisted. Production analysis now persists
+It contains a README, manifest, validated redacted JSON/Markdown, the six
+compatibility files under `plan/`, and the complete 08_spec-compatible
+directory under `package/`; it is assembled on demand and is not persisted.
+Missing report/source dimensions are explicit coverage gaps rather than
+invented market evidence. Production analysis now persists
 deterministic `report-markdown` objects through migrations `0120`/`0121`: the report and analysis-run rows retain
 the complete reference, invalidated-output purge queueing includes the Markdown
 kind, source-deletion propagation clears the report projection after the queue
 captures the reference, and the direct owner purge gate counts the Markdown
 reference. Cursor pagination is implemented for the private
 web history route and the authenticated MCP history/selected-version resources;
-provider-side export/backup purge remains open. The complete 08_spec directory
-layout and provider-consumed destructive export/backup purge are still explicit
+provider-side export/backup purge remains open. Provider-consumed destructive
+export/backup purge and hosted object-store verification remain explicit
 production gaps.
 
 Production analysis private reads now carry the current report and plan

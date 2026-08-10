@@ -107,8 +107,10 @@ history uses the same cursor-paginated selector and offers deterministic file-le
 comparison (SHA-256 and UTF-8 byte counts, never a second source copy). Plan
 exports use the same boundary with a `plan.exported` receipt; JSON is the
 machine envelope and Markdown is a single ordered six-file bundle for human or
-agent review, not a ZIP. These receipts account for an approved export
-occurrence; they do not perform provider-side export retention or deletion.
+agent review. ZIP adds the six compatibility files plus the complete
+08_spec-compatible `package/` directory, assembled on demand with explicit
+coverage gaps. These receipts account for an approved export occurrence; they
+do not perform provider-side export retention or deletion.
 
 ## Lifecycle decisions
 

@@ -484,6 +484,13 @@ export class WorkspacePlanNotReadyError extends Error {
   }
 }
 
+export class WorkspacePlanReportNotApprovedError extends Error {
+  constructor() {
+    super('The linked report must be approved before the plan can be exported')
+    this.name = 'WorkspacePlanReportNotApprovedError'
+  }
+}
+
 interface UserRow extends QueryResultRow {
   user_id: string
   email: string
@@ -1215,6 +1222,43 @@ const workspacePlanSelect = `
     LEFT JOIN appsea.production_analysis_runs analysis
       ON analysis.workspace_id = analysis_output.workspace_id
      AND analysis.analysis_run_id = analysis_output.analysis_run_id`
+
+async function readApprovedLinkedReport(
+  client: PoolClient,
+  row: WorkspacePlanRow,
+  workspaceId: string,
+  objectStore: ObjectStore | undefined,
+  masks: readonly EvidenceRedactionMask[]
+): Promise<WorkspaceReportReadModel['structuredReport'] | null> {
+  if (row.report_id === null) return null
+  const result = await client.query<WorkspaceReportRow>(
+    `${workspaceReportSelect}
+     WHERE report.workspace_id = $1
+       AND report.report_id = $2
+       AND report.opportunity_id = $3
+       AND report.deletion_state = 'active'
+       AND (
+         analysis.analysis_run_id IS NULL
+         OR (
+           analysis.state = 'completed'
+           AND analysis.availability_state = 'active'
+           AND appsea.production_analysis_policies_collectible(
+             analysis.workspace_id, analysis.analysis_run_id
+           )
+         )
+       )`,
+    [workspaceId, row.report_id, row.opportunity_id]
+  )
+  const linked = result.rows[0]
+  if (!linked || linked.approval_state !== 'approved') {
+    throw new WorkspacePlanReportNotApprovedError()
+  }
+  try {
+    return (await mapWorkspaceReport(linked, workspaceId, objectStore, masks)).structuredReport
+  } catch {
+    throw new WorkspacePlanReportNotApprovedError()
+  }
+}
 
 const emptyScoreFactors = {
   complaintVolume: 0,
@@ -4213,6 +4257,7 @@ export class PostgresAuthRepository {
           row.analysis_run_id,
           row.collection_run_id
         )
+        await readApprovedLinkedReport(client, row, parsedWorkspaceId, this.objectStore, masks)
         const exported = workspacePlanExportReadModelSchema.parse({
           plan: await mapWorkspacePlan(row, parsedWorkspaceId, this.objectStore, masks),
           manifestHash: row.manifest_hash
@@ -4274,6 +4319,7 @@ export class PostgresAuthRepository {
           row.analysis_run_id,
           row.collection_run_id
         )
+        await readApprovedLinkedReport(client, row, parsedWorkspaceId, this.objectStore, masks)
         const plan = await mapWorkspacePlan(row, parsedWorkspaceId, this.objectStore, masks)
         const planPackage = planPackageSchema.parse({
           opportunitySlug: row.opportunity_slug,
@@ -4342,6 +4388,13 @@ export class PostgresAuthRepository {
           row.analysis_run_id,
           row.collection_run_id
         )
+        const linkedReport = await readApprovedLinkedReport(
+          client,
+          row,
+          parsedWorkspaceId,
+          this.objectStore,
+          masks
+        )
         const plan = await mapWorkspacePlan(row, parsedWorkspaceId, this.objectStore, masks)
         const planPackage = planPackageSchema.parse({
           opportunitySlug: row.opportunity_slug,
@@ -4354,7 +4407,8 @@ export class PostgresAuthRepository {
           plan: planPackage,
           readinessState: plan.readinessState,
           approvalState: plan.approvalState,
-          synthetic: plan.synthetic
+          synthetic: plan.synthetic,
+          report: linkedReport
         })
         await recordWorkspaceExportAudit(client, {
           workspaceId: parsedWorkspaceId,

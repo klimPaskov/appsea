@@ -15,15 +15,15 @@ presented as public market research.
 | Durable workflows             | Fixture, collection, analysis, maintenance, alert, cancellation, retry, admission, and worker-drain boundaries are covered by unit/integration-shaped tests and deterministic identifiers.                                                                                                                                                                               | Implemented locally; hosted Temporal, HA, replacement, and namespace ACL evidence pending.                                                   |
 | Approved collection           | `manual-owner-import-v3` is active, owner-attested, tenant-private, bounded, PII-scrubbed, quota-gated, tombstone-aware, and fixture-backed. Optional author keys become workspace-scoped opaque fingerprints; deletion and author-field redaction clear them. CFPB and Stack Exchange have typed policy/connector boundaries and handoff manifests but remain disabled. | Private connector usable; no public source activation is authorized.                                                                         |
 | Research pipeline             | Normalization, deduplication, classification, clustering, entity resolution, competitor/contrary observations, deep-research gates, deterministic v0.2/v1 scoring, provenance, quality snapshots, and correction invalidation are implemented.                                                                                                                           | Implemented with visible synthetic/coverage limits; live-source calibration remains open.                                                    |
-| Reports and plans             | Private evidence inspection, approvals, cursor-bounded history, selected-version reads, JSON/Markdown/ZIP export, plan comparison, deterministic report Markdown persistence, and report-Markdown purge lineage are implemented.                                                                                                                                         | Implemented locally; full 08_spec directory packaging and provider-side export/object/backup purge remain follow-up work.                    |
+| Reports and plans             | Private evidence inspection, approvals, cursor-bounded history, selected-version reads, JSON/Markdown/ZIP export, plan comparison, deterministic report Markdown persistence, report-Markdown purge lineage, and an on-demand complete 08_spec-compatible plan directory under `package/` are implemented.                                                               | Implemented locally; provider-side export/object/backup purge and fresh hosted verification remain follow-up work.                           |
 | Authentication and workspaces | Scrypt sessions, membership/RLS, MFA, step-up, session inventory/revocation, owner archival/purge readiness, invitations/recovery mechanics, optional OIDC, and private routes are implemented and tested.                                                                                                                                                               | Repository boundary implemented; verified identity, delivery, retention, provider-backed step-up, and deployment operations remain external. |
 | Website and desktop boundary  | Sparse public leaderboard and separate opportunity detail routes; private route captures cover 20 public and 36 private screenshots across four viewports with no runtime/main/overflow failures. Tauri boundary checks pass.                                                                                                                                            | UI contract is locally verified; signed desktop releases and hosted-origin review remain open.                                               |
 | Operations and security       | Worker/alert loops, budgets, cost ledgers, leases, failure recovery, preflight, and dependency audit are implemented. `pnpm security:audit`, `pnpm memory:check`, and `pnpm docs:check` pass.                                                                                                                                                                            | Local controls pass; production scheduler, endpoint, billing, incident, secret, provider, and backup operations remain open.                 |
 
 ## Validation evidence
 
-- `pnpm test` — passed: 15 packages; current run includes 119 contract, 194
-  database, 146 worker, and 244 web tests among the package totals. The selected
+- `pnpm test` — passed: 15 packages; current run includes 119 contract, 195
+  database, 146 worker, and 245 web tests among the package totals. The selected
   version security review confirms active draft/reviewed private reads remain
   member-scoped, while withdrawn/deleted/incomplete/stale rows are excluded and
   export/MCP agent gates remain approval-aware.
@@ -44,6 +44,9 @@ presented as public market research.
 - `pnpm docs:check` — passed on the current checkpoint after the private
   evidence-surface and imagegen icon updates; the report remains incomplete
   because deployment-owned gates are still open.
+- Expanded-package rerun: database tests `195`, web tests `245`, and memory
+  validation indexed `167` chunks; repository-wide typecheck, lint, build,
+  format, security, release, smoke, and public UI capture all pass.
 - Repository-wide `pnpm lint`, `pnpm typecheck`, `pnpm build`, and the release
   static verifier pass on the validated baseline; the final web build and web
   test pass include commit `1795a33`; `pnpm format:check` and
@@ -51,8 +54,9 @@ presented as public market research.
 - The 2026-08-10 export-bundle tranche adds deterministic replay and hostile-data
   tests for `appsea-export-bundle-v1`, approval/current-policy/redaction-gated
   report and plan repository methods, ZIP route headers/body tests, and a
-  readiness fail-closed regression for all plan export representations. The
-  current web production build, smoke test, release static verifier, security
+  readiness fail-closed regression for all plan export representations, the
+  expanded 08_spec-compatible plan directory, and linked-report approval gate.
+  The current web production build, smoke test, release static verifier, security
   audit, full test suite, typecheck, lint, and format checks pass.
 - `artifacts/ui-reference-loop/2026-08-06/public-capture-manifest.json` — 20
   captures pass title/main/runtime/overflow checks.
@@ -86,9 +90,10 @@ presented as public market research.
    identity/delivery, billing, backup/restore, incident, and retention
    operations are deployment-owned and not proven by this repository.
 3. The report/plan export slice now provides deterministic JSON, Markdown, and
-   a bounded on-demand ZIP v1 plus metadata-only comparison. The complete
-   08_spec directory bundle and provider-side destructive purge are not silently
-   represented as complete.
+   a bounded on-demand ZIP v1 plus metadata-only comparison. The plan ZIP now
+   includes the complete 08_spec-compatible directory under `package/` while
+   preserving explicit coverage gaps; provider-side destructive purge is not
+   silently represented as complete.
 4. The public website remains fixture-disclosed and database-free; private
    research requires the local authenticated stack. This preserves the sparse
    leaderboard contract instead of presenting synthetic rankings as demand.

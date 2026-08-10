@@ -25,6 +25,7 @@ import {
   WorkspaceAuthorizationError,
   WorkspacePlanNotApprovedError,
   WorkspacePlanNotReadyError,
+  WorkspacePlanReportNotApprovedError,
   WorkspacePurgeRequestNotReadyError,
   WorkspacePurgeRequestPermissionError,
   WorkspacePurgeManifestNotReadyError,
@@ -335,7 +336,8 @@ function objectBackedReportPool(
 function objectBackedPlanPool(
   reference: { uri: string; contentHash: string },
   approvalState: 'unreviewed' | 'reviewed' | 'approved' = 'approved',
-  readinessState: 'draft' | 'ready' | 'withdrawn' = 'ready'
+  readinessState: 'draft' | 'ready' | 'withdrawn' = 'ready',
+  linkedReportApprovalState: 'draft' | 'reviewed' | 'approved' | null = null
 ): Pool & { statements: RecordedStatement[] } {
   const statements: RecordedStatement[] = []
   const client = {
@@ -353,7 +355,8 @@ function objectBackedPlanPool(
           rows: [
             {
               plan_package_id: 'plan:production',
-              report_id: null,
+              opportunity_id: 'opportunity:production',
+              report_id: linkedReportApprovalState === null ? null : 'report:linked',
               version: 'production-plan-v1',
               fixture_files: null,
               package_object_ref: reference.uri,
@@ -377,7 +380,31 @@ function objectBackedPlanPool(
               synthetic: false,
               deletion_state: 'active',
               manifest_hash: reference.contentHash,
-              opportunity_slug: 'private-opportunity'
+              opportunity_slug: 'private-opportunity',
+              analysis_run_id: null,
+              collection_run_id: 'run:production'
+            }
+          ],
+          rowCount: 1
+        }
+      }
+      if (text.includes('FROM appsea.report_versions')) {
+        return {
+          rows: [
+            {
+              report_id: 'report:linked',
+              opportunity_id: 'opportunity:production',
+              version: 'production-report-v1',
+              structured_report: null,
+              structured_object_ref: null,
+              analysis_report_object_ref: null,
+              generated_at: '2026-07-24T00:00:00.000Z',
+              approval_state: linkedReportApprovalState,
+              manifest_hash: reference.contentHash,
+              deletion_state: 'active',
+              synthetic: true,
+              analysis_run_id: null,
+              collection_run_id: null
             }
           ],
           rowCount: 1
@@ -2172,6 +2199,30 @@ describe('PostgresAuthRepository', () => {
         'plan:production'
       )
     ).rejects.toBeInstanceOf(WorkspacePlanNotReadyError)
+    expect(
+      pool.statements.some((entry) => entry.text.includes('INSERT INTO appsea.audit_events'))
+    ).toBe(false)
+  })
+
+  it('blocks a plan export when its linked report is not approved', async () => {
+    const objectStore = new InMemoryObjectStore()
+    const stored = await storePlanPackage(objectStore, {
+      workspaceId: 'workspace:one',
+      createdAt: '2026-07-24T00:00:00.000Z',
+      planPackage: {
+        opportunitySlug: 'private-opportunity',
+        generatedAt: '2026-07-24T00:00:00.000Z',
+        files: [{ path: 'README.md', content: 'Reviewed plan' }]
+      }
+    })
+    const pool = objectBackedPlanPool(stored, 'approved', 'ready', 'reviewed')
+    await expect(
+      new PostgresAuthRepository(pool, objectStore).exportWorkspacePlanBundle(
+        'user:one',
+        'workspace:one',
+        'plan:production'
+      )
+    ).rejects.toBeInstanceOf(WorkspacePlanReportNotApprovedError)
     expect(
       pool.statements.some((entry) => entry.text.includes('INSERT INTO appsea.audit_events'))
     ).toBe(false)

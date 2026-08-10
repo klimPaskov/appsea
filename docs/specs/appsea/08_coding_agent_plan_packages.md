@@ -89,14 +89,17 @@ rendered on demand from the validated, redacted package and emits one ordered
 Markdown bundle containing the six supported files, including the existing
 `04-task-graph.json` as inert text. Approved `format=zip` export is the bounded
 `appsea-export-bundle-v1`: a deterministic stored ZIP containing `README.md`,
-`manifest.json`, `plan.json`, `plan.md`, and the six validated files under
-`plan/`. Imported evidence and generated instructions remain file data and
-cannot modify repository controls. This is not the complete 08_spec directory
-layout; the richer evidence, research, product, and machine sections remain
-visible package gaps. Production analysis report Markdown is persisted
-separately as a `report-markdown` object for retention/deletion lineage; plan
-Markdown and ZIP remain on-demand representations, not second persisted plan
-objects.
+`manifest.json`, `plan.json`, `plan.md`, the six compatibility files under
+`plan/`, and a complete 08_spec-compatible directory under `package/`.
+The nested package includes evidence, research, product, delivery, and
+machine paths; its manifest hashes every payload file (the manifest itself is
+the envelope) and carries explicit coverage gaps when a linked approved report
+or a source dimension is unavailable. Imported evidence and generated
+instructions remain file data and cannot modify repository controls. The
+directory is assembled on demand from hydrated, redacted read models and is
+not a second persisted plan object. Production analysis report Markdown is
+persisted separately as a `report-markdown` object for retention/deletion
+lineage; plan Markdown and ZIP remain on-demand representations.
 
 ## Product brief
 
