@@ -42,13 +42,32 @@ export async function GET(
   const parsedFormat = workspaceExportFormatSchema.safeParse(formatValues[0] ?? 'json')
   if (!parsedFormat.success) {
     return Response.json(
-      { error: 'Export format must be json or markdown' },
+      { error: 'Export format must be json, markdown, or zip' },
       { status: 400, headers: privateResponseHeaders }
     )
   }
   const format = parsedFormat.data
 
   try {
+    if (format === 'zip') {
+      const data = await authRepository({
+        objectStore: getObjectStore()
+      }).exportWorkspaceReportBundle(
+        session.user.userId,
+        parsedWorkspaceId.data,
+        parsedReportId.data
+      )
+      return new Response(Buffer.from(data.bytes), {
+        headers: {
+          ...privateResponseHeaders,
+          'content-disposition': 'attachment; filename="appsea-report-bundle.zip"',
+          'content-type': 'application/zip',
+          'content-length': String(data.bytes.byteLength),
+          'x-appsea-manifest-hash': data.manifestHash,
+          'x-appsea-bundle-hash': data.bundleHash
+        }
+      })
+    }
     if (format === 'markdown') {
       const data = await authRepository({
         objectStore: getObjectStore()

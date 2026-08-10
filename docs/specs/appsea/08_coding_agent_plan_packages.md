@@ -87,10 +87,16 @@ show a diff.
 Approved JSON export remains the machine envelope. Approved Markdown export is
 rendered on demand from the validated, redacted package and emits one ordered
 Markdown bundle containing the six supported files, including the existing
-`04-task-graph.json` as inert text. This is intentionally not a ZIP. Production
-analysis report Markdown is persisted separately as a `report-markdown` object
-for retention/deletion lineage; plan Markdown remains the export bundle and is
-not a second persisted plan object.
+`04-task-graph.json` as inert text. Approved `format=zip` export is the bounded
+`appsea-export-bundle-v1`: a deterministic stored ZIP containing `README.md`,
+`manifest.json`, `plan.json`, `plan.md`, and the six validated files under
+`plan/`. Imported evidence and generated instructions remain file data and
+cannot modify repository controls. This is not the complete 08_spec directory
+layout; the richer evidence, research, product, and machine sections remain
+visible package gaps. Production analysis report Markdown is persisted
+separately as a `report-markdown` object for retention/deletion lineage; plan
+Markdown and ZIP remain on-demand representations, not second persisted plan
+objects.
 
 ## Product brief
 

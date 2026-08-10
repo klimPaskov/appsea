@@ -2,6 +2,7 @@ import { appseaIdentifierSchema, workspaceExportFormatSchema } from '@appsea/con
 import {
   WorkspaceAuthorizationError,
   WorkspacePlanNotApprovedError,
+  WorkspacePlanNotReadyError,
   WorkspacePlanNotFoundError
 } from '@appsea/db/auth'
 import {
@@ -42,12 +43,31 @@ export async function GET(
   const parsedFormat = workspaceExportFormatSchema.safeParse(formatValues[0] ?? 'json')
   if (!parsedFormat.success) {
     return Response.json(
-      { error: 'Export format must be json or markdown' },
+      { error: 'Export format must be json, markdown, or zip' },
       { status: 400, headers: privateResponseHeaders }
     )
   }
 
   try {
+    if (parsedFormat.data === 'zip') {
+      const data = await authRepository({
+        objectStore: getObjectStore()
+      }).exportWorkspacePlanBundle(
+        session.user.userId,
+        parsedWorkspaceId.data,
+        parsedPlanPackageId.data
+      )
+      return new Response(Buffer.from(data.bytes), {
+        headers: {
+          ...privateResponseHeaders,
+          'content-disposition': 'attachment; filename="appsea-plan-package-bundle.zip"',
+          'content-type': 'application/zip',
+          'content-length': String(data.bytes.byteLength),
+          'x-appsea-manifest-hash': data.manifestHash,
+          'x-appsea-bundle-hash': data.bundleHash
+        }
+      })
+    }
     if (parsedFormat.data === 'markdown') {
       const data = await authRepository({
         objectStore: getObjectStore()
@@ -92,6 +112,12 @@ export async function GET(
     if (error instanceof WorkspacePlanNotApprovedError) {
       return Response.json(
         { error: 'Only approved plans can be exported' },
+        { status: 409, headers: privateResponseHeaders }
+      )
+    }
+    if (error instanceof WorkspacePlanNotReadyError) {
+      return Response.json(
+        { error: 'Only ready plans can be exported' },
         { status: 409, headers: privateResponseHeaders }
       )
     }

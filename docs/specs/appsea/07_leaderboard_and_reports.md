@@ -79,10 +79,14 @@ newest active versions. Withdrawn versions can remain visible as metadata-only
 history entries but cannot be selected for content or export. `format=json` is
 the machine representation; `format=markdown` is a deterministic on-demand
 render of the same redacted read model, with the manifest hash in a response
-header. Production analysis additionally retains a content-addressed
-`report-markdown` object for deletion/retention workflows; that object is not
-an export authorization or a public leaderboard surface. The public leaderboard
-remains latest-ranked and contains no history or comparison UI.
+header. `format=zip` is the approved, deterministic `appsea-export-bundle-v1`
+download containing a README, manifest, report JSON, and report Markdown; it
+also returns the source manifest hash and archive hash in response headers. It
+is generated on demand and never exposes raw object URIs or source payloads.
+Production analysis additionally retains a content-addressed `report-markdown`
+object for deletion/retention workflows; that object is not an export
+authorization or a public leaderboard surface. The public leaderboard remains
+latest-ranked and contains no history or comparison UI.
 
 Plan history follows the same membership, current-policy, and deletion
 boundaries. Active draft and reviewed versions remain available to authenticated
@@ -90,4 +94,7 @@ workspace members for private review; plan export and agent-facing MCP reads
 still require readiness plus owner approval. A plan comparison returns sorted file paths, status, SHA-256
 hashes, and UTF-8 byte counts; it never republishes a second source copy. The
 Markdown plan export is one ordered human-readable bundle of the existing six
-files, not a ZIP or a new persisted object.
+files. `format=zip` adds the bounded `appsea-export-bundle-v1` archive with
+README, manifest, plan JSON/Markdown, and the six validated files under
+`plan/`; it is deterministic and generated on demand, not a new persisted
+object or the full 08_spec directory layout.

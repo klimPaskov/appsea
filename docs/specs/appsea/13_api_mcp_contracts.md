@@ -141,8 +141,8 @@ GET /api/workspaces/{workspaceId}/opportunities/{slug}/history
 GET /api/workspaces/{workspaceId}/reports/{reportId}
 GET /api/workspaces/{workspaceId}/plans/{planPackageId}
 GET /api/workspaces/{workspaceId}/opportunities/{slug}/plans/compare?from={planId}&to={planId}
-GET /api/workspaces/{workspaceId}/reports/{reportId}/export?format=json|markdown
-GET /api/workspaces/{workspaceId}/plans/{planPackageId}/export?format=json|markdown
+GET /api/workspaces/{workspaceId}/reports/{reportId}/export?format=json|markdown|zip
+GET /api/workspaces/{workspaceId}/plans/{planPackageId}/export?format=json|markdown|zip
 ````
 
 History returns at most 50 active, current-policy-visible summaries for each
@@ -155,7 +155,10 @@ Selected reads exclude withdrawn/deleted rows and reuse object hydration and
 field-redaction gates. Export accepts exactly one
 format value, defaults to JSON, and requires approval; Markdown is rendered on
 demand from the redacted validated read and returns the immutable manifest hash
-in `X-AppSea-Manifest-Hash`. The compare response contains only sorted path
+in `X-AppSea-Manifest-Hash`. ZIP is the deterministic, bounded
+`appsea-export-bundle-v1` archive with a README, manifest, JSON, and Markdown;
+it returns both `X-AppSea-Manifest-Hash` and `X-AppSea-Bundle-Hash` and is never
+persisted as an export object. The compare response contains only sorted path
 status/hash/byte metadata. The authenticated MCP boundary also exposes
 scope-filtered `report-history` and `plan-history` resources with the same
 independent opaque cursors and 1..50 page bound; those resources return

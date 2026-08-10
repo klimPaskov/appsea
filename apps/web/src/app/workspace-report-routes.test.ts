@@ -16,6 +16,7 @@ const mocks = vi.hoisted(() => ({
     updateWorkspaceReportApproval: vi.fn(),
     exportWorkspaceReport: vi.fn(),
     exportWorkspaceReportMarkdown: vi.fn(),
+    exportWorkspaceReportBundle: vi.fn(),
     readWorkspaceReportVersionForUser: vi.fn()
   },
   readSession: vi.fn(),
@@ -107,6 +108,7 @@ describe('workspace report routes', () => {
     mocks.repository.updateWorkspaceReportApproval.mockReset()
     mocks.repository.exportWorkspaceReport.mockReset()
     mocks.repository.exportWorkspaceReportMarkdown.mockReset()
+    mocks.repository.exportWorkspaceReportBundle.mockReset()
     mocks.repository.readWorkspaceReportVersionForUser.mockReset()
   })
 
@@ -237,6 +239,27 @@ describe('workspace report routes', () => {
       { params: Promise.resolve({ workspaceId: 'workspace:one', reportId: 'report:one' }) }
     )
     expect(duplicate.status).toBe(400)
+  })
+
+  it('supports approved ZIP export with both artifact and archive hashes', async () => {
+    mocks.repository.exportWorkspaceReportBundle.mockResolvedValue({
+      report,
+      manifestHash: 'c'.repeat(64),
+      bundleHash: 'd'.repeat(64),
+      bytes: new Uint8Array([0x50, 0x4b, 0x03, 0x04])
+    })
+    const response = await exportReport(new Request('https://appsea.example?format=zip'), {
+      params: Promise.resolve({ workspaceId: 'workspace:one', reportId: 'report:one' })
+    })
+    expect(response.status).toBe(200)
+    expect(response.headers.get('content-type')).toContain('application/zip')
+    expect(response.headers.get('content-disposition')).toContain('appsea-report-bundle.zip')
+    expect(response.headers.get('content-length')).toBe('4')
+    expect(response.headers.get('x-appsea-manifest-hash')).toBe('c'.repeat(64))
+    expect(response.headers.get('x-appsea-bundle-hash')).toBe('d'.repeat(64))
+    await expect(new Uint8Array(await response.arrayBuffer())).toEqual(
+      new Uint8Array([0x50, 0x4b, 0x03, 0x04])
+    )
   })
 
   it('reads a selected non-withdrawn report version through the private route', async () => {

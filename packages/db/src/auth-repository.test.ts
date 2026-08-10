@@ -24,6 +24,7 @@ import {
   WorkspaceMembershipManagementError,
   WorkspaceAuthorizationError,
   WorkspacePlanNotApprovedError,
+  WorkspacePlanNotReadyError,
   WorkspacePurgeRequestNotReadyError,
   WorkspacePurgeRequestPermissionError,
   WorkspacePurgeManifestNotReadyError,
@@ -333,7 +334,8 @@ function objectBackedReportPool(
 
 function objectBackedPlanPool(
   reference: { uri: string; contentHash: string },
-  approvalState: 'unreviewed' | 'reviewed' | 'approved' = 'approved'
+  approvalState: 'unreviewed' | 'reviewed' | 'approved' = 'approved',
+  readinessState: 'draft' | 'ready' | 'withdrawn' = 'ready'
 ): Pool & { statements: RecordedStatement[] } {
   const statements: RecordedStatement[] = []
   const client = {
@@ -370,7 +372,7 @@ function objectBackedPlanPool(
                 deletionReason: null
               },
               generated_at: '2026-07-24T00:00:00.000Z',
-              readiness_state: 'ready',
+              readiness_state: readinessState,
               approval_state: approvalState,
               synthetic: false,
               deletion_state: 'active',
@@ -1989,6 +1991,32 @@ describe('PostgresAuthRepository', () => {
     )
   })
 
+  it('builds an approved report ZIP bundle through the same redaction and audit boundary', async () => {
+    const artifact = await buildFixtureResearchArtifact('2026-07-24T00:00:00.000Z')
+    const fixtureReport = generateOpportunityReport(artifact, '2026-07-24T00:00:00.000Z')
+    const report = { ...fixtureReport, synthetic: false as const, testOnly: false, transport: null }
+    const objectStore = new InMemoryObjectStore()
+    const stored = await storeOpportunityReport(objectStore, {
+      workspaceId: 'workspace:one',
+      createdAt: '2026-07-24T00:00:00.000Z',
+      report
+    })
+    const pool = objectBackedReportPool(stored)
+    const exported = await new PostgresAuthRepository(
+      pool,
+      objectStore
+    ).exportWorkspaceReportBundle('user:one', 'workspace:one', 'report:production')
+    expect(exported.bytes.slice(0, 4)).toEqual(new Uint8Array([0x50, 0x4b, 0x03, 0x04]))
+    expect(exported.bundleHash).toMatch(/^[a-f0-9]{64}$/)
+    expect(exported.manifestHash).toBe(stored.contentHash)
+    const audit = pool.statements.find((entry) =>
+      entry.text.includes('INSERT INTO appsea.audit_events')
+    )
+    expect(audit?.values?.[5]).toBe(
+      JSON.stringify({ manifestHash: stored.contentHash, representation: 'zip' })
+    )
+  })
+
   it('hydrates object-backed production plans before approved export', async () => {
     const objectStore = new InMemoryObjectStore()
     const stored = await storePlanPackage(objectStore, {
@@ -2073,6 +2101,34 @@ describe('PostgresAuthRepository', () => {
     )
   })
 
+  it('builds an approved plan ZIP bundle through the same object and audit boundary', async () => {
+    const objectStore = new InMemoryObjectStore()
+    const stored = await storePlanPackage(objectStore, {
+      workspaceId: 'workspace:one',
+      createdAt: '2026-07-24T00:00:00.000Z',
+      planPackage: {
+        opportunitySlug: 'private-opportunity',
+        generatedAt: '2026-07-24T00:00:00.000Z',
+        files: [{ path: 'README.md', content: 'Reviewed plan' }]
+      }
+    })
+    const pool = objectBackedPlanPool(stored)
+    const exported = await new PostgresAuthRepository(pool, objectStore).exportWorkspacePlanBundle(
+      'user:one',
+      'workspace:one',
+      'plan:production'
+    )
+    expect(exported.bytes.slice(0, 4)).toEqual(new Uint8Array([0x50, 0x4b, 0x03, 0x04]))
+    expect(exported.bundleHash).toMatch(/^[a-f0-9]{64}$/)
+    expect(exported.manifestHash).toBe(stored.contentHash)
+    const audit = pool.statements.find((entry) =>
+      entry.text.includes('INSERT INTO appsea.audit_events')
+    )
+    expect(audit?.values?.[5]).toBe(
+      JSON.stringify({ manifestHash: stored.contentHash, representation: 'zip' })
+    )
+  })
+
   it('blocks plan export until owner approval', async () => {
     const objectStore = new InMemoryObjectStore()
     const stored = await storePlanPackage(objectStore, {
@@ -2092,6 +2148,30 @@ describe('PostgresAuthRepository', () => {
         'plan:production'
       )
     ).rejects.toBeInstanceOf(WorkspacePlanNotApprovedError)
+    expect(
+      pool.statements.some((entry) => entry.text.includes('INSERT INTO appsea.audit_events'))
+    ).toBe(false)
+  })
+
+  it('blocks plan export until the package is ready', async () => {
+    const objectStore = new InMemoryObjectStore()
+    const stored = await storePlanPackage(objectStore, {
+      workspaceId: 'workspace:one',
+      createdAt: '2026-07-24T00:00:00.000Z',
+      planPackage: {
+        opportunitySlug: 'private-opportunity',
+        generatedAt: '2026-07-24T00:00:00.000Z',
+        files: [{ path: 'README.md', content: 'Draft plan' }]
+      }
+    })
+    const pool = objectBackedPlanPool(stored, 'approved', 'draft')
+    await expect(
+      new PostgresAuthRepository(pool, objectStore).exportWorkspacePlanBundle(
+        'user:one',
+        'workspace:one',
+        'plan:production'
+      )
+    ).rejects.toBeInstanceOf(WorkspacePlanNotReadyError)
     expect(
       pool.statements.some((entry) => entry.text.includes('INSERT INTO appsea.audit_events'))
     ).toBe(false)

@@ -89,7 +89,9 @@ gated; selected reads and exports remain approval-aware. A real-Postgres
 incomplete-run case is authored, but Docker execution is pending. Migrations
 `0120`/`0121` persist Markdown objects and purge lineage; `0122` adds the
 reviewed owner-import author-fingerprint path and deletion/redaction clearing.
-MCP history is metadata-only; ZIP/provider purge follow-up is explicit.
+MCP history is metadata-only; bounded on-demand ZIP v1 is implemented with
+representation-specific audit receipts. The complete 08_spec directory bundle
+and provider purge remain explicit follow-up work.
 
 ## Next production tranche
 

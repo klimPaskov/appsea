@@ -7951,7 +7951,70 @@ export const workspacePlanComparisonSchema = z
   })
   .strict()
 
-export const workspaceExportFormatSchema = z.enum(['json', 'markdown'])
+const workspaceExportBundlePathSchema = z
+  .string()
+  .min(1)
+  .max(240)
+  .regex(/^[A-Za-z0-9][A-Za-z0-9._/-]*$/, 'Bundle paths must be portable relative paths')
+  .refine(
+    (value) =>
+      !value.split('/').some((segment) => segment === '' || segment === '.' || segment === '..'),
+    'Bundle paths cannot contain empty, dot, or parent segments'
+  )
+
+export const workspaceExportBundleFileSchema = z
+  .object({
+    path: workspaceExportBundlePathSchema,
+    sha256: artifactManifestHashSchema,
+    bytes: z.number().int().nonnegative().max(16_777_216)
+  })
+  .strict()
+
+export const workspaceExportBundleManifestSchema = z
+  .object({
+    schemaVersion: z.literal('1.0.0'),
+    bundleVersion: z.literal('appsea-export-bundle-v1'),
+    artifactType: z.enum(['report', 'plan-package']),
+    artifactId: appseaIdentifierSchema,
+    opportunitySlug: z.string().min(1).max(120),
+    generatedAt: z.string().datetime(),
+    sourceManifestHash: artifactManifestHashSchema,
+    approvalState: z.enum(['draft', 'reviewed', 'approved', 'withdrawn', 'unreviewed']),
+    readinessState: z.enum(['draft', 'ready', 'withdrawn']).nullable(),
+    synthetic: z.boolean(),
+    coverageGaps: z.array(z.string().max(1_000)).max(100),
+    files: z.array(workspaceExportBundleFileSchema).min(1).max(128)
+  })
+  .strict()
+  .superRefine((value, context) => {
+    const paths = new Set<string>()
+    for (const [index, file] of value.files.entries()) {
+      if (paths.has(file.path)) {
+        context.addIssue({
+          code: 'custom',
+          path: ['files', index, 'path'],
+          message: 'Bundle file paths must be unique'
+        })
+      }
+      paths.add(file.path)
+    }
+    if (value.artifactType === 'report' && value.readinessState !== null) {
+      context.addIssue({
+        code: 'custom',
+        path: ['readinessState'],
+        message: 'Report bundles cannot include a plan readiness state'
+      })
+    }
+    if (value.artifactType === 'plan-package' && value.readinessState === null) {
+      context.addIssue({
+        code: 'custom',
+        path: ['readinessState'],
+        message: 'Plan bundles require a readiness state'
+      })
+    }
+  })
+
+export const workspaceExportFormatSchema = z.enum(['json', 'markdown', 'zip'])
 
 export const workspaceOpportunityDetailReadModelSchema = z
   .object({
@@ -8841,6 +8904,8 @@ export type WorkspaceArtifactHistoryReadModel = z.infer<
 >
 export type WorkspacePlanFileChange = z.infer<typeof workspacePlanFileChangeSchema>
 export type WorkspacePlanComparison = z.infer<typeof workspacePlanComparisonSchema>
+export type WorkspaceExportBundleFile = z.infer<typeof workspaceExportBundleFileSchema>
+export type WorkspaceExportBundleManifest = z.infer<typeof workspaceExportBundleManifestSchema>
 export type WorkspaceExportFormat = z.infer<typeof workspaceExportFormatSchema>
 export type WorkspaceOpportunityDecisionType = z.infer<
   typeof workspaceOpportunityDecisionTypeSchema

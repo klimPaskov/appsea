@@ -746,18 +746,22 @@ object-hydration, and field-redaction gates; active draft/reviewed rows remain
 available to authenticated workspace members for private review, while
 withdrawn rows are
 metadata-only. The report and plan
-export routes accept `format=json|markdown`, with deterministic on-demand
-Markdown and representation-specific audit receipts. Plan comparison is
-metadata-only (sorted file status, SHA-256, and UTF-8 byte counts). The page
-shows a visible 50-version bound when older rows exist. Migrations `0120` and
+export routes accept `format=json|markdown|zip`, with deterministic on-demand
+Markdown or bounded `appsea-export-bundle-v1` ZIP archives and
+representation-specific audit receipts. ZIP contains the validated redacted
+JSON/Markdown, manifest, README, and (for plans) the six supported files under
+`plan/`; it is not persisted. Plan comparison is metadata-only (sorted file
+status, SHA-256, and UTF-8 byte counts). The page shows a visible 50-version
+bound when older rows exist. Migrations `0120` and
 `0121` persist the deterministic production `report-markdown` object with a complete
 reference, extends invalidated-analysis purge queueing, clears the report-side
 reference during source deletion, and keeps the direct owner purge function
 aligned with the full output set. The authenticated MCP boundary
 now exposes the same scope-filtered report/plan history as metadata-only
 resources with independent opaque cursors; selected MCP content adds the
-approved report and ready-plus-approved plan gates. ZIP/API packaging and provider-side export/backup purge
-remain follow-up work.
+approved report and ready-plus-approved plan gates. The repository now provides
+the bounded ZIP/API packaging slice; the full 08_spec directory bundle and
+provider-side export/backup purge remain follow-up work.
 The PostgreSQL integration suite now seeds a linked `running` analysis output
 and proves private report/plan reads and history exclude it; fresh/upgrade
 execution remains pending until Docker is available.

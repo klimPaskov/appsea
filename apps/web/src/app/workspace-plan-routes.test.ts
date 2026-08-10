@@ -3,6 +3,7 @@ import {
   WorkspaceAuthorizationError,
   WorkspacePlanApprovalConflictError,
   WorkspacePlanNotApprovedError,
+  WorkspacePlanNotReadyError,
   WorkspacePlanPermissionError
 } from '@appsea/db/auth'
 import {
@@ -16,6 +17,7 @@ const mocks = vi.hoisted(() => ({
     updateWorkspacePlanApproval: vi.fn(),
     exportWorkspacePlan: vi.fn(),
     exportWorkspacePlanMarkdown: vi.fn(),
+    exportWorkspacePlanBundle: vi.fn(),
     readWorkspacePlanVersionForUser: vi.fn()
   },
   readSession: vi.fn(),
@@ -61,6 +63,7 @@ describe('workspace plan routes', () => {
     mocks.repository.updateWorkspacePlanApproval.mockReset()
     mocks.repository.exportWorkspacePlan.mockReset()
     mocks.repository.exportWorkspacePlanMarkdown.mockReset()
+    mocks.repository.exportWorkspacePlanBundle.mockReset()
     mocks.repository.readWorkspacePlanVersionForUser.mockReset()
   })
 
@@ -215,6 +218,36 @@ describe('workspace plan routes', () => {
       { params: Promise.resolve({ workspaceId: 'workspace:one', planPackageId: 'plan:one' }) }
     )
     expect(duplicate.status).toBe(400)
+  })
+
+  it('supports approved ZIP export with both artifact and archive hashes', async () => {
+    mocks.repository.exportWorkspacePlanBundle.mockResolvedValue({
+      plan,
+      manifestHash: 'c'.repeat(64),
+      bundleHash: 'd'.repeat(64),
+      bytes: new Uint8Array([0x50, 0x4b, 0x03, 0x04])
+    })
+    const response = await exportPlan(new Request('https://appsea.example?format=zip'), {
+      params: Promise.resolve({ workspaceId: 'workspace:one', planPackageId: 'plan:one' })
+    })
+    expect(response.status).toBe(200)
+    expect(response.headers.get('content-type')).toContain('application/zip')
+    expect(response.headers.get('content-disposition')).toContain('appsea-plan-package-bundle.zip')
+    expect(response.headers.get('content-length')).toBe('4')
+    expect(response.headers.get('x-appsea-manifest-hash')).toBe('c'.repeat(64))
+    expect(response.headers.get('x-appsea-bundle-hash')).toBe('d'.repeat(64))
+    await expect(new Uint8Array(await response.arrayBuffer())).toEqual(
+      new Uint8Array([0x50, 0x4b, 0x03, 0x04])
+    )
+  })
+
+  it('blocks export when an approved plan is not ready', async () => {
+    mocks.repository.exportWorkspacePlanBundle.mockRejectedValue(new WorkspacePlanNotReadyError())
+    const response = await exportPlan(new Request('https://appsea.example?format=zip'), {
+      params: Promise.resolve({ workspaceId: 'workspace:one', planPackageId: 'plan:one' })
+    })
+    expect(response.status).toBe(409)
+    await expect(response.json()).resolves.toEqual({ error: 'Only ready plans can be exported' })
   })
 
   it('reads a selected non-withdrawn plan version through the private route', async () => {

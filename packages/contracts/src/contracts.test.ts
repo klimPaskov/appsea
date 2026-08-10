@@ -144,6 +144,7 @@ import {
   workspacePlanFileChangeSchema,
   workspacePlanVersionSummarySchema,
   workspaceExportFormatSchema,
+  workspaceExportBundleManifestSchema,
   workspaceReportExportReadModelSchema,
   workspacePlanApprovalInputSchema,
   workspacePlanExportReadModelSchema,
@@ -2260,6 +2261,58 @@ describe('contracts', () => {
       }).success
     ).toBe(false)
     expect(workspaceExportFormatSchema.safeParse('markdown').success).toBe(true)
+    expect(workspaceExportFormatSchema.safeParse('zip').success).toBe(true)
+    expect(
+      workspaceExportBundleManifestSchema.safeParse({
+        schemaVersion: '1.0.0',
+        bundleVersion: 'appsea-export-bundle-v1',
+        artifactType: 'plan-package',
+        artifactId: 'plan:one',
+        opportunitySlug: 'private-opportunity',
+        generatedAt: now,
+        sourceManifestHash: 'a'.repeat(64),
+        approvalState: 'approved',
+        readinessState: 'ready',
+        synthetic: false,
+        coverageGaps: ['Coverage remains bounded.'],
+        files: [{ path: 'README.md', sha256: 'b'.repeat(64), bytes: 12 }]
+      }).success
+    ).toBe(true)
+    expect(
+      workspaceExportBundleManifestSchema.safeParse({
+        schemaVersion: '1.0.0',
+        bundleVersion: 'appsea-export-bundle-v1',
+        artifactType: 'report',
+        artifactId: 'report:one',
+        opportunitySlug: 'private-opportunity',
+        generatedAt: now,
+        sourceManifestHash: 'a'.repeat(64),
+        approvalState: 'approved',
+        readinessState: null,
+        synthetic: false,
+        coverageGaps: [],
+        files: [
+          { path: 'README.md', sha256: 'b'.repeat(64), bytes: 12 },
+          { path: 'README.md', sha256: 'c'.repeat(64), bytes: 13 }
+        ]
+      }).success
+    ).toBe(false)
+    expect(
+      workspaceExportBundleManifestSchema.safeParse({
+        schemaVersion: '1.0.0',
+        bundleVersion: 'appsea-export-bundle-v1',
+        artifactType: 'report',
+        artifactId: 'report:one',
+        opportunitySlug: 'private-opportunity',
+        generatedAt: now,
+        sourceManifestHash: 'a'.repeat(64),
+        approvalState: 'approved',
+        readinessState: null,
+        synthetic: false,
+        coverageGaps: [],
+        files: [{ path: '../escape', sha256: 'b'.repeat(64), bytes: 12 }]
+      }).success
+    ).toBe(false)
     expect(
       workspacePlanComparisonSchema.safeParse({
         from: plan,

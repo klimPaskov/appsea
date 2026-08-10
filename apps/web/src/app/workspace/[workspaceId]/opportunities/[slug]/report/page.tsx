@@ -117,6 +117,12 @@ export default async function PrivateReportPage({
               >
                 Export Markdown
               </a>
+              <a
+                className="quiet-button"
+                href={`/api/workspaces/${workspaceId}/reports/${detail.report.id}/export?format=zip`}
+              >
+                Download bundle
+              </a>
             </span>
           ) : null}
         </div>

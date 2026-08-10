@@ -136,6 +136,8 @@ import {
 import {
   decodeOpportunityReport,
   decodePlanPackage,
+  buildOpportunityReportExportBundle,
+  buildPlanPackageExportBundle,
   renderOpportunityReportMarkdown,
   renderPlanPackageMarkdown
 } from '@appsea/reports'
@@ -190,10 +192,11 @@ function exportAuditEventId(input: {
   action: 'report.exported' | 'plan.exported'
   manifestHash: string
   actorId: string
-  representation: 'json' | 'markdown'
+  representation: 'json' | 'markdown' | 'zip'
 }): string {
-  // One receipt is retained per workspace/artifact version/actor. Replays of
-  // the same approved export therefore do not create duplicate audit rows.
+  // One receipt is retained per workspace/artifact version/actor/representation.
+  // Replays of the same approved export therefore do not create duplicate rows,
+  // while JSON, Markdown, and ZIP remain independently auditable.
   return `audit:${contentHash(input).slice(0, 32)}`
 }
 
@@ -206,7 +209,7 @@ async function recordWorkspaceExportAudit(
     action: 'report.exported' | 'plan.exported'
     manifestHash: string
     actorId: string
-    representation: 'json' | 'markdown'
+    representation: 'json' | 'markdown' | 'zip'
   }
 ): Promise<void> {
   const auditEventId = exportAuditEventId(input)
@@ -471,6 +474,13 @@ export class WorkspacePlanNotApprovedError extends Error {
   constructor() {
     super('Only approved plans can be exported')
     this.name = 'WorkspacePlanNotApprovedError'
+  }
+}
+
+export class WorkspacePlanNotReadyError extends Error {
+  constructor() {
+    super('Only ready plans can be exported')
+    this.name = 'WorkspacePlanNotReadyError'
   }
 }
 
@@ -3966,6 +3976,78 @@ export class PostgresAuthRepository {
     )
   }
 
+  async exportWorkspaceReportBundle(
+    userId: string,
+    workspaceId: string,
+    reportId: string
+  ): Promise<{
+    report: WorkspaceReportReadModel
+    manifestHash: string
+    bytes: Uint8Array
+    bundleHash: string
+  }> {
+    const parsedUserId = appseaIdentifierSchema.parse(userId)
+    const parsedWorkspaceId = appseaIdentifierSchema.parse(workspaceId)
+    const parsedReportId = appseaIdentifierSchema.parse(reportId)
+
+    return withAuthenticatedWorkspaceTransaction(
+      this.pool,
+      parsedUserId,
+      parsedWorkspaceId,
+      async (client) => {
+        const result = await client.query<WorkspaceReportRow>(
+          `${workspaceReportSelect}
+          WHERE report.workspace_id = $1
+            AND report.report_id = $2
+            AND report.deletion_state = 'active'
+            AND (
+              analysis.analysis_run_id IS NULL
+              OR (
+                analysis.state = 'completed'
+                AND analysis.availability_state = 'active'
+                AND appsea.production_analysis_policies_collectible(
+                  analysis.workspace_id, analysis.analysis_run_id
+                )
+              )
+            )`,
+          [parsedWorkspaceId, parsedReportId]
+        )
+        const row = result.rows[0]
+        if (!row) throw new WorkspaceReportNotFoundError()
+        if (row.approval_state !== 'approved') throw new WorkspaceReportNotApprovedError()
+        const masks = await readOutputRedactionMasks(
+          client,
+          parsedWorkspaceId,
+          row.analysis_run_id,
+          row.collection_run_id
+        )
+        const report = await mapWorkspaceReport(row, parsedWorkspaceId, this.objectStore, masks)
+        const bundle = buildOpportunityReportExportBundle({
+          reportId: parsedReportId,
+          manifestHash: row.manifest_hash,
+          report: report.structuredReport,
+          approvalState: row.approval_state
+        })
+        await recordWorkspaceExportAudit(client, {
+          workspaceId: parsedWorkspaceId,
+          artifactId: parsedReportId,
+          targetType: 'report',
+          action: 'report.exported',
+          manifestHash: row.manifest_hash,
+          actorId: parsedUserId,
+          representation: 'zip'
+        })
+        return {
+          report,
+          manifestHash: row.manifest_hash,
+          bytes: bundle.bytes,
+          bundleHash: bundle.bundleHash
+        }
+      },
+      { isolationLevel: 'SERIALIZABLE' }
+    )
+  }
+
   async updateWorkspacePlanApproval(
     userId: string,
     workspaceId: string,
@@ -4124,6 +4206,7 @@ export class PostgresAuthRepository {
         const row = result.rows[0]
         if (!row) throw new WorkspacePlanNotFoundError()
         if (row.approval_state !== 'approved') throw new WorkspacePlanNotApprovedError()
+        if (row.readiness_state !== 'ready') throw new WorkspacePlanNotReadyError()
         const masks = await readOutputRedactionMasks(
           client,
           parsedWorkspaceId,
@@ -4184,6 +4267,7 @@ export class PostgresAuthRepository {
         const row = result.rows[0]
         if (!row) throw new WorkspacePlanNotFoundError()
         if (row.approval_state !== 'approved') throw new WorkspacePlanNotApprovedError()
+        if (row.readiness_state !== 'ready') throw new WorkspacePlanNotReadyError()
         const masks = await readOutputRedactionMasks(
           client,
           parsedWorkspaceId,
@@ -4207,6 +4291,86 @@ export class PostgresAuthRepository {
           representation: 'markdown'
         })
         return { plan, manifestHash: row.manifest_hash, markdown }
+      },
+      { isolationLevel: 'SERIALIZABLE' }
+    )
+  }
+
+  async exportWorkspacePlanBundle(
+    userId: string,
+    workspaceId: string,
+    planPackageId: string
+  ): Promise<{
+    plan: WorkspacePlanReadModel
+    manifestHash: string
+    bytes: Uint8Array
+    bundleHash: string
+  }> {
+    const parsedUserId = appseaIdentifierSchema.parse(userId)
+    const parsedWorkspaceId = appseaIdentifierSchema.parse(workspaceId)
+    const parsedPlanPackageId = appseaIdentifierSchema.parse(planPackageId)
+
+    return withAuthenticatedWorkspaceTransaction(
+      this.pool,
+      parsedUserId,
+      parsedWorkspaceId,
+      async (client) => {
+        const result = await client.query<WorkspacePlanRow>(
+          `${workspacePlanSelect}
+          WHERE plan.workspace_id = $1
+            AND plan.plan_package_id = $2
+            AND plan.deletion_state = 'active'
+            AND (
+              analysis.analysis_run_id IS NULL
+              OR (
+                analysis.state = 'completed'
+                AND analysis.availability_state = 'active'
+                AND appsea.production_analysis_policies_collectible(
+                  analysis.workspace_id, analysis.analysis_run_id
+                )
+              )
+            )`,
+          [parsedWorkspaceId, parsedPlanPackageId]
+        )
+        const row = result.rows[0]
+        if (!row) throw new WorkspacePlanNotFoundError()
+        if (row.approval_state !== 'approved') throw new WorkspacePlanNotApprovedError()
+        if (row.readiness_state !== 'ready') throw new WorkspacePlanNotReadyError()
+        const masks = await readOutputRedactionMasks(
+          client,
+          parsedWorkspaceId,
+          row.analysis_run_id,
+          row.collection_run_id
+        )
+        const plan = await mapWorkspacePlan(row, parsedWorkspaceId, this.objectStore, masks)
+        const planPackage = planPackageSchema.parse({
+          opportunitySlug: row.opportunity_slug,
+          generatedAt: plan.generatedAt,
+          files: plan.files
+        })
+        const bundle = buildPlanPackageExportBundle({
+          planId: parsedPlanPackageId,
+          manifestHash: row.manifest_hash,
+          plan: planPackage,
+          readinessState: plan.readinessState,
+          approvalState: plan.approvalState,
+          synthetic: plan.synthetic
+        })
+        await recordWorkspaceExportAudit(client, {
+          workspaceId: parsedWorkspaceId,
+          artifactId: parsedPlanPackageId,
+          targetType: 'plan_package',
+          action: 'plan.exported',
+          manifestHash: row.manifest_hash,
+          actorId: parsedUserId,
+          representation: 'zip'
+        })
+        return {
+          plan,
+          manifestHash: row.manifest_hash,
+          bytes: bundle.bytes,
+          bundleHash: bundle.bundleHash
+        }
       },
       { isolationLevel: 'SERIALIZABLE' }
     )

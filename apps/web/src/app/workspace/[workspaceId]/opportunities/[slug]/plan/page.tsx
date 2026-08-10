@@ -161,7 +161,7 @@ export default async function PrivatePlanPage({
         </div>
         <div className="workspace-actions">
           <span>{detail.plan?.version ?? 'Not generated'}</span>
-          {detail.plan?.approvalState === 'approved' ? (
+          {detail.plan?.approvalState === 'approved' && detail.plan.readinessState === 'ready' ? (
             <span className="workspace-export-links">
               <a
                 className="quiet-button"
@@ -174,6 +174,12 @@ export default async function PrivatePlanPage({
                 href={`/api/workspaces/${workspaceId}/plans/${detail.plan.id}/export?format=markdown`}
               >
                 Export Markdown
+              </a>
+              <a
+                className="quiet-button"
+                href={`/api/workspaces/${workspaceId}/plans/${detail.plan.id}/export?format=zip`}
+              >
+                Download bundle
               </a>
             </span>
           ) : null}

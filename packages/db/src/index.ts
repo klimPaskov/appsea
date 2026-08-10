@@ -320,6 +320,7 @@ export {
   WorkspaceReportPermissionError,
   WorkspacePlanApprovalConflictError,
   WorkspacePlanNotApprovedError,
+  WorkspacePlanNotReadyError,
   WorkspacePlanNotFoundError,
   WorkspacePlanPermissionError,
   PostgresAuthRepository,

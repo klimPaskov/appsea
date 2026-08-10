@@ -841,3 +841,13 @@ export {
   type PlanPackageFileState,
   type PlanPackageManifest
 } from './plan-comparison'
+export {
+  buildDeterministicZip,
+  buildOpportunityReportExportBundle,
+  buildPlanPackageExportBundle,
+  type ExportBundleFileInput,
+  type ExportBundleFileManifest,
+  type ExportBundleResult,
+  type PlanExportBundleInput,
+  type ReportExportBundleInput
+} from './export-bundle'
