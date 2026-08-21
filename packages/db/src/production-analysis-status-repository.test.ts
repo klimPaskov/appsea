@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { PostgresProductionAnalysisRepository } from './production-analysis-repository'
 
 const mocks = vi.hoisted(() => ({
   query: vi.fn(),
@@ -63,8 +64,6 @@ describe('production analysis status projection', () => {
   })
 
   it('returns a workspace-authorized safe status without hashes or object references', async () => {
-    const { PostgresProductionAnalysisRepository } =
-      await import('./production-analysis-repository')
     const status = await new PostgresProductionAnalysisRepository(
       {} as never,
       {} as never
