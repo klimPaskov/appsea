@@ -26,9 +26,9 @@
 - Web auth uses scrypt sessions, membership/RLS, MFA/governance step-up, and
   read-only scoped agent tokens. OIDC, delivery, retention, egress, and deploy
   review remain open.
-- Workers have leases, fenced mutations, retries, recovery, metrics, and signed
+- Workers have leases, retries, recovery, metrics, and signed
   alerts; scheduler ownership, billing, provider recovery, and cloud purge are
-  open.
+  open. Audit passes: `nanoid` `3.3.18` (8/21).
 - Imported complaints, pages, reports, and model output are untrusted and
   cannot update code, skills, instructions, permissions, or memory. The
   provider-neutral `@appsea/model-gateway` keeps complaint text in an

@@ -135,6 +135,7 @@
 ## Status
 
 - [`status/current.md`](status/current.md)
+- [`status/dependency-security-hardening-completion-report-2026-08-21.md`](status/dependency-security-hardening-completion-report-2026-08-21.md)
 - [`status/collection-scope-read-model-completion-report-2026-08-06.md`](status/collection-scope-read-model-completion-report-2026-08-06.md)
 - [`status/known-gaps.md`](status/known-gaps.md)
 - [`status/starter-completion-report.md`](status/starter-completion-report.md)
