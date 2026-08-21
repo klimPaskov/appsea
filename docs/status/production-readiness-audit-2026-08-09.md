@@ -1,4 +1,4 @@
-# AppSea production-readiness audit — 2026-08-09 (refreshed 2026-08-10)
+# AppSea production-readiness audit — 2026-08-09 (refreshed 2026-08-21)
 
 Status: **incomplete; do not promote as a production market-research service**.
 
@@ -40,17 +40,17 @@ presented as public market research.
   package. `pnpm smoke:web` also passed the leaderboard, opportunity routes,
   and fixture API.
 - `pnpm security:audit` — passed with no known production vulnerabilities.
-- `pnpm memory:check` — passed with 152 indexed chunks.
-- `pnpm docs:check` — passed on the current checkpoint after the private
-  evidence-surface and imagegen icon updates; the report remains incomplete
-  because deployment-owned gates are still open.
-- Expanded-package rerun: database tests `195`, web tests `245`, and memory
-  validation indexed `167` chunks; repository-wide typecheck, lint, build,
-  format, security, release, smoke, and public UI capture all pass.
-- Repository-wide `pnpm lint`, `pnpm typecheck`, `pnpm build`, and the release
-  static verifier pass on the validated baseline; the final web build and web
-  test pass include commit `1795a33`; `pnpm format:check` and
-  `git diff --check` also pass.
+- `pnpm memory:check` — passed with 167 indexed chunks; `pnpm docs:check` —
+  passed with 21 skills and 11 bounded subagents. The report remains
+  incomplete because deployment-owned gates are still open.
+- The post-security-patch `pnpm test` run passed all 15 workspace packages,
+  including 195 database, 146 worker, 245 web, and 31 workflow tests;
+  repository-wide `pnpm typecheck`, `pnpm lint`, and `pnpm build` also passed
+  (30 build tasks, including the optimized Next production build).
+- `pnpm security:audit` passed with `No known vulnerabilities found` after the
+  workspace override moved `nanoid` to `3.3.18`; the release static verifier,
+  Prettier, and `git diff --check` also pass. The hardening commits are
+  `b456188` and `5b2c22d`.
 - The 2026-08-10 export-bundle tranche adds deterministic replay and hostile-data
   tests for `appsea-export-bundle-v1`, approval/current-policy/redaction-gated
   report and plan repository methods, ZIP route headers/body tests, and a
@@ -74,9 +74,10 @@ presented as public market research.
   the same 20 public routes and scalar overflow/runtime checks. Authenticated
   private captures remain intentionally unclaimed because the local
   PostgreSQL/Temporal stack is unavailable.
-- `pnpm verify:backup-restore` — blocked in this environment because Docker
-  Desktop's `dockerDesktopLinuxEngine` pipe is unavailable; this is not fresh
-  migration or restore evidence.
+- `pnpm verify:backup-restore` and a direct `docker version` probe remain
+  blocked in this environment because the Docker Desktop
+  `dockerDesktopLinuxEngine` pipe is unavailable; this is not fresh migration,
+  restore, or local-stack evidence.
 - `pnpm verify` — blocked before repository checks because the user-owned empty
   root `AGENTS.md` is missing the generated catalog block. It remains untouched.
 

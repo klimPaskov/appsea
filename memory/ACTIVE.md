@@ -2,9 +2,10 @@
 
 ## State
 
-Audit: `docs/status/production-readiness-audit-2026-08-09.md`.
-`pnpm verify`/local smoke pass through `0119`; backup verifier targets `0122`
-but last proof is `0119`. Captures pass; private sections use imagegen marks.
+Audit: `docs/status/production-readiness-audit-2026-08-09.md` (8/21).
+Post-patch checks pass; Docker fresh/restore proof is unavailable.
+`pnpm verify`/local smoke through `0119`; verifier targets `0122`, last proof
+`0119`.
 
 AppSea remains fixture-first with production-shaped persistence, workflow,
 source policy, private workspaces, reports/plans, and maintenance; the public
