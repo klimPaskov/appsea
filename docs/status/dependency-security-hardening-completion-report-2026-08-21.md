@@ -17,9 +17,10 @@ source-policy behavior, or runtime authorization boundary changed.
   check passed.
 - `pnpm why nanoid` resolves only `nanoid@3.3.18` through PostCSS.
 - `pnpm security:audit` passes with `No known vulnerabilities found`.
-- The existing full tests, typecheck, lint, build, web smoke, release static
-  checks, memory validation, and documentation validation remain green from
-  the preceding tranche.
+- The patched tree's full `pnpm test` run passed all 15 workspace packages
+  (DB 195, worker 146, web 245, workflows 31), followed by 15-package
+  typecheck and lint, a 30-task production build, release-static checks,
+  memory validation, and documentation validation.
 
 ## Remaining security scope
 
