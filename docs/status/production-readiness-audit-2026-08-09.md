@@ -22,8 +22,9 @@ presented as public market research.
 
 ## Validation evidence
 
-- `pnpm test` — passed: 15 packages; current run includes 119 contract, 195
-  database, 146 worker, and 245 web tests among the package totals. The selected
+- `pnpm test` — passed on 2026-08-22: 15 packages; current run includes 119
+  contract, 195 database, 146 worker, and 247 web tests among the package totals.
+  The selected
   version security review confirms active draft/reviewed private reads remain
   member-scoped, while withdrawn/deleted/incomplete/stale rows are excluded and
   export/MCP agent gates remain approval-aware.
@@ -43,8 +44,8 @@ presented as public market research.
 - `pnpm memory:check` — passed with 167 indexed chunks; `pnpm docs:check` —
   passed with 21 skills and 11 bounded subagents. The report remains
   incomplete because deployment-owned gates are still open.
-- The post-security-patch `pnpm test` run passed all 15 workspace packages,
-  including 195 database, 146 worker, 245 web, and 31 workflow tests;
+- The post-handoff `pnpm test` run passed all 15 workspace packages, including
+  195 database, 146 worker, 247 web, and 31 workflow tests;
   repository-wide `pnpm typecheck`, `pnpm lint`, and `pnpm build` also passed
   (30 build tasks, including the optimized Next production build).
 - `pnpm security:audit` passed with `No known vulnerabilities found` after the
