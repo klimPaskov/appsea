@@ -2407,6 +2407,18 @@ a:focus-visible {
   font-size: 12px;
 }
 
+.workspace-analysis-handoff,
+.workspace-analysis-retry {
+  display: grid;
+  gap: 12px;
+  max-width: 820px;
+  margin-top: 22px;
+}
+
+.workspace-analysis-handoff .detail-grid {
+  margin-top: 0;
+}
+
 .seed-review-create {
   display: grid;
   gap: 18px;

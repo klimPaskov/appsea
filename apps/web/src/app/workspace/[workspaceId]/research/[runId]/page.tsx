@@ -8,6 +8,10 @@ import { readSession } from '../../../../../server/auth-session'
 import { decodePathParam } from '../../../../../server/path-params'
 import { ProductionComplaintReviewActions } from '../../../production-complaint-review-actions'
 import { ProductionAnalysisStartAction } from '../../../production-analysis-start-action'
+import {
+  analysisHandoffNeedsManualRetry,
+  analysisHandoffStatusCopy
+} from '../../../workspace-analysis-handoff'
 
 export const dynamic = 'force-dynamic'
 
@@ -188,7 +192,43 @@ export default async function ProductionCollectionPage({
             private opportunity, report, and coding plan as separate governed outputs.
           </p>
         </div>
-        {canStartAnalysis ? (
+        {collection.analysisHandoff ? (
+          <div className="workspace-analysis-handoff" aria-live="polite">
+            <dl className="detail-grid">
+              <div>
+                <dt className="label">Reviewed handoff</dt>
+                <dd>{collection.analysisHandoff.state}</dd>
+              </div>
+              <div>
+                <dt className="label">Analysis run</dt>
+                <dd>{collection.analysisHandoff.analysisRunId}</dd>
+              </div>
+              <div>
+                <dt className="label">Attempts</dt>
+                <dd>{collection.analysisHandoff.attemptCount}</dd>
+              </div>
+            </dl>
+            {collection.analysisHandoff.failureSummary ? (
+              <p className="form-error">{collection.analysisHandoff.failureSummary}</p>
+            ) : null}
+            {!collection.analysisHandoff.failureSummary ? (
+              <p className="muted-note">
+                {analysisHandoffStatusCopy(collection.analysisHandoff.state)}
+              </p>
+            ) : null}
+            {collection.analysisHandoff.state === 'started' &&
+            collection.analysisHandoff.workflowId ? (
+              <p className="workspace-actions">
+                <Link
+                  className="quiet-button"
+                  href={`/workspace/${encodeURIComponent(parsedWorkspaceId.data)}/research/analysis/${encodeURIComponent(collection.analysisHandoff.analysisRunId)}?workflowId=${encodeURIComponent(collection.analysisHandoff.workflowId)}`}
+                >
+                  View analysis status
+                </Link>
+              </p>
+            ) : null}
+          </div>
+        ) : canStartAnalysis ? (
           <ProductionAnalysisStartAction
             workspaceId={parsedWorkspaceId.data}
             collectionRunId={parsedRunId.data}
@@ -199,6 +239,18 @@ export default async function ProductionCollectionPage({
             An owner or editor can start reviewed analysis after confirming the retained evidence.
           </p>
         )}
+        {analysisHandoffNeedsManualRetry(collection.analysisHandoff) && canStartAnalysis ? (
+          <div className="workspace-analysis-retry">
+            <p className="muted-note">
+              The automatic handoff stopped. Choose an approved seed to retry analysis explicitly.
+            </p>
+            <ProductionAnalysisStartAction
+              workspaceId={parsedWorkspaceId.data}
+              collectionRunId={parsedRunId.data}
+              approvedSeeds={approvedSeeds}
+            />
+          </div>
+        ) : null}
       </section>
     </main>
   )

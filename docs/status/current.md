@@ -40,7 +40,9 @@
   eligibility column; the corrected path now passes again. GitHub CI runs it on
   every change. The intake row and seed are smoke-only and never market
   evidence.
-- Local UI proof: `pnpm ui:capture:private` now runs a scalar browser audit on
+- Local UI proof: the persisted public capture in
+  `artifacts/ui-reference-loop/2026-08-22/` passes the scalar browser audit;
+  `pnpm ui:capture:private` now runs the same audit on
   all nine authenticated routes at desktop 1280/1024/768 and responsive 480
   widths. It fails on an explicit runtime-error page, missing title/`<main>`, or
   horizontal overflow; the checked-in manifest records only those scalar
@@ -97,7 +99,7 @@
   editors can submit a review, owners can attempt promotion, and owners can
   withdraw a passed gate. Client controls never bypass the server-side
   evidence, snapshot, membership, or step-up checks.
-- Private workspace website/API: implemented and production-built; reads are membership-authorized and cache-disabled. Encoded workspace and detail identifiers are decoded exactly once at the page boundary before schema validation. Completed collection reads now expose the bounded private `analysisHandoff` status when an approved-seed handoff exists. Owner settings expose a read-only purge-readiness inventory, an expiring owner-confirmed metadata-only purge manifest, and a step-up-protected, durable non-destructive purge intent; these snapshot PostgreSQL references/readiness without authorizing deletion and keep cloud/export/backup requirements visible.
+- Private workspace website/API: implemented and production-built; reads are membership-authorized and cache-disabled. Encoded workspace and detail identifiers are decoded exactly once at the page boundary before schema validation. Completed collection reads now expose the bounded private `analysisHandoff` status when an approved-seed handoff exists; the collection page shows queued/dispatching/started states without a duplicate manual start and reserves explicit approved-seed retry for failed handoffs. Owner settings expose a read-only purge-readiness inventory, an expiring owner-confirmed metadata-only purge manifest, and a step-up-protected, durable non-destructive purge intent; these snapshot PostgreSQL references/readiness without authorizing deletion and keep cloud/export/backup requirements visible.
 - Private opportunity navigation: the Overview, Evidence, Competitors, Report, and Plan routes now share one keyboard-accessible tab component with a single `aria-current="page"` marker, so detail pages remain directly navigable without duplicating route markup.
 - Opportunity lifecycle governance: migration `0105` adds a forced-RLS, append-only decision record with identifier-only evidence snapshots, idempotency, stale-state checks, owner-only approval gates, and audit/outbox receipts. The private Overview route renders the current decision history and step-up-protected approve/watch/reject/archive controls; fixture opportunities stay read-only and explicitly synthetic. MCP remains read-only by design.
 - Complaint-cluster curation: migration `0106` adds a forced-RLS, append-only review ledger with stale input hashes, idempotent editor/owner transitions, split/merge lineage identifiers, membership-state updates, and identifier-only snapshots. The private Evidence route exposes bounded cluster labels, membership IDs, review history, and a step-up-protected review form; fixture clusters remain read-only. The deep-research gate now blocks until every current non-synthetic cluster is reviewed or confirmed.
