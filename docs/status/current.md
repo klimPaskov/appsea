@@ -4,7 +4,7 @@
 - Stage: validated fixture product with production-shaped PostgreSQL persistence and a local/CI-proven durable workflow and worker-replacement slice
 - Production-readiness: not complete; see the current [`production-readiness-audit-2026-08-09.md`](production-readiness-audit-2026-08-09.md) and the historical [`production-readiness-audit-2026-08-06.md`](production-readiness-audit-2026-08-06.md)
 - Website: implemented and freshly production-built; the current web package
-  test (245 tests), `pnpm --filter @appsea/web build`, and `pnpm smoke:web`
+  test (247 tests), `pnpm --filter @appsea/web build`, and `pnpm smoke:web`
   pass. The public route now renders only the required `Leaderboard` heading,
   rank/opportunity/complaint/score fields, and synthetic disclosure; private
   research detail remains on opportunity routes. The current full `pnpm test`
