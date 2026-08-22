@@ -33,7 +33,7 @@ but the restored database and dump do not persist. The script refuses
 `NODE_ENV=production` and does not accept a caller-selected database URL.
 
 The verifier currently requires the restored migration history to end at
-`0122`, the checked-in schema head. A previous successful drill through
+`0123`, the checked-in schema head. A previous successful drill through
 `0119` remains historical evidence only; after schema changes, rerun the
 Docker-backed command and record its fresh output before treating backup/restore
 coverage as current.

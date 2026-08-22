@@ -70,6 +70,15 @@ const source = {
     deletionPollIntervalHours: 24,
     retentionAction: 'redact' as const
   },
+  approval: {
+    available: true,
+    requiredReviewerRoles: ['legal', 'privacy', 'security'],
+    approvedReviewerRoles: ['legal'],
+    missingReviewerRoles: ['privacy', 'security'],
+    permissionEvidenceRequired: true,
+    permissionEvidencePresent: false,
+    complete: false
+  },
   enabled: false,
   synthetic: false,
   collectible: false,

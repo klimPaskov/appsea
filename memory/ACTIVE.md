@@ -3,8 +3,8 @@
 ## State
 
 Audit: `docs/status/production-readiness-audit-2026-08-09.md` (8/22).
-Post-patch checks and handoff UI/capture pass; Docker fresh/restore is unavailable.
-`pnpm verify`/local smoke through `0119`; verifier targets `0122`, last proof
+Checks pass; Docker unavailable.
+`pnpm verify`/local smoke through `0119`; verifier targets `0123`, last proof
 `0119`.
 
 AppSea remains fixture-first with production-shaped persistence, workflow,
@@ -15,7 +15,7 @@ CSV/JSON without claiming public market coverage. Optional author keys are
 reduced to workspace-scoped opaque SHA-256 fingerprints; raw identity is never
 staged, and reports disclose author coverage gaps.
 
-Migrations `0027`-`0122` cover policy, deletion/leases, orchestration,
+Migrations `0027`-`0123` cover policy, deletion/leases, orchestration,
 analysis/report/plan governance, cost/alerts, object refs, archival/purge
 intent, redaction, agent/MFA/review, shared collectibility,
 and policy-impact expiry.
@@ -30,8 +30,8 @@ Authentication uses scrypt sessions, membership/RLS, MFA/governance step-up,
 closure/archival, and scoped read-only agent tokens. OIDC, delivery, egress,
 retention, and deployment operations remain external.
 
-Workers have server-clock leases, fenced mutations, retries, recovery, metrics,
-and signed alerts; `alerts:loop` supervises scans, delivery, and outbox status.
+Workers have leases, fencing, retries, recovery, metrics, and signed alerts;
+`alerts:loop` supervises scans/delivery/outbox.
 Scheduler, billing, cloud purge, and provider topology remain open.
 
 Imported complaints, pages, reports, and model output are untrusted data and
@@ -88,7 +88,8 @@ Private report/plan history is cursor-bounded and policy/deletion/redaction
 gated; selected reads and exports remain approval-aware. A real-Postgres
 incomplete-run case is authored, but Docker execution is pending. Migrations
 `0120`/`0121` persist Markdown objects and purge lineage; `0122` adds the
-reviewed owner-import author-fingerprint path and deletion/redaction clearing.
+reviewed owner-import author-fingerprint path and deletion/redaction clearing;
+`0123` projects identity-free source-policy approval roles and permission gaps.
 MCP history is metadata-only; bounded on-demand ZIP v1 is implemented with
 representation-specific audit receipts. Plan ZIPs retain the six compatibility
 files and add a complete 08_spec-compatible `package/` directory assembled

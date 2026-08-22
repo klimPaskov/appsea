@@ -857,11 +857,22 @@ describe('contracts', () => {
         deletionPollIntervalHours: 24,
         retentionAction: 'redact'
       },
+      approval: {
+        available: true,
+        requiredReviewerRoles: ['legal', 'privacy', 'security'],
+        approvedReviewerRoles: ['legal'],
+        missingReviewerRoles: ['privacy', 'security'],
+        permissionEvidenceRequired: true,
+        permissionEvidencePresent: false,
+        complete: false
+      },
       enabled: false,
       synthetic: false,
       collectible: false
     })
     expect(source.collectible).toBe(false)
+    expect(source.approval.missingReviewerRoles).toEqual(['privacy', 'security'])
+    expect(source.approval.permissionEvidencePresent).toBe(false)
     expect(source.health.state).toBe('unknown')
     expect(source.health.freshness).toMatchObject({
       state: 'unknown',

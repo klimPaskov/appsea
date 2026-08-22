@@ -89,7 +89,15 @@ function rowFor(
     policy_payload: policy,
     content_hash: contentHash(policy),
     enabled: overrides.enabled,
-    collectible: overrides.collectible
+    collectible: overrides.collectible,
+    approval_available: true,
+    approval_required_reviewer_roles:
+      policy.sourceType === 'fixture' ? [] : ['legal', 'privacy', 'security'],
+    approval_approved_reviewer_roles: policy.sourceType === 'fixture' ? [] : ['legal'],
+    approval_missing_reviewer_roles: policy.sourceType === 'fixture' ? [] : ['privacy', 'security'],
+    approval_permission_evidence_required: policy.sourceType !== 'fixture',
+    approval_permission_evidence_present: policy.sourceType === 'fixture',
+    approval_complete: policy.sourceType === 'fixture'
   }
 }
 
@@ -165,7 +173,16 @@ describe('source policy registry repository', () => {
       collectible: false,
       synthetic: false,
       quota: pendingPolicy.quota,
-      deletion: pendingPolicy.deletion
+      deletion: pendingPolicy.deletion,
+      approval: {
+        available: true,
+        requiredReviewerRoles: ['legal', 'privacy', 'security'],
+        approvedReviewerRoles: ['legal'],
+        missingReviewerRoles: ['privacy', 'security'],
+        permissionEvidenceRequired: true,
+        permissionEvidencePresent: false,
+        complete: false
+      }
     })
     expect(sources[1]).toMatchObject({
       sourceId: 'fixture-community-feed',
@@ -177,7 +194,16 @@ describe('source policy registry repository', () => {
       sourceId: 'manual-source',
       policyState: null,
       enabled: false,
-      collectible: false
+      collectible: false,
+      approval: {
+        available: false,
+        requiredReviewerRoles: [],
+        approvedReviewerRoles: [],
+        missingReviewerRoles: [],
+        permissionEvidenceRequired: false,
+        permissionEvidencePresent: false,
+        complete: false
+      }
     })
     expect(sources[0]).not.toHaveProperty('policyOwner')
     expect(sources[0]).not.toHaveProperty('contentHash')
@@ -189,6 +215,7 @@ describe('source policy registry repository', () => {
     expect(statement).toContain('production_collection_workflow_jobs')
     expect(statement).toContain('deletion_tombstones')
     expect(statement).toContain('read_source_quota_headroom')
+    expect(statement).toContain('read_source_policy_approval_summary')
     expect(transactionMocks.withAuthenticatedWorkspaceTransaction).toHaveBeenCalledWith(
       {},
       'user:editor',

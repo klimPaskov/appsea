@@ -5,6 +5,12 @@ import { PostgresSourcePolicyRepository } from '@appsea/db/source-policy'
 import { readSession } from '../../../../server/auth-session'
 import { getDatabasePool } from '../../../../server/database'
 import { decodePathParam } from '../../../../server/path-params'
+import {
+  sourceApprovalGap,
+  sourceApprovalProgressLabel,
+  sourceApprovalStatusLabel,
+  sourcePermissionEvidenceLabel
+} from '../../workspace-source-coverage'
 
 export const dynamic = 'force-dynamic'
 
@@ -258,14 +264,31 @@ export default async function WorkspaceSourcesPage({
                       <dt className="label">Policy expiry</dt>
                       <dd>{source.expiresAt ?? 'No expiry recorded'}</dd>
                     </div>
+                    <div>
+                      <dt className="label">Policy approval</dt>
+                      <dd>{sourceApprovalStatusLabel(source)}</dd>
+                    </div>
+                    <div>
+                      <dt className="label">Review progress</dt>
+                      <dd>{sourceApprovalProgressLabel(source)}</dd>
+                    </div>
+                    <div>
+                      <dt className="label">Permission evidence</dt>
+                      <dd>{sourcePermissionEvidenceLabel(source)}</dd>
+                    </div>
                   </dl>
                   <div className="source-coverage-notes">
                     <p className="label">Coverage notes</p>
                     {source.coverageNotes.length > 0 ? (
                       <ul>
+                        {sourceApprovalGap(source) ? <li>{sourceApprovalGap(source)}</li> : null}
                         {source.coverageNotes.map((note) => (
                           <li key={note}>{note}</li>
                         ))}
+                      </ul>
+                    ) : sourceApprovalGap(source) ? (
+                      <ul>
+                        <li>{sourceApprovalGap(source)}</li>
                       </ul>
                     ) : (
                       <p className="muted-note">No additional source-specific gap is recorded.</p>

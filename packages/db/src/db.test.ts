@@ -135,7 +135,8 @@ describe('database foundation', () => {
       '0119',
       '0120',
       '0121',
-      '0122'
+      '0122',
+      '0123'
     ])
     expect(migrations[0]?.checksum).toMatch(/^[a-f0-9]{64}$/)
     expect(migrations[0]?.sql).toContain('CREATE TABLE appsea.evidence_records')
@@ -428,6 +429,26 @@ describe('database foundation', () => {
     expect(authorFingerprintMigration?.sql).toContain('manual-owner-import-v3')
     expect(authorFingerprintMigration?.sql).toContain('workspace-scoped-sha256')
     expect(authorFingerprintMigration?.sql).toContain('authorFingerprint')
+    const sourceApprovalSummaryMigration = migrations.find(
+      (migration) => migration.version === '0123'
+    )
+    expect(sourceApprovalSummaryMigration?.sql).toContain(
+      'CREATE OR REPLACE FUNCTION appsea.read_source_policy_approval_summary'
+    )
+    expect(sourceApprovalSummaryMigration?.sql).toContain(
+      'source policy approval summary requires the runtime service role'
+    )
+    expect(sourceApprovalSummaryMigration?.sql).toContain(
+      'do not turn a nullable policy join into a registry failure'
+    )
+    expect(sourceApprovalSummaryMigration?.sql).toContain('SECURITY DEFINER')
+    expect(sourceApprovalSummaryMigration?.sql).toContain('permission_evidence_present')
+    expect(sourceApprovalSummaryMigration?.sql).toContain(
+      'REVOKE ALL ON FUNCTION appsea.read_source_policy_approval_summary'
+    )
+    expect(sourceApprovalSummaryMigration?.sql).toContain(
+      'GRANT EXECUTE ON FUNCTION appsea.read_source_policy_approval_summary'
+    )
     const productionAdmissionReleaseMigration = migrations.find(
       (migration) => migration.version === '0112'
     )

@@ -43,6 +43,13 @@ interface SourcePolicyRow extends QueryResultRow {
 interface SourcePolicyRegistryRow extends SourcePolicyRow {
   enabled: boolean
   collectible: boolean
+  approval_available: boolean | null
+  approval_required_reviewer_roles: string[] | null
+  approval_approved_reviewer_roles: string[] | null
+  approval_missing_reviewer_roles: string[] | null
+  approval_permission_evidence_required: boolean | null
+  approval_permission_evidence_present: boolean | null
+  approval_complete: boolean | null
   health_state: WorkspaceSourceHealthReadModel['state']
   health_last_attempt_at: Date | string | null
   health_last_observed_at: Date | string | null
@@ -204,6 +211,15 @@ function mapWorkspaceSource(row: SourcePolicyRegistryRow) {
     freshness: policy?.freshness ?? null,
     quota: policy?.quota ?? null,
     deletion: policy?.deletion ?? null,
+    approval: {
+      available: row.approval_available ?? false,
+      requiredReviewerRoles: row.approval_required_reviewer_roles ?? [],
+      approvedReviewerRoles: row.approval_approved_reviewer_roles ?? [],
+      missingReviewerRoles: row.approval_missing_reviewer_roles ?? [],
+      permissionEvidenceRequired: row.approval_permission_evidence_required ?? false,
+      permissionEvidencePresent: row.approval_permission_evidence_present ?? false,
+      complete: row.approval_complete ?? false
+    },
     enabled: row.enabled,
     synthetic,
     collectible: row.collectible,
@@ -421,6 +437,15 @@ export class PostgresSourcePolicyRepository {
                   quota_headroom.window_ends_at AS quota_window_ends_at,
                   quota_headroom.requests_used AS quota_requests_used,
                   quota_headroom.requests_remaining AS quota_requests_remaining,
+                  approval_summary.available AS approval_available,
+                  approval_summary.required_reviewer_roles AS approval_required_reviewer_roles,
+                  approval_summary.approved_reviewer_roles AS approval_approved_reviewer_roles,
+                  approval_summary.missing_reviewer_roles AS approval_missing_reviewer_roles,
+                  approval_summary.permission_evidence_required
+                    AS approval_permission_evidence_required,
+                  approval_summary.permission_evidence_present
+                    AS approval_permission_evidence_present,
+                  approval_summary.complete AS approval_complete,
                   COALESCE((
                     source.lifecycle_state = 'active'
                     AND policy.policy_version = source.current_policy_version
@@ -528,6 +553,19 @@ export class PostgresSourcePolicyRepository {
                     policy.policy_version
                   ) headroom
              ) quota_headroom ON true
+             LEFT JOIN LATERAL (
+                SELECT summary.available,
+                       summary.required_reviewer_roles,
+                       summary.approved_reviewer_roles,
+                       summary.missing_reviewer_roles,
+                       summary.permission_evidence_required,
+                       summary.permission_evidence_present,
+                       summary.complete
+                  FROM appsea.read_source_policy_approval_summary(
+                    policy.source_id,
+                    policy.policy_version
+                  ) summary
+             ) approval_summary ON true
             ORDER BY source.display_name, source.source_id`
         )
         return result.rows.map(mapWorkspaceSource)

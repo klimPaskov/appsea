@@ -419,7 +419,7 @@ in-memory/filesystem adapters plus a signed S3-compatible adapter wired through
 the shared environment factory. Migration `0043` adds the durable
 invalidated-output purge queue. Provider encryption, lifecycle/versioning,
 least-privilege credential deployment, destructive workspace/object/backup
-purge remain open. The backup/restore verifier targets migration `0122`, while
+purge remain open. The backup/restore verifier targets migration `0123`, while
 the last successful local proof remains historical through `0119`; the Docker
 fresh/upgrade rerun and provider encryption, lifecycle, and restore evidence
 remain open. Owner workspace archival and

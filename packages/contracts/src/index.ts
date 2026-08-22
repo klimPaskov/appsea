@@ -1267,6 +1267,22 @@ export const workspaceSourceHealthReadModelSchema = z
   })
   .strict()
 
+/**
+ * Safe private source-policy approval progress. Reviewer identities, notes,
+ * approval references, and permission locators never cross this boundary.
+ */
+export const workspaceSourceApprovalSummarySchema = z
+  .object({
+    available: z.boolean(),
+    requiredReviewerRoles: z.array(sourcePolicyReviewerRoleSchema).max(4),
+    approvedReviewerRoles: z.array(sourcePolicyReviewerRoleSchema).max(4),
+    missingReviewerRoles: z.array(sourcePolicyReviewerRoleSchema).max(4),
+    permissionEvidenceRequired: z.boolean(),
+    permissionEvidencePresent: z.boolean(),
+    complete: z.boolean()
+  })
+  .strict()
+
 /** Safe private source-registry metadata; policy payloads and review identities stay out. */
 export const workspaceSourceReadModelSchema = z
   .object({
@@ -1297,6 +1313,7 @@ export const workspaceSourceReadModelSchema = z
     freshness: sourceFreshnessPolicySchema.nullable().default(null),
     quota: sourceQuotaSchema.nullable(),
     deletion: sourceDeletionPolicySchema.nullable(),
+    approval: workspaceSourceApprovalSummarySchema,
     enabled: z.boolean(),
     synthetic: z.boolean(),
     collectible: z.boolean(),
@@ -8382,6 +8399,7 @@ export type WorkspaceSourceFreshnessReadModel = z.infer<
   typeof workspaceSourceFreshnessReadModelSchema
 >
 export type WorkspaceSourceHealthReadModel = z.infer<typeof workspaceSourceHealthReadModelSchema>
+export type WorkspaceSourceApprovalSummary = z.infer<typeof workspaceSourceApprovalSummarySchema>
 export type WorkspaceSourceReadModel = z.infer<typeof workspaceSourceReadModelSchema>
 export type SourceDeletionEvent = z.infer<typeof sourceDeletionEventSchema>
 export type EvidenceRedactionInput = z.infer<typeof evidenceRedactionInputSchema>

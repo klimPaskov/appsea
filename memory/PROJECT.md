@@ -15,13 +15,12 @@ ranked opportunities, and coding-agent planning packages.
 - A future Tauri shell will reuse the website contract.
 - `packages/db` owns PostgreSQL 18 migrations, transaction-scoped workspace RLS, and persistence repositories.
 - Local and CI PostgreSQL use a no-login owner, separate migrator, and non-owner runtime role. Production provisioning remains external and unimplemented.
-- `scripts/run_db_backup_restore.mjs` checks RLS/least privilege and targets
-  head `0122`; last successful proof is `0119`; Docker rerun pending. It is not
-  provider HA/restore evidence.
+- Backup/restore checks RLS/least privilege at head `0123`; last proof is
+  `0119`; Docker rerun pending. It is not provider HA/restore evidence.
 - Temporal/client hashing belongs to `packages/workflows`; worker activities to
   `apps/worker`; RLS persistence to `packages/db`. Local proof passes through
-  `0119`; `0120`/`0121`/`0122` need a fresh/upgrade rerun; deployment security, HA, object
-  purge, and workflow operations remain external.
+  `0119`; `0120`-`0123` need a fresh/upgrade rerun; deployment/HA/purge/ops
+  remain external.
 - Campaign cancellation is a durable control boundary: migrations `0070`/`0071` store owner/editor intent before Temporal for multi-source and one-source runs; the worker retries external cancellation, while each workflow owns safe reconciliation.
 - Private campaign history uses strict bounded cursor pages ordered by request timestamp plus stable identifier; only the validated boundary crosses private APIs. The public leaderboard is unaffected.
 - Public `/leaderboard` and `/` share a sparse database-free view; UI captures
@@ -84,6 +83,8 @@ ranked opportunities, and coding-agent planning packages.
   fields remain database-owned. Migration `0111` adds optional
   `permissionEvidenceRequired` policy metadata and stores a required external
   permission/exception reference on immutable approval rows when declared.
+- `0123` exposes identity-free source-policy role, permission evidence, and
+  completion to coverage.
 - `apps/worker` provides deterministic, secret-free source-policy review
   manifests for CFPB and Stack Exchange. The Stack Exchange packet records
   first-party API/AUP/attribution/licensing evidence and the written-consent or

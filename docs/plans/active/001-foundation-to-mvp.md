@@ -25,7 +25,7 @@ Status: production-shaped foundation implemented and validated locally; producti
 
 Implemented:
 
-- PostgreSQL 18 schema and one hundred twenty-two forward, checksummed migrations
+- PostgreSQL 18 schema and one hundred twenty-three forward, checksummed migrations
 - normalized source, evidence, complaint, cluster, competitor, opportunity, score, report, plan, audit, cost, deletion, outbox, and lineage tables
 - no-login owner, separate migrator, and least-privilege runtime role contract
 - forced workspace RLS and transaction-scoped workspace context
@@ -88,6 +88,10 @@ Implemented:
   author keys are immediately reduced to workspace-scoped opaque SHA-256
   fingerprints, source deletion/redaction clears them, and reports expose
   unique-author coverage only when the retained signal is complete enough.
+- Migration `0123` adds a service-role-only source-policy approval summary for
+  private source coverage. It returns only bounded required/approved/missing
+  role names, permission-evidence presence, and completion; reviewer identities,
+  notes, references, hashes, and policy payloads stay outside the read boundary.
 - migration `0103_competitor_observation_contrary_purpose.sql` keeps the same
   provenance/evidence/review trigger while accepting the explicit private
   `contrary-evidence` collection purpose.
@@ -241,7 +245,8 @@ a private ranking index. Legacy score rows remain readable and keep `score` as
 their raw-score compatibility field. The 2026-08-06 local fresh migration and
 backup/restore drills pass through `0119`; migrations `0120` and `0121` add
 report-Markdown persistence and purge-gate lineage, while `0122` adds the
-privacy-safe owner-import author-fingerprint boundary; these still need a Docker-backed
+privacy-safe owner-import author-fingerprint boundary and `0123` adds the
+identity-free source-policy approval summary; these still need a Docker-backed
 fresh/upgrade run. Provider backup, HA, retention, and production restore remain
 deployment work.
 
@@ -450,6 +455,10 @@ workspace-local connector-health projection derived from completed collection
 jobs, retained active source items, and pending deletion tombstones. It uses
 fixed state/note values and counters only; it does not expose raw failure text,
 credentials, payloads, reviewer identity, or retry/activation controls.
+Migration `0123` extends this read with a service-role-only approval summary:
+bounded required/approved/missing reviewer roles, permission-evidence presence,
+and completion are visible to private members without exposing identities,
+notes, references, hashes, or policy payloads.
 
 The source-health follow-up adds optional reviewed freshness metadata without
 rewriting legacy policy JSONB or hashes. Scheduled policies declare an expected
