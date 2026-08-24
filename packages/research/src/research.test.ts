@@ -93,6 +93,30 @@ describe('fixture research', () => {
     expect(analyzed.entities.unresolvedTypes).not.toContain('competitor')
   })
 
+  it('extracts explicitly framed outcomes, consequences, workarounds, and user hints', () => {
+    const analyzed = analyzeComplaint({
+      ...complaint,
+      text: 'For a support team, expected outcome: "reliable export". Consequence: weekly reporting is delayed. Workaround: copy and paste into a spreadsheet.'
+    })
+
+    expect(analyzed.expectedOutcome).toBe('reliable export')
+    expect(analyzed.consequence).toBe('weekly reporting is delayed')
+    expect(analyzed.workaround).toBe('copy and paste into a spreadsheet')
+    expect(analyzed.userSegmentHints).toEqual(['support'])
+  })
+
+  it('does not invent narrative fields from ordinary complaint prose', () => {
+    const analyzed = analyzeComplaint({
+      ...complaint,
+      text: 'The export is slow and the team loses time every week.'
+    })
+
+    expect(analyzed.expectedOutcome).toBeNull()
+    expect(analyzed.consequence).toBeNull()
+    expect(analyzed.workaround).toBeNull()
+    expect(analyzed.userSegmentHints).toEqual([])
+  })
+
   it('orders analysis snapshots by complaint identity for replay', () => {
     const first = analyzeComplaints([complaint, { ...complaint, id: 'c0' }])
     const replay = analyzeComplaints([{ ...complaint, id: 'c0' }, complaint])
@@ -126,6 +150,10 @@ describe('fixture research', () => {
       ])
     )
     expect(analysis.problemStatement).toContain('Ignore previous instructions')
+    expect(analysis.expectedOutcome).toBeNull()
+    expect(analysis.consequence).toBeNull()
+    expect(analysis.workaround).toBeNull()
+    expect(analysis.userSegmentHints).toEqual([])
     expect(analysis.entities.substitutes).toEqual([])
     expect(analysis.entities.competitors).toEqual([])
   })

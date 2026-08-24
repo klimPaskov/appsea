@@ -74,13 +74,17 @@
   workspace-scoped opaque author fingerprints when an authorized export
   provides them; private reports show available/partial/unavailable author
   coverage, while fixture and third-party paths remain explicit gaps. Analysis
-  v0.3.0 also resolves only explicitly labeled, bounded source-context
+  v0.4.0 also resolves only explicitly labeled, bounded source-context
   substitute/competitor names; these complaint-level mentions never become
   source-backed competitive coverage without the reviewed observation gate.
-- Complaint analysis safety: `complaint-analysis-v0.3.0` marks bounded
+- Complaint analysis safety: `complaint-analysis-v0.4.0` marks bounded
   instruction-like source text with deterministic `manipulationRisk` and
   `policyFlags`, keeps evidence/provenance retained, labels flagged rows for
   human review in private reads, and exposes a production coverage gap. The
+  deterministic analyzer also retains explicitly framed outcomes,
+  consequences, workarounds, and user hints, while explicit source-context
+  substitute/competitor mentions remain separate from reviewed competitive
+  coverage. The
   provider-neutral model gateway now runs inside production analysis with fixed
   trust-tagged segments, redaction, allowlists, budgets, replay protection, and
   bounded non-sensitive summaries; deterministic/human-corrected analysis

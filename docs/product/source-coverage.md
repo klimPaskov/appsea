@@ -85,8 +85,9 @@ package validation, but it cannot establish market coverage or activate a
 source.
 
 Each retained complaint now also exposes a versioned derived-analysis snapshot:
-classification type, severity, recurrence and switching signals, entity
-confidence, and unresolved competitor/substitute dimensions. A bounded
+classification type, explicit outcome/consequence/workaround/user-hint fields,
+severity, recurrence and switching signals, entity confidence, and unresolved
+competitor/substitute dimensions. A bounded
 source-context extractor can resolve a substitute or competitor name only when
 the complaint explicitly labels it (for example, a quoted alternative or
 delimiter-bound `competitor:` value); ordinary prose and safety-flagged text

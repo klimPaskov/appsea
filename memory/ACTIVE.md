@@ -5,13 +5,12 @@
 Audit: `docs/status/production-readiness-audit-2026-08-09.md` (8/22); checks
 pass, Docker unavailable. `pnpm verify`/local smoke through `0119`; verifier
 targets `0123`, last proof `0119`.
-
 AppSea remains fixture-first with production-shaped persistence, workflows,
 source policy, private workspaces, reports/plans, and maintenance; the public
 leaderboard is synthetic and no source enabled. Reviewed
 `manual-owner-import-v3` supports tenant-private owner CSV/JSON without public
 market claims. Optional author keys become workspace-scoped opaque SHA-256
-fingerprints; raw identity is never staged, and reports disclose coverage gaps.
+fingerprints; raw identity is never staged, and reports disclose gaps.
 
 Migrations `0027`-`0123` cover policy, deletion/leases, orchestration,
 analysis/report/plan governance, cost/alerts, object refs, archival/purge,
@@ -25,16 +24,16 @@ coverage gaps, approval state, synthetic disclosure, and object references.
 
 Authentication uses scrypt sessions, membership/RLS, MFA/governance step-up,
 closure/archival, and scoped read-only agent tokens. OIDC, delivery, egress,
-retention, and deployment remain external.
-Workers have leases, fencing, retries, recovery, metrics, and signed alerts;
+retention, and deployment remain external. Workers have leases, fencing,
+retries, recovery, metrics, and alerts;
 `alerts:loop` supervises scans/delivery. Scheduler, billing, cloud purge, and
-provider topology remain open.
+provider ops remain open.
 
 Imported complaints, pages, reports, and model output are untrusted data and
 cannot update code, skills, instructions, permissions, or repository memory.
 
 Manual owner-import (`0089`, `0102`–`0104`) is the active non-fixture path:
-bounded, normalized, PII-scrubbed tenant-private CSV/JSON with a batch ID
+bounded, normalized, PII-scrubbed tenant-private CSV/JSON with batch ID
 in Temporal. Durable quota ledgers gate connectors; the in-memory map is
 test-only. Confirmed competitor observations enter only the next reviewed
 analysis with hash lineage and masked restricted claims; rejection/deletion
@@ -65,12 +64,12 @@ reconstruction, snapshots, and source filtering (including owner-import
 published/captured fallback). Filtered runs emit coverage warnings; private
 reads show query/window beside gaps and legacy snapshots remain replayable.
 
-Complaint analysis v0.3.0 flags instruction-like imported text with
+Complaint analysis v0.4.0 flags instruction-like imported text with
 deterministic `manipulationRisk`/`policyFlags`, preserves provenance, labels
-private rows for review, and adds a coverage gap. It resolves only explicitly
-labeled, bounded source-context substitute/competitor names; these mentions
-are not source-backed competitive claims. Imported content remains data; no
-migration is needed. See
+private rows for review, and adds a coverage gap. It retains explicitly framed
+outcomes, consequences, workarounds, user hints, and bounded source-context
+substitute/competitor names; these are not source-backed claims. Imported
+content remains data; no migration is needed. See
 `docs/status/imported-content-safety-completion-report-2026-08-06.md`.
 
 `@appsea/model-gateway` is wired into production analysis with workspace-bound

@@ -29,7 +29,7 @@ import {
 } from '@appsea/contracts'
 import { buildResearchQualitySnapshot } from './quality-benchmark'
 
-export const COMPLAINT_ANALYSIS_VERSION = 'complaint-analysis-v0.3.0'
+export const COMPLAINT_ANALYSIS_VERSION = 'complaint-analysis-v0.4.0'
 export const COMPLAINT_DEDUPLICATION_VERSION = 'complaint-deduplication-v1.0.0'
 
 export interface DeepResearchGateEvaluation {
@@ -181,6 +181,62 @@ function paymentSignalFor(category: string, text: string): ComplaintAnalysis['pa
   return 'unknown'
 }
 
+const explicitExpectedOutcomePatterns: ReadonlyArray<RegExp> = [
+  /\b(?:expected outcome|desired outcome|desired result)\s*[:=-]\s*["“]([^"”]{2,400})["”]/gi,
+  /\b(?:expected outcome|desired outcome|desired result)\s*[:=-]\s*([^,.;!?]{2,400})/gi,
+  /\b(?:i|we)\s+(?:need|want|would like|wish(?: there was)?)\s+(?:a|an|the)?\s*(?:way|option|ability)\s+to\s+([^.;!?]{2,400})/gi
+]
+
+const explicitConsequencePatterns: ReadonlyArray<RegExp> = [
+  /\b(?:consequence|impact|business impact|result)\s*[:=-]\s*["“]([^"”]{2,400})["”]/gi,
+  /\b(?:consequence|impact|business impact|result)\s*[:=-]\s*([^,.;!?]{2,400})/gi,
+  /\b(?:which means|resulting in|causing)\s+([^.;!?]{2,400})/gi
+]
+
+const explicitWorkaroundPatterns: ReadonlyArray<RegExp> = [
+  /\b(?:workaround|current workaround|temporary fix)\s*[:=-]\s*["“]([^"”]{2,400})["”]/gi,
+  /\b(?:workaround|current workaround|temporary fix)\s*[:=-]\s*([^,.;!?]{2,400})/gi,
+  /\b(?:i|we)\s+(?:currently\s+)?(?:have|has)\s+to\s+([^.;!?]{2,400})/gi,
+  /\b(?:i|we)\s+(?:currently\s+)?(?:manually|copy and paste)\s+([^.;!?]{2,400})/gi
+]
+
+const explicitUserSegmentPatterns: ReadonlyArray<RegExp> = [
+  /\b(?:for|from|as)\s+(?:a|an|the)?\s*(customer success|small business|team lead|support|operations?|developer|engineering|finance|sales|marketing|administrator|admin|enterprise|startup|freelancer|agency|founder|manager)(?:\s+(?:team|user|users|staff|role))?\b/gi
+]
+
+function normalizeExplicitPhrase(value: string): string {
+  return normalizeComplaintText(value)
+    .replace(/^[\s"'“”`]+|[\s"'“”`]+$/g, '')
+    .replace(/[.,;!?]+$/g, '')
+    .trim()
+}
+
+function extractExplicitPhrases(
+  text: string,
+  patterns: ReadonlyArray<RegExp>,
+  maxCount: number
+): string[] {
+  const values: string[] = []
+  const seen = new Set<string>()
+  for (const pattern of patterns) {
+    pattern.lastIndex = 0
+    for (const match of text.matchAll(pattern)) {
+      const value = normalizeExplicitPhrase(match[1] ?? '')
+      if (!value || value.length > 2_000) continue
+      const key = lower(value)
+      if (seen.has(key)) continue
+      seen.add(key)
+      values.push(value)
+      if (values.length >= maxCount) return values
+    }
+  }
+  return values
+}
+
+function firstExplicitPhrase(text: string, patterns: ReadonlyArray<RegExp>): string | null {
+  return extractExplicitPhrases(text, patterns, 1)[0] ?? null
+}
+
 function entityReference(
   entityType: ComplaintEntityReference['entityType'],
   surfaceText: string
@@ -297,6 +353,18 @@ export function analyzeComplaint(complaint: Complaint): ComplaintAnalysis {
   const contextEntities = safetyFlagged
     ? { substitutes: [], competitors: [] }
     : extractExplicitContextEntities(normalizedText)
+  const expectedOutcome = safetyFlagged
+    ? null
+    : firstExplicitPhrase(normalizedText, explicitExpectedOutcomePatterns)
+  const consequence = safetyFlagged
+    ? null
+    : firstExplicitPhrase(normalizedText, explicitConsequencePatterns)
+  const workaround = safetyFlagged
+    ? null
+    : firstExplicitPhrase(normalizedText, explicitWorkaroundPatterns)
+  const userSegmentHints = safetyFlagged
+    ? []
+    : extractExplicitPhrases(normalizedText, explicitUserSegmentPatterns, 10)
   const unresolvedTypes: ComplaintAnalysis['entities']['unresolvedTypes'] = [
     ...(product.canonicalName === null ? (['product'] as const) : []),
     ...(company.canonicalName === null ? (['company'] as const) : []),
@@ -319,13 +387,13 @@ export function analyzeComplaint(complaint: Complaint): ComplaintAnalysis {
     classification,
     complaintType,
     problemStatement: normalizedText,
-    expectedOutcome: null,
+    expectedOutcome,
     observedOutcome: normalizedText,
-    consequence: null,
+    consequence,
     affectedWorkflow: normalizeComplaintText(complaint.feature),
-    workaround: null,
+    workaround,
     featureMentions: uniqueStrings([complaint.feature]),
-    userSegmentHints: [],
+    userSegmentHints,
     severity,
     recurrence: safetyFlagged ? 'unknown' : recurrenceFor(complaint.category, normalizedText),
     switchingIntent: safetyFlagged

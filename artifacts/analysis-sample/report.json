@@ -4,7 +4,7 @@
   "synthetic": false,
   "testOnly": true,
   "transport": "offline-sample",
-  "artifactId": "analysis:40c46ee53bebfb8eb52cb720391379cb",
+  "artifactId": "analysis:0dacc9dcbb9a9b205540e5f2c16ff5c6",
   "generatedAt": "2026-07-26T00:00:00.000Z",
   "opportunity": {
     "id": "opportunity:cfpb-offline-sample",
@@ -104,7 +104,7 @@
             "source-policy-representation-applied"
           ],
           "reviewState": "unreviewed",
-          "extractionVersion": "complaint-analysis-v0.3.0",
+          "extractionVersion": "complaint-analysis-v0.4.0",
           "derivation": {
             "skillVersion": "appsea-complaint-analysis-v1",
             "modelVersion": "deterministic-rules-v1",
@@ -186,7 +186,7 @@
             "source-policy-representation-applied"
           ],
           "reviewState": "unreviewed",
-          "extractionVersion": "complaint-analysis-v0.3.0",
+          "extractionVersion": "complaint-analysis-v0.4.0",
           "derivation": {
             "skillVersion": "appsea-complaint-analysis-v1",
             "modelVersion": "deterministic-rules-v1",
@@ -268,7 +268,7 @@
             "source-policy-representation-applied"
           ],
           "reviewState": "unreviewed",
-          "extractionVersion": "complaint-analysis-v0.3.0",
+          "extractionVersion": "complaint-analysis-v0.4.0",
           "derivation": {
             "skillVersion": "appsea-complaint-analysis-v1",
             "modelVersion": "deterministic-rules-v1",

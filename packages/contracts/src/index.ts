@@ -2567,9 +2567,12 @@ export const productionPolicySnapshotSchema = z
   })
 
 /**
- * Product, competitor, contrary-signal, and score inputs are reviewed seed
- * data. They are never inferred from complaint text by the deterministic
- * analysis composer.
+ * Product, competitor, contrary-signal, and score inputs in a production
+ * opportunity seed are reviewed seed data. They are never inferred from
+ * complaint text by the deterministic opportunity composer. Complaint-level
+ * analysis may retain separately bounded, explicitly labelled source-context
+ * entity mentions, but those mentions are not seed or source-backed market
+ * claims.
  */
 export const productionOpportunitySeedReviewSchema = z
   .object({

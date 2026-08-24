@@ -147,8 +147,12 @@ and production deployment controls remain absent.
 
 Complaint observations now carry a deterministic, versioned classification and
 entity-resolution snapshot with severity and uncertainty fields. The rules are
-not a trained classifier and intentionally leave substitute/competitor
-resolution unresolved until separately reviewed permitted research is available.
+not a trained classifier; v0.4.0 also retains expected outcomes, consequences,
+workarounds, user hints, and explicitly labelled source-context
+substitute/competitor names when the text supports them. These complaint-level
+mentions remain inference, not reviewed competitive relationships, and all
+unmentioned dimensions stay unresolved until separately reviewed permitted
+research is available.
 Manual-import v3 can count only explicit workspace-scoped opaque author
 fingerprints; fixture, third-party, and missing-key observations remain visible
 as unavailable/partial author coverage rather than inferred people. Private opportunity reads now expose a

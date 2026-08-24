@@ -9,7 +9,8 @@ AppSea stores deterministic complaint classification and entity-resolution
 output as a validated `analysis_snapshot` on each complaint observation. The
 source complaint and evidence identifiers remain immutable; a derived
 snapshot carries its extraction, skill, model, and prompt versions plus human
-review state.
+review state. Explicitly framed outcomes, consequences, workarounds, and user
+hints are retained only when bounded source text supports them.
 
 The snapshot resolves only what the retained source fields support. Products,
 companies, and features can be exact or normalized matches. A bounded
