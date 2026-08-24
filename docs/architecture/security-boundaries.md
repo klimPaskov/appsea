@@ -43,6 +43,11 @@ receipts. It deliberately does not purge retained objects; only the later
 source-deletion path can transition an expired output to destructive
 `invalidated` handling. Private analysis/report/plan/opportunity/export reads
 repeat the helper so a stale output is not exposed while maintenance is queued.
+Migration `0123` adds a service-role-only source-policy approval summary for
+the private source registry. It projects only bounded reviewer-role names,
+permission-evidence booleans, and completion; null policy joins return an
+unavailable summary, while identities, notes, references, hashes, and payloads
+remain outside the authenticated read boundary.
 The v2 `competitor-research` and `contrary-evidence` purposes only enable a
 private observation write linked to retained evidence. Observation claims are
 unreviewed by default and require editor/owner review; they never bypass the

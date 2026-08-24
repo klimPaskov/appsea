@@ -94,6 +94,13 @@ every declared role, same-hash independent evidence, distinct identities, and
 required permission evidence; `collectible` additionally requires the active,
 current, approved, unexpired non-fixture source state.
 
+The authenticated source registry uses a separate service-role-only projection
+from migration `0123`. It exposes only bounded role names, permission-evidence
+presence, and completion, so private members can see missing review gaps without
+seeing reviewer identities, notes, approval references, hashes, or policy
+payloads. An unregistered source is shown as unavailable rather than causing a
+registry read failure; review and activation remain operator-only actions.
+
 ```powershell
 $env:APPSEA_SOURCE_POLICY_ACTION = 'approve'
 $env:APPSEA_CFPB_POLICY_VERSION = 'cfpb-2026-07-v1'

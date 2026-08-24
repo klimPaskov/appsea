@@ -35,6 +35,15 @@ model. Fixture sources are labeled synthetic and are never collectible
 production sources. The route is private, membership-authorized, no-store, and
 read-only; health cannot start or retry collection.
 
+Migration `0123` adds a service-role-only approval summary to this projection.
+Private members can see whether the summary is available, the bounded required,
+approved, and missing reviewer roles, permission-evidence requirement/presence,
+and review completion. Missing roles and permission evidence are rendered as
+coverage gaps; reviewer identities, notes, approval references, hashes, and
+policy payloads never cross the authenticated boundary. A source without a
+current policy remains visible as an unavailable approval summary rather than
+failing the registry read.
+
 The private health projection also reports freshness separately from connector
 health. A reviewed `scheduled` policy produces `fresh` or `stale` from the
 latest retained source observation and its expected interval plus allowed
