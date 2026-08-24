@@ -38,11 +38,12 @@ Implemented:
   recorded drill restores a disposable dump through migration `0119` and verifies
   forced workspace RLS plus runtime/maintenance privileges without accepting a
   remote URL
-- one-command loopback private-workspace stack with migration, worker, and web
-  startup (`pnpm dev:local`), including disposable MinIO bucket initialization
-  and signed S3-compatible object-store configuration
+- one-command loopback private-workspace stack with migration, worker,
+  maintenance/alert supervisors, and web startup (`pnpm dev:local`), including
+  disposable MinIO bucket initialization and signed S3-compatible object-store
+  configuration
 - end-to-end loopback stack smoke (`pnpm verify:local-stack`) covering
-  dependency readiness, migrations, worker/web startup, authenticated
+  dependency readiness, migrations, worker/maintenance/alert/web startup, authenticated
   private-workspace signup, owner-authorized manual intake through durable
   consumption, every private workspace page with encoded identifiers, auth
   pages, fixture disclosure, and Compose cleanup in CI; the smoke row is not

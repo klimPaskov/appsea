@@ -11,12 +11,13 @@ services and development adapters:
   the signed S3-compatible adapter and the `appsea-local` bucket
 - the Next.js web process at `http://localhost:3000`
 - the durable fixture/production worker in development mode
+- the lease-backed maintenance and alert supervisors in development mode
 
 The command starts PostgreSQL, Temporal, and MinIO, waits for each service
 health check, runs the disposable `minio-init` one-shot service to create the
 bucket idempotently, applies all forward migrations through the dedicated
-migrator role, then starts the worker and web process with loopback-only
-settings. The local S3 endpoint uses fixed development credentials, path-style
+migrator role, then starts the worker, maintenance/alert supervisors, and web
+process with loopback-only settings. The local S3 endpoint uses fixed development credentials, path-style
 addressing, and the test-only insecure-localhost allowance required for HTTP;
 these values are never suitable for production. The command deliberately
 removes inherited filesystem/cloud object-store, remote Temporal, OIDC,
@@ -33,8 +34,9 @@ pnpm install
 pnpm dev:local
 ```
 
-Open `http://localhost:3000`. Press Ctrl+C to stop the web and worker
-processes. The dependency containers remain available for the next run:
+Open `http://localhost:3000`. Press Ctrl+C to stop the web, worker,
+maintenance, and alert processes. The dependency containers remain available
+for the next run:
 
 ```bash
 docker compose -f infra/local/compose.yaml down

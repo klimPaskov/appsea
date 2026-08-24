@@ -85,6 +85,19 @@ export function localEnvironment(parent = process.env) {
   }
 }
 
+/**
+ * Long-lived local processes that share the loopback dependency stack. Keep
+ * this list explicit so the dry-run contract and shutdown path cannot drift.
+ */
+export function localProcessCommands() {
+  return [
+    ['--filter', '@appsea/worker', 'workflow:worker'],
+    ['--filter', '@appsea/worker', 'maintenance:loop'],
+    ['--filter', '@appsea/worker', 'alerts:loop'],
+    ['dev:web']
+  ]
+}
+
 function pnpmCommand() {
   return process.platform === 'win32' ? (process.env.ComSpec ?? 'cmd.exe') : 'pnpm'
 }
@@ -203,13 +216,14 @@ export function printHelp() {
 
 Starts the existing loopback PostgreSQL, Temporal, and MinIO services, creates
 the local S3-compatible bucket, applies forward migrations with the dedicated
-local migrator role, then runs the web app and durable worker in development
-mode.
+local migrator role, then runs the web app, durable worker, maintenance
+supervisor, and alert supervisor in development mode.
 
 Usage: pnpm dev:local [--dry-run]
 
 The command never uses production endpoints or cloud object storage. Stop the
-web/worker with Ctrl+C; stop local dependencies with:
+web, worker, maintenance, and alert processes with Ctrl+C; stop local
+dependencies with:
   docker compose -f infra/local/compose.yaml down
 `)
 }
@@ -232,6 +246,8 @@ async function main() {
             'docker compose run --rm --no-deps minio-init',
             'pnpm db:migrate',
             'pnpm --filter @appsea/worker workflow:worker',
+            'pnpm --filter @appsea/worker maintenance:loop',
+            'pnpm --filter @appsea/worker alerts:loop',
             'pnpm dev:web'
           ],
           endpoints: {
@@ -267,10 +283,9 @@ async function main() {
   await run('docker', ['compose', '-f', composeFile, 'run', '--rm', '--no-deps', 'minio-init'])
   await runMigration(environment)
 
-  const children = [
-    start(pnpmCommand(), pnpmArgs(['--filter', '@appsea/worker', 'workflow:worker']), environment),
-    start(pnpmCommand(), pnpmArgs(['dev:web']), environment)
-  ]
+  const children = localProcessCommands().map((args) =>
+    start(pnpmCommand(), pnpmArgs(args), environment)
+  )
   let stopping = false
   const stop = async (exitCode) => {
     if (stopping) return

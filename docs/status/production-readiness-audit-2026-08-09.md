@@ -41,6 +41,11 @@ presented as public market research.
   contiguous SQL migrations ending at `0123`; it is static repository proof
   only and does not replace Docker-backed fresh/upgrade or backup/restore
   execution.
+- `node --test scripts/dev_local.test.mjs` and `pnpm dev:local --dry-run` —
+  passed the local process contract for the durable worker, lease-backed
+  maintenance supervisor, alert supervisor, and web process. This improves
+  local evidence only; it does not prove deployed scheduler ownership or
+  external alert delivery.
 - `pnpm worker:fixture` — passed and wrote the deterministic synthetic artifact
   (4 complaints, 3 clusters, score `80.3`).
 - `pnpm plan:sample` — passed and wrote the six-file synthetic coding-agent

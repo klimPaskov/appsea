@@ -21,7 +21,8 @@ Open `http://localhost:3000` after the web server starts.
 The command above runs the public fixture website. To exercise the private
 workspace path locally, run `pnpm dev:local`; it starts the existing loopback
 PostgreSQL/Temporal/MinIO services, initializes the local S3-compatible bucket,
-applies migrations, and starts the durable worker and web process. See
+applies migrations, and starts the durable worker, maintenance/alert
+supervisors, and web process. See
 [`docs/runbooks/local-stack.md`](docs/runbooks/local-stack.md).
 The disposable integration smoke is `pnpm verify:local-stack`.
 

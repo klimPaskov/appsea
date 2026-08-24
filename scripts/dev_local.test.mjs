@@ -1,7 +1,12 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { readFile } from 'node:fs/promises'
-import { composeFile, localEnvironment, parseDevLocalArgs } from './dev_local.mjs'
+import {
+  composeFile,
+  localEnvironment,
+  localProcessCommands,
+  parseDevLocalArgs
+} from './dev_local.mjs'
 
 test('local command accepts help, dry-run, and no arguments only', () => {
   assert.deepEqual(parseDevLocalArgs([]), { help: false, dryRun: false })
@@ -51,6 +56,15 @@ test('local environment is loopback-only and removes inherited remote boundaries
     environment.APPSEA_AUTH_MFA_ENCRYPTION_KEY,
     Buffer.alloc(32, 7).toString('base64url')
   )
+})
+
+test('local stack starts every durable supervisor alongside the worker and web process', () => {
+  assert.deepEqual(localProcessCommands(), [
+    ['--filter', '@appsea/worker', 'workflow:worker'],
+    ['--filter', '@appsea/worker', 'maintenance:loop'],
+    ['--filter', '@appsea/worker', 'alerts:loop'],
+    ['dev:web']
+  ])
 })
 
 test('local compose provisions loopback MinIO and initializes its bucket idempotently', async () => {

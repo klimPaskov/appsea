@@ -23,11 +23,12 @@
   do not alter the staged Tauri icon pair or any research semantics.
 - Local private-workspace stack: `pnpm dev:local` starts loopback PostgreSQL,
   Temporal, and disposable MinIO, initializes the `appsea-local` bucket, applies
-  migrations with the dedicated local migrator, and runs the durable worker plus
-  web process through the signed S3-compatible adapter; it is a development
-  workflow and never activates a third-party source.
+  migrations with the dedicated local migrator, and runs the durable worker,
+  lease-backed maintenance/alert supervisors, and web process through the signed
+  S3-compatible adapter; it is a development workflow and never activates a
+  third-party source.
 - Local stack smoke: `pnpm verify:local-stack` now exercises loopback dependency
-  readiness, migrations, worker/web startup, authenticated private-workspace
+  readiness, migrations, worker/maintenance/alert/web startup, authenticated private-workspace
   signup, owner-authorized manual intake through durable consumption, complaint
   confirmation, reviewed/approved opportunity seed input, production-analysis
   completion, private opportunity/report/plan readback, every private

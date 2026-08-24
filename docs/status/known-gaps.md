@@ -429,6 +429,11 @@ admission/rate gate and authenticated initiator attribution through migration
 `0042`; deployment still needs a scheduler, Temporal authorization, and
 crash/failure proof for that boundary.
 
+The supported `pnpm dev:local` path now starts the worker together with the
+lease-backed maintenance and alert supervisors. This makes the local process
+contract complete without claiming deployed scheduler ownership, hosted
+Temporal, or external alert routing.
+
 Non-fixture report, plan, and production-analysis artifact payloads require
 object storage; inline JSONB is deliberately restricted to compact metadata
 and synthetic fixture packages. `@appsea/object-store` now provides bounded
