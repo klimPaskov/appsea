@@ -41,7 +41,7 @@
   every change. The intake row and seed are smoke-only and never market
   evidence.
 - Local UI proof: the persisted public capture in
-  `artifacts/ui-reference-loop/2026-08-22/` passes the scalar browser audit;
+  `artifacts/ui-reference-loop/2026-08-24/` passes the scalar browser audit;
   `pnpm ui:capture:private` now runs the same audit on
   all nine authenticated routes at desktop 1280/1024/768 and responsive 480
   widths. It fails on an explicit runtime-error page, missing title/`<main>`, or
