@@ -8,9 +8,10 @@
   pass. The public route now renders only the required `Leaderboard` heading,
   rank/opportunity/complaint/score fields, and synthetic disclosure; private
   research detail remains on opportunity routes. The current full `pnpm test`
-  suite passes, while `pnpm verify` is currently blocked before repository
-  checks by the user-owned empty root `AGENTS.md`; deployment-only production
-  gates remain open. Prior hosted/local Docker baselines passed on 2026-08-06,
+  suite passes, and the full `pnpm verify` repository proof now passes while
+  preserving the intentionally empty, user-owned root `AGENTS.md` through
+  catalog synchronization; deployment-only production gates remain open.
+  Prior hosted/local Docker baselines passed on 2026-08-06,
   but current Docker-backed reruns are pending. The header uses the generated, non-text
   `appsea-mark-generated.png` asset; the private evidence coverage panel also
   uses the imagegen-generated decorative `appsea-evidence-icon-generated.png`,

@@ -27,7 +27,10 @@ After meaningful work, classify new information:
 - stable global rule goes to root `AGENTS.md`
 - one-off history goes to a session handoff or completion report
 
-The root instructions remain below 32 KiB. Generated catalogs are synchronized from skill and subagent metadata.
+The root instructions remain below 32 KiB. Generated catalogs are synchronized
+from skill and subagent metadata. An intentionally empty, user-owned root
+`AGENTS.md` is preserved by synchronization; scoped guidance and the generated
+catalogs remain the source of operational detail in that case.
 
 ## Completion proof
 

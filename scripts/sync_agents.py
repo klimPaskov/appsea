@@ -130,9 +130,14 @@ def replace_block(text: str, name: str, replacement: str) -> str:
 
 def update_agents(
     skills: list[tuple[str, str, str]], agents: list[tuple[str, str, str, str]]
-) -> None:
+) -> bool:
     path = ROOT / 'AGENTS.md'
     text = path.read_text(encoding='utf-8')
+    # A repository owner may intentionally keep the root guidance file empty
+    # and rely on scoped guidance plus the generated catalogs. Preserve that
+    # explicit local choice while still refreshing docs/generated above.
+    if not text.strip():
+        return False
     skill_lines = '\n'.join(f'- `{name}`: {description}' for name, description, _ in skills)
     agent_lines = '\n'.join(
         f'- `{name}` ({sandbox}): {description}'
@@ -141,14 +146,16 @@ def update_agents(
     text = replace_block(text, 'SKILL CATALOG', skill_lines)
     text = replace_block(text, 'SUBAGENT CATALOG', agent_lines)
     path.write_text(text, encoding='utf-8')
+    return True
 
 
 def main() -> int:
     skills = load_skills()
     agents = load_subagents()
     write_catalogs(skills, agents)
-    update_agents(skills, agents)
-    print(f'synced {len(skills)} skills and {len(agents)} subagents')
+    root_updated = update_agents(skills, agents)
+    suffix = '' if root_updated else '; preserved empty user-owned AGENTS.md'
+    print(f'synced {len(skills)} skills and {len(agents)} subagents{suffix}')
     return 0
 
 

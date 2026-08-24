@@ -2,9 +2,9 @@
 
 ## State
 
-Audit: `docs/status/production-readiness-audit-2026-08-09.md` (8/22); checks
-pass, Docker unavailable. `pnpm verify`/local smoke through `0119`; static
-guard targets `0123`; DB proof remains `0119`.
+Audit: `docs/status/production-readiness-audit-2026-08-09.md` (8/24); checks
+pass, Docker unavailable. `pnpm verify` passes local repo proof; DB/smoke proof
+stops at `0119`; static guard targets `0123`.
 AppSea is fixture-first with production persistence, workflows,
 source policy, private workspaces, reports/plans, and maintenance; the public
 leaderboard is synthetic and no source enabled. Reviewed

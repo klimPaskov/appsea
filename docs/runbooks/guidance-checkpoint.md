@@ -9,6 +9,9 @@ After a meaningful tranche:
 5. Search the skill catalog for repeated workflows.
 6. Update or create a skill when justified.
 7. Change `AGENTS.md` only for a stable global rule.
-8. Run `pnpm agents:sync` and `pnpm repo:check`.
+8. Run `pnpm agents:sync` and `pnpm repo:check`. If the repository owner has
+   intentionally left the root `AGENTS.md` empty, synchronization must preserve
+   that file while still refreshing the generated catalogs; `pnpm verify` covers
+   this exception with `pnpm test:guidance`.
 
 Do not use the checkpoint to inflate documentation. Every update must reduce future ambiguity.

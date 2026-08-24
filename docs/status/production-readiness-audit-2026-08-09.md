@@ -1,4 +1,4 @@
-# AppSea production-readiness audit — 2026-08-09 (refreshed 2026-08-22)
+# AppSea production-readiness audit — 2026-08-09 (refreshed 2026-08-24)
 
 Status: **incomplete; do not promote as a production market-research service**.
 
@@ -99,8 +99,10 @@ presented as public market research.
   blocked in this environment because the Docker Desktop
   `dockerDesktopLinuxEngine` pipe is unavailable; this is not fresh migration,
   restore, or local-stack evidence.
-- `pnpm verify` — blocked before repository checks because the user-owned empty
-  root `AGENTS.md` is missing the generated catalog block. It remains untouched.
+- `pnpm verify` — passed on 2026-08-24 after catalog synchronization was made
+  tolerant of an intentionally empty, user-owned root `AGENTS.md`; generated
+  catalogs still refresh and the root file remains untouched. This is local
+  repository proof only and does not close Docker or deployment gates.
 
 ## Release blockers and simplifications
 

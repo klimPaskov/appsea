@@ -16,6 +16,8 @@
 - coding-agent plan generation
 - sparse website routes
 - staged desktop boundary
+- guidance catalog synchronization that preserves an intentionally empty,
+  user-owned root `AGENTS.md` while keeping `pnpm verify` runnable
 
 ## Production milestones
 
