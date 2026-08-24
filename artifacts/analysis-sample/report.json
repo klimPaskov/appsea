@@ -4,7 +4,7 @@
   "synthetic": false,
   "testOnly": true,
   "transport": "offline-sample",
-  "artifactId": "analysis:07f5d14d3d21b25c5a9641e809dd7f40",
+  "artifactId": "analysis:40c46ee53bebfb8eb52cb720391379cb",
   "generatedAt": "2026-07-26T00:00:00.000Z",
   "opportunity": {
     "id": "opportunity:cfpb-offline-sample",
@@ -17,6 +17,12 @@
   "evidence": {
     "complaintCount": 3,
     "clusterCount": 3,
+    "authorCoverage": {
+      "status": "unavailable",
+      "identifiedObservationCount": 0,
+      "uniqueAuthorCount": null,
+      "gap": "The approved source did not provide a retained author identity signal for these observations."
+    },
     "deduplication": [
       {
         "version": "complaint-deduplication-v1.0.0",
@@ -98,7 +104,7 @@
             "source-policy-representation-applied"
           ],
           "reviewState": "unreviewed",
-          "extractionVersion": "complaint-analysis-v0.2.0",
+          "extractionVersion": "complaint-analysis-v0.3.0",
           "derivation": {
             "skillVersion": "appsea-complaint-analysis-v1",
             "modelVersion": "deterministic-rules-v1",
@@ -180,7 +186,7 @@
             "source-policy-representation-applied"
           ],
           "reviewState": "unreviewed",
-          "extractionVersion": "complaint-analysis-v0.2.0",
+          "extractionVersion": "complaint-analysis-v0.3.0",
           "derivation": {
             "skillVersion": "appsea-complaint-analysis-v1",
             "modelVersion": "deterministic-rules-v1",
@@ -262,7 +268,7 @@
             "source-policy-representation-applied"
           ],
           "reviewState": "unreviewed",
-          "extractionVersion": "complaint-analysis-v0.2.0",
+          "extractionVersion": "complaint-analysis-v0.3.0",
           "derivation": {
             "skillVersion": "appsea-complaint-analysis-v1",
             "modelVersion": "deterministic-rules-v1",
@@ -372,6 +378,7 @@
     "rationale": [
       "3 retained observations form 3 complaint clusters.",
       "The deterministic opportunity-score-v0.2.0 score is 7.8 out of 100.",
+      "The approved source did not provide a retained author identity signal for these observations.",
       "1 contrary signal remain visible.",
       "No confirmed, evidence-linked competitor or contrary observations are included."
     ],
@@ -541,7 +548,8 @@
       "The CFPB connector remains pending review and was not activated.",
       "No permitted competitor or contrary-signal source evidence is attached; reviewed seed values are not market research.",
       "This analysis was composed from a test-only offline transport and cannot support market conclusions.",
-      "This production-shaped artifact uses the legacy v0.2 score because no reviewed balanced v1 input envelope was supplied."
+      "This production-shaped artifact uses the legacy v0.2 score because no reviewed balanced v1 input envelope was supplied.",
+      "The approved source did not provide a retained author identity signal for these observations."
     ],
     "sources": [
       {

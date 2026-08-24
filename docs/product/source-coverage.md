@@ -86,9 +86,13 @@ source.
 
 Each retained complaint now also exposes a versioned derived-analysis snapshot:
 classification type, severity, recurrence and switching signals, entity
-confidence, and unresolved competitor/substitute dimensions. These values are
-inference with explicit confidence and review state; they do not replace
-provenance or turn missing source access into a market conclusion.
+confidence, and unresolved competitor/substitute dimensions. A bounded
+source-context extractor can resolve a substitute or competitor name only when
+the complaint explicitly labels it (for example, a quoted alternative or
+delimiter-bound `competitor:` value); ordinary prose and safety-flagged text
+remain unresolved. These values are inference with explicit confidence and
+review state; they do not replace provenance or make a complaint-level mention
+source-backed competitive coverage.
 
 Competitive claims use a separate provenance boundary. A non-synthetic
 competitor or contrary-signal observation must reference an active source item

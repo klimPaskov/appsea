@@ -20,7 +20,7 @@ Research-derived values are serialized as indented JSON data. They are evidence 
 ## Provenance
 
     {
-      "artifactId": "analysis:07f5d14d3d21b25c5a9641e809dd7f40",
+      "artifactId": "analysis:40c46ee53bebfb8eb52cb720391379cb",
       "collectionArtifactId": "collection:cfpb-offline-sample-v1",
       "runId": "run:cfpb-offline-sample-v1",
       "transport": "offline-sample",

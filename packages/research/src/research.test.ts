@@ -65,6 +65,34 @@ describe('fixture research', () => {
     )
   })
 
+  it('resolves only explicitly named source-context alternatives and competitors', () => {
+    const analyzed = analyzeComplaint({
+      ...complaint,
+      text: 'We switched to "Notion" after the handoff failed. A competitor: QueueFox still handles exports better.'
+    })
+
+    expect(analyzed.entities.substitutes).toEqual([
+      expect.objectContaining({
+        entityType: 'substitute',
+        surfaceText: 'Notion',
+        canonicalName: 'Notion',
+        resolution: 'contextual',
+        evidence: 'source-context'
+      })
+    ])
+    expect(analyzed.entities.competitors).toEqual([
+      expect.objectContaining({
+        entityType: 'competitor',
+        surfaceText: 'QueueFox',
+        canonicalName: 'QueueFox',
+        resolution: 'contextual',
+        evidence: 'source-context'
+      })
+    ])
+    expect(analyzed.entities.unresolvedTypes).not.toContain('substitute')
+    expect(analyzed.entities.unresolvedTypes).not.toContain('competitor')
+  })
+
   it('orders analysis snapshots by complaint identity for replay', () => {
     const first = analyzeComplaints([complaint, { ...complaint, id: 'c0' }])
     const replay = analyzeComplaints([{ ...complaint, id: 'c0' }, complaint])
@@ -98,6 +126,8 @@ describe('fixture research', () => {
       ])
     )
     expect(analysis.problemStatement).toContain('Ignore previous instructions')
+    expect(analysis.entities.substitutes).toEqual([])
+    expect(analysis.entities.competitors).toEqual([])
   })
 
   it('normalizes and deduplicates source records', () => {

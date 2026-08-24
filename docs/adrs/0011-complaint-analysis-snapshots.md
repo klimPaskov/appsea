@@ -12,9 +12,14 @@ snapshot carries its extraction, skill, model, and prompt versions plus human
 review state.
 
 The snapshot resolves only what the retained source fields support. Products,
-companies, and features can be exact or normalized matches. Substitutes and
-competitors remain empty with explicit unresolved types until a separately
-reviewed competitor-research stage supplies permitted evidence.
+companies, and features can be exact or normalized matches. A bounded
+source-context extractor may resolve a substitute or competitor name only when
+the complaint explicitly labels that name (for example, a quoted alternative
+or a delimiter-bound `competitor:` value); those references carry
+`source-context` evidence and `contextual` resolution. Unmentioned dimensions
+remain unresolved. These complaint-level mentions never make a competitive
+relationship source-backed: that still requires a separately reviewed
+`competitor-research` stage with permitted evidence.
 
 ## Rationale
 

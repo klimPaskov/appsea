@@ -11,7 +11,7 @@ SHA-256 fingerprints before staging; raw author identities are never retained.
 Unknown fields and text instructions are never executed or
 copied into code, skills, instructions, permissions, or repository memory.
 The deterministic complaint-analysis safety projection
-(`complaint-analysis-v0.2.0`) also marks instruction-like text with
+(`complaint-analysis-v0.3.0`) also marks instruction-like text with
 `manipulationRisk` and policy flags while retaining the original evidence and
 provenance. Private evidence reads label flagged observations for human review,
 and production artifacts expose a coverage gap; no imported text is promoted
@@ -329,13 +329,17 @@ for that pre-context authorization lookup.
   never complaint text, and deleted evidence cannot be reviewed.
 - Migration `0053` stores derived complaint analysis in a validated JSONB
   snapshot. The deterministic extractor receives already policy-checked
-  evidence, records its version and confidence, and emits no competitor or
-  substitute relation without a reviewed source. The v0.2.0 safety projection
-  detects bounded instruction-like patterns, retains the text, and marks the
-  interpretation for review; imported text remains data, and analysis output
-  cannot write instructions, code, skills, or memory. Existing JSONB fields
-  already carry `manipulationRisk` and `policyFlags`, so this additive version
-  requires no relational migration and legacy snapshots remain readable.
+  evidence, records its version and confidence, and resolves a substitute or
+  competitor only when the complaint explicitly labels a bounded source-context
+  name; ordinary prose and safety-flagged text remain unresolved. These
+  complaint-level references never make a competitive relationship
+  source-backed: that still requires a reviewed source/evidence observation.
+  The v0.2.0 safety projection detects bounded instruction-like patterns,
+  retains the text, and marks the interpretation for review; imported text
+  remains data, and analysis output cannot write instructions, code, skills, or
+  memory. Existing JSONB fields already carry `manipulationRisk` and
+  `policyFlags`, so this additive version requires no relational migration and
+  legacy snapshots remain readable.
 - The private competitors/contrary-signals read model records competitive
   research state and seed-review provenance separately from complaint evidence.
   It cannot label a synthetic or reviewed-seed-only record source-backed;

@@ -29,7 +29,7 @@ import {
 } from '@appsea/contracts'
 import { buildResearchQualitySnapshot } from './quality-benchmark'
 
-export const COMPLAINT_ANALYSIS_VERSION = 'complaint-analysis-v0.2.0'
+export const COMPLAINT_ANALYSIS_VERSION = 'complaint-analysis-v0.3.0'
 export const COMPLAINT_DEDUPLICATION_VERSION = 'complaint-deduplication-v1.0.0'
 
 export interface DeepResearchGateEvaluation {
@@ -197,6 +197,90 @@ function entityReference(
   }
 }
 
+type ContextEntityType = 'substitute' | 'competitor'
+
+interface ExplicitContextEntityPattern {
+  entityType: ContextEntityType
+  pattern: RegExp
+}
+
+/**
+ * Resolve only names that the source text explicitly labels as an alternative
+ * or competitor. Quoted or delimiter-bound names keep ordinary prose from
+ * becoming a market entity; unmentioned dimensions stay unresolved.
+ */
+const explicitContextEntityPatterns: ReadonlyArray<ExplicitContextEntityPattern> = [
+  {
+    entityType: 'competitor',
+    pattern: /\bcompetitor\s+(?:called|named|is)\s+["“]([^"”]{1,120})["”]/gi
+  },
+  {
+    entityType: 'competitor',
+    pattern:
+      /\bcompetitor\s*[:=-]\s*([^,.;!?]{2,120}?)(?=\s+(?:still|handles|has|lacks|offers|supports|is|was|can|but|while|and)\b|[,.!?;]|$)/gi
+  },
+  {
+    entityType: 'substitute',
+    pattern: /\b(?:alternative|replacement)\s+(?:called|named|is)\s+["“]([^"”]{1,120})["”]/gi
+  },
+  {
+    entityType: 'substitute',
+    pattern:
+      /\b(?:alternative|replacement)\s*[:=-]\s*([^,.;!?]{2,120}?)(?=\s+(?:still|handles|has|lacks|offers|supports|is|was|can|but|while|and)\b|[,.!?;]|$)/gi
+  },
+  {
+    entityType: 'substitute',
+    pattern:
+      /\b(?:switched|switching|moved|moving|migrated|migrating)\s+to\s+["“]([^"”]{1,120})["”]/gi
+  },
+  {
+    entityType: 'substitute',
+    pattern: /\b(?:using|use|adopted|replaced\s+with)\s+["“]([^"”]{1,120})["”]/gi
+  }
+]
+
+function explicitContextEntityReference(
+  entityType: ContextEntityType,
+  surfaceText: string
+): ComplaintEntityReference | null {
+  const normalized = normalizeComplaintText(surfaceText)
+  if (!normalized || genericEntityLabels.has(lower(normalized))) return null
+  return {
+    entityType,
+    surfaceText: normalized,
+    canonicalName: normalized,
+    confidence: 0.78,
+    resolution: 'contextual',
+    evidence: 'source-context'
+  }
+}
+
+function extractExplicitContextEntities(text: string): {
+  substitutes: ComplaintEntityReference[]
+  competitors: ComplaintEntityReference[]
+} {
+  const byType: Record<ContextEntityType, ComplaintEntityReference[]> = {
+    substitute: [],
+    competitor: []
+  }
+  const seen = new Set<string>()
+  for (const { entityType, pattern } of explicitContextEntityPatterns) {
+    pattern.lastIndex = 0
+    for (const match of text.matchAll(pattern)) {
+      const reference = explicitContextEntityReference(entityType, match[1] ?? '')
+      if (!reference) continue
+      const key = `${entityType}\0${lower(reference.canonicalName ?? reference.surfaceText)}`
+      if (seen.has(key)) continue
+      seen.add(key)
+      byType[entityType].push(reference)
+    }
+  }
+  return {
+    substitutes: byType.substitute,
+    competitors: byType.competitor
+  }
+}
+
 export function analyzeComplaint(complaint: Complaint): ComplaintAnalysis {
   const normalizedText = normalizeComplaintText(complaint.text)
   const safety = assessComplaintContentSafety(normalizedText)
@@ -210,12 +294,19 @@ export function analyzeComplaint(complaint: Complaint): ComplaintAnalysis {
   const product = entityReference('product', complaint.product)
   const company = entityReference('company', complaint.company)
   const feature = entityReference('feature', complaint.feature)
+  const contextEntities = safetyFlagged
+    ? { substitutes: [], competitors: [] }
+    : extractExplicitContextEntities(normalizedText)
   const unresolvedTypes: ComplaintAnalysis['entities']['unresolvedTypes'] = [
     ...(product.canonicalName === null ? (['product'] as const) : []),
     ...(company.canonicalName === null ? (['company'] as const) : []),
     ...(feature.canonicalName === null ? (['feature'] as const) : []),
-    'substitute',
-    'competitor'
+    ...(contextEntities.substitutes.some((entry) => entry.canonicalName !== null)
+      ? []
+      : (['substitute'] as const)),
+    ...(contextEntities.competitors.some((entry) => entry.canonicalName !== null)
+      ? []
+      : (['competitor'] as const))
   ]
   const severity = safetyFlagged ? 0 : severityFor(complaint.category, normalizedText)
   const classificationConfidence = safetyFlagged
@@ -268,8 +359,8 @@ export function analyzeComplaint(complaint: Complaint): ComplaintAnalysis {
       product,
       company,
       feature,
-      substitutes: [],
-      competitors: [],
+      substitutes: contextEntities.substitutes,
+      competitors: contextEntities.competitors,
       unresolvedTypes
     }
   })

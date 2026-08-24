@@ -2,23 +2,20 @@
 
 ## State
 
-Audit: `docs/status/production-readiness-audit-2026-08-09.md` (8/22).
-Checks pass; Docker unavailable.
-`pnpm verify`/local smoke through `0119`; verifier targets `0123`, last proof
-`0119`.
+Audit: `docs/status/production-readiness-audit-2026-08-09.md` (8/22); checks
+pass, Docker unavailable. `pnpm verify`/local smoke through `0119`; verifier
+targets `0123`, last proof `0119`.
 
-AppSea remains fixture-first with production-shaped persistence, workflow,
+AppSea remains fixture-first with production-shaped persistence, workflows,
 source policy, private workspaces, reports/plans, and maintenance; the public
-leaderboard is synthetic and no public source is enabled.
-Reviewed `manual-owner-import-v3` supports tenant-private owner-authorized
-CSV/JSON without claiming public market coverage. Optional author keys are
-reduced to workspace-scoped opaque SHA-256 fingerprints; raw identity is never
-staged, and reports disclose author coverage gaps.
+leaderboard is synthetic and no source enabled. Reviewed
+`manual-owner-import-v3` supports tenant-private owner CSV/JSON without public
+market claims. Optional author keys become workspace-scoped opaque SHA-256
+fingerprints; raw identity is never staged, and reports disclose coverage gaps.
 
 Migrations `0027`-`0123` cover policy, deletion/leases, orchestration,
-analysis/report/plan governance, cost/alerts, object refs, archival/purge
-intent, redaction, agent/MFA/review, shared collectibility,
-and policy-impact expiry.
+analysis/report/plan governance, cost/alerts, object refs, archival/purge,
+redaction, agent/MFA/review, collectibility, and policy-impact expiry.
 
 Fixture is the persisted path. Production collection and
 analysis v2 are policy-gated/replay-safe; CFPB and Stack Exchange remain
@@ -28,17 +25,16 @@ coverage gaps, approval state, synthetic disclosure, and object references.
 
 Authentication uses scrypt sessions, membership/RLS, MFA/governance step-up,
 closure/archival, and scoped read-only agent tokens. OIDC, delivery, egress,
-retention, and deployment operations remain external.
-
+retention, and deployment remain external.
 Workers have leases, fencing, retries, recovery, metrics, and signed alerts;
-`alerts:loop` supervises scans/delivery/outbox.
-Scheduler, billing, cloud purge, and provider topology remain open.
+`alerts:loop` supervises scans/delivery. Scheduler, billing, cloud purge, and
+provider topology remain open.
 
 Imported complaints, pages, reports, and model output are untrusted data and
 cannot update code, skills, instructions, permissions, or repository memory.
 
 Manual owner-import (`0089`, `0102`–`0104`) is the active non-fixture path:
-bounded, normalized, PII-scrubbed tenant-private CSV/JSON with only a batch ID
+bounded, normalized, PII-scrubbed tenant-private CSV/JSON with a batch ID
 in Temporal. Durable quota ledgers gate connectors; the in-memory map is
 test-only. Confirmed competitor observations enter only the next reviewed
 analysis with hash lineage and masked restricted claims; rejection/deletion
@@ -55,25 +51,26 @@ preflight; the production gate also requires a bounded
 the worker stop-grace window. Remote namespace/task-queue authorization and
 hosted replacement/crash evidence remain external.
 
-Owner-import ingress reserves workspace admission before persistence; rejected
-requests leave no staged payloads and a server-owned five-minute TTL bounds
-uncertain Temporal starts.
+Owner-import ingress reserves admission before persistence; rejected requests
+leave no staged payloads and a server-owned five-minute TTL bounds uncertain
+Temporal starts.
 
 Forward migrations `0113`–`0119` harden owner-import retention, reviewer
 independence, collectibility, lineage, policy impact, pointer repair, and
-current-policy private reads/exports. Policy decay retains objects until a
-later source deletion; provider scheduler ownership and external retention
-remain release gates.
+current-policy reads/exports. Policy decay retains objects until source
+deletion; provider scheduler ownership and external retention remain gates.
 
 Campaign `dateRange` is enforced across admission, refresh, Temporal input,
 reconstruction, snapshots, and source filtering (including owner-import
 published/captured fallback). Filtered runs emit coverage warnings; private
 reads show query/window beside gaps and legacy snapshots remain replayable.
 
-Complaint analysis v0.2.0 flags instruction-like imported text with
+Complaint analysis v0.3.0 flags instruction-like imported text with
 deterministic `manipulationRisk`/`policyFlags`, preserves provenance, labels
-private rows for review, and adds a coverage gap. No content executes or enters
-repository controls; no migration is needed. See
+private rows for review, and adds a coverage gap. It resolves only explicitly
+labeled, bounded source-context substitute/competitor names; these mentions
+are not source-backed competitive claims. Imported content remains data; no
+migration is needed. See
 `docs/status/imported-content-safety-completion-report-2026-08-06.md`.
 
 `@appsea/model-gateway` is wired into production analysis with workspace-bound
