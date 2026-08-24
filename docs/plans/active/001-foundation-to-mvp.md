@@ -36,10 +36,10 @@ Implemented:
 - replay-safe fixture repository with concurrent idempotency conflict handling
 - populated upgrade, fresh install, privilege, RLS, provenance, policy, cross-wire, and replay tests
 - local runbook and CI persistence gate
-- isolated local PostgreSQL backup/restore runbook and CI gate; the last
-  recorded drill restores a disposable dump through migration `0119` and verifies
-  forced workspace RLS plus runtime/maintenance privileges without accepting a
-  remote URL
+- isolated local PostgreSQL backup/restore runbook and CI gate; the 2026-08-24
+  Docker-backed fresh/upgrade and backup/restore drills pass through migration
+  `0123` and verify forced workspace RLS plus runtime/maintenance privileges
+  without accepting a remote URL
 - one-command loopback private-workspace stack with migration, worker,
   maintenance/alert supervisors, and web startup (`pnpm dev:local`), including
   disposable MinIO bucket initialization and signed S3-compatible object-store
@@ -97,8 +97,9 @@ Implemented:
   notes, references, hashes, and policy payloads stay outside the read boundary.
 - The release static verifier independently requires the checked-in migration
   inventory to contain exactly 123 valid, unique, contiguous SQL files ending
-  at `0123`. This catches repository migration drift without replacing the
-  Docker-backed fresh/upgrade or hosted persistence proof.
+  at `0123`. This catches repository migration drift; the 2026-08-24 local
+  fresh/upgrade and backup/restore runs now provide the disposable PostgreSQL
+  proof, without replacing hosted persistence proof.
 - migration `0103_competitor_observation_contrary_purpose.sql` keeps the same
   provenance/evidence/review trigger while accepting the explicit private
   `contrary-evidence` collection purpose.
@@ -249,13 +250,12 @@ other lease columns remain maintenance-only.
 Migration `0096_opportunity_score_v1_envelope.sql` adds nullable, range-checked
 balanced v1 score fields, reviewed evidence/coverage/freshness references, and
 a private ranking index. Legacy score rows remain readable and keep `score` as
-their raw-score compatibility field. The 2026-08-06 local fresh migration and
-backup/restore drills pass through `0119`; migrations `0120` and `0121` add
+their raw-score compatibility field. The 2026-08-24 Docker-backed fresh/upgrade
+and backup/restore drills pass through `0123`; migrations `0120` and `0121` add
 report-Markdown persistence and purge-gate lineage, while `0122` adds the
 privacy-safe owner-import author-fingerprint boundary and `0123` adds the
-identity-free source-policy approval summary; these still need a Docker-backed
-fresh/upgrade run. Provider backup, HA, retention, and production restore remain
-deployment work.
+identity-free source-policy approval summary. Provider backup, HA, retention,
+and production restore remain deployment work.
 
 Migration `0097_mcp_agent_access_admission.sql` rechecks workspace membership
 for bearer authentication and adds a forced-RLS request-lease projection. The
@@ -787,8 +787,8 @@ the bounded ZIP/API packaging slice, including the complete 08_spec-compatible
 on-demand directory and explicit coverage gaps; provider-side export/backup
 purge remains follow-up work.
 The PostgreSQL integration suite now seeds a linked `running` analysis output
-and proves private report/plan reads and history exclude it; fresh/upgrade
-execution remains pending until Docker is available.
+and proves private report/plan reads and history exclude it; the 2026-08-24
+fresh/upgrade execution passes through `0123`.
 
 The private workspace Activity page now exposes the existing immutable audit
 projection through a bounded cursor view. It is read-only, scalar-only, and
