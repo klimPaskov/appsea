@@ -1,7 +1,7 @@
 # Privacy-safe author coverage completion report — 2026-08-10
 
-Status: **implemented in the repository; database execution proof remains
-environment-blocked**.
+Status: **implemented in the repository; local Docker-backed database proof
+passed through migration `0123` on 2026-08-24**.
 
 ## Delivered
 
@@ -44,7 +44,8 @@ environment-blocked**.
 This capability is tenant-private owner-attested evidence; it does not create
 public market coverage or authorize CFPB, Stack Exchange, or another
 third-party source. Fixture reports disclose that unique-author coverage is
-unavailable. Docker Desktop's `dockerDesktopLinuxEngine` pipe is unavailable in
-this environment, so fresh/upgrade PostgreSQL, RLS, deletion propagation, and
-backup/restore execution against migration `0122` remain deployment-proof
-work.
+unavailable. On 2026-08-24, `pnpm verify:persistence:fresh`,
+`pnpm verify:persistence`, and `pnpm verify:backup-restore` passed against
+disposable PostgreSQL through migration `0123`, including RLS, deletion and
+redaction paths, and the v3 activation ordering. Provider backup/HA/restore,
+hosted deployment, and live source approval remain open.

@@ -111,12 +111,6 @@ BEGIN
       USING ERRCODE = '23505';
   END IF;
 
-  UPDATE appsea.sources
-     SET current_policy_version = 'manual-owner-import-v3',
-         updated_at = recorded_at
-   WHERE source_id = 'manual-owner-import'
-     AND lifecycle_state NOT IN ('retired', 'disabled_operator');
-
   INSERT INTO appsea.source_policy_reviews
     (review_id, source_id, policy_version, decision, reviewer,
      reviewer_identity, reviewer_role, independence_attested,
@@ -136,6 +130,15 @@ BEGIN
       policy_hash, recorded_at, recorded_at
     )
   ON CONFLICT (review_id) DO NOTHING;
+
+  -- The source activation trigger requires a complete review set. Record the
+  -- v3 approval before promoting the source so a fresh install and an upgrade
+  -- follow the same fail-closed ordering.
+  UPDATE appsea.sources
+     SET current_policy_version = 'manual-owner-import-v3',
+         updated_at = recorded_at
+   WHERE source_id = 'manual-owner-import'
+     AND lifecycle_state NOT IN ('retired', 'disabled_operator');
 END
 $$;
 

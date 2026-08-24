@@ -2,9 +2,9 @@
 
 ## State
 
-Audit: `docs/status/production-readiness-audit-2026-08-09.md` (8/24); checks
-pass, Docker unavailable. `pnpm verify` passes local repo proof; DB/smoke proof
-stops at `0119`; static guard targets `0123`.
+Audit: `docs/status/production-readiness-audit-2026-08-09.md` (8/24);
+checks pass; PostgreSQL fresh/upgrade and backup/restore proof
+passes through `0123`.
 AppSea is fixture-first with production persistence, workflows,
 source policy, private workspaces, reports/plans, and maintenance; the public
 leaderboard is synthetic and no source enabled. Reviewed
@@ -53,9 +53,11 @@ Owner-import ingress reserves admission before persistence; rejected requests
 leave no staged payloads and a server-owned five-minute TTL bounds uncertain
 Temporal starts.
 
-Forward migrations `0113`–`0119` harden owner-import retention, reviewer
+Forward migrations `0113`–`0123` harden owner-import retention, reviewer
 independence, collectibility, lineage, policy impact, pointer repair, and
-current-policy reads/exports. Policy decay retains objects until source
+current-policy reads/exports, Markdown purge lineage, owner-import v3 author
+fingerprints, and identity-free policy approval summaries. Policy decay retains
+objects until source
 deletion; provider scheduler ownership and external retention remain gates.
 
 Campaign `dateRange` is enforced across admission, refresh, Temporal input,

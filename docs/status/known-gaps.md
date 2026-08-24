@@ -6,8 +6,8 @@ No live social platform is enabled. Fixture data cannot estimate market size, co
 
 The production release verifier now checks the repository migration inventory
 statically: exactly 123 valid, unique, contiguous SQL migrations must end at
-`0123`. This catches checked-in drift but does not close the remaining
-Docker-backed fresh/upgrade, backup/restore, hosted HA, or provider-operations
+`0123`. Local Docker-backed fresh/upgrade and backup/restore checks now pass
+through that head; the verifier does not close hosted HA or provider-operations
 gates.
 
 Production complaint analysis is intentionally a `candidate`, not a
@@ -441,10 +441,9 @@ in-memory/filesystem adapters plus a signed S3-compatible adapter wired through
 the shared environment factory. Migration `0043` adds the durable
 invalidated-output purge queue. Provider encryption, lifecycle/versioning,
 least-privilege credential deployment, destructive workspace/object/backup
-purge remain open. The backup/restore verifier targets migration `0123`, while
-the last successful local proof remains historical through `0119`; the Docker
-fresh/upgrade rerun and provider encryption, lifecycle, and restore evidence
-remain open. Owner workspace archival and
+purge remain open. The backup/restore verifier and fresh/upgrade persistence
+run now pass locally through migration `0123`; provider encryption,
+lifecycle, hosted restore, and HA evidence remain open. Owner workspace archival and
 the non-destructive purge intent are implemented separately and retain the
 referenced data.
 

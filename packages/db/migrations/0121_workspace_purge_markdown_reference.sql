@@ -114,22 +114,22 @@ BEGIN
      AND plan.package_object_ref IS NOT NULL;
 
   IF workspace_row.archived_at IS NULL THEN
-    blockers := blockers || 'workspace_not_archived';
+    blockers := blockers || ARRAY['workspace_not_archived'];
   END IF;
   IF active_work_count > 0 THEN
-    blockers := blockers || 'active_work';
+    blockers := blockers || ARRAY['active_work'];
   END IF;
   IF raw_source_object_reference_count > 0 THEN
-    blockers := blockers || 'raw_source_objects';
+    blockers := blockers || ARRAY['raw_source_objects'];
   END IF;
   IF analysis_object_reference_count > 0 THEN
-    blockers := blockers || 'analysis_objects';
+    blockers := blockers || ARRAY['analysis_objects'];
   END IF;
   IF report_object_reference_count > 0 THEN
-    blockers := blockers || 'report_objects';
+    blockers := blockers || ARRAY['report_objects'];
   END IF;
   IF plan_object_reference_count > 0 THEN
-    blockers := blockers || 'plan_objects';
+    blockers := blockers || ARRAY['plan_objects'];
   END IF;
 
   readiness := jsonb_build_object(

@@ -59,7 +59,7 @@ This skill may change `packages/db`, directly affected contracts and producers, 
    the enclosing mutation transaction commits; reject stale owner/token pairs
    before invoking the callback. Keep the fence identity private and document
    external source/provider/object-store effects as outside the atomic claim.
-9. Add both a populated forward-upgrade test and a fresh-install test. Include negative privilege, RLS, policy, immutability, and cross-wire assertions.
+9. When a migration seeds or promotes a non-fixture source under an activation trigger, insert the complete same-hash review set before updating `current_policy_version` or `lifecycle_state`; test the ordering on both fresh install and populated upgrade, plus an idempotent rerun. Add both a populated forward-upgrade test and a fresh-install test. Include negative privilege, RLS, policy, immutability, and cross-wire assertions.
 10. Update the local runbook, source-of-truth docs, and memory in the same tranche.
 
 ## Validation

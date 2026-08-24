@@ -667,7 +667,11 @@ describe.sequential('PostgreSQL fixture persistence lifecycle', () => {
       '0116',
       '0117',
       '0118',
-      '0119'
+      '0119',
+      '0120',
+      '0121',
+      '0122',
+      '0123'
     ])
     expect(secondMigrationResult.applied).toEqual([])
     expect(secondMigrationResult.alreadyApplied).toEqual([
@@ -789,7 +793,11 @@ describe.sequential('PostgreSQL fixture persistence lifecycle', () => {
       '0116',
       '0117',
       '0118',
-      '0119'
+      '0119',
+      '0120',
+      '0121',
+      '0122',
+      '0123'
     ])
   })
 
@@ -4542,9 +4550,13 @@ describe.sequential('PostgreSQL fixture persistence lifecycle', () => {
           await client.query(
             `INSERT INTO appsea.opportunity_score_snapshots
                (workspace_id, score_snapshot_id, opportunity_id, scoring_version, score, factors,
-                weights, input_hash, calculated_at)
+                weights, input_hash, calculated_at, risk_penalty, risk_adjusted_score,
+                evidence_confidence, uncertainty_margin, ranking_score, scoring_profile,
+                model_version, evidence_snapshot_id, coverage_summary, freshness_summary)
              VALUES ($1, $2, $3, 'opportunity-score-v1.0.0', 50.0, '{}'::jsonb, '{}'::jsonb,
-                     repeat('b', 64), $4)`,
+                     repeat('b', 64), $4,
+                     5.0, 45.0, 0.5, 10.0, 40.0, 'balanced', 'model-v1',
+                     'evidence-snapshot:incomplete-analysis', '{}'::jsonb, '{}'::jsonb)`,
             [workspaceId, scoreSnapshotId, opportunityId, fixedAt]
           )
           await client.query(
@@ -6458,8 +6470,8 @@ describe.sequential('PostgreSQL fixture persistence lifecycle', () => {
                    repeat('c', 64), 'purge-manifest-analysis-artifact', '{}',
                    jsonb_build_object(
                      'version', 1,
-                     'uri', $2,
-                     'workspaceId', $1,
+                     'uri', $2::text,
+                     'workspaceId', $1::text,
                      'kind', 'report-markdown'
                    ), 'partial', 'active', 'purge-manifest-seed', repeat('d', 64), $3, $3)`,
           [workspaceId, reportMarkdownUri, fixedAt]
