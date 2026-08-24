@@ -1,4 +1,4 @@
-import { readFile } from 'node:fs/promises'
+import { readdir, readFile } from 'node:fs/promises'
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import path from 'node:path'
@@ -13,6 +13,9 @@ async function inputs() {
     envExample: await readFile(path.join(root, 'infra/production/production.env.example'), 'utf8'),
     webDockerfile: await readFile(path.join(root, 'Dockerfile.web'), 'utf8'),
     workerDockerfile: await readFile(path.join(root, 'Dockerfile.worker'), 'utf8'),
+    migrationFilenames: (await readdir(path.join(root, 'packages/db/migrations')))
+      .filter((filename) => filename.endsWith('.sql'))
+      .sort(),
     trackedProductionEnv: false
   }
 }
@@ -102,6 +105,25 @@ test('the release boundary requires the long-lived alerts supervisor', async () 
   const withoutAlerts = current.compose.replace(/\n  alerts:\n[\s\S]*$/, '\n')
   const findings = releaseBoundaryFindings({ ...current, compose: withoutAlerts })
   assert.ok(findings.includes('production compose is missing alerts'))
+})
+
+test('the release boundary requires the contiguous reviewed migration head', async () => {
+  const current = await inputs()
+  const missingLatest = current.migrationFilenames.filter(
+    (filename) => !filename.startsWith('0123_')
+  )
+  const findings = releaseBoundaryFindings({ ...current, migrationFilenames: missingLatest })
+  assert.ok(findings.includes('database migration inventory must contain exactly 123 SQL files'))
+  assert.ok(
+    findings.includes(
+      'database migration inventory must be a contiguous ordered prefix ending at 0123'
+    )
+  )
+
+  const invalid = [...current.migrationFilenames, '0001_duplicate.sql', 'notes.txt']
+  const invalidFindings = releaseBoundaryFindings({ ...current, migrationFilenames: invalid })
+  assert.ok(invalidFindings.includes('database migration filename is invalid: notes.txt'))
+  assert.ok(invalidFindings.includes('database migration versions must be unique: 0001'))
 })
 
 test('long-lived services cannot inherit the migration database credential', async () => {

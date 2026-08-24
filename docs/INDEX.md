@@ -6,6 +6,7 @@
 - [`../GOAL_PROMPT.md`](../GOAL_PROMPT.md)
 - [`status/current.md`](status/current.md)
 - [`status/weak-market-context-handoff-completion-report-2026-08-24.md`](status/weak-market-context-handoff-completion-report-2026-08-24.md)
+- [`status/migration-head-static-guard-completion-report-2026-08-24.md`](status/migration-head-static-guard-completion-report-2026-08-24.md)
 - [`status/stackexchange-policy-blocker-completion-report-2026-08-06.md`](status/stackexchange-policy-blocker-completion-report-2026-08-06.md)
 - [`status/source-policy-permission-evidence-completion-report-2026-08-06.md`](status/source-policy-permission-evidence-completion-report-2026-08-06.md)
 - [`status/source-policy-reviewer-role-completion-report-2026-08-06.md`](status/source-policy-reviewer-role-completion-report-2026-08-06.md)

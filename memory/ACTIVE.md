@@ -3,9 +3,9 @@
 ## State
 
 Audit: `docs/status/production-readiness-audit-2026-08-09.md` (8/22); checks
-pass, Docker unavailable. `pnpm verify`/local smoke through `0119`; verifier
-targets `0123`, last proof `0119`.
-AppSea remains fixture-first with production-shaped persistence, workflows,
+pass, Docker unavailable. `pnpm verify`/local smoke through `0119`; static
+guard targets `0123`; DB proof remains `0119`.
+AppSea is fixture-first with production persistence, workflows,
 source policy, private workspaces, reports/plans, and maintenance; the public
 leaderboard is synthetic and no source enabled. Reviewed
 `manual-owner-import-v3` supports tenant-private owner CSV/JSON without public

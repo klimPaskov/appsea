@@ -92,6 +92,10 @@ Implemented:
   private source coverage. It returns only bounded required/approved/missing
   role names, permission-evidence presence, and completion; reviewer identities,
   notes, references, hashes, and policy payloads stay outside the read boundary.
+- The release static verifier independently requires the checked-in migration
+  inventory to contain exactly 123 valid, unique, contiguous SQL files ending
+  at `0123`. This catches repository migration drift without replacing the
+  Docker-backed fresh/upgrade or hosted persistence proof.
 - migration `0103_competitor_observation_contrary_purpose.sql` keeps the same
   provenance/evidence/review trigger while accepting the explicit private
   `contrary-evidence` collection purpose.

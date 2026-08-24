@@ -35,6 +35,12 @@ presented as public market research.
   evidence therefore remains open.
 - `pnpm test:backup-restore` — passed the local helper tests; the verifier now
   targets migration `0123`.
+- `pnpm verify:release -- --static` and
+  `node --test scripts/verify_release.test.mjs` — passed the release-boundary
+  migration-inventory guard. It requires exactly 123 valid, unique,
+  contiguous SQL migrations ending at `0123`; it is static repository proof
+  only and does not replace Docker-backed fresh/upgrade or backup/restore
+  execution.
 - `pnpm worker:fixture` — passed and wrote the deterministic synthetic artifact
   (4 complaints, 3 clusters, score `80.3`).
 - `pnpm plan:sample` — passed and wrote the six-file synthetic coding-agent

@@ -1,4 +1,4 @@
-import { readFile } from 'node:fs/promises'
+import { readdir, readFile } from 'node:fs/promises'
 import { spawn } from 'node:child_process'
 import { fileURLToPath } from 'node:url'
 import path from 'node:path'
@@ -39,8 +39,13 @@ const staticFiles = {
   compose: 'infra/production/compose.yaml',
   envExample: 'infra/production/production.env.example',
   webDockerfile: 'Dockerfile.web',
-  workerDockerfile: 'Dockerfile.worker'
+  workerDockerfile: 'Dockerfile.worker',
+  migrationFilenames: 'packages/db/migrations'
 }
+
+const migrationFilePattern = /^(\d{4})_[a-z0-9_]+\.sql$/
+const expectedMigrationCount = 123
+const expectedLatestMigration = '0123'
 
 function section(text, name) {
   const escapedName = name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
@@ -64,10 +69,43 @@ export function releaseBoundaryFindings({
   envExample,
   webDockerfile,
   workerDockerfile,
-  trackedProductionEnv = false
+  trackedProductionEnv = false,
+  migrationFilenames = []
 }) {
   const findings = []
   if (trackedProductionEnv) findings.push('infra/production/production.env must remain untracked')
+
+  const migrationVersions = []
+  for (const filename of [...migrationFilenames].sort()) {
+    const match = filename.match(migrationFilePattern)
+    if (!match) {
+      findings.push(`database migration filename is invalid: ${filename}`)
+      continue
+    }
+    migrationVersions.push(match[1])
+  }
+  const duplicateVersions = migrationVersions.filter(
+    (version, index) => migrationVersions.indexOf(version) !== index
+  )
+  if (duplicateVersions.length > 0) {
+    findings.push(`database migration versions must be unique: ${duplicateVersions.join(', ')}`)
+  }
+  const expectedVersions = Array.from({ length: expectedMigrationCount }, (_, index) =>
+    String(index + 1).padStart(4, '0')
+  )
+  if (migrationVersions.length !== expectedMigrationCount) {
+    findings.push(
+      `database migration inventory must contain exactly ${expectedMigrationCount} SQL files`
+    )
+  }
+  if (
+    migrationVersions.some((version, index) => version !== expectedVersions[index]) ||
+    migrationVersions.at(-1) !== expectedLatestMigration
+  ) {
+    findings.push(
+      `database migration inventory must be a contiguous ordered prefix ending at ${expectedLatestMigration}`
+    )
+  }
 
   if (!/^services:\s*$/m.test(compose)) {
     findings.push('production compose must declare a services section')
@@ -183,10 +221,13 @@ export function releaseBoundaryFindings({
 
 async function readReleaseInputs(repositoryRoot = root) {
   const entries = await Promise.all(
-    Object.entries(staticFiles).map(async ([key, relativePath]) => [
-      key,
-      await readFile(path.join(repositoryRoot, relativePath), 'utf8')
-    ])
+    Object.entries(staticFiles).map(async ([key, relativePath]) => {
+      if (key === 'migrationFilenames') {
+        const filenames = await readdir(path.join(repositoryRoot, relativePath))
+        return [key, filenames.filter((filename) => filename.endsWith('.sql')).sort()]
+      }
+      return [key, await readFile(path.join(repositoryRoot, relativePath), 'utf8')]
+    })
   )
   return Object.fromEntries(entries)
 }

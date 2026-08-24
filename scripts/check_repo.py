@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import re
 import struct
 import subprocess
@@ -45,6 +46,15 @@ REFERENCE_IMAGES = [
 
 def should_skip(path: Path) -> bool:
     return bool(SKIP_PARTS.intersection(path.parts))
+
+
+def iter_files(suffix: str):
+    """Walk repository files without following pnpm/junction directories."""
+    for directory, child_directories, filenames in os.walk(ROOT, topdown=True, followlinks=False):
+        child_directories[:] = [name for name in child_directories if name not in SKIP_PARTS]
+        for filename in filenames:
+            if filename.endswith(suffix):
+                yield Path(directory) / filename
 
 
 def markdown_links(path: Path) -> list[str]:
@@ -139,7 +149,7 @@ def main() -> int:
     if len(agent_names) < 5:
         errors.append(f'expected bounded subagents, found {len(agent_names)}')
 
-    for path in ROOT.rglob('*.md'):
+    for path in iter_files('.md'):
         if should_skip(path):
             continue
         for target in markdown_links(path):
@@ -151,7 +161,7 @@ def main() -> int:
             if not candidate.exists():
                 errors.append(f'broken link in {path.relative_to(ROOT)}: {target}')
 
-    for path in ROOT.rglob('*.json'):
+    for path in iter_files('.json'):
         if should_skip(path):
             continue
         try:
@@ -159,7 +169,7 @@ def main() -> int:
         except Exception as exc:
             errors.append(f'invalid JSON {path.relative_to(ROOT)}: {exc}')
 
-    for path in ROOT.rglob('*.toml'):
+    for path in iter_files('.toml'):
         if should_skip(path):
             continue
         try:

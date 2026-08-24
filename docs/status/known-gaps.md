@@ -4,6 +4,12 @@
 
 No live social platform is enabled. Fixture data cannot estimate market size, complaint frequency, or current momentum.
 
+The production release verifier now checks the repository migration inventory
+statically: exactly 123 valid, unique, contiguous SQL migrations must end at
+`0123`. This catches checked-in drift but does not close the remaining
+Docker-backed fresh/upgrade, backup/restore, hosted HA, or provider-operations
+gates.
+
 Production complaint analysis is intentionally a `candidate`, not a
 `researched` opportunity, until the explicit deep-research gate passes. The
 private read boundary repairs legacy non-synthetic `researched` rows through
