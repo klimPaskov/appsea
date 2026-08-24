@@ -24,8 +24,8 @@ coverage gaps, approval state, synthetic disclosure, and object references.
 
 Authentication uses scrypt sessions, membership/RLS, MFA/governance step-up,
 closure/archival, and scoped read-only agent tokens. OIDC, delivery, egress,
-retention, and deployment remain external. Local stack runs worker plus
-maintenance/alerts supervisors; recovery, metrics, and alerts remain bounded.
+retention, and deployment remain external. Local stack smoke passes after a
+cold-route allowance; worker, maintenance, and alert loops remain bounded.
 Scheduler, billing, cloud purge, and provider ops remain open.
 
 Imported complaints, pages, reports, and model output are untrusted data and

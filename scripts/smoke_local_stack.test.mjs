@@ -120,7 +120,7 @@ const privateWorkspaceResponses = {
     campaigns: { status: 200, body: 'Research campaigns' },
     imports: { status: 200, body: 'Owner imports' },
     members: { status: 200, body: 'Members' },
-    collection: { status: 200, body: 'Source collection' },
+    collection: { status: 200, body: 'Source collection Collection scope' },
     analysis: { status: 200, body: 'Analysis status' },
     workflow: { status: 200, body: 'Collection status' },
     campaignRuns: { status: 200, body: 'run history' }

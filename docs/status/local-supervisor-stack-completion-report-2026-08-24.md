@@ -27,13 +27,17 @@ not activate CFPB, Stack Exchange, or any other third-party source.
   or an external provider.
 - `pnpm test`, `pnpm lint`, `pnpm typecheck`, and `pnpm build` remain green for
   the workspace after the change.
+- `pnpm verify:local-stack` — the disposable PostgreSQL/Temporal/MinIO stack
+  completed the authenticated owner-import, production-analysis, private
+  report/plan readback, fixture-disclosure, and cleanup smoke on 2026-08-24.
+  The smoke harness now allows a cold Next.js route compile while keeping its
+  workflow polling deadlines bounded.
 
 ## Boundary and follow-up
 
 This does not prove a deployed scheduler owner, hosted Temporal/HA behavior,
 external alert routing, provider recovery, or source activation. Those remain
-deployment and independent source-policy gates. Docker-backed local-stack
-execution remains unavailable in this environment because the Docker Desktop
-`dockerDesktopLinuxEngine` pipe is missing.
+deployment and independent source-policy gates. The local Docker proof is
+disposable development evidence only and does not claim hosted durability.
 
 The user-owned root `AGENTS.md` was not edited or staged.

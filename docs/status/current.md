@@ -40,9 +40,10 @@
   risk-adjusted, ranking, and confidence fields survive durable analysis and
   private readback. A PostgreSQL `42803` regression in the source-coverage
   aggregate was caught by this smoke and fixed by grouping every policy
-  eligibility column; the corrected path now passes again. GitHub CI runs it on
-  every change. The intake row and seed are smoke-only and never market
-  evidence.
+  eligibility column; the corrected path now passes again. The 2026-08-24
+  rerun also confirmed the smoke harness tolerates a cold Next.js route compile
+  without widening workflow polling limits. GitHub CI runs it on every change.
+  The intake row and seed are smoke-only and never market evidence.
 - Local UI proof: the persisted public capture in
   `artifacts/ui-reference-loop/2026-08-24/` passes the scalar browser audit;
   `pnpm ui:capture:private` now runs the same audit on

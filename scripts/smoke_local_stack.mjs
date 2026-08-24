@@ -5,6 +5,9 @@ import { composeFile, repositoryRoot } from './dev_local.mjs'
 
 const localHost = '127.0.0.1'
 const localWebUrl = `http://${localHost}:3000`
+// Next.js may compile a route on its first request in the local stack. Keep
+// that cold-start allowance separate from the bounded workflow polling loops.
+const localRequestTimeoutMs = 60_000
 
 const balancedScoreFactorKeys = [
   'demand.complaintFrequency',
@@ -166,7 +169,7 @@ async function terminate(child) {
 async function fetchResponse(route, init = {}) {
   return fetch(`${localWebUrl}${route}`, {
     ...init,
-    signal: init.signal ?? AbortSignal.timeout(15_000)
+    signal: init.signal ?? AbortSignal.timeout(localRequestTimeoutMs)
   })
 }
 
