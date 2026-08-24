@@ -17,6 +17,7 @@ const analysis: ComplaintAnalysis = complaintAnalysisSchema.parse({
   workaround: null,
   featureMentions: ['handoff'],
   userSegmentHints: ['support'],
+  marketSignalHints: [],
   severity: 3,
   recurrence: 'repeated',
   switchingIntent: 'possible',

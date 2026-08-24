@@ -159,6 +159,13 @@ export default async function ProductionCollectionPage({
                 {evidence.analysis.entityConfidence.toFixed(2)}. Unresolved:{' '}
                 {evidence.analysis.entities.unresolvedTypes.join(', ') || 'none'}.
               </p>
+              {evidence.analysis.marketSignalHints.length > 0 ? (
+                <p className="complaint-meta">
+                  Market context hints:{' '}
+                  {evidence.analysis.marketSignalHints.map((hint) => hint.signalCode).join(', ')}{' '}
+                  (source-context only; not scored)
+                </p>
+              ) : null}
               <p className="complaint-meta">
                 <time dateTime={evidence.capturedAt}>Captured {evidence.capturedAt}</time>
                 {evidence.publishedAt ? (

@@ -147,10 +147,12 @@ and production deployment controls remain absent.
 
 Complaint observations now carry a deterministic, versioned classification and
 entity-resolution snapshot with severity and uncertainty fields. The rules are
-not a trained classifier; v0.4.0 also retains expected outcomes, consequences,
-workarounds, user hints, and explicitly labelled source-context
+not a trained classifier; v0.5.0 also retains expected outcomes, consequences,
+workarounds, user hints, bounded weak-demand/contrary-context market-signal
+hints, and explicitly labelled source-context
 substitute/competitor names when the text supports them. These complaint-level
-mentions remain inference, not reviewed competitive relationships, and all
+mentions and market-signal hints remain inference, not reviewed competitive
+relationships or score inputs, and all
 unmentioned dimensions stay unresolved until separately reviewed permitted
 research is available.
 Manual-import v3 can count only explicit workspace-scoped opaque author

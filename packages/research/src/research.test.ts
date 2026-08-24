@@ -105,6 +105,37 @@ describe('fixture research', () => {
     expect(analyzed.userSegmentHints).toEqual(['support'])
   })
 
+  it('retains explicit weak-market and contrary-context hints without treating them as proof', () => {
+    const analyzed = analyzeComplaint({
+      ...complaint,
+      text: 'The issue is not worth paying for. We already have a workaround, and it works fine now.'
+    })
+
+    expect(analyzed.marketSignalHints).toEqual([
+      {
+        signalType: 'weak-demand',
+        signalCode: 'not-willing-to-pay',
+        surfaceText: 'not worth paying for',
+        confidence: 0.92,
+        evidence: 'source-context'
+      },
+      {
+        signalType: 'contrary-context',
+        signalCode: 'already-solved',
+        surfaceText: 'already have a workaround',
+        confidence: 0.86,
+        evidence: 'source-context'
+      },
+      {
+        signalType: 'contrary-context',
+        signalCode: 'works-as-expected',
+        surfaceText: 'works fine now',
+        confidence: 0.84,
+        evidence: 'source-context'
+      }
+    ])
+  })
+
   it('does not invent narrative fields from ordinary complaint prose', () => {
     const analyzed = analyzeComplaint({
       ...complaint,
@@ -115,6 +146,7 @@ describe('fixture research', () => {
     expect(analyzed.consequence).toBeNull()
     expect(analyzed.workaround).toBeNull()
     expect(analyzed.userSegmentHints).toEqual([])
+    expect(analyzed.marketSignalHints).toEqual([])
   })
 
   it('orders analysis snapshots by complaint identity for replay', () => {
@@ -154,6 +186,7 @@ describe('fixture research', () => {
     expect(analysis.consequence).toBeNull()
     expect(analysis.workaround).toBeNull()
     expect(analysis.userSegmentHints).toEqual([])
+    expect(analysis.marketSignalHints).toEqual([])
     expect(analysis.entities.substitutes).toEqual([])
     expect(analysis.entities.competitors).toEqual([])
   })

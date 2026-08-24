@@ -246,6 +246,15 @@ const validFixturePersistenceInput: FixturePersistenceInput = {
         workaround: null,
         featureMentions: ['Fixture feature'],
         userSegmentHints: [],
+        marketSignalHints: [
+          {
+            signalType: 'weak-demand',
+            signalCode: 'not-a-problem',
+            surfaceText: 'not a problem for this team',
+            confidence: 0.88,
+            evidence: 'source-context'
+          }
+        ],
         severity: 1,
         recurrence: 'unknown',
         switchingIntent: 'unknown',
@@ -2042,6 +2051,7 @@ describe('contracts', () => {
     )
     expect(analysis.problemStatement).toBe('[Content redacted by workspace privacy policy]')
     expect(analysis.severity).toBe(1)
+    expect(analysis.marketSignalHints).toEqual([])
     expect(analysis.entities.product.canonicalName).toBeNull()
 
     const report = opportunityReportSchema.parse({

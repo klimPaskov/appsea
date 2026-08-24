@@ -1,5 +1,5 @@
 {
-  "id": "analysis:0dacc9dcbb9a9b205540e5f2c16ff5c6",
+  "id": "analysis:e0ca35db687a4dabf3e7591ef55dc473",
   "mode": "production",
   "createdAt": "2026-07-26T00:00:00.000Z",
   "sourcePolicies": [
@@ -137,6 +137,7 @@
         "ownership history"
       ],
       "userSegmentHints": [],
+      "marketSignalHints": [],
       "severity": 1,
       "recurrence": "unknown",
       "switchingIntent": "unknown",
@@ -150,7 +151,7 @@
         "source-policy-representation-applied"
       ],
       "reviewState": "unreviewed",
-      "extractionVersion": "complaint-analysis-v0.4.0",
+      "extractionVersion": "complaint-analysis-v0.5.0",
       "derivation": {
         "skillVersion": "appsea-complaint-analysis-v1",
         "modelVersion": "deterministic-rules-v1",
@@ -203,6 +204,7 @@
         "reassignment audit"
       ],
       "userSegmentHints": [],
+      "marketSignalHints": [],
       "severity": 1,
       "recurrence": "unknown",
       "switchingIntent": "unknown",
@@ -216,7 +218,7 @@
         "source-policy-representation-applied"
       ],
       "reviewState": "unreviewed",
-      "extractionVersion": "complaint-analysis-v0.4.0",
+      "extractionVersion": "complaint-analysis-v0.5.0",
       "derivation": {
         "skillVersion": "appsea-complaint-analysis-v1",
         "modelVersion": "deterministic-rules-v1",
@@ -269,6 +271,7 @@
         "handoff notes"
       ],
       "userSegmentHints": [],
+      "marketSignalHints": [],
       "severity": 3,
       "recurrence": "unknown",
       "switchingIntent": "unknown",
@@ -282,7 +285,7 @@
         "source-policy-representation-applied"
       ],
       "reviewState": "unreviewed",
-      "extractionVersion": "complaint-analysis-v0.4.0",
+      "extractionVersion": "complaint-analysis-v0.5.0",
       "derivation": {
         "skillVersion": "appsea-complaint-analysis-v1",
         "modelVersion": "deterministic-rules-v1",

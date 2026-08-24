@@ -11,7 +11,7 @@ SHA-256 fingerprints before staging; raw author identities are never retained.
 Unknown fields and text instructions are never executed or
 copied into code, skills, instructions, permissions, or repository memory.
 The deterministic complaint-analysis safety projection
-(`complaint-analysis-v0.4.0`) also marks instruction-like text with
+(`complaint-analysis-v0.5.0`) also marks instruction-like text with
 `manipulationRisk` and policy flags while retaining the original evidence and
 provenance. Private evidence reads label flagged observations for human review,
 and production artifacts expose a coverage gap; no imported text is promoted
@@ -330,13 +330,16 @@ for that pre-context authorization lookup.
 - Migration `0053` stores derived complaint analysis in a validated JSONB
   snapshot. The deterministic extractor receives already policy-checked
   evidence, records its version and confidence, and extracts outcomes,
-  consequences, workarounds, and user hints only from bounded explicit phrasing.
+  consequences, workarounds, user hints, and bounded market-signal hints only
+  from explicit phrasing. Market-signal hints carry `source-context` evidence
+  and remain research prompts rather than reviewed contrary evidence or score
+  inputs.
   It resolves a substitute or competitor only when the complaint explicitly
   labels a bounded source-context name; ordinary prose and safety-flagged text
   remain unresolved. These complaint-level references never make a competitive
   relationship source-backed: that still requires a reviewed source/evidence
   observation.
-  The v0.4.0 safety projection detects bounded instruction-like patterns,
+  The v0.5.0 safety projection detects bounded instruction-like patterns,
   retains the text, and marks the interpretation for review; imported text
   remains data, and analysis output cannot write instructions, code, skills, or
   memory. Existing JSONB fields already carry `manipulationRisk` and

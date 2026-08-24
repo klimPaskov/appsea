@@ -86,12 +86,13 @@ source.
 
 Each retained complaint now also exposes a versioned derived-analysis snapshot:
 classification type, explicit outcome/consequence/workaround/user-hint fields,
-severity, recurrence and switching signals, entity confidence, and unresolved
+bounded market-signal hints, severity, recurrence and switching signals, entity confidence, and unresolved
 competitor/substitute dimensions. A bounded
 source-context extractor can resolve a substitute or competitor name only when
 the complaint explicitly labels it (for example, a quoted alternative or
 delimiter-bound `competitor:` value); ordinary prose and safety-flagged text
-remain unresolved. These values are inference with explicit confidence and
+remain unresolved. Market-signal hints are source-context prompts only; they do
+not establish contrary evidence or change ranking. These values are inference with explicit confidence and
 review state; they do not replace provenance or make a complaint-level mention
 source-backed competitive coverage.
 

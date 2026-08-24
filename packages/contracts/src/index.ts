@@ -361,6 +361,28 @@ export const complaintEntityResolutionSchema = z
   .strict()
 
 /**
+ * A complaint-level market signal is a bounded source-context hint, not a
+ * reviewed market observation. It is retained so researchers can find
+ * explicit contrary or weak-demand language without allowing the analyzer to
+ * turn ordinary prose into a market claim or a score input.
+ */
+export const complaintMarketSignalHintSchema = z
+  .object({
+    signalType: z.enum(['weak-demand', 'contrary-context']),
+    signalCode: z.enum([
+      'not-willing-to-pay',
+      'not-a-problem',
+      'already-solved',
+      'works-as-expected',
+      'low-frequency'
+    ]),
+    surfaceText: z.string().min(1).max(240),
+    confidence: z.number().min(0).max(1),
+    evidence: z.literal('source-context')
+  })
+  .strict()
+
+/**
  * A derived observation is intentionally separate from the source complaint.
  * It records deterministic extraction, entity confidence, and unresolved
  * market dimensions without turning a missing lookup into negative evidence.
@@ -378,6 +400,7 @@ export const complaintAnalysisSchema = z
     workaround: z.string().min(1).max(2_000).nullable(),
     featureMentions: z.array(z.string().min(1).max(240)).max(50),
     userSegmentHints: z.array(z.string().min(1).max(240)).max(50),
+    marketSignalHints: z.array(complaintMarketSignalHintSchema).max(10).default([]),
     severity: z.number().int().min(0).max(5),
     recurrence: z.enum(['none', 'occasional', 'repeated', 'persistent', 'unknown']),
     switchingIntent: z.enum(['none', 'possible', 'explicit', 'unknown']),
@@ -8132,7 +8155,8 @@ export function redactComplaintAnalysis(
           affectedWorkflow: evidenceRedactionMarker,
           workaround: evidenceRedactionMarker,
           featureMentions: [evidenceRedactionMarker],
-          userSegmentHints: [evidenceRedactionMarker]
+          userSegmentHints: [evidenceRedactionMarker],
+          marketSignalHints: []
         }
       : {}),
     entities: redactAnalysisEntityFields(analysis.entities, fields)

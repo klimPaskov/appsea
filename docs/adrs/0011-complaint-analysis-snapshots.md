@@ -9,8 +9,14 @@ AppSea stores deterministic complaint classification and entity-resolution
 output as a validated `analysis_snapshot` on each complaint observation. The
 source complaint and evidence identifiers remain immutable; a derived
 snapshot carries its extraction, skill, model, and prompt versions plus human
-review state. Explicitly framed outcomes, consequences, workarounds, and user
-hints are retained only when bounded source text supports them.
+review state. Explicitly framed outcomes, consequences, workarounds, user hints,
+and market-signal hints are retained only when bounded source text supports
+them. Market-signal hints remain source-context derivations, never reviewed
+contrary evidence or score inputs.
+
+This is an additive JSONB contract change: no relational migration is needed.
+Legacy snapshots parse with an empty hint list, and the next versioned analysis
+write persists the current shape.
 
 The snapshot resolves only what the retained source fields support. Products,
 companies, and features can be exact or normalized matches. A bounded

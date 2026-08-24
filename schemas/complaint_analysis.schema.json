@@ -79,6 +79,30 @@
       "maxItems": 50,
       "items": { "type": "string", "minLength": 1, "maxLength": 240 }
     },
+    "marketSignalHints": {
+      "type": "array",
+      "maxItems": 10,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["signalType", "signalCode", "surfaceText", "confidence", "evidence"],
+        "properties": {
+          "signalType": { "enum": ["weak-demand", "contrary-context"] },
+          "signalCode": {
+            "enum": [
+              "not-willing-to-pay",
+              "not-a-problem",
+              "already-solved",
+              "works-as-expected",
+              "low-frequency"
+            ]
+          },
+          "surfaceText": { "type": "string", "minLength": 1, "maxLength": 240 },
+          "confidence": { "type": "number", "minimum": 0, "maximum": 1 },
+          "evidence": { "const": "source-context" }
+        }
+      }
+    },
     "severity": { "type": "integer", "minimum": 0, "maximum": 5 },
     "recurrence": { "enum": ["none", "occasional", "repeated", "persistent", "unknown"] },
     "switchingIntent": { "enum": ["none", "possible", "explicit", "unknown"] },

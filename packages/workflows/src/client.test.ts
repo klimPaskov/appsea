@@ -23,6 +23,7 @@ const analysisFor = (complaintId: string) =>
     workaround: null,
     featureMentions: ['Feature'],
     userSegmentHints: [],
+    marketSignalHints: [],
     severity: 2,
     recurrence: 'unknown',
     switchingIntent: 'unknown',

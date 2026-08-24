@@ -29,7 +29,7 @@ import {
 } from '@appsea/contracts'
 import { buildResearchQualitySnapshot } from './quality-benchmark'
 
-export const COMPLAINT_ANALYSIS_VERSION = 'complaint-analysis-v0.4.0'
+export const COMPLAINT_ANALYSIS_VERSION = 'complaint-analysis-v0.5.0'
 export const COMPLAINT_DEDUPLICATION_VERSION = 'complaint-deduplication-v1.0.0'
 
 export interface DeepResearchGateEvaluation {
@@ -204,6 +204,51 @@ const explicitUserSegmentPatterns: ReadonlyArray<RegExp> = [
   /\b(?:for|from|as)\s+(?:a|an|the)?\s*(customer success|small business|team lead|support|operations?|developer|engineering|finance|sales|marketing|administrator|admin|enterprise|startup|freelancer|agency|founder|manager)(?:\s+(?:team|user|users|staff|role))?\b/gi
 ]
 
+type MarketSignalHint = ComplaintAnalysis['marketSignalHints'][number]
+
+const explicitMarketSignalPatterns: ReadonlyArray<{
+  signalType: MarketSignalHint['signalType']
+  signalCode: MarketSignalHint['signalCode']
+  confidence: number
+  pattern: RegExp
+}> = [
+  {
+    signalType: 'weak-demand',
+    signalCode: 'not-willing-to-pay',
+    confidence: 0.92,
+    pattern:
+      /\b(?:not worth (?:paying|the cost)|(?:would|will|wouldn't|would not|won't|will not)\s+pay(?:ing)?|not going to pay)\b[^,.;!?]{0,120}/gi
+  },
+  {
+    signalType: 'weak-demand',
+    signalCode: 'not-a-problem',
+    confidence: 0.88,
+    pattern:
+      /\b(?:not\s+(?:a|an|the)?\s*(?:problem|issue|pain point|need)|no\s+(?:real\s+)?(?:problem|issue|need))\b[^,.;!?]{0,120}/gi
+  },
+  {
+    signalType: 'contrary-context',
+    signalCode: 'already-solved',
+    confidence: 0.86,
+    pattern:
+      /\balready\s+(?:solved|fixed|resolved|(?:have|use|using)\s+(?:a|an|the)?\s*(?:workaround|solution|tool|process))\b[^,.;!?]{0,120}/gi
+  },
+  {
+    signalType: 'contrary-context',
+    signalCode: 'works-as-expected',
+    confidence: 0.84,
+    pattern:
+      /\b(?:works?\s+(?:fine|well|as expected)|working\s+as expected|no\s+complaints?)\b[^,.;!?]{0,120}/gi
+  },
+  {
+    signalType: 'weak-demand',
+    signalCode: 'low-frequency',
+    confidence: 0.8,
+    pattern:
+      /\b(?:one[- ]time|rarely|hardly ever|infrequently|once\s+(?:a|per)\s+(?:year|month|quarter))\b[^,.;!?]{0,120}/gi
+  }
+]
+
 function normalizeExplicitPhrase(value: string): string {
   return normalizeComplaintText(value)
     .replace(/^[\s"'“”`]+|[\s"'“”`]+$/g, '')
@@ -235,6 +280,30 @@ function extractExplicitPhrases(
 
 function firstExplicitPhrase(text: string, patterns: ReadonlyArray<RegExp>): string | null {
   return extractExplicitPhrases(text, patterns, 1)[0] ?? null
+}
+
+function extractExplicitMarketSignalHints(text: string): MarketSignalHint[] {
+  const hints: MarketSignalHint[] = []
+  const seen = new Set<string>()
+  for (const { signalType, signalCode, confidence, pattern } of explicitMarketSignalPatterns) {
+    pattern.lastIndex = 0
+    for (const match of text.matchAll(pattern)) {
+      const surfaceText = normalizeExplicitPhrase(match[0] ?? '')
+      if (!surfaceText || surfaceText.length > 240) continue
+      const key = `${signalCode}\0${lower(surfaceText)}`
+      if (seen.has(key)) continue
+      seen.add(key)
+      hints.push({
+        signalType,
+        signalCode,
+        surfaceText,
+        confidence,
+        evidence: 'source-context'
+      })
+      if (hints.length >= 10) return hints
+    }
+  }
+  return hints
 }
 
 function entityReference(
@@ -365,6 +434,7 @@ export function analyzeComplaint(complaint: Complaint): ComplaintAnalysis {
   const userSegmentHints = safetyFlagged
     ? []
     : extractExplicitPhrases(normalizedText, explicitUserSegmentPatterns, 10)
+  const marketSignalHints = safetyFlagged ? [] : extractExplicitMarketSignalHints(normalizedText)
   const unresolvedTypes: ComplaintAnalysis['entities']['unresolvedTypes'] = [
     ...(product.canonicalName === null ? (['product'] as const) : []),
     ...(company.canonicalName === null ? (['company'] as const) : []),
@@ -394,6 +464,7 @@ export function analyzeComplaint(complaint: Complaint): ComplaintAnalysis {
     workaround,
     featureMentions: uniqueStrings([complaint.feature]),
     userSegmentHints,
+    marketSignalHints,
     severity,
     recurrence: safetyFlagged ? 'unknown' : recurrenceFor(complaint.category, normalizedText),
     switchingIntent: safetyFlagged

@@ -218,6 +218,28 @@ const analysisFor = (complaintId: string) =>
     }
   })
 
+describe('complaint market signal hints', () => {
+  it('defaults legacy snapshots to no hints and rejects unsupported signal codes', () => {
+    const legacy = analysisFor('complaint:legacy')
+    expect(legacy.marketSignalHints).toEqual([])
+
+    expect(() =>
+      complaintAnalysisSchema.parse({
+        ...legacy,
+        marketSignalHints: [
+          {
+            signalType: 'weak-demand',
+            signalCode: 'inferred-market-size',
+            surfaceText: 'not source text',
+            confidence: 0.5,
+            evidence: 'source-context'
+          }
+        ]
+      })
+    ).toThrow()
+  })
+})
+
 function input(overrides: Partial<ProductionAnalysisInput> = {}): ProductionAnalysisInput {
   return {
     collectionArtifactId: 'collection:sample',
