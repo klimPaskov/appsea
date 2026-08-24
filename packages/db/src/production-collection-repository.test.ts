@@ -147,7 +147,10 @@ describe('production collection read model', () => {
         tombstone_id: 'tombstone:source:one',
         source_id: 'source:cfpb',
         source_record_id: '123456',
-        completed_at: at
+        reason: 'source_retention_expired',
+        completed_at: at,
+        active_source_item: false,
+        active_workflow_id: null
       }
     ]
     const { PostgresProductionCollectionRepository } =
@@ -160,8 +163,65 @@ describe('production collection read model', () => {
       tombstoneId: 'tombstone:source:one',
       sourceId: 'source:cfpb',
       sourceRecordId: '123456',
+      reason: 'source_retention_expired',
+      activeSourceItem: false,
+      activeWorkflowId: null,
       completedAt: at
     })
+    mocks.recollectionRows = []
+  })
+
+  it('lists bounded completed lineage without crossing the tenant boundary', async () => {
+    mocks.recollectionRows = [
+      {
+        tombstone_id: 'tombstone:source:two',
+        source_id: 'source:cfpb',
+        source_record_id: '654321',
+        reason: 'source_retention_expired',
+        completed_at: '2026-07-27T00:00:00.000Z',
+        active_source_item: true,
+        active_workflow_id: 'workflow:production:workspace:one:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb'
+      },
+      {
+        tombstone_id: 'tombstone:source:one',
+        source_id: 'source:cfpb',
+        source_record_id: '123456',
+        reason: 'source_owner_deleted',
+        completed_at: at,
+        active_source_item: false,
+        active_workflow_id: null
+      }
+    ]
+    const { PostgresProductionCollectionRepository } =
+      await import('./production-collection-repository')
+    const targets = await new PostgresProductionCollectionRepository(
+      {} as never
+    ).listRecollectionTargetsForUser('user:one', 'workspace:one', {
+      sourceId: 'source:cfpb',
+      limit: 2
+    })
+
+    expect(targets).toEqual([
+      {
+        tombstoneId: 'tombstone:source:two',
+        sourceId: 'source:cfpb',
+        sourceRecordId: '654321',
+        reason: 'source_retention_expired',
+        completedAt: '2026-07-27T00:00:00.000Z',
+        activeSourceItem: true,
+        activeWorkflowId: 'workflow:production:workspace:one:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb'
+      },
+      {
+        tombstoneId: 'tombstone:source:one',
+        sourceId: 'source:cfpb',
+        sourceRecordId: '123456',
+        reason: 'source_owner_deleted',
+        completedAt: at,
+        activeSourceItem: false,
+        activeWorkflowId: null
+      }
+    ])
+    expect(mocks.queryLog.at(-1)).toContain('LIMIT $3')
     mocks.recollectionRows = []
   })
 

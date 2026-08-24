@@ -9,6 +9,7 @@
 - [`status/migration-head-static-guard-completion-report-2026-08-24.md`](status/migration-head-static-guard-completion-report-2026-08-24.md)
 - [`status/local-supervisor-stack-completion-report-2026-08-24.md`](status/local-supervisor-stack-completion-report-2026-08-24.md)
 - [`status/guidance-sync-completion-report-2026-08-24.md`](status/guidance-sync-completion-report-2026-08-24.md)
+- [`status/source-recollection-workspace-completion-report-2026-08-24.md`](status/source-recollection-workspace-completion-report-2026-08-24.md)
 - [`status/stackexchange-policy-blocker-completion-report-2026-08-06.md`](status/stackexchange-policy-blocker-completion-report-2026-08-06.md)
 - [`status/source-policy-permission-evidence-completion-report-2026-08-06.md`](status/source-policy-permission-evidence-completion-report-2026-08-06.md)
 - [`status/source-policy-reviewer-role-completion-report-2026-08-06.md`](status/source-policy-reviewer-role-completion-report-2026-08-06.md)

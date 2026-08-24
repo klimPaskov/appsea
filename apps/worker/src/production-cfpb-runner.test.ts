@@ -362,6 +362,9 @@ describe('production CFPB runner lease lifecycle', () => {
       tombstoneId: 'tombstone:source:one',
       sourceId: 'cfpb-consumer-complaints',
       sourceRecordId: '123456',
+      reason: 'source_retention_expired',
+      activeSourceItem: false,
+      activeWorkflowId: null,
       completedAt: '2026-07-10T00:00:00.000Z'
     }
     state.acquireInput = undefined

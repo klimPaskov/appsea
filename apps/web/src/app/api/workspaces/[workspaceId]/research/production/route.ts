@@ -118,6 +118,11 @@ export async function POST(
       )
     }
   }
+  const actorBoundRequest = productionCollectionWorkflowStartRequestSchema.parse({
+    ...strict.data,
+    requestedBy: { actorType: 'user', actorId: session.user.userId }
+  })
+  const prepared = prepareProductionCollectionWorkflowStart(actorBoundRequest)
   if (strict.data.recollectionTombstoneId) {
     let recollectionTarget: Awaited<
       ReturnType<PostgresProductionCollectionRepository['readRecollectionTargetForUser']>
@@ -143,12 +148,16 @@ export async function POST(
         { status: 422, headers: privateResponseHeaders }
       )
     }
+    if (
+      recollectionTarget.activeWorkflowId &&
+      recollectionTarget.activeWorkflowId !== prepared.workflowId
+    ) {
+      return Response.json(
+        { error: 'A re-collection workflow is already active for this deletion tombstone' },
+        { status: 409, headers: privateResponseHeaders }
+      )
+    }
   }
-  const actorBoundRequest = productionCollectionWorkflowStartRequestSchema.parse({
-    ...strict.data,
-    requestedBy: { actorType: 'user', actorId: session.user.userId }
-  })
-  const prepared = prepareProductionCollectionWorkflowStart(actorBoundRequest)
   try {
     await new PostgresProductionWorkflowAdmissionRepository(getDatabasePool()).admitForUser({
       workspaceId: parsedWorkspaceId.data,

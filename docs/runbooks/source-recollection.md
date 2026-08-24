@@ -48,6 +48,17 @@ The request schema and workflow input require `limit: 1`. The server binds the
 authenticated actor, and the workflow hash includes the tombstone identifier
 without carrying a raw caller key or source content into Temporal history.
 
+The private read model also reports an active queued/running workflow for the
+tombstone by identifier only. A different request is rejected before admission;
+the same deterministic workflow identity remains replayable through the normal
+idempotency path.
+
+The private campaigns page lists completed identifier-only tombstones for
+workspace members. Owners and editors see a submission control only when a
+non-synthetic campaign has a matching current approved source policy; viewers,
+manual-owner-import campaigns, and unavailable policy reads remain
+non-submittable. The page does not display source payloads or start analysis.
+
 ## Collection and persistence guarantees
 
 The CFPB connector uses the official complaint-by-ID route for the tombstone's

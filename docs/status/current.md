@@ -426,6 +426,12 @@ and the deleted predecessor remains historical. Maintenance, quota
 reconciliation, and retries never trigger this path automatically. The source
 is still disabled pending legal/privacy/security approval, and downstream
 analysis/report/plan generation remains a separate explicit action.
+The private campaigns workspace now lists completed identifier-only tombstones
+through an authenticated, bounded read and offers the action only to owners or
+editors whose non-synthetic campaign has a matching current approved policy;
+manual-owner-import campaigns are excluded because staged-batch ingress is a
+separate boundary. See
+[`source-recollection-workspace-completion-report-2026-08-24.md`](source-recollection-workspace-completion-report-2026-08-24.md).
 
 Migration `0048` adds the workspace/time index used by the private
 `GET /api/workspaces/:workspaceId/costs` read. The route repeats membership

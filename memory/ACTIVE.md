@@ -80,16 +80,15 @@ disabled pending model-use, malware, DPA/egress, durable cost, and calibration
 review.
 
 Private report/plan history is cursor-bounded and policy/deletion/redaction
-gated; selected reads and exports remain approval-aware. A real-Postgres
-incomplete-run case is authored, but Docker execution is pending. Migrations
+gated; selected reads and exports remain approval-aware. Migrations
 `0120`/`0121` persist Markdown objects and purge lineage; `0122` adds the
-reviewed owner-import author-fingerprint path and deletion/redaction clearing;
-`0123` projects identity-free source-policy approval roles and permission gaps.
-MCP history is metadata-only; bounded on-demand ZIP v1 is implemented with
-representation-specific audit receipts. Plan ZIPs retain the six compatibility
-files and add a complete 08_spec-compatible `package/` directory assembled
-from hydrated/redacted models, with explicit coverage gaps. Provider purge
-remains explicit follow-up work.
+reviewed owner-import author-fingerprint path; `0123` projects identity-free
+source-policy approval roles and permission gaps. MCP history is metadata-only;
+bounded ZIP v1 retains representation-specific audit receipts and explicit
+coverage gaps. The private campaigns page now lists completed identifier-only
+tombstones and offers one-record re-collection only for owners/editors with a
+matching approved non-synthetic campaign; in-flight tombstones are blocked by
+workflow identifier; manual imports remain separate.
 
 ## Next production tranche
 

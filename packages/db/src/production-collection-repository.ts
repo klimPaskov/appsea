@@ -8,6 +8,7 @@ import {
   productionAnalysisHandoffReadModelSchema,
   productionCollectionAnalysisSourceSchema,
   productionCollectionPersistenceInputSchema,
+  productionCollectionRecollectionTargetSchema,
   productionCollectionReadModelSchema,
   productionCollectionResultSchema,
   productionCollectionSnapshotSchema,
@@ -26,6 +27,7 @@ import {
   type ProductionCollectionPersistenceInput,
   type ProductionCollectionAnalysisSource,
   type ProductionCollectionReadModel,
+  type ProductionCollectionRecollectionTarget,
   type ProductionCollectionResult,
   type ProductionCollectionSnapshot,
   type ProductionAnalysisHandoffReadModel,
@@ -41,6 +43,8 @@ import {
   withServiceWorkspaceTransaction,
   withWorkspaceTransaction
 } from './transaction'
+
+export type { ProductionCollectionRecollectionTarget } from '@appsea/contracts'
 
 export interface ProductionCollectionPersistenceLease {
   leaseId: string
@@ -156,13 +160,6 @@ export interface ProductionCollectionCompletedIdentity {
   requestedDisplayMode: 'excerpt' | 'metadata-only' | 'aggregate-only'
   manualImportBatchId: string | null
   recollectionTombstoneId: string | null
-}
-
-export interface ProductionCollectionRecollectionTarget {
-  tombstoneId: string
-  sourceId: string
-  sourceRecordId: string
-  completedAt: string
 }
 
 function normalizeText(value: string): string {
@@ -374,6 +371,81 @@ export class PostgresProductionCollectionRepository {
     )
   }
 
+  /**
+   * Read completed deletion lineage without exposing source payloads. This is
+   * intentionally bounded and tenant-scoped; the caller still has to submit
+   * the identifier through the normal policy, quota, admission, and workflow
+   * gates before a new source request can happen.
+   */
+  async listRecollectionTargetsForUser(
+    userId: string,
+    workspaceId: string,
+    options: { sourceId?: string; limit?: number } = {}
+  ): Promise<ProductionCollectionRecollectionTarget[]> {
+    const parsedUserId = appseaIdentifierSchema.parse(userId)
+    const parsedWorkspaceId = appseaIdentifierSchema.parse(workspaceId)
+    const parsedSourceId = options.sourceId ? appseaIdentifierSchema.parse(options.sourceId) : null
+    const limit = Math.min(Math.max(Math.trunc(options.limit ?? 100), 1), 100)
+    return withAuthenticatedWorkspaceTransaction(
+      this.pool,
+      parsedUserId,
+      parsedWorkspaceId,
+      async (client) => {
+        const result = await client.query<
+          QueryResultRow & {
+            tombstone_id: string
+            source_id: string
+            source_record_id: string
+            reason: string
+            completed_at: Date | string
+            active_source_item: boolean
+            active_workflow_id: string | null
+          }
+        >(
+          `SELECT tombstone.tombstone_id, tombstone.source_id,
+                  tombstone.source_record_id, tombstone.reason,
+                  tombstone.completed_at,
+                  EXISTS (
+                    SELECT 1
+                      FROM appsea.source_items item
+                     WHERE item.workspace_id = tombstone.workspace_id
+                       AND item.recollection_tombstone_id = tombstone.tombstone_id
+                       AND item.deletion_state = 'active'
+                  ) AS active_source_item,
+                  (
+                    SELECT workflow.workflow_id
+                      FROM appsea.production_collection_workflow_jobs workflow
+                     WHERE workflow.workspace_id = tombstone.workspace_id
+                       AND workflow.recollection_tombstone_id = tombstone.tombstone_id
+                       AND workflow.state IN ('queued', 'running')
+                     ORDER BY workflow.requested_at DESC, workflow.workflow_id DESC
+                     LIMIT 1
+                  ) AS active_workflow_id
+             FROM appsea.deletion_tombstones tombstone
+            WHERE tombstone.workspace_id = $1
+              AND tombstone.state = 'completed'
+              AND tombstone.completed_at IS NOT NULL
+              AND ($2::text IS NULL OR tombstone.source_id = $2)
+            ORDER BY tombstone.completed_at DESC, tombstone.tombstone_id DESC
+            LIMIT $3`,
+          [parsedWorkspaceId, parsedSourceId, limit]
+        )
+        return result.rows.map((row) =>
+          productionCollectionRecollectionTargetSchema.parse({
+            tombstoneId: row.tombstone_id,
+            sourceId: row.source_id,
+            sourceRecordId: row.source_record_id,
+            reason: row.reason,
+            completedAt: asIso(row.completed_at),
+            activeSourceItem: row.active_source_item,
+            activeWorkflowId: row.active_workflow_id
+          })
+        )
+      },
+      { readOnly: true }
+    )
+  }
+
   async readRecollectionTarget(
     workspaceId: string,
     tombstoneId: string,
@@ -399,26 +471,50 @@ export class PostgresProductionCollectionRepository {
         tombstone_id: string
         source_id: string
         source_record_id: string
+        reason: string
         completed_at: Date | string
+        active_source_item: boolean
+        active_workflow_id: string | null
       }
     >(
-      `SELECT tombstone_id, source_id, source_record_id, completed_at
-         FROM appsea.deletion_tombstones
-        WHERE workspace_id = $1
-          AND tombstone_id = $2
-          AND source_id = $3
-          AND state = 'completed'
-          AND completed_at IS NOT NULL`,
+      `SELECT tombstone.tombstone_id, tombstone.source_id,
+              tombstone.source_record_id, tombstone.reason,
+              tombstone.completed_at,
+              EXISTS (
+                SELECT 1
+                  FROM appsea.source_items item
+                 WHERE item.workspace_id = tombstone.workspace_id
+                   AND item.recollection_tombstone_id = tombstone.tombstone_id
+                   AND item.deletion_state = 'active'
+              ) AS active_source_item,
+              (
+                SELECT workflow.workflow_id
+                  FROM appsea.production_collection_workflow_jobs workflow
+                 WHERE workflow.workspace_id = tombstone.workspace_id
+                   AND workflow.recollection_tombstone_id = tombstone.tombstone_id
+                   AND workflow.state IN ('queued', 'running')
+                 ORDER BY workflow.requested_at DESC, workflow.workflow_id DESC
+                 LIMIT 1
+              ) AS active_workflow_id
+         FROM appsea.deletion_tombstones tombstone
+        WHERE tombstone.workspace_id = $1
+          AND tombstone.tombstone_id = $2
+          AND tombstone.source_id = $3
+          AND tombstone.state = 'completed'
+          AND tombstone.completed_at IS NOT NULL`,
       [workspaceId, tombstoneId, sourceId]
     )
     const row = result.rows[0]
     if (!row) return null
-    return {
-      tombstoneId: appseaIdentifierSchema.parse(row.tombstone_id),
-      sourceId: appseaIdentifierSchema.parse(row.source_id),
+    return productionCollectionRecollectionTargetSchema.parse({
+      tombstoneId: row.tombstone_id,
+      sourceId: row.source_id,
       sourceRecordId: row.source_record_id,
-      completedAt: asIso(row.completed_at)
-    }
+      reason: row.reason,
+      completedAt: asIso(row.completed_at),
+      activeSourceItem: row.active_source_item,
+      activeWorkflowId: row.active_workflow_id
+    })
   }
 
   async readCompletedIdentity(

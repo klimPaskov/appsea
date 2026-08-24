@@ -4270,6 +4270,23 @@ export const productionCollectionResultSchema = z
   })
   .strict()
 
+/**
+ * Private, identifier-only lineage for a completed source deletion. The
+ * target never contains source content; it exists only to make an explicit,
+ * one-record re-collection reviewable before the normal policy gates run.
+ */
+export const productionCollectionRecollectionTargetSchema = z
+  .object({
+    tombstoneId: appseaIdentifierSchema,
+    sourceId: appseaIdentifierSchema,
+    sourceRecordId: z.string().min(1).max(500),
+    reason: z.string().min(1).max(500),
+    completedAt: z.string().datetime(),
+    activeSourceItem: z.boolean(),
+    activeWorkflowId: appseaIdentifierSchema.nullable()
+  })
+  .strict()
+
 export const productionCollectionSnapshotSchema = z
   .object({
     mode: z.literal('production-collection'),
@@ -8633,6 +8650,9 @@ export type ProductionCollectionPersistenceInput = z.infer<
   typeof productionCollectionPersistenceInputSchema
 >
 export type ProductionCollectionResult = z.infer<typeof productionCollectionResultSchema>
+export type ProductionCollectionRecollectionTarget = z.infer<
+  typeof productionCollectionRecollectionTargetSchema
+>
 export type ProductionCollectionSnapshot = z.infer<typeof productionCollectionSnapshotSchema>
 export type ProductionCollectionEvidenceReadModel = z.infer<
   typeof productionCollectionEvidenceReadModelSchema

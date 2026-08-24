@@ -156,7 +156,10 @@ describe('production workflow start route admission boundary', () => {
       tombstoneId: 'tombstone:source:one',
       sourceId: 'cfpb-consumer-complaints',
       sourceRecordId: '123456',
-      completedAt: '2026-08-01T00:00:00.000Z'
+      reason: 'source_retention_expired',
+      completedAt: '2026-08-01T00:00:00.000Z',
+      activeSourceItem: false,
+      activeWorkflowId: null
     })
   })
 
@@ -243,6 +246,46 @@ describe('production workflow start route admission boundary', () => {
     expect(response.status).toBe(422)
     expect(mocks.admitForUser).not.toHaveBeenCalled()
     expect(mocks.startProductionCollectionWorkflow).not.toHaveBeenCalled()
+  })
+
+  it('does not admit a second re-collection while another workflow is active', async () => {
+    mocks.readRecollectionTargetForUser.mockResolvedValue({
+      tombstoneId: 'tombstone:source:one',
+      sourceId: 'cfpb-consumer-complaints',
+      sourceRecordId: '123456',
+      reason: 'source_retention_expired',
+      completedAt: '2026-08-01T00:00:00.000Z',
+      activeSourceItem: false,
+      activeWorkflowId: 'workflow:production:workspace:one:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb'
+    })
+    const response = await POST(
+      request({ ...payload, limit: 1, recollectionTombstoneId: 'tombstone:source:one' }),
+      { params: Promise.resolve({ workspaceId: 'workspace:one' }) }
+    )
+
+    expect(response.status).toBe(409)
+    expect(mocks.admitForUser).not.toHaveBeenCalled()
+    expect(mocks.startProductionCollectionWorkflow).not.toHaveBeenCalled()
+  })
+
+  it('allows the deterministic replay of the active re-collection workflow', async () => {
+    mocks.readRecollectionTargetForUser.mockResolvedValue({
+      tombstoneId: 'tombstone:source:one',
+      sourceId: 'cfpb-consumer-complaints',
+      sourceRecordId: '123456',
+      reason: 'source_retention_expired',
+      completedAt: '2026-08-01T00:00:00.000Z',
+      activeSourceItem: false,
+      activeWorkflowId: 'workflow:production:workspace:one:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa'
+    })
+    const response = await POST(
+      request({ ...payload, limit: 1, recollectionTombstoneId: 'tombstone:source:one' }),
+      { params: Promise.resolve({ workspaceId: 'workspace:one' }) }
+    )
+
+    expect(response.status).toBe(202)
+    expect(mocks.admitForUser).toHaveBeenCalledTimes(1)
+    expect(mocks.startProductionCollectionWorkflow).toHaveBeenCalledTimes(1)
   })
 
   it('fails closed when tombstone verification is unavailable', async () => {

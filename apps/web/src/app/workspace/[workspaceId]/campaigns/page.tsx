@@ -3,9 +3,11 @@ import { notFound, redirect } from 'next/navigation'
 import {
   appseaIdentifierSchema,
   researchCampaignConfigurationSchema,
+  type ProductionCollectionRecollectionTarget,
   type ResearchCampaignReadModel,
   type WorkspaceSourceReadModel
 } from '@appsea/contracts'
+import { PostgresProductionCollectionRepository } from '@appsea/db'
 import { PostgresResearchCampaignRepository } from '@appsea/db/research-campaign'
 import { PostgresProductionCollectionWorkflowRepository } from '@appsea/db/production-collection-workflow'
 import { PostgresResearchCampaignOrchestrationRepository } from '@appsea/db/research-campaign-orchestration'
@@ -17,6 +19,8 @@ import { ResearchCampaignCreateForm, ResearchCampaignEditForm } from '../../camp
 import { ResearchCampaignRunAction } from '../../campaign-run-action'
 import { ResearchCampaignRunHistory } from '../../campaign-run-history'
 import { ResearchCampaignOrchestrationHistory } from '../../campaign-orchestration-history'
+import { recollectionCampaignOptions } from '../../recollection-campaign-options'
+import { ProductionRecollectionAction } from '../../production-recollection-action'
 
 export const dynamic = 'force-dynamic'
 
@@ -91,7 +95,8 @@ export default async function ResearchCampaignsPage({
       ReturnType<PostgresResearchCampaignOrchestrationRepository['listPageForCampaignForUser']>
     >
   >()
-  if (!workspace.fixtureOnly) {
+  let recollectionTargets: ProductionCollectionRecollectionTarget[] | null = []
+  if (!workspace.fixtureOnly && workspace.visibility === 'private') {
     const runLists = await Promise.all(
       campaigns.map((campaign) =>
         new PostgresProductionCollectionWorkflowRepository(pool).listPageForCampaignForUser(
@@ -124,6 +129,16 @@ export default async function ResearchCampaignsPage({
         orchestrationLists[index] ?? { data: [], nextCursor: null }
       )
     })
+    try {
+      recollectionTargets = await new PostgresProductionCollectionRepository(
+        pool
+      ).listRecollectionTargetsForUser(session.user.userId, parsedWorkspaceId.data, { limit: 100 })
+    } catch (error) {
+      console.error('AppSea recollection lineage read failed', {
+        name: error instanceof Error ? error.name : 'unknown'
+      })
+      recollectionTargets = null
+    }
   }
 
   return (
@@ -234,6 +249,67 @@ export default async function ResearchCampaignsPage({
           </ul>
         )}
       </section>
+      {!workspace.fixtureOnly && workspace.visibility === 'private' ? (
+        <section className="workspace-section" aria-labelledby="recollection-heading">
+          <div className="section-intro">
+            <h2 id="recollection-heading">Completed source deletions</h2>
+            <p>
+              These identifier-only tombstones preserve the coverage gap after deletion. An owner or
+              editor may explicitly request one source-native record again only when a current
+              approved campaign can satisfy the source policy.
+            </p>
+          </div>
+          {recollectionTargets === null ? (
+            <p className="empty-state">
+              Completed deletion lineage is temporarily unavailable. No re-collection request can be
+              submitted until the private database reconnects.
+            </p>
+          ) : recollectionTargets.length === 0 ? (
+            <p className="empty-state">No completed source deletion tombstones are available.</p>
+          ) : (
+            <ul className="seed-review-list">
+              {recollectionTargets.map((target) => (
+                <li key={target.tombstoneId}>
+                  <article className="source-registry-card">
+                    <div className="source-registry-heading">
+                      <div>
+                        <div className="complaint-meta">
+                          <span>{target.sourceId}</span>
+                          <span>
+                            {target.activeWorkflowId
+                              ? 'Re-collection in flight'
+                              : target.activeSourceItem
+                                ? 'Already re-collected'
+                                : 'Available'}
+                          </span>
+                        </div>
+                        <h3>{target.sourceRecordId}</h3>
+                      </div>
+                      <strong className="source-registry-state">
+                        {target.activeWorkflowId
+                          ? 'Workflow queued'
+                          : target.activeSourceItem
+                            ? 'Lineage linked'
+                            : 'Tombstone complete'}
+                      </strong>
+                    </div>
+                    <p className="muted-note">
+                      Tombstone {target.tombstoneId} · reason {target.reason} · completed{' '}
+                      {target.completedAt}
+                    </p>
+                    <ProductionRecollectionAction
+                      workspaceId={parsedWorkspaceId.data}
+                      target={target}
+                      campaigns={recollectionCampaignOptions(target, campaigns)}
+                      canStart={workspace.role === 'owner' || workspace.role === 'editor'}
+                    />
+                  </article>
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
+      ) : null}
       {workspace.role === 'owner' || workspace.role === 'editor' ? (
         <section className="workspace-section" aria-labelledby="campaign-create-heading">
           <div className="section-intro">

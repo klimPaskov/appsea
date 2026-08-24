@@ -63,6 +63,7 @@ import {
   productionAnalysisWorkflowPersistenceActivityResultSchema,
   productionCollectionRequestSchema,
   productionCollectionPersistenceInputSchema,
+  productionCollectionRecollectionTargetSchema,
   productionCollectionResultSchema,
   productionCollectionWorkflowStartRequestSchema,
   productionCollectionWorkflowCancelResultSchema,
@@ -3330,6 +3331,35 @@ describe('contracts', () => {
       replayed: false
     })
     expect(result.recollectionTombstoneId).toBeNull()
+  })
+
+  it('keeps completed re-collection lineage identifier-only and bounded', () => {
+    expect(
+      productionCollectionRecollectionTargetSchema.parse({
+        tombstoneId: 'tombstone:source:record',
+        sourceId: 'cfpb-consumer-complaints',
+        sourceRecordId: '123456',
+        reason: 'source_retention_expired',
+        completedAt: now,
+        activeSourceItem: false,
+        activeWorkflowId: null
+      })
+    ).toMatchObject({
+      tombstoneId: 'tombstone:source:record',
+      activeSourceItem: false
+    })
+    expect(
+      productionCollectionRecollectionTargetSchema.safeParse({
+        tombstoneId: 'tombstone:source:record',
+        sourceId: 'cfpb-consumer-complaints',
+        sourceRecordId: '123456',
+        reason: 'source_retention_expired',
+        completedAt: now,
+        activeSourceItem: false,
+        activeWorkflowId: null,
+        rawPayload: '{"complaint":"do not cross this boundary"}'
+      }).success
+    ).toBe(false)
   })
 
   it('rejects synthetic or mismatched production complaints', () => {

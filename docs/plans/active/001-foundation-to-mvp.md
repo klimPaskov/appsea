@@ -306,6 +306,12 @@ lineage is immutable; and the old deleted row remains historical. The CFPB
 connector uses its exact complaint route for this request and emits no deletion
 tombstone. This is a private operator action, not an automatic retry or source
 activation; see [`source-recollection.md`](../../runbooks/source-recollection.md).
+The campaigns workspace now exposes completed identifier-only tombstones through
+an authenticated bounded read and offers one-record submission only to owners or
+editors with a matching current approved non-synthetic campaign; an existing
+queued/running tombstone workflow is surfaced by identifier and blocks a
+different request while preserving deterministic replay. Manual imports
+remain a separate staged-batch boundary.
 
 Migration `0051_service_production_workflow_admission.sql` extends the existing
 production collection admission function for the direct CFPB command. The
