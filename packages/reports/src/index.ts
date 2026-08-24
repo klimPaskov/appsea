@@ -413,8 +413,19 @@ ${indentedJson(
     switchingIntent: analysis.switchingIntent,
     classificationConfidence: analysis.classificationConfidence,
     entityConfidence: analysis.entityConfidence,
-    unresolvedTypes: analysis.entities.unresolvedTypes
+    unresolvedTypes: analysis.entities.unresolvedTypes,
+    marketSignalHints: analysis.marketSignalHints
   }))
+)}
+
+## Weak-market and contrary-context hints
+
+These are bounded source-context prompts extracted from complaint wording. They are not reviewed market evidence and never affect ranking.
+
+${indentedJson(
+  artifact.analyses.flatMap((analysis) =>
+    analysis.marketSignalHints.map((hint) => ({ complaintId: analysis.complaintId, ...hint }))
+  )
 )}
 
 ## Competitors and workarounds
@@ -716,8 +727,19 @@ ${indentedJson(
     switchingIntent: analysis.switchingIntent,
     classificationConfidence: analysis.classificationConfidence,
     entityConfidence: analysis.entityConfidence,
-    unresolvedTypes: analysis.entities.unresolvedTypes
+    unresolvedTypes: analysis.entities.unresolvedTypes,
+    marketSignalHints: analysis.marketSignalHints
   }))
+)}
+
+## Weak-market and contrary-context hints
+
+These are bounded source-context prompts extracted from complaint wording. They are not reviewed market evidence and never affect ranking.
+
+${indentedJson(
+  artifact.analyses.flatMap((analysis) =>
+    analysis.marketSignalHints.map((hint) => ({ complaintId: analysis.complaintId, ...hint }))
+  )
 )}
 
 ## Competitors and contrary evidence

@@ -816,6 +816,10 @@ activity with fixed authority-bearing segments, redaction, route allowlists,
 budgets, replay protection, and bounded summary metadata. Its deterministic
 fallback is non-authoritative and the external provider remains disabled until
 model-use, DPA/retention, egress, malware, and calibration review is complete.
+Bounded weak-market and contrary-context hints are now carried into report
+Markdown, coding-plan briefs, and private evidence reads with source/evidence
+identifiers and an explicit source-context-only, not-scored disclosure; narrative
+redaction removes them.
 Private opportunity reads now expose a separate competitive-research coverage
 record, per-claim provenance observations, and a competitors/contrary-signals
 route; it does not promote reviewed seed assumptions to source-backed market

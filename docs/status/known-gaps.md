@@ -155,6 +155,11 @@ mentions and market-signal hints remain inference, not reviewed competitive
 relationships or score inputs, and all
 unmentioned dimensions stay unresolved until separately reviewed permitted
 research is available.
+Report Markdown, coding-plan briefs, and private evidence pages now expose the
+bounded hints with source/evidence identifiers and an explicit not-scored
+disclosure; narrative redaction removes them. This improves reviewability but
+does not create source-backed weak-market evidence or replace the missing
+approved competitor/contrary-evidence collection.
 Manual-import v3 can count only explicit workspace-scoped opaque author
 fingerprints; fixture, third-party, and missing-key observations remain visible
 as unavailable/partial author coverage rather than inferred people. Private opportunity reads now expose a

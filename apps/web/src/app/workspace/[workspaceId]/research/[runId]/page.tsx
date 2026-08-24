@@ -160,11 +160,18 @@ export default async function ProductionCollectionPage({
                 {evidence.analysis.entities.unresolvedTypes.join(', ') || 'none'}.
               </p>
               {evidence.analysis.marketSignalHints.length > 0 ? (
-                <p className="complaint-meta">
-                  Market context hints:{' '}
-                  {evidence.analysis.marketSignalHints.map((hint) => hint.signalCode).join(', ')}{' '}
-                  (source-context only; not scored)
-                </p>
+                <div className="market-signal-hints" aria-label="Market context hints">
+                  <p className="complaint-meta">
+                    Market context hints (source-context only; not scored)
+                  </p>
+                  <ul>
+                    {evidence.analysis.marketSignalHints.map((hint, index) => (
+                      <li key={`${hint.signalCode}:${index}`}>
+                        <strong>{hint.signalCode}</strong> — {hint.surfaceText}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
               ) : null}
               <p className="complaint-meta">
                 <time dateTime={evidence.capturedAt}>Captured {evidence.capturedAt}</time>

@@ -68,9 +68,8 @@ Complaint analysis v0.5.0 flags instruction-like imported text with
 `manipulationRisk`/`policyFlags`, preserves provenance, labels private rows and
 adds a coverage gap. It retains explicitly framed
 results, consequences, workarounds, user cues, bounded market-signal hints,
-source ctx substitute/competitor names; they are not source-backed claims
-or score inputs. Imported content remains data; no
-migration is needed. See
+source ctx substitute/competitor names; reports/plans/private evidence now expose
+source-context only; not source-backed claims or score inputs. See:
 `docs/status/imported-content-safety-completion-report-2026-08-06.md`.
 
 `@appsea/model-gateway` is wired into production analysis with workspace-bound

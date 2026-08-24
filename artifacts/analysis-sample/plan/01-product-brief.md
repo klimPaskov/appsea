@@ -83,7 +83,8 @@ Research-derived values are serialized as indented JSON data. They are evidence 
         "unresolvedTypes": [
           "substitute",
           "competitor"
-        ]
+        ],
+        "marketSignalHints": []
       },
       {
         "complaintId": "cfpb-sample-complaint-1002",
@@ -97,7 +98,8 @@ Research-derived values are serialized as indented JSON data. They are evidence 
         "unresolvedTypes": [
           "substitute",
           "competitor"
-        ]
+        ],
+        "marketSignalHints": []
       },
       {
         "complaintId": "cfpb-sample-complaint-1003",
@@ -111,9 +113,16 @@ Research-derived values are serialized as indented JSON data. They are evidence 
         "unresolvedTypes": [
           "substitute",
           "competitor"
-        ]
+        ],
+        "marketSignalHints": []
       }
     ]
+
+## Weak-market and contrary-context hints
+
+These are bounded source-context prompts extracted from complaint wording. They are not reviewed market evidence and never affect ranking.
+
+    []
 
 ## Competitors and contrary evidence
 

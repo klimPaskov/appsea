@@ -455,6 +455,36 @@ a:focus-visible {
   margin-right: 8px;
 }
 
+.market-signal-hints {
+  max-width: 760px;
+  margin-top: 14px;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.complaint-list .market-signal-hints p {
+  margin: 0;
+  font-size: inherit;
+  line-height: inherit;
+}
+
+.market-signal-hints ul {
+  display: grid;
+  gap: 4px;
+  margin: 6px 0 0;
+  padding-left: 18px;
+}
+
+.market-signal-hints li {
+  margin: 0;
+}
+
+.market-signal-hints strong {
+  color: #dbe2ef;
+  font-weight: 650;
+}
+
 .complaint-list p {
   max-width: 760px;
   margin: 12px 0 0;

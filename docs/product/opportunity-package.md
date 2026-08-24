@@ -33,6 +33,12 @@ and unresolved market dimensions. It is an inference checkpoint with explicit
 review state; it never substitutes for source provenance or separately
 reviewed competitor research.
 
+Report Markdown and the coding-agent product brief also render any bounded
+weak-market or contrary-context hints with their complaint/evidence identifier.
+They are labeled source-context only, remain unreviewed inference, and never
+affect ranking. Redaction clears the hint when the underlying narrative is
+masked.
+
 The private competitors route exposes the attached relationship records,
 contrary signals, and per-claim observations with a validated competitive-
 research coverage state. Fixture records are synthetic/unresolved, production

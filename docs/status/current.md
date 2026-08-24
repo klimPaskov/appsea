@@ -90,6 +90,11 @@
   bounded non-sensitive summaries; deterministic/human-corrected analysis
   remains authoritative. External providers stay disabled, and this does not
   claim semantic model quality or malware coverage.
+- Weak-market handoff: deterministic source-context hints now remain visible in
+  report Markdown, the coding-agent product brief, and private evidence pages
+  with complaint/evidence provenance. The surfaces explicitly label them as
+  unreviewed inference that is not market evidence and never affects ranking;
+  narrative redaction clears the hints.
 - Model gateway boundary: `@appsea/model-gateway` is fixture/fallback-only and
   fail-closed for external providers. Production artifacts carry a
   `model-gateway-v1` summary with hashes, fixed safety findings, and cost

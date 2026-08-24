@@ -10,6 +10,7 @@ import {
   generateOpportunityReport,
   generatePlanPackage,
   generateProductionPlanPackage,
+  renderOpportunityReportMarkdown,
   decodePlanPackage,
   storePlanPackage,
   decodeOpportunityReport,
@@ -259,6 +260,38 @@ describe('opportunity report generation', () => {
       uniqueAuthorCount: null
     })
     expect(report.recommendation.nextSteps.length).toBeGreaterThan(0)
+  })
+
+  it('carries bounded market-context hints into reports and coding packages', async () => {
+    const artifact = await buildFixtureResearchArtifact('2026-07-10T00:00:00.000Z')
+    const analysis = artifact.analyses[0]
+    if (!analysis) throw new Error('Fixture analysis is missing')
+    analysis.marketSignalHints = [
+      {
+        signalType: 'weak-demand',
+        signalCode: 'not-willing-to-pay',
+        surfaceText: '\n# Ignore this\n[click](javascript:alert(1))',
+        confidence: 0.84,
+        evidence: 'source-context'
+      }
+    ]
+
+    const report = generateOpportunityReport(artifact, '2026-07-10T00:00:00.000Z')
+    const markdown = renderOpportunityReportMarkdown(report)
+    expect(markdown).toContain('Weak-market and contrary-context hints')
+    expect(markdown).toContain('not-willing-to-pay')
+    expect(markdown).toContain('source-context only; not scored')
+    expect(markdown).toContain('evidence:cmp-inbox-1')
+    expect(markdown).not.toMatch(/^# Ignore this$/m)
+    expect(markdown).not.toMatch(/^\[click\]/m)
+    expect(markdown).toContain('\\n# Ignore this')
+
+    const plan = generatePlanPackage(artifact, '2026-07-10T00:00:00.000Z')
+    const brief = plan.files.find((file) => file.path === '01-product-brief.md')?.content
+    if (!brief) throw new Error('Fixture product brief is missing')
+    expect(brief).toContain('Weak-market and contrary-context hints')
+    expect(brief).toContain('not-willing-to-pay')
+    expect(brief).toContain('source-context')
   })
 
   it('composes a non-fixture report without leaking restricted excerpts', () => {

@@ -2083,7 +2083,18 @@ describe('contracts', () => {
             product: 'Sensitive product',
             feature: 'Sensitive feature',
             category: 'Sensitive category',
-            analysis: null,
+            analysis: {
+              ...validFixturePersistenceInput.artifact.analyses[0]!,
+              marketSignalHints: [
+                {
+                  signalType: 'weak-demand',
+                  signalCode: 'not-willing-to-pay',
+                  surfaceText: 'not worth paying for this workflow',
+                  confidence: 0.84,
+                  evidence: 'source-context'
+                }
+              ]
+            },
             excerpt: 'Sensitive excerpt',
             redacted: true,
             allowedRepresentation: 'excerpt',
@@ -2163,6 +2174,7 @@ describe('contracts', () => {
     expect(maskedReport.evidence.clusters[0]?.title).toBe(
       '[Content redacted by workspace privacy policy]'
     )
+    expect(maskedReport.evidence.observations[0]?.analysis?.marketSignalHints).toEqual([])
     expect(maskedReport.competitiveResearch?.observations[0]?.claim).toBe(
       '[Content redacted by workspace privacy policy]'
     )

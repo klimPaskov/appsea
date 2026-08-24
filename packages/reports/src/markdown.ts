@@ -63,6 +63,17 @@ function representationDisclosure(report: OpportunityReport): string[] {
   return lines
 }
 
+function marketSignalHintRows(report: OpportunityReport) {
+  return report.evidence.observations.flatMap((observation) =>
+    observation.analysis
+      ? observation.analysis.marketSignalHints.map((hint) => ({
+          evidenceId: observation.evidenceId,
+          ...hint
+        }))
+      : []
+  )
+}
+
 /**
  * Render a validated opportunity report as deterministic Markdown.
  *
@@ -73,6 +84,7 @@ function representationDisclosure(report: OpportunityReport): string[] {
  */
 export function renderOpportunityReportMarkdown(reportInput: OpportunityReport): string {
   const report = opportunityReportSchema.parse(reportInput)
+  const marketSignalHints = marketSignalHintRows(report)
   const lines = [
     '# Opportunity report',
     `- Report ID: ${inertValue(report.artifactId)}`,
@@ -159,6 +171,20 @@ export function renderOpportunityReportMarkdown(reportInput: OpportunityReport):
       )
     }
     lines.push('')
+  }
+
+  lines.push(
+    '## Weak-market and contrary-context hints',
+    '- These bounded hints are extracted from complaint wording for source-context review only; they are not reviewed market evidence and never affect ranking.'
+  )
+  if (marketSignalHints.length === 0) {
+    lines.push('- None recorded.')
+  } else {
+    for (const hint of marketSignalHints) {
+      lines.push(
+        `- ${inertValue(hint.signalCode)} (${inertValue(hint.signalType)}; source-context only; not scored; evidence=${inertValue(hint.evidenceId)}): ${inertValue(hint.surfaceText)}`
+      )
+    }
   }
 
   lines.push(
